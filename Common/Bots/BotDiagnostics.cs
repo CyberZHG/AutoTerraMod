@@ -19,7 +19,7 @@ public static class BotDiagnostics
 	public static void LogDecision(Bot bot, BotTask task, PlanStep plan)
 	{
 		if (Enabled)
-			Log(bot, $"task={task?.NameKey ?? "none"} ({task?.Detail}) plan={Describe(plan)} at tile {bot.CenterTile}");
+			Log(bot, $"task={task?.NameKey ?? "none"} ({task?.Detail}) plan={Describe(plan)} goal={bot.Brain.GoalName} at tile {bot.CenterTile}");
 	}
 
 	static string Describe(PlanStep plan) => plan switch

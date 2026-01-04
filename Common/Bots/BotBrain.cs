@@ -56,6 +56,7 @@ public sealed class BotBrain
 
 	public BotTask Current => current;
 	public PlanStep Plan { get; private set; } = PlanStep.Idle;
+	public string GoalName => currentGoal?.Describe() ?? "none";
 	public System.Collections.Generic.HashSet<int> PlannedItemTypes { get; private set; } = new();
 
 	public void Tick(NPC body)

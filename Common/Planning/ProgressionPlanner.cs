@@ -111,6 +111,8 @@ public static class ProgressionPlanner
 				continue;
 			foreach (int candidate in accepted.OrderByDescending(type => Inventory.Count(avatar, type)))
 			{
+				if (context.Visiting.Contains(candidate))
+					continue;
 				int target = required.stack - have + Inventory.Count(avatar, candidate);
 				var step = Resolve(context, candidate, target, depth + 1);
 				if (step != null && step is not BlockedStep)

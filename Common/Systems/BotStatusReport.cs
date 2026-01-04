@@ -53,7 +53,7 @@ public sealed class BotStatusReport : ModSystem
 		var avatar = bot.Avatar;
 		var task = bot.Brain.Current;
 		return $"{bot.Name}: at {bot.CenterTile} hp={avatar.statLife}/{avatar.statLifeMax2} slots={Inventory.UsedSlots(avatar)} " +
-			$"pick={bot.Hands.BestPickaxe?.pick ?? 0} task={task?.NameKey ?? "none"}({task?.Detail}) plan={DescribePlan(bot.Brain.Plan)} stalled={bot.Watchdog.StalledSeconds}s";
+			$"pick={bot.Hands.BestPickaxe?.pick ?? 0} task={task?.NameKey ?? "none"}({task?.Detail}) plan={DescribePlan(bot.Brain.Plan)} goal={bot.Brain.GoalName} stalled={bot.Watchdog.StalledSeconds}s";
 	}
 
 	static string DescribePlan(PlanStep plan) => plan switch

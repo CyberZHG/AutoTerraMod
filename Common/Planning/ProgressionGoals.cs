@@ -10,6 +10,7 @@ namespace AutoTerraMod.Common.Planning;
 public abstract class ProgressionGoal
 {
 	public virtual bool AppliesTo(Bot bot) => true;
+	public virtual string Describe() => GetType().Name;
 	public abstract bool IsMet(Bot bot);
 	public abstract PlanStep Plan(Bot bot);
 }
@@ -36,6 +37,7 @@ public sealed class GearGoal : ProgressionGoal
 	readonly int requiredPower;
 
 	public GearKind Kind => kind;
+	public override string Describe() => $"Gear({kind})";
 
 	public GearGoal(GearKind kind, params int[] options)
 	{
@@ -169,6 +171,7 @@ public sealed class StyleGoal : ProgressionGoal
 	}
 
 	public override bool AppliesTo(Bot bot) => styles.Contains(EffectiveStyle(bot.Personality.Style));
+	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
 

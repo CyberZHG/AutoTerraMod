@@ -13,11 +13,24 @@ public sealed class RecipeIndex : ModSystem
 
 	public override void PostSetupRecipes()
 	{
-		recipesByResult = Main.recipe
+		var allRecipes = Main.recipe
 			.Take(Recipe.numRecipes)
 			.Where(recipe => !recipe.Disabled && recipe.createItem.type > ItemID.None)
+			.ToList();
+		var ingredientsByResult = allRecipes
 			.GroupBy(recipe => recipe.createItem.type)
-			.ToDictionary(group => group.Key, group => group.ToList());
+			.ToDictionary(group => group.Key, group => group.SelectMany(recipe => recipe.requiredItem.Select(item => item.type)).ToHashSet());
+		recipesByResult = allRecipes
+			.GroupBy(recipe => recipe.createItem.type)
+			.ToDictionary(group => group.Key, group => PreferForwardRecipes(group.ToList(), ingredientsByResult));
+	}
+
+	static List<Recipe> PreferForwardRecipes(List<Recipe> recipes, Dictionary<int, HashSet<int>> ingredientsByResult)
+	{
+		bool IsReverse(Recipe recipe) => recipe.requiredItem.Any(required =>
+			ingredientsByResult.TryGetValue(required.type, out var ingredients) && ingredients.Contains(recipe.createItem.type));
+		var forward = recipes.Where(recipe => !IsReverse(recipe)).ToList();
+		return forward.Count > 0 ? forward : recipes;
 	}
 
 	public override void Unload() => recipesByResult = new();
