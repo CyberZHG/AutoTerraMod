@@ -65,7 +65,7 @@ public sealed class BotWatchdog
 			trapAnchorSince = Main.GameUpdateCount;
 		}
 		uint now = Main.GameUpdateCount;
-		if (now - lastProgress < DecisionStallTicks || now - lastEscalation < RetryTicks)
+		if (now - lastProgress < DecisionStallTicks || now - lastEscalation < RetryTicks || EscapeRequested)
 			return;
 		lastEscalation = now;
 		bool trapped = now - trapAnchorSince >= TrappedStallTicks || now - lastProgress >= ForceEscapeStallTicks;

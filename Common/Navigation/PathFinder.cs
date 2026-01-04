@@ -72,7 +72,7 @@ public static class PathFinder
 
 	public static float CenterXOf(int nodeX) => (nodeX + 1) * 16f;
 
-	public static PathResult Find(Point start, Point goal, int goalRadius, NavigationAbilities abilities)
+	public static PathResult Find(Point start, Point goal, int goalRadius, NavigationAbilities abilities, ISet<(Point from, Point to)> forbiddenSteps = null)
 	{
 		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
 		hazardCache.Clear();
@@ -105,6 +105,8 @@ public static class PathFinder
 			foreach (var edge in edges)
 			{
 				if (Math.Abs(edge.To.X - start.X) > MaxSearchRadius || Math.Abs(edge.To.Y - start.Y) > MaxSearchRadius)
+					continue;
+				if (forbiddenSteps != null && forbiddenSteps.Contains((current, edge.To)))
 					continue;
 				float cost = costSoFar[current] + edge.Cost + (IsHazardousStand(edge.To) ? HazardPenalty : 0f);
 				if (costSoFar.TryGetValue(edge.To, out float known) && known <= cost)

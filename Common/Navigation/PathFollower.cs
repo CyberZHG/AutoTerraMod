@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -21,7 +22,8 @@ public struct MotorIntent
 public sealed class PathFollower
 {
 	const int ReplanIntervalTicks = 180;
-	const int StepTimeoutTicks = 180;
+	const int StepTimeoutTicks = 120;
+	const int ForgetFailedStepsTicks = 1800;
 	const int OffPathTolerance = 4;
 	const int GoalShiftTolerance = 4;
 	const int MinimumReplanGapTicks = 20;
@@ -35,6 +37,8 @@ public sealed class PathFollower
 	Point stepOrigin;
 	uint plannedAt;
 	int stepTicks;
+	readonly HashSet<(Point from, Point to)> failedSteps = new();
+	uint failedStepsSince;
 
 	public bool HasNoRoute { get; private set; }
 	public bool HasPath => path.Nodes.Count > 0 && index < path.Nodes.Count;
@@ -57,6 +61,7 @@ public sealed class PathFollower
 		var feet = PathFinder.FeetOf(body);
 		var goal = new Point((int)(destination.X / 16f), (int)((destination.Y + 21f) / 16f));
 		bool grounded = body.velocity.Y == 0f || body.wet;
+		RememberFailedStep(feet);
 		if (NeedsReplan(feet, goal, grounded) && MayReplan() && PathFinder.HasBudget)
 		{
 			Replan(feet, goal, arriveRadius, abilities);
@@ -83,6 +88,19 @@ public sealed class PathFollower
 		return grounded && (Math.Abs(next.X - feet.X) > OffPathTolerance || Math.Abs(next.Y - feet.Y) > OffPathTolerance);
 	}
 
+	void RememberFailedStep(Point feet)
+	{
+		if (Main.GameUpdateCount - failedStepsSince > ForgetFailedStepsTicks)
+		{
+			failedSteps.Clear();
+			failedStepsSince = Main.GameUpdateCount;
+		}
+		if (stepTicks <= StepTimeoutTicks || index >= path.Nodes.Count || feet != stepOrigin)
+			return;
+		failedSteps.Add((stepOrigin, path.Nodes[index].Feet));
+		plannedAt = 0;
+	}
+
 	bool MayReplan()
 	{
 		uint sinceLast = Main.GameUpdateCount - plannedAt;
@@ -92,7 +110,7 @@ public sealed class PathFollower
 	void Replan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
 	{
 		int goalRadius = Math.Max(1, (int)(arriveRadius / 16f));
-		path = PathFinder.Find(feet, goal, goalRadius, abilities);
+		path = PathFinder.Find(feet, goal, goalRadius, abilities, failedSteps);
 		index = 0;
 		plannedGoal = goal;
 		plannedAt = Main.GameUpdateCount;

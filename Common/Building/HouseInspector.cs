@@ -27,8 +27,11 @@ public static class HouseInspector
 		reportedFailures.Clear();
 	}
 
-	public static HouseDesign MaterialsFor(Faction faction) =>
-		Planning.Stations.BaseHas(faction, TileID.Furnaces) ? faction.HouseDesign : faction.HouseDesign.AsRustic();
+	public static HouseDesign MaterialsFor(Faction faction)
+	{
+		bool tasteAffordable = Planning.Stations.BaseHas(faction, TileID.Furnaces) && IsComplete(faction, faction.Settlement.Hall);
+		return tasteAffordable ? faction.HouseDesign : faction.HouseDesign.AsRustic();
+	}
 
 	public static bool IsComplete(Faction faction) => faction.Settlement != null && IsComplete(faction, faction.Settlement.Hall);
 
@@ -186,6 +189,27 @@ public static class HouseMaterials
 		BuildAction.PlaceBed => ItemID.Bed,
 		_ => ItemID.None
 	};
+
+	public static int CountAvailable(Player avatar, BuildAction placement, HouseDesign design) => placement switch
+	{
+		BuildAction.PlaceBlock => Inventory.Count(avatar, design.BlockItem),
+		BuildAction.PlaceWall => Inventory.Count(avatar, design.WallItem),
+		_ => Inventory.Items(avatar).Where(item => Matches(item, placement)).Sum(item => item.stack)
+	};
+
+	static bool Matches(Item item, BuildAction placement)
+	{
+		int[] tiles = placement switch
+		{
+			BuildAction.PlaceDoor => TileID.Sets.RoomNeeds.CountsAsDoor,
+			BuildAction.PlaceTorch => TileID.Sets.RoomNeeds.CountsAsTorch,
+			BuildAction.PlaceTable => TileID.Sets.RoomNeeds.CountsAsTable,
+			BuildAction.PlaceChair => TileID.Sets.RoomNeeds.CountsAsChair,
+			BuildAction.PlaceBed => Beds,
+			_ => System.Array.Empty<int>()
+		};
+		return item.createTile >= 0 && tiles.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile];
+	}
 
 	static Item FindPlacing(Player avatar, int[] tileTypes) =>
 		Inventory.Items(avatar).FirstOrDefault(item => item.createTile >= 0 && tileTypes.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile]);

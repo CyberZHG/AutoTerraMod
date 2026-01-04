@@ -11,6 +11,9 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class EscapeTask : BotTask
 {
 	const int MaxEscapeTicks = 3600;
+	const int NavigationGraceTicks = 600;
+	const int StraightClimbTicks = 1800;
+	const int StillTrappedTiles = 10;
 	const int SurfaceMarginTiles = 5;
 	const int SurfaceStepTiles = 8;
 	const int OpenGroundTrip = 30;
@@ -18,7 +21,9 @@ public sealed class EscapeTask : BotTask
 	static readonly int[] RecallItems = { ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone, ItemID.RecallPotion };
 
 	Vector2 destination;
+	Vector2 start;
 	bool headingForSurface;
+	uint climbStartedAt;
 	uint startedAt;
 
 	public EscapeTask(Bot bot) : base(bot) { }
@@ -32,6 +37,8 @@ public sealed class EscapeTask : BotTask
 	{
 		base.Start();
 		startedAt = Main.GameUpdateCount;
+		start = Bot.Center;
+		climbStartedAt = 0;
 		if (TryRecall())
 		{
 			Finish();
@@ -51,6 +58,17 @@ public sealed class EscapeTask : BotTask
 	public override void Tick()
 	{
 		Bot.Motor.ScaffoldingAllowed = true;
+		if (climbStartedAt == 0 && ShouldClimbStraightUp())
+		{
+			climbStartedAt = Main.GameUpdateCount;
+			Bot.Motor.ClimbingStraightUp = true;
+			BotDiagnostics.Log(Bot, $"navigation failed to free me, digging straight up from {Bot.CenterTile}");
+		}
+		if (climbStartedAt != 0 && Main.GameUpdateCount - climbStartedAt > StraightClimbTicks)
+		{
+			Finish();
+			return;
+		}
 		Bot.Motor.MoveTo(destination, 32f);
 		var here = Bot.CenterTile;
 		bool reachedSurface = headingForSurface && here.Y <= TileQuery.SurfaceY(here.X) + SurfaceMarginTiles;
@@ -58,8 +76,20 @@ public sealed class EscapeTask : BotTask
 			Finish();
 	}
 
+	bool ShouldClimbStraightUp() =>
+		headingForSurface
+		&& Main.GameUpdateCount - startedAt > NavigationGraceTicks
+		&& Vector2.Distance(Bot.Center, start) < StillTrappedTiles * 16f;
+
+	public override void Stop()
+	{
+		Bot.Motor.ClimbingStraightUp = false;
+		base.Stop();
+	}
+
 	void Finish()
 	{
+		Bot.Motor.ClimbingStraightUp = false;
 		IsFinished = true;
 		Bot.Watchdog.EscapeFinished();
 	}

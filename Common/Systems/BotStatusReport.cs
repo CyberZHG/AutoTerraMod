@@ -26,11 +26,24 @@ public sealed class BotStatusReport : ModSystem
 		{
 			var settlement = faction.Settlement;
 			int built = settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
-			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}");
+			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}");
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}
 		Mod.Logger.Info(report.ToString());
+	}
+
+	static string DescribeConstruction(Factions.Faction faction)
+	{
+		var settlement = faction.Settlement;
+		var structure = settlement?.Structures.FirstOrDefault(candidate => !Building.HouseInspector.IsFinished(faction, candidate));
+		if (structure == null)
+			return "";
+		var materials = Building.HouseInspector.MaterialsFor(faction);
+		var bill = Building.ConstructionBill.For(structure, materials);
+		string needs = string.Join(", ", bill.Select(line => $"{Lang.GetItemNameValue(line.ItemType)} x{line.Amount}"));
+		var next = Building.HouseInspector.NextOperation(faction, structure);
+		return $"\n    building {structure.Purpose}#{structure.Index}: next={next?.Action} needs=[{needs}]";
 	}
 
 	static string Describe(Bot bot)

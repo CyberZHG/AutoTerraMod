@@ -45,6 +45,7 @@ public sealed class BotMotor
 	public Point? BridgeTile { get; private set; }
 	public bool HasRoute => destination != null && follower.HasPath;
 	public bool ScaffoldingAllowed { get; set; }
+	public bool ClimbingStraightUp { get; set; }
 
 	public void MoveTo(Vector2 target, float radius = 16f)
 	{
@@ -107,7 +108,9 @@ public sealed class BotMotor
 		int moveDirection = 0;
 		bool wantsJump = false;
 		int jumpHoldTicks = JumpHoldTicks;
-		if (destination is Vector2 target)
+		if (ClimbingStraightUp)
+			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
+		else if (destination is Vector2 target)
 			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
 			moveDirection = EscapeHazard(npc);
@@ -133,6 +136,98 @@ public sealed class BotMotor
 			PlaceFoothold(scaffold);
 		ScaffoldingAllowed = false;
 	}
+
+	const int ClimbJumpHoldTicks = 4;
+
+	const float ClimbCenteringTolerance = 3f;
+
+	void ClimbUpStep(NPC npc, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
+	{
+		var feet = PathFinder.FeetOf(npc);
+		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
+		if (BestClimbColumn(feet, pickPower) is not int column)
+			return;
+		bool grounded = npc.velocity.Y == 0f;
+		float offset = PathFinder.CenterXOf(column) - npc.Center.X;
+		if (grounded && Math.Abs(offset) > ClimbCenteringTolerance)
+		{
+			moveDirection = Math.Sign(offset);
+			return;
+		}
+		if (FirstSolidAbove(column, feet.Y) is Point ceiling)
+		{
+			TileToDig = ceiling;
+			return;
+		}
+		if (!bot.Hands.HasBridgeMaterial)
+		{
+			TileToDig = DiggableWallBeside(column, feet.Y, pickPower);
+			return;
+		}
+		wantsJump = grounded || jumpHold > 0;
+		jumpHoldTicks = ClimbJumpHoldTicks;
+		var body = BodyTiles.Of(npc);
+		bool risenOneTileAboveSupport = !grounded && !PathFinder.IsSupportedNow(column, body.Bottom) && PathFinder.IsSupportedNow(column, body.Bottom + 1);
+		if (risenOneTileAboveSupport)
+			ScaffoldTile = new Point(column, body.Bottom + 1);
+	}
+
+	int? BestClimbColumn(Point feet, int pickPower)
+	{
+		int? best = null;
+		int bestCost = int.MaxValue;
+		for (int column = feet.X - 1; column <= feet.X + 1; column++)
+		{
+			int cost = Math.Abs(column - feet.X);
+			bool blocked = false;
+			for (int x = column; x <= column + 1 && !blocked; x++)
+			{
+				for (int y = feet.Y - 4; y <= feet.Y; y++)
+				{
+					if (!TileQuery.IsSolid(x, y))
+						continue;
+					if (!CanBreak(x, y, pickPower))
+						blocked = true;
+					cost += 3;
+				}
+			}
+			if (!blocked && cost < bestCost)
+			{
+				best = column;
+				bestCost = cost;
+			}
+		}
+		return best;
+	}
+
+	static Point? FirstSolidAbove(int column, int feetY)
+	{
+		for (int y = feetY; y >= feetY - 4; y--)
+		{
+			for (int x = column; x <= column + 1; x++)
+			{
+				if (TileQuery.IsSolid(x, y))
+					return new Point(x, y);
+			}
+		}
+		return null;
+	}
+
+	static Point? DiggableWallBeside(int column, int feetY, int pickPower)
+	{
+		foreach (int x in new[] { column - 1, column + 2 })
+		{
+			for (int y = feetY; y >= feetY - 2; y--)
+			{
+				if (TileQuery.IsSolid(x, y) && CanBreak(x, y, pickPower))
+					return new Point(x, y);
+			}
+		}
+		return null;
+	}
+
+	static bool CanBreak(int x, int y, int pickPower) =>
+		CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower;
 
 	void PlaceFoothold(Point tile)
 	{

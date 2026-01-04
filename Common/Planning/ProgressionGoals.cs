@@ -144,15 +144,16 @@ public sealed class StructureGoal : ProgressionGoal
 			return PlanStep.Idle;
 		}
 		var materials = HouseInspector.MaterialsFor(bot.Faction);
-		if (structure.IsOutOfReachFromFloor(operation.Tile) && !HouseInspector.HasScaffoldMaterial(bot.Avatar))
-			return ProgressionPlanner.Obtain(bot, ItemID.WoodPlatform, 20);
 		var placement = HouseMaterials.ReplacementFor(operation.Action);
-		if (!HouseMaterials.IsNeeded(placement) || HouseMaterials.Find(bot.Avatar, placement, materials) != null)
+		if (!HouseMaterials.IsNeeded(placement))
 			return new BuildHouseStep(operation);
-		int amount = placement is BuildAction.PlaceBlock or BuildAction.PlaceWall
-			? structure.PendingCount(placement, materials) + structure.PendingCount(operation.Action, materials)
-			: 1;
-		return ProgressionPlanner.Obtain(bot, HouseMaterials.DefaultItem(placement, materials), amount);
+		var bill = ConstructionBill.For(structure, materials);
+		if (ConstructionBill.FirstShortfall(bot, bill, materials) is BillLine shortfall)
+			return ProgressionPlanner.Obtain(bot, shortfall.ItemType, shortfall.Amount);
+		if (HouseMaterials.Find(bot.Avatar, placement, materials) != null)
+			return new BuildHouseStep(operation);
+		var line = bill.First(entry => entry.Placement == placement);
+		return ProgressionPlanner.Obtain(bot, line.ItemType, line.Amount);
 	}
 }
 
