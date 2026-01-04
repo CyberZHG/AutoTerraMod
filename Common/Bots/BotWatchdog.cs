@@ -11,7 +11,8 @@ public sealed class BotWatchdog
 	const int TrappedStallTicks = 2400;
 	const int RetryTicks = 1200;
 	const int TravelProgressTiles = 12;
-	const int TrappedRadiusTiles = 6;
+	const int TrappedRadiusTiles = 10;
+	const int ForceEscapeStallTicks = 3600;
 
 	readonly Bot bot;
 	uint lastProgress;
@@ -67,7 +68,7 @@ public sealed class BotWatchdog
 		if (now - lastProgress < DecisionStallTicks || now - lastEscalation < RetryTicks)
 			return;
 		lastEscalation = now;
-		bool trapped = now - trapAnchorSince >= TrappedStallTicks;
+		bool trapped = now - trapAnchorSince >= TrappedStallTicks || now - lastProgress >= ForceEscapeStallTicks;
 		bot.Brain.SuppressCurrentGoal();
 		if (trapped)
 		{
@@ -76,7 +77,7 @@ public sealed class BotWatchdog
 		}
 		BotDiagnostics.Log(bot, trapped
 			? $"watchdog: trapped near {here} for {StalledSeconds}s, escaping; motor: {bot.Motor.Describe()}{TerrainDump.Around(here)}"
-			: $"watchdog: no progress for {StalledSeconds}s, suppressing current goal");
+			: $"watchdog: no progress for {StalledSeconds}s, suppressing current goal; motor: {bot.Motor.Describe()}");
 		bot.Brain.ForceReconsider();
 	}
 }

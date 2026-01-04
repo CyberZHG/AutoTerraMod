@@ -38,6 +38,8 @@ public static class PathFinder
 	static readonly int[] Directions = { -1, 1 };
 	static readonly Dictionary<Point, bool> hazardCache = new();
 	static readonly Dictionary<Point, bool> diggableCache = new();
+	static readonly Dictionary<Point, bool> bodyClearCache = new();
+	static readonly Dictionary<Point, bool> supportedCache = new();
 	static uint budgetTick;
 	static int budgetUsed;
 
@@ -75,6 +77,8 @@ public static class PathFinder
 		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
 		hazardCache.Clear();
 		diggableCache.Clear();
+		bodyClearCache.Clear();
+		supportedCache.Clear();
 		var open = new PriorityQueue<Point, float>();
 		var cameFrom = new Dictionary<Point, (Point parent, MoveKind kind)>();
 		var costSoFar = new Dictionary<Point, float> { [start] = 0f };
@@ -203,17 +207,19 @@ public static class PathFinder
 
 	static void AddJumpEdges(int x, int y, List<Edge> edges)
 	{
-		for (int rise = 1; rise <= MaxJumpRise; rise++)
+		int headroom = 0;
+		while (headroom < MaxJumpRise && RowClear(x, y - 3 - headroom))
+			headroom++;
+		for (int dx = -MaxJumpReach; dx <= MaxJumpReach; dx++)
 		{
-			if (!RowClear(x, y - 2 - rise))
-				break;
-			int ny = y - rise;
-			for (int dx = -MaxJumpReach; dx <= MaxJumpReach; dx++)
+			int nx = x + dx;
+			for (int rise = dx == 0 ? 2 : 1; rise <= headroom; rise++)
 			{
-				int nx = x + dx;
-				if ((dx == 0 && rise < 2) || !BodyClear(nx, ny) || !Supported(nx, ny) || !SpanClear(x, nx, ny))
+				int ny = y - rise;
+				if (!BodyClear(nx, ny) || !Supported(nx, ny) || !SpanClear(x, nx, ny))
 					continue;
 				edges.Add(new Edge(new Point(nx, ny), MoveKind.Jump, 2f + rise * 0.8f + Math.Abs(dx) * 0.5f));
+				break;
 			}
 		}
 	}
@@ -296,10 +302,23 @@ public static class PathFinder
 
 	public static bool IsClosedDoor(int x, int y) => Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.ClosedDoor;
 
-	static bool BodyClear(int x, int feetY) =>
-		RowClear(x, feetY) && RowClear(x, feetY - 1) && RowClear(x, feetY - 2) && !Hazardous(x, feetY) && !Hazardous(x + 1, feetY);
+	static bool BodyClear(int x, int feetY)
+	{
+		var key = new Point(x, feetY);
+		if (!bodyClearCache.TryGetValue(key, out bool clear))
+			bodyClearCache[key] = clear = RowClear(x, feetY) && RowClear(x, feetY - 1) && RowClear(x, feetY - 2) && !Hazardous(x, feetY) && !Hazardous(x + 1, feetY);
+		return clear;
+	}
 
-	public static bool Supported(int x, int feetY) => TileQuery.CanStandOn(x, feetY + 1) || TileQuery.CanStandOn(x + 1, feetY + 1);
+	public static bool IsSupportedNow(int x, int feetY) => TileQuery.CanStandOn(x, feetY + 1) || TileQuery.CanStandOn(x + 1, feetY + 1);
+
+	static bool Supported(int x, int feetY)
+	{
+		var key = new Point(x, feetY);
+		if (!supportedCache.TryGetValue(key, out bool supported))
+			supportedCache[key] = supported = TileQuery.CanStandOn(x, feetY + 1) || TileQuery.CanStandOn(x + 1, feetY + 1);
+		return supported;
+	}
 
 	static bool IsPlatformBelow(int x, int feetY) =>
 		(TileQuery.IsPlatform(x, feetY + 1) || TileQuery.IsPlatform(x + 1, feetY + 1))

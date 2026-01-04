@@ -154,11 +154,11 @@ public sealed class PathFollower
 				intent.MoveDirection = 0;
 				intent.Jump = grounded || body.velocity.Y < 0f;
 				intent.JumpHoldTicks = HoldTicksForRise(2);
-				if (!grounded && feet.Y < stepOrigin.Y && !PathFinder.Supported(stepOrigin.X, stepOrigin.Y - 1))
+				if (!grounded && feet.Y < stepOrigin.Y && !PathFinder.IsSupportedNow(stepOrigin.X, stepOrigin.Y - 1))
 					intent.ScaffoldTile = new Point(stepOrigin.X + (body.Center.X >= PathFinder.CenterXOf(stepOrigin.X) ? 1 : 0), stepOrigin.Y);
 				break;
 			case MoveKind.Bridge:
-				if (!PathFinder.Supported(node.Feet.X, node.Feet.Y))
+				if (!PathFinder.IsSupportedNow(node.Feet.X, node.Feet.Y))
 				{
 					intent.BridgeTile = new Point(PathFinder.BridgeColumn(feet.X, node.Feet.X), node.Feet.Y + 1);
 					intent.MoveDirection = 0;
