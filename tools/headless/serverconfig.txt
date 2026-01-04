@@ -1,0 +1,8 @@
+autocreate=1
+worldname=AutoTest
+seed=autoterra
+difficulty=0
+maxplayers=2
+port=7788
+password=autotest
+secure=0

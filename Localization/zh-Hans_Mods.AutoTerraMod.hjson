@@ -1,0 +1,165 @@
+Configs: {
+	AutoTerraConfig: {
+		DisplayName: 自动泰拉阵营
+
+		FactionCount: {
+			Label: 阵营数量
+			Tooltip: 首次进入世界时创建的 AI 阵营数（1-4）。
+		}
+
+		BotsPerFaction: {
+			Label: 每阵营人数
+			Tooltip: 每个阵营的 AI 角色数（1-6）。
+		}
+
+		Relation: {
+			Label: 阵营关系
+			Tooltip: 竞速：各阵营情报独立；合作：共享已发现的资源位置。
+		}
+
+		SpectatorMode: {
+			Label: 观战模式
+			Tooltip: 你会变成不会被攻击的幽灵，镜头跟随 AI 角色。
+		}
+
+		DiagnosticLogging: {
+			Label: 诊断日志
+			Tooltip: 把每个角色的任务和计划变化写入 client.log。
+		}
+	}
+
+	FactionRelation: {
+		Race: {
+			Label: 竞速
+			// Tooltip: ""
+		}
+
+		Cooperate: {
+			Label: 合作
+			// Tooltip: ""
+		}
+
+		// Tooltip: ""
+	}
+}
+
+Keybinds: {
+	BotInventory.DisplayName: 显示/隐藏角色背包
+	NextBot.DisplayName: 观战下一个角色
+	PreviousBot.DisplayName: 观战上一个角色
+	FreeCamera.DisplayName: 切换自由镜头
+}
+
+NPCs.BotNPC.DisplayName: 阵营角色
+
+Factions: {
+	Name0: 红队
+	Name1: 蓝队
+	Name2: 绿队
+	Name3: 金队
+}
+
+Archetypes: {
+	Miner: 矿工
+	Explorer: 探险家
+	Builder: 建筑师
+	Warrior: 战士
+}
+
+Styles: {
+	Melee: 近战
+	Ranged: 射手
+	Magic: 法师
+	Summon: 召唤师
+}
+
+Aspirations: {
+	Naturalist: 博物学家（生物展览馆）
+	MonsterHunter: 怪物猎人（挂旗帜）
+	Collector: 收藏家（衣架摆装备）
+}
+
+Tasks: {
+	Escape: 脱困
+	Treasure: 挖生命水晶
+	Store: 存仓库
+	Withdraw: 从仓库取货
+	Loot: 开宝箱
+	Flee: 逃跑
+	Fight: 战斗
+	Pickup: 捡东西
+	Craft: 合成
+	PlaceStation: 放置工作站
+	Chop: 砍树
+	Prospect: 找矿
+	Mine: 挖矿
+	Hunt: 狩猎
+	ReturnHome: 回家
+	Explore: 探索
+	Idle: 空闲
+	Build: 建房
+}
+
+Plans: {
+	Withdraw: 从仓库取 {0} x{1}
+	Gather: 收集 {0} x{1}
+	Craft: 合成 {0}
+	Place: 放置 {0}
+	Idle: 暂无计划
+	Build: 建房：{0}
+}
+
+UI: {
+	Stalled: 已 {0} 秒无进展
+	SettlementProgress: 已建成 {0}/{1} 栋（{2}，{3}）
+	InventoryOf: "{0} 的背包（只读）"
+	SharingBoosters: 带回营地给队友
+	Respawning: 已阵亡，{0} 秒后复活
+	Breath: 氧气 {0}%
+	Epitaph: "{1}的{0}长眠于此"
+	NowFollowing: 正在观战：{0}（{1}）
+	FreeCameraOn: 自由镜头：开
+	FreeCameraOff: 自由镜头：关
+	BotDied: "{1}的{0}阵亡了。"
+	FreeCamera: 自由镜头
+	Controls: '''[ / ] 切换角色   \ 自由镜头   I 背包'''
+	Watching: "{0}  [{1}]  {2} / {3}"
+	Vitals: 生命 {0}/{1}   魔力 {2}/{3}   防御 {4}
+	Task: 任务：{0} {1}
+	Plan: 计划：{0}
+	Gear: 镐：{0}   武器：{1}   手持：{2}
+	Traits: 挖矿 {0}  探索 {1}  建筑 {2}  战斗 {3}  勇气 {4}  合作 {5}
+	Aspiration: 人生目标：{0}   审美：{1}
+	RelationRace: 模式：竞速
+	RelationCooperate: 模式：合作
+	FactionLine: "{0}：存活 {1}/{2}，最好的镐 {3}%，房子 {4}"
+	HouseDone: 已建成（{0}，{1}）
+	HousePending: 建造中（{0}，{1}）
+}
+
+BuildActions: {
+	ChopTree: 清理树木
+	ClearTile: 平整场地
+	PlaceWall: 背景墙
+	PlaceBlock: 墙体和屋顶
+	PlaceDoor: 门
+	PlaceTorch: 火把
+	PlaceTable: 桌子
+	RemoveScaffold: 拆除脚手架
+	RenovateBlock: 翻新墙体屋顶
+	RenovateWall: 翻新背景墙
+	PlaceBed: 床
+	PlaceChair: 椅子
+}
+
+Tastes: {
+	Rustic: 原木风
+	StoneBrick: 灰砖
+	RedBrick: 红砖
+}
+
+Roofs: {
+	Flat: 平顶
+	Gable: 人字顶
+	Shed: 单坡顶
+}

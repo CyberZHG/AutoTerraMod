@@ -1,0 +1,138 @@
+using System.Linq;
+using AutoTerraMod.Common.Factions;
+using AutoTerraMod.Common.Systems;
+using AutoTerraMod.Common.World;
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.Audio;
+using Terraria.ID;
+
+namespace AutoTerraMod.Common.Bots.Tasks;
+
+public sealed class LootTask : BotTask
+{
+	const int OpenDelayTicks = 30;
+	const float MaxTravel = 16f * 200f;
+
+	int chestIndex = -1;
+	int openTimer;
+
+	public LootTask(Bot bot) : base(bot) { }
+
+	public override string NameKey => "Loot";
+
+	public override float Evaluate()
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		NoticeVisibleChests(knowledge);
+		chestIndex = NearestLootable(knowledge);
+		if (chestIndex < 0 || Inventory.UsedSlots(Avatar) >= 45)
+			return 0f;
+		Detail = Lang.GetMapObjectName(Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y].TileType) ?? "";
+		return 30f + Traits.Exploring * 40f;
+	}
+
+	public override void Start()
+	{
+		base.Start();
+		openTimer = 0;
+	}
+
+	public override void Tick()
+	{
+		var chest = chestIndex >= 0 ? Main.chest[chestIndex] : null;
+		if (chest == null)
+		{
+			IsFinished = true;
+			return;
+		}
+		var chestTile = new Point(chest.x, chest.y);
+		if (!Bot.Hands.CanReach(null, chestTile))
+		{
+			Bot.Motor.MoveTo(chestTile.ToWorldCoordinates(16f, 16f), 24f);
+			if (Bot.Motor.IsStuck)
+				Abandon("stuck on the way");
+			return;
+		}
+		Bot.Motor.Stop();
+		Bot.Motor.Face(chestTile.ToWorldCoordinates());
+		if (openTimer++ == 0)
+			SoundEngine.PlaySound(SoundID.MenuOpen, chestTile.ToWorldCoordinates());
+		if (openTimer < OpenDelayTicks)
+			return;
+		TakeEverything(chest);
+		Bot.Watchdog.RecordProgress();
+		SoundEngine.PlaySound(SoundID.MenuClose, chestTile.ToWorldCoordinates());
+		IsFinished = true;
+	}
+
+	void TakeEverything(Chest chest)
+	{
+		int taken = 0;
+		for (int slot = 0; slot < chest.item.Length; slot++)
+		{
+			var item = chest.item[slot];
+			if (item == null || item.IsAir)
+				continue;
+			var leftover = Inventory.Add(Avatar, item.Clone());
+			taken += item.stack - (leftover.IsAir ? 0 : leftover.stack);
+			chest.item[slot] = leftover.IsAir ? new Item() : leftover;
+		}
+		if (chest.item.All(item => item == null || item.IsAir))
+			BotWorldSystem.KnowledgeOf(Bot.Faction).MarkLooted(chestIndex);
+		BotDiagnostics.Log(Bot, $"looted chest at ({chest.x},{chest.y}), took {taken} items");
+	}
+
+	void Abandon(string reason)
+	{
+		BotDiagnostics.Log(Bot, $"gave up chest {chestIndex}: {reason}");
+		BotWorldSystem.KnowledgeOf(Bot.Faction).MarkLooted(chestIndex);
+		IsFinished = true;
+	}
+
+	void NoticeVisibleChests(FactionKnowledge knowledge)
+	{
+		var origin = Bot.CenterTile;
+		for (int index = 0; index < Main.maxChests; index++)
+		{
+			var chest = Main.chest[index];
+			if (chest == null)
+				continue;
+			if (System.Math.Abs(chest.x - origin.X) > WorldScan.ViewHalfWidth || System.Math.Abs(chest.y - origin.Y) > WorldScan.ViewHalfHeight)
+				continue;
+			if (IsExposed(chest))
+				knowledge.RememberChest(index);
+		}
+	}
+
+	static bool IsExposed(Chest chest)
+	{
+		for (int x = chest.x - 1; x <= chest.x + 2; x++)
+		{
+			for (int y = chest.y - 1; y <= chest.y + 2; y++)
+			{
+				bool outsideChest = x < chest.x || x > chest.x + 1 || y < chest.y || y > chest.y + 1;
+				if (outsideChest && !TileQuery.IsSolid(x, y))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	int NearestLootable(FactionKnowledge knowledge) => knowledge.UnlootedChests
+		.Where(index => IsLootable(Main.chest[index]))
+		.Select(index => (index, distance: Vector2.Distance(Bot.Center, new Point(Main.chest[index].x, Main.chest[index].y).ToWorldCoordinates())))
+		.Where(candidate => candidate.distance < MaxTravel)
+		.OrderBy(candidate => candidate.distance)
+		.Select(candidate => candidate.index)
+		.DefaultIfEmpty(-1)
+		.First();
+
+	bool IsLootable(Chest chest) =>
+		!Chest.IsLocked(chest.x, chest.y)
+		&& !IsAtAnyBase(chest)
+		&& Main.LocalPlayer.chest != System.Array.IndexOf(Main.chest, chest);
+
+	static bool IsAtAnyBase(Chest chest) =>
+		BotWorldSystem.Factions.Any(faction => faction.Settlement?.Contains(chest.x, chest.y) == true);
+}

@@ -1,0 +1,2 @@
+Up to four AI factions with up to six bots each play Terraria by vanilla rules: they mine, chop, craft, gear up and fight, while you spectate.
+Single-player only.

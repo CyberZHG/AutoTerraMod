@@ -1,0 +1,165 @@
+Configs: {
+	AutoTerraConfig: {
+		DisplayName: Auto Terra Factions
+
+		FactionCount: {
+			Label: Faction count
+			Tooltip: Number of AI factions created when a world is first entered (1-4).
+		}
+
+		BotsPerFaction: {
+			Label: Bots per faction
+			Tooltip: Number of AI bots in each faction (1-6).
+		}
+
+		Relation: {
+			Label: Faction relation
+			Tooltip: Race keeps knowledge separate; Cooperate shares discovered resources between factions.
+		}
+
+		SpectatorMode: {
+			Label: Spectator mode
+			Tooltip: Turns you into an untargetable ghost and lets the camera follow bots.
+		}
+
+		DiagnosticLogging: {
+			Label: Diagnostic logging
+			Tooltip: Writes each bot's task and plan changes to client.log.
+		}
+	}
+
+	FactionRelation: {
+		Race: {
+			Label: Race
+			Tooltip: ""
+		}
+
+		Cooperate: {
+			Label: Cooperate
+			Tooltip: ""
+		}
+
+		Tooltip: ""
+	}
+}
+
+Keybinds: {
+	BotInventory.DisplayName: Toggle followed bot inventory
+	NextBot.DisplayName: Follow next bot
+	PreviousBot.DisplayName: Follow previous bot
+	FreeCamera.DisplayName: Toggle free camera
+}
+
+NPCs.BotNPC.DisplayName: Faction Bot
+
+Factions: {
+	Name0: Red
+	Name1: Blue
+	Name2: Green
+	Name3: Gold
+}
+
+Archetypes: {
+	Miner: Miner
+	Explorer: Explorer
+	Builder: Builder
+	Warrior: Warrior
+}
+
+Styles: {
+	Melee: Melee
+	Ranged: Ranger
+	Magic: Mage
+	Summon: Summoner
+}
+
+Aspirations: {
+	Naturalist: Naturalist (critter exhibition)
+	MonsterHunter: Monster hunter (banners)
+	Collector: Collector (armor on mannequins)
+}
+
+Tasks: {
+	Escape: Escaping
+	Treasure: Collecting treasure
+	Store: Storing items
+	Withdraw: Taking from storage
+	Loot: Looting chest
+	Flee: Fleeing
+	Fight: Fighting
+	Pickup: Picking up
+	Craft: Crafting
+	PlaceStation: Placing station
+	Chop: Chopping
+	Prospect: Prospecting
+	Mine: Mining
+	Hunt: Hunting
+	ReturnHome: Going home
+	Explore: Exploring
+	Idle: Idle
+	Build: Building house
+}
+
+Plans: {
+	Withdraw: Take {0} x{1} from storage
+	Gather: Gather {0} x{1}
+	Craft: Craft {0}
+	Place: Place {0}
+	Idle: Nothing planned
+	Build: Build house: {0}
+}
+
+UI: {
+	Stalled: No progress for {0}s
+	SettlementProgress: "{0}/{1} buildings ({2}, {3})"
+	InventoryOf: "{0}'s inventory (read-only)"
+	SharingBoosters: bringing boosters home
+	Respawning: Dead, respawning in {0}s
+	Breath: Breath {0}%
+	Epitaph: Here lies {0} of the {1} faction
+	NowFollowing: Now following {0} ({1})
+	FreeCameraOn: Free camera on
+	FreeCameraOff: Free camera off
+	BotDied: "{0} of {1} has died."
+	FreeCamera: Free camera
+	Controls: '''[ / ] switch bot   \ free camera   I inventory'''
+	Watching: "{0}  [{1}]  {2} / {3}"
+	Vitals: HP {0}/{1}   MP {2}/{3}   Defense {4}
+	Task: Task: {0} {1}
+	Plan: Plan: {0}
+	Gear: Pickaxe: {0}   Weapon: {1}   Holding: {2}
+	Traits: Mine {0}  Explore {1}  Build {2}  Fight {3}  Courage {4}  Coop {5}
+	Aspiration: Life goal: {0}   Taste: {1}
+	RelationRace: Mode: Race
+	RelationCooperate: Mode: Cooperate
+	FactionLine: "{0}: {1}/{2} alive, best pickaxe {3}%, house {4}"
+	HouseDone: done ({0}, {1})
+	HousePending: building ({0}, {1})
+}
+
+BuildActions: {
+	ChopTree: clear trees
+	ClearTile: clear ground
+	PlaceWall: background wall
+	PlaceBlock: walls and roof
+	PlaceDoor: door
+	PlaceTorch: torch
+	PlaceTable: table
+	RemoveScaffold: remove scaffolding
+	RenovateBlock: renovate walls/roof
+	RenovateWall: renovate background walls
+	PlaceBed: bed
+	PlaceChair: chair
+}
+
+Tastes: {
+	Rustic: rustic wood
+	StoneBrick: gray brick
+	RedBrick: red brick
+}
+
+Roofs: {
+	Flat: flat roof
+	Gable: gable roof
+	Shed: shed roof
+}
