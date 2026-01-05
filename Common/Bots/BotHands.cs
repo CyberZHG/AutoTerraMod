@@ -455,7 +455,7 @@ public sealed class BotHands
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox))
+			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) || ItemReservations.IsReservedForOther(i, bot))
 				continue;
 			if (ItemID.Sets.IsAPickup[item.type])
 			{

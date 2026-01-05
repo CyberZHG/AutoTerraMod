@@ -17,11 +17,13 @@ public sealed class SpectatorSystem : ModSystem
 	public static ModKeybind PreviousBotKey { get; private set; }
 	public static ModKeybind FreeCameraKey { get; private set; }
 	public static ModKeybind InventoryKey { get; private set; }
+	public static ModKeybind PlayInPersonKey { get; private set; }
+	public static bool PlayingInPerson { get; private set; }
 
 	public static bool FreeCamera { get; private set; } = true;
 	static int followedBotId = -1;
 
-	public static bool IsSpectating => BotWorldSystem.IsRunning && Main.netMode == NetmodeID.SinglePlayer && ModContent.GetInstance<AutoTerraConfig>().SpectatorMode;
+	public static bool IsSpectating => BotWorldSystem.IsRunning && Main.netMode == NetmodeID.SinglePlayer && ModContent.GetInstance<AutoTerraConfig>().SpectatorMode && !PlayingInPerson;
 
 	public static Bot Followed
 	{
@@ -42,8 +44,9 @@ public sealed class SpectatorSystem : ModSystem
 	{
 		NextBotKey = KeybindLoader.RegisterKeybind(Mod, "NextBot", "OemCloseBrackets");
 		PreviousBotKey = KeybindLoader.RegisterKeybind(Mod, "PreviousBot", "OemOpenBrackets");
-		FreeCameraKey = KeybindLoader.RegisterKeybind(Mod, "FreeCamera", "OemPipe");
+		FreeCameraKey = KeybindLoader.RegisterKeybind(Mod, "FreeCamera", "OemQuestion");
 		InventoryKey = KeybindLoader.RegisterKeybind(Mod, "BotInventory", "I");
+		PlayInPersonKey = KeybindLoader.RegisterKeybind(Mod, "PlayInPerson", "P");
 	}
 
 	public override void Unload()
@@ -52,12 +55,14 @@ public sealed class SpectatorSystem : ModSystem
 		PreviousBotKey = null;
 		FreeCameraKey = null;
 		InventoryKey = null;
+		PlayInPersonKey = null;
 	}
 
 	public override void OnWorldLoad()
 	{
 		followedBotId = -1;
 		FreeCamera = true;
+		PlayingInPerson = false;
 	}
 
 	public static void Cycle(int step)
@@ -71,6 +76,24 @@ public sealed class SpectatorSystem : ModSystem
 		followedBotId = followed.Id;
 		FreeCamera = false;
 		Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.NowFollowing", followed.Name, followed.Faction.Name), followed.Faction.Color);
+	}
+
+	public static void TogglePlayingInPerson()
+	{
+		PlayingInPerson = !PlayingInPerson;
+		var player = Main.LocalPlayer;
+		if (PlayingInPerson)
+		{
+			player.ghost = false;
+			player.Spawn(PlayerSpawnContext.RecallFromItem);
+		}
+		Main.NewText(Language.GetTextValue(PlayingInPerson ? "Mods.AutoTerraMod.UI.PlayingInPerson" : "Mods.AutoTerraMod.UI.BackToSpectating"));
+	}
+
+	public static string KeysOf(ModKeybind keybind)
+	{
+		var keys = keybind?.GetAssignedKeys() ?? new System.Collections.Generic.List<string>();
+		return keys.Count > 0 ? string.Join("/", keys) : Language.GetTextValue("Mods.AutoTerraMod.UI.Unbound");
 	}
 
 	public static void ToggleFreeCamera()
@@ -94,6 +117,9 @@ public sealed class SpectatorPlayer : ModPlayer
 
 	public override void ProcessTriggers(TriggersSet triggersSet)
 	{
+		bool canToggle = BotWorldSystem.IsRunning && Main.netMode == NetmodeID.SinglePlayer && ModContent.GetInstance<AutoTerraConfig>().SpectatorMode;
+		if (canToggle && SpectatorSystem.PlayInPersonKey.JustPressed)
+			SpectatorSystem.TogglePlayingInPerson();
 		if (!SpectatorSystem.IsSpectating)
 			return;
 		if (SpectatorSystem.NextBotKey.JustPressed || SpectatorSystem.PreviousBotKey.JustPressed || SpectatorSystem.FreeCameraKey.JustPressed)

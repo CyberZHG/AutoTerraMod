@@ -55,6 +55,7 @@ public sealed class BotWorldSystem : ModSystem
 		Stations.Reset();
 		HouseInspector.Reset();
 		BaseStorage.Reset();
+		ItemReservations.Clear();
 		ResourceSources.Reset();
 		ProgressionPlanner.Reset();
 	}
@@ -96,9 +97,10 @@ public sealed class BotWorldSystem : ModSystem
 
 	static void Initialize()
 	{
-		if (Factions.Count == 0)
-			CreateFactionsFromConfig();
+		GrowToConfig();
 		DesignMissingHouses();
+		foreach (var faction in Factions)
+			BotDiagnostics.LogWorld($"[{faction.Name}] base site {faction.BaseTile}:{TerrainDump.Around(faction.BaseTile, 45, 25)}");
 		AssignAvatarSlots();
 		foreach (var bot in Bots)
 		{
@@ -108,17 +110,45 @@ public sealed class BotWorldSystem : ModSystem
 		initialized = true;
 	}
 
-	static void CreateFactionsFromConfig()
+	const int MinimumBaseSeparation = 150;
+
+	static void GrowToConfig()
 	{
 		var config = ModContent.GetInstance<AutoTerraConfig>();
 		Relation = config.Relation;
-		for (int index = 0; index < config.FactionCount; index++)
+		bool firstSetup = Factions.Count == 0;
+		for (int index = Factions.Count; index < config.FactionCount; index++)
 		{
-			var faction = new Faction { Id = index, BaseTile = FindBaseTile(index, config.FactionCount) };
-			Factions.Add(faction);
-			for (int member = 0; member < config.BotsPerFaction; member++)
-				Bots.Add(Bot.Create(nextBotId++, faction, Main.rand, Bots.Select(bot => bot.Name).ToHashSet()));
+			var baseTile = firstSetup ? FindBaseTile(index, config.FactionCount) : FindBaseTileAwayFromOthers();
+			Factions.Add(new Faction { Id = index, BaseTile = baseTile });
 		}
+		foreach (var faction in Factions)
+		{
+			int members = Bots.Count(bot => bot.FactionId == faction.Id);
+			if (members >= config.BotsPerFaction)
+				continue;
+			for (; members < config.BotsPerFaction; members++)
+				Bots.Add(Bot.Create(nextBotId++, faction, Main.rand, Bots.Select(bot => bot.Name).ToHashSet()));
+			faction.ForgetSettlement();
+		}
+		Building.HouseInspector.Reset();
+		Building.BaseStorage.Reset();
+	}
+
+	static Point FindBaseTileAwayFromOthers()
+	{
+		for (int step = 1; step < Main.maxTilesX / BaseSpacingTiles; step++)
+		{
+			foreach (int direction in new[] { 1, -1 })
+			{
+				int x = Main.spawnTileX + direction * step * BaseSpacingTiles;
+				if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
+					continue;
+				if (Factions.All(faction => System.Math.Abs(faction.BaseTile.X - x) >= MinimumBaseSeparation))
+					return FindBaseTileNear(x);
+			}
+		}
+		return FindBaseTileNear(Main.spawnTileX);
 	}
 
 	static void DesignMissingHouses()
@@ -138,7 +168,12 @@ public sealed class BotWorldSystem : ModSystem
 	static Point FindBaseTile(int index, int count)
 	{
 		float offset = (index - (count - 1) / 2f) * BaseSpacingTiles;
-		int preferredX = Utils.Clamp(Main.spawnTileX + (int)offset, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+		return FindBaseTileNear(Main.spawnTileX + (int)offset);
+	}
+
+	static Point FindBaseTileNear(int targetX)
+	{
+		int preferredX = Utils.Clamp(targetX, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
 		int bestX = preferredX;
 		float bestScore = float.MaxValue;
 		for (int x = preferredX - BaseSearchRadius; x <= preferredX + BaseSearchRadius; x += 2)

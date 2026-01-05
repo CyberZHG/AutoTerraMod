@@ -24,6 +24,8 @@ public sealed record BuildHouseStep(BuildOperation Operation) : PlanStep;
 
 public sealed record WithdrawStep(int ItemType, int Amount) : PlanStep;
 
+public sealed record DeliverStep(int ItemType, int RecipientId) : PlanStep;
+
 public abstract record ResourceSource;
 
 public sealed record TileSource(ISet<int> TileTypes, bool IsTree) : ResourceSource;

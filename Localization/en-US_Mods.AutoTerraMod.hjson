@@ -44,6 +44,7 @@ Configs: {
 }
 
 Keybinds: {
+	PlayInPerson.DisplayName: Toggle spectating / playing in person
 	BotInventory.DisplayName: Toggle followed bot inventory
 	NextBot.DisplayName: Follow next bot
 	PreviousBot.DisplayName: Follow previous bot
@@ -80,6 +81,7 @@ Aspirations: {
 }
 
 Tasks: {
+	Deliver: Delivering materials
 	Escape: Escaping
 	Treasure: Collecting treasure
 	Store: Storing items
@@ -101,6 +103,7 @@ Tasks: {
 }
 
 Plans: {
+	Deliver: Bring {0} to {1}
 	Withdraw: Take {0} x{1} from storage
 	Gather: Gather {0} x{1}
 	Craft: Craft {0}
@@ -110,6 +113,11 @@ Plans: {
 }
 
 UI: {
+	Unbound: unbound
+	PlayingInPerson: You join the game. Press again to spectate.
+	BackToSpectating: Back to spectating.
+	BossProgress: Bosses defeated {0}/{1} - next: {2}
+	AllBossesDefeated: all defeated
 	Stalled: No progress for {0}s
 	SettlementProgress: "{0}/{1} buildings ({2}, {3})"
 	InventoryOf: "{0}'s inventory (read-only)"
@@ -122,7 +130,7 @@ UI: {
 	FreeCameraOff: Free camera off
 	BotDied: "{0} of {1} has died."
 	FreeCamera: Free camera
-	Controls: '''[ / ] switch bot   \ free camera   I inventory'''
+	Controls: "{0}/{1} switch bot   {2} free camera   {3} inventory   {4} spectate/play"
 	Watching: "{0}  [{1}]  {2} / {3}"
 	Vitals: HP {0}/{1}   MP {2}/{3}   Defense {4}
 	Task: Task: {0} {1}

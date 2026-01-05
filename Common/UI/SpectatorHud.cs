@@ -57,8 +57,12 @@ public sealed class SpectatorHud : ModSystem
 			lines.Add((Text("UI.FreeCamera"), Color.White));
 		lines.Add(("", Color.White));
 		DescribeFactions(lines);
-		if (SpectatorSystem.IsSpectating)
-			lines.Add((Text("UI.Controls"), Color.Gray));
+		lines.Add((Text("UI.Controls",
+			SpectatorSystem.KeysOf(SpectatorSystem.PreviousBotKey),
+			SpectatorSystem.KeysOf(SpectatorSystem.NextBotKey),
+			SpectatorSystem.KeysOf(SpectatorSystem.FreeCameraKey),
+			SpectatorSystem.KeysOf(SpectatorSystem.InventoryKey),
+			SpectatorSystem.KeysOf(SpectatorSystem.PlayInPersonKey)), Color.Gray));
 
 		var position = new Vector2(PanelLeft, PanelTop);
 		foreach (var (text, color) in lines)
@@ -103,12 +107,15 @@ public sealed class SpectatorHud : ModSystem
 		PlaceStationStep place => Text("Plans.Place", Lang.GetItemNameValue(place.ItemType)),
 		BuildHouseStep build => Text("Plans.Build", Text($"BuildActions.{build.Operation.Action}")),
 		WithdrawStep withdraw => Text("Plans.Withdraw", Lang.GetItemNameValue(withdraw.ItemType), withdraw.Amount),
+		DeliverStep deliver => Text("Plans.Deliver", Lang.GetItemNameValue(deliver.ItemType), BotWorldSystem.FindBot(deliver.RecipientId)?.Name ?? "?"),
 		_ => Text("Plans.Idle")
 	};
 
 	static void DescribeFactions(List<(string, Color)> lines)
 	{
 		lines.Add((Text($"UI.Relation{BotWorldSystem.Relation}"), Color.Gold));
+		var nextBoss = WorldBosses.NextUndefeated;
+		lines.Add((Text("UI.BossProgress", WorldBosses.DefeatedCount, WorldBosses.InProgressionOrder.Count, nextBoss?.Name ?? Text("UI.AllBossesDefeated")), Color.Gold));
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var members = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).ToList();

@@ -79,6 +79,9 @@ public static class Kit
 			case WithdrawStep withdraw:
 				types.Add(withdraw.ItemType);
 				break;
+			case DeliverStep deliver:
+				types.Add(deliver.ItemType);
+				break;
 			case PlaceStationStep place:
 				types.Add(place.ItemType);
 				break;

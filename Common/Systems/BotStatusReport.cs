@@ -21,7 +21,7 @@ public sealed class BotStatusReport : ModSystem
 		ticksSinceReport = 0;
 		if (!ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging)
 			return;
-		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}):");
+		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}):");
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
@@ -63,6 +63,7 @@ public sealed class BotStatusReport : ModSystem
 		PlaceStationStep place => $"place {Lang.GetItemNameValue(place.ItemType)}",
 		BuildHouseStep build => $"build {build.Operation.Action} {build.Operation.Tile} in #{build.Operation.Structure}",
 		WithdrawStep withdraw => $"withdraw {Lang.GetItemNameValue(withdraw.ItemType)} x{withdraw.Amount}",
+		DeliverStep deliver => $"deliver {Lang.GetItemNameValue(deliver.ItemType)} to #{deliver.RecipientId}",
 		_ => plan.GetType().Name
 	};
 }

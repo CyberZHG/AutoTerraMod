@@ -16,6 +16,12 @@ public static class BotDiagnostics
 			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"[{bot.Faction.Name}/{bot.Name}] {message}");
 	}
 
+	public static void LogWorld(string message)
+	{
+		if (Enabled)
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info(message);
+	}
+
 	public static void LogDecision(Bot bot, BotTask task, PlanStep plan)
 	{
 		if (Enabled)
@@ -29,6 +35,7 @@ public static class BotDiagnostics
 		PlaceStationStep place => $"Place {Lang.GetItemNameValue(place.ItemType)}",
 		BuildHouseStep build => $"Build {build.Operation.Action} at {build.Operation.Tile}",
 		WithdrawStep withdraw => $"Withdraw {Lang.GetItemNameValue(withdraw.ItemType)} x{withdraw.Amount}",
+		DeliverStep deliver => $"Deliver {Lang.GetItemNameValue(deliver.ItemType)} to #{deliver.RecipientId}",
 		_ => plan.GetType().Name
 	};
 }

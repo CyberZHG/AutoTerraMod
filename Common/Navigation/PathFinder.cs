@@ -34,6 +34,10 @@ public static class PathFinder
 	const int MaxExpandedNodes = 2000;
 	const int MaxSearchRadius = 90;
 	const int ExpansionBudgetPerTick = 3000;
+	const float HeuristicWeight = 1.3f;
+	const int LongTripTiles = 60;
+	const int WaypointTiles = 50;
+	const int WaypointRadius = 4;
 
 	static readonly int[] Directions = { -1, 1 };
 	static readonly Dictionary<Point, bool> hazardCache = new();
@@ -72,9 +76,15 @@ public static class PathFinder
 
 	public static float CenterXOf(int nodeX) => (nodeX + 1) * 16f;
 
-	public static PathResult Find(Point start, Point goal, int goalRadius, NavigationAbilities abilities, ISet<(Point from, Point to)> forbiddenSteps = null)
+	public static PathResult Find(Point start, Point goal, int goalRadius, NavigationAbilities abilities, ISet<(Point from, Point to)> forbiddenSteps = null, int searchMultiplier = 1)
 	{
+		int maxExpanded = MaxExpandedNodes * searchMultiplier;
 		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
+		if (Heuristic(start, goal) > LongTripTiles)
+		{
+			goal = WaypointToward(start, goal);
+			goalRadius = Math.Max(goalRadius, WaypointRadius);
+		}
 		hazardCache.Clear();
 		diggableCache.Clear();
 		bodyClearCache.Clear();
@@ -83,12 +93,12 @@ public static class PathFinder
 		var cameFrom = new Dictionary<Point, (Point parent, MoveKind kind)>();
 		var costSoFar = new Dictionary<Point, float> { [start] = 0f };
 		var edges = new List<Edge>(32);
-		open.Enqueue(start, Heuristic(start, goal));
+		open.Enqueue(start, HeuristicWeight * Heuristic(start, goal));
 		var best = start;
 		float bestHeuristic = Heuristic(start, goal);
 		int expanded = 0;
 
-		while (open.TryDequeue(out var current, out _) && expanded++ < MaxExpandedNodes)
+		while (open.TryDequeue(out var current, out _) && expanded++ < maxExpanded)
 		{
 			budgetUsed++;
 			Systems.Perf.CountPathNodes(1);
@@ -113,7 +123,7 @@ public static class PathFinder
 					continue;
 				costSoFar[edge.To] = cost;
 				cameFrom[edge.To] = (current, edge.Kind);
-				open.Enqueue(edge.To, cost + Heuristic(edge.To, goal));
+				open.Enqueue(edge.To, cost + HeuristicWeight * Heuristic(edge.To, goal));
 			}
 		}
 		return best == start ? PathResult.None : new PathResult(Reconstruct(cameFrom, start, best), false);
@@ -123,6 +133,13 @@ public static class PathFinder
 		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2;
 
 	static float Heuristic(Point a, Point b) => Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
+
+	static Point WaypointToward(Point start, Point goal)
+	{
+		float distance = Heuristic(start, goal);
+		float fraction = WaypointTiles / distance;
+		return new Point(start.X + (int)((goal.X - start.X) * fraction), start.Y + (int)((goal.Y - start.Y) * fraction));
+	}
 
 	static List<PathNode> Reconstruct(Dictionary<Point, (Point parent, MoveKind kind)> cameFrom, Point start, Point end)
 	{

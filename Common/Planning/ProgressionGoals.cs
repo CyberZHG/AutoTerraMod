@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AutoTerraMod.Common.Bots;
 using AutoTerraMod.Common.Building;
+using AutoTerraMod.Common.Systems;
 using Terraria.ID;
 
 namespace AutoTerraMod.Common.Planning;
@@ -159,6 +160,42 @@ public sealed class StructureGoal : ProgressionGoal
 	}
 }
 
+public sealed class SupportConstructionGoal : ProgressionGoal
+{
+	const float MinimumCooperation = 0.4f;
+	const int BatchSize = 40;
+
+	public override bool AppliesTo(Bot bot) =>
+		bot.Faction.Settlement != null && bot.Personality.Cooperation >= MinimumCooperation && !HouseInspector.IsDesignatedBuilder(bot);
+
+	public override bool IsMet(Bot bot) => Need(bot, out _) == null;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Need(bot, out var builder) is not BillLine need)
+			return PlanStep.Idle;
+		int batch = System.Math.Min(need.Amount, BatchSize);
+		return Inventory.Count(bot.Avatar, need.ItemType) >= batch
+			? new DeliverStep(need.ItemType, builder.Id)
+			: ProgressionPlanner.Obtain(bot, need.ItemType, batch);
+	}
+
+	static BillLine? Need(Bot bot, out Bot builder)
+	{
+		builder = BotWorldSystem.Bots
+			.Where(member => member.FactionId == bot.FactionId && member != bot && member.IsAlive)
+			.MaxBy(member => member.Personality.Building);
+		var settlement = bot.Faction.Settlement;
+		if (builder == null || settlement == null)
+			return null;
+		var structure = settlement.Structures.FirstOrDefault(candidate => !HouseInspector.IsFinished(bot.Faction, candidate));
+		if (structure == null)
+			return null;
+		var materials = HouseInspector.MaterialsFor(bot.Faction);
+		return ConstructionBill.FirstShortfall(builder, ConstructionBill.For(structure, materials), materials);
+	}
+}
+
 public sealed class StyleGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -189,6 +226,7 @@ public static class ProgressionGoals
 			new StationGoal(TileID.WorkBenches, ItemID.WorkBench),
 			new ReserveGoal(ItemID.Torch, 10, 30),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
+			new SupportConstructionGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new StyleGoal(new ReserveGoal(ItemID.WoodenArrow, 60, 120), CombatStyle.Ranged),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),

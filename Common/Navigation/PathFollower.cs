@@ -24,6 +24,7 @@ public sealed class PathFollower
 	const int ReplanIntervalTicks = 180;
 	const int StepTimeoutTicks = 120;
 	const int ForgetFailedStepsTicks = 1800;
+	const int ExtendedSearchMultiplier = 3;
 	const int OffPathTolerance = 4;
 	const int GoalShiftTolerance = 4;
 	const int MinimumReplanGapTicks = 20;
@@ -107,10 +108,14 @@ public sealed class PathFollower
 		return sinceLast >= (HasNoRoute ? NoRouteBackoffTicks : MinimumReplanGapTicks);
 	}
 
+	public bool ExtendNextSearch { get; set; }
+
 	void Replan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
 	{
 		int goalRadius = Math.Max(1, (int)(arriveRadius / 16f));
-		path = PathFinder.Find(feet, goal, goalRadius, abilities, failedSteps);
+		int multiplier = ExtendNextSearch ? ExtendedSearchMultiplier : 1;
+		ExtendNextSearch = false;
+		path = PathFinder.Find(feet, goal, goalRadius, abilities, failedSteps, multiplier);
 		index = 0;
 		plannedGoal = goal;
 		plannedAt = Main.GameUpdateCount;

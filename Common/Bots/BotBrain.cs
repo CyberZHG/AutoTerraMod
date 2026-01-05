@@ -46,6 +46,7 @@ public sealed class BotBrain
 			new LootTask(bot),
 			new TreasureTask(bot),
 			new StoreTask(bot),
+			new DeliverTask(bot),
 			new WithdrawTask(bot),
 			new ReturnHomeTask(bot),
 			new ExploreTask(bot),

@@ -26,6 +26,8 @@ public sealed class Faction
 	public HashSet<Point> Scaffolding { get; } = new();
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);
 	public HouseBlueprint Blueprint => Settlement?.Hall;
+
+	public void ForgetSettlement() => settlement = null;
 	int MemberCount => System.Math.Max(1, Systems.BotWorldSystem.Bots.Count(bot => bot.FactionId == Id));
 
 	public Color Color => Palette[Id % Palette.Length];

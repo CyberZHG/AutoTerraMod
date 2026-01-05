@@ -37,7 +37,21 @@ public sealed class BotMotor
 	public BotMotor(Bot bot) => this.bot = bot;
 
 	public bool HasArrived { get; private set; }
-	public bool IsStuck => stalledChecks >= StalledChecksBeforeStuck;
+	public bool IsStuck
+	{
+		get
+		{
+			bool stuck = stalledChecks >= StalledChecksBeforeStuck;
+			if (stuck && !stuckReported)
+			{
+				stuckReported = true;
+				bot.Watchdog.ReportNavigationFailure();
+			}
+			return stuck;
+		}
+	}
+
+	bool stuckReported;
 	public bool WantsToDropThroughPlatforms { get; private set; }
 	public Point? TileToDig { get; private set; }
 	public Point? ScaffoldTile { get; private set; }
@@ -51,15 +65,21 @@ public sealed class BotMotor
 	{
 		if (destination is not Vector2 current || Vector2.DistanceSquared(current, target) > 32f * 32f)
 		{
+			bool retryingSameTarget = lastFailedDestination is Vector2 failed && Vector2.DistanceSquared(failed, target) < 64f * 64f;
 			ResetProgress();
 			follower.Invalidate();
+			follower.ExtendNextSearch = retryingSameTarget;
 		}
 		destination = target;
 		arriveRadius = radius;
 	}
 
+	Vector2? lastFailedDestination;
+
 	public void Stop()
 	{
+		if (stalledChecks >= StalledChecksBeforeStuck)
+			lastFailedDestination = destination;
 		destination = null;
 		HasArrived = false;
 		ResetProgress();
@@ -68,6 +88,7 @@ public sealed class BotMotor
 
 	void ResetProgress()
 	{
+		stuckReported = false;
 		stalledChecks = 0;
 		progressTimer = 0;
 		closestDistance = float.MaxValue;

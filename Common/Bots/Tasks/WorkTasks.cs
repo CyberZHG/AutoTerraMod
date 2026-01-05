@@ -100,7 +100,7 @@ public sealed class CraftTask : BotTask
 		Bot.Motor.MoveTo(station.ToWorldCoordinates(), StationArrivalRadius);
 		if (Bot.Motor.IsStuck)
 		{
-			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}");
+			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}; motor: {Bot.Motor.Describe()}{World.TerrainDump.Around(Bot.CenterTile, 30, 12)}");
 			IsFinished = true;
 		}
 	}

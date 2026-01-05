@@ -44,6 +44,7 @@ Configs: {
 }
 
 Keybinds: {
+	PlayInPerson.DisplayName: 切换观战 / 亲自游玩
 	BotInventory.DisplayName: 显示/隐藏角色背包
 	NextBot.DisplayName: 观战下一个角色
 	PreviousBot.DisplayName: 观战上一个角色
@@ -80,6 +81,7 @@ Aspirations: {
 }
 
 Tasks: {
+	Deliver: 送材料
 	Escape: 脱困
 	Treasure: 挖生命水晶
 	Store: 存仓库
@@ -101,6 +103,7 @@ Tasks: {
 }
 
 Plans: {
+	Deliver: 把{0}送给{1}
 	Withdraw: 从仓库取 {0} x{1}
 	Gather: 收集 {0} x{1}
 	Craft: 合成 {0}
@@ -110,6 +113,11 @@ Plans: {
 }
 
 UI: {
+	Unbound: 未绑定
+	PlayingInPerson: 你亲自下场了，再按一次回到观战。
+	BackToSpectating: 回到观战。
+	BossProgress: 世界 Boss {0}/{1}，下一个：{2}
+	AllBossesDefeated: 全部击败
 	Stalled: 已 {0} 秒无进展
 	SettlementProgress: 已建成 {0}/{1} 栋（{2}，{3}）
 	InventoryOf: "{0} 的背包（只读）"
@@ -122,7 +130,7 @@ UI: {
 	FreeCameraOff: 自由镜头：关
 	BotDied: "{1}的{0}阵亡了。"
 	FreeCamera: 自由镜头
-	Controls: '''[ / ] 切换角色   \ 自由镜头   I 背包'''
+	Controls: "{0}/{1} 切换角色   {2} 自由镜头   {3} 背包   {4} 观战/亲自玩"
 	Watching: "{0}  [{1}]  {2} / {3}"
 	Vitals: 生命 {0}/{1}   魔力 {2}/{3}   防御 {4}
 	Task: 任务：{0} {1}

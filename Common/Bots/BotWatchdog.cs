@@ -13,6 +13,8 @@ public sealed class BotWatchdog
 	const int TravelProgressTiles = 12;
 	const int TrappedRadiusTiles = 10;
 	const int ForceEscapeStallTicks = 3600;
+	const int NavigationFailureWindowTicks = 3600;
+	const int NavigationFailuresBeforeEscape = 3;
 
 	readonly Bot bot;
 	uint lastProgress;
@@ -21,6 +23,7 @@ public sealed class BotWatchdog
 	Point trapAnchor;
 	uint trapAnchorSince;
 	int checkTimer;
+	readonly System.Collections.Generic.Queue<uint> navigationFailures = new();
 
 	public BotWatchdog(Bot bot)
 	{
@@ -40,6 +43,22 @@ public sealed class BotWatchdog
 		EscapeRequested = false;
 		travelAnchor = trapAnchor = bot.CenterTile;
 		trapAnchorSince = Main.GameUpdateCount;
+	}
+
+	public void ReportNavigationFailure()
+	{
+		uint now = Main.GameUpdateCount;
+		navigationFailures.Enqueue(now);
+		while (navigationFailures.Count > 0 && now - navigationFailures.Peek() > NavigationFailureWindowTicks)
+			navigationFailures.Dequeue();
+		if (navigationFailures.Count < NavigationFailuresBeforeEscape || EscapeRequested)
+			return;
+		navigationFailures.Clear();
+		EscapeRequested = true;
+		EscapeDirection = -EscapeDirection;
+		bot.Brain.SuppressCurrentGoal();
+		BotDiagnostics.Log(bot, $"watchdog: repeated navigation failures near {bot.CenterTile}, escaping");
+		bot.Brain.ForceReconsider();
 	}
 
 	public void EscapeFinished()
