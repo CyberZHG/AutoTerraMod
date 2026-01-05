@@ -10,6 +10,7 @@ public static class Inventory
 {
 	public const int StorageSlots = 58;
 	const int MainSlots = 50;
+	public const int MainSlotCount = MainSlots;
 
 	public static IEnumerable<Item> Items(Player avatar) => avatar.inventory.Take(StorageSlots).Where(item => !item.IsAir);
 

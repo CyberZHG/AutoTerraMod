@@ -56,7 +56,11 @@ public sealed class DeliverTask : BotTask
 			return;
 		}
 		Bot.Motor.Stop();
-		DropFor(builder, recipient.Center);
+		var sample = Inventory.Items(Avatar).First(item => item.type == step.ItemType);
+		if (Inventory.HasRoomFor(builder.Avatar, sample))
+			DropFor(builder, recipient.Center);
+		else
+			BotDiagnostics.Log(Bot, $"{builder.Name} has no room for {sample.Name}, keeping it");
 		IsFinished = true;
 	}
 

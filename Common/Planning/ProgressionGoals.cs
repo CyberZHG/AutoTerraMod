@@ -175,9 +175,10 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 		if (Need(bot, out var builder) is not BillLine need)
 			return PlanStep.Idle;
 		int batch = System.Math.Min(need.Amount, BatchSize);
-		return Inventory.Count(bot.Avatar, need.ItemType) >= batch
-			? new DeliverStep(need.ItemType, builder.Id)
-			: ProgressionPlanner.Obtain(bot, need.ItemType, batch);
+		if (Inventory.Count(bot.Avatar, need.ItemType) < batch)
+			return ProgressionPlanner.Obtain(bot, need.ItemType, batch);
+		bool canHandOver = BaseStorage.HasRoom(bot.Faction) || Inventory.UsedSlots(builder.Avatar) < Inventory.MainSlotCount;
+		return canHandOver ? new DeliverStep(need.ItemType, builder.Id) : PlanStep.Idle;
 	}
 
 	static BillLine? Need(Bot bot, out Bot builder)

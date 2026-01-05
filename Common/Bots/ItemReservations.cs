@@ -5,7 +5,7 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class ItemReservations
 {
-	const int ReservationTicks = 300;
+	const int ReservationTicks = 1800;
 
 	static readonly Dictionary<int, (int botId, uint until)> reservations = new();
 
