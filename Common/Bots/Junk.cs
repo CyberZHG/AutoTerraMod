@@ -20,7 +20,7 @@ public static class Junk
 		[ItemID.StoneBlock] = 150,
 		[ItemID.SandBlock] = 100,
 		[ItemID.ClayBlock] = 100,
-		[ItemID.Acorn] = 10
+		[ItemID.Acorn] = 20
 	};
 
 	public static bool IsUnwanted(Bot bot, Item item)
@@ -90,6 +90,8 @@ public static class Junk
 
 	static int ReserveFor(Item item)
 	{
+		if (item.createTile == TileID.Tombstones)
+			return 0;
 		if (Reserves.TryGetValue(item.type, out int reserve))
 			return reserve;
 		if (IsGrassSeed(item))

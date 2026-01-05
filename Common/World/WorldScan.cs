@@ -40,7 +40,7 @@ public static class WorldScan
 	{
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y))
 				knowledge.Remember(new Point(x, y), tileType);
 		});
 	}

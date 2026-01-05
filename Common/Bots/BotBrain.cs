@@ -47,6 +47,7 @@ public sealed class BotBrain
 			new TreasureTask(bot),
 			new StoreTask(bot),
 			new DeliverTask(bot),
+			new TidyCampTask(bot),
 			new WithdrawTask(bot),
 			new ReturnHomeTask(bot),
 			new ExploreTask(bot),
@@ -105,6 +106,7 @@ public sealed class BotBrain
 		BreakFailureLoops();
 		Equipment.EquipBestArmor(bot.Avatar);
 		StatBoosters.ConsumeUsable(bot);
+		TreePlanter.PlantIfUseful(bot);
 		if (++reconsiderCount % ObserveEveryReconsiders == 0)
 		{
 			using var _ = Systems.Perf.Measure(Systems.PerfSection.WorldScans);

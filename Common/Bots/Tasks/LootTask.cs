@@ -16,6 +16,7 @@ public sealed class LootTask : BotTask
 
 	int chestIndex = -1;
 	int openTimer;
+	bool emptied;
 
 	public LootTask(Bot bot) : base(bot) { }
 
@@ -36,6 +37,7 @@ public sealed class LootTask : BotTask
 	{
 		base.Start();
 		openTimer = 0;
+		emptied = false;
 	}
 
 	public override void Tick()
@@ -60,11 +62,21 @@ public sealed class LootTask : BotTask
 			SoundEngine.PlaySound(SoundID.MenuOpen, chestTile.ToWorldCoordinates());
 		if (openTimer < OpenDelayTicks)
 			return;
-		TakeEverything(chest);
-		Bot.Watchdog.RecordProgress();
-		SoundEngine.PlaySound(SoundID.MenuClose, chestTile.ToWorldCoordinates());
-		IsFinished = true;
+		if (!emptied)
+		{
+			TakeEverything(chest);
+			Bot.Watchdog.RecordProgress();
+			SoundEngine.PlaySound(SoundID.MenuClose, chestTile.ToWorldCoordinates());
+			emptied = true;
+		}
+		if (!ShouldCarryHome(chest) || Bot.Hands.Dig(chestTile) is not ToolResult.Working)
+			IsFinished = true;
 	}
+
+	bool ShouldCarryHome(Chest chest) =>
+		chest.item.All(item => item == null || item.IsAir)
+		&& Inventory.UsedSlots(Avatar) < Inventory.MainSlotCount
+		&& Bot.Hands.BestPickaxe != null;
 
 	void TakeEverything(Chest chest)
 	{
