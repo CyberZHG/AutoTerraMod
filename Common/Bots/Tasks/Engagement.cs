@@ -11,6 +11,8 @@ public static class Engagement
 {
 	const float RangedStandoff = 16f * 14f;
 	const float TooCloseForRanged = 16f * 3f;
+	const float BossStandoff = 12f;
+	const float StandingTolerance = 8f;
 
 	public static bool IsHostileTarget(NPC npc) =>
 		npc.active
@@ -62,14 +64,18 @@ public static class Engagement
 	{
 		if (bot.Motor.IsStuck)
 		{
-			bot.IgnoreTarget(target);
 			bot.Motor.Stop();
-			return;
+			if (!target.boss)
+			{
+				bot.IgnoreTarget(target);
+				return;
+			}
 		}
+		var approach = target.boss ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
 		if (weapon == null)
 		{
-			bot.Motor.MoveTo(target.Center, 24f);
+			bot.Motor.MoveTo(approach, 24f);
 			return;
 		}
 		var body = bot.Npc;
@@ -88,7 +94,7 @@ public static class Engagement
 			}
 			else
 			{
-				bot.Motor.MoveTo(target.Center, RangedStandoff * 0.5f);
+				bot.Motor.MoveTo(approach, RangedStandoff * 0.5f);
 			}
 			return;
 		}
@@ -97,6 +103,19 @@ public static class Engagement
 			bot.Motor.Face(target.Center);
 			bot.Hands.Strike(target, weapon);
 		}
-		bot.Motor.MoveTo(target.Center, BotHands.MeleeReach(weapon) * 0.5f);
+		if (target.boss)
+		{
+			bot.Motor.MoveTo(BossStandingSpot(body, target), StandingTolerance);
+			return;
+		}
+		bot.Motor.MoveTo(approach, BotHands.MeleeReach(weapon) * 0.5f);
+	}
+
+	static Vector2 BossStandingSpot(NPC body, NPC boss)
+	{
+		int side = body.Center.X >= boss.Center.X ? 1 : -1;
+		float x = boss.Center.X + side * (boss.width / 2f + body.width / 2f + BossStandoff);
+		float y = boss.velocity.Y == 0f ? boss.Bottom.Y - body.height / 2f : body.Center.Y;
+		return new Vector2(x, y);
 	}
 }

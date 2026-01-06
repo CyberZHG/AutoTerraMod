@@ -54,9 +54,33 @@ public sealed class FightTask : BotTask
 	public override string NameKey => "Fight";
 	public override bool IsUrgent => closeThreat;
 
+	const float BossEngagementRange = 16f * 150f;
+	const float BossPriority = 92f;
+	const float InterruptPriority = 95f;
+	const float AmbushRadius = 16f * 10f;
+	const float BlockingRadius = 16f * 5f;
+	const float BossDrinkHealthFraction = 0.5f;
+	const float DrinkHealthFraction = 0.35f;
+
 	public override float Evaluate()
 	{
 		closeThreat = false;
+		var boss = Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossEngagementRange);
+		if (boss != null && !Bot.IsIgnoring(boss))
+		{
+			target = boss;
+			closeThreat = true;
+			Detail = boss.GivenOrTypeName;
+			return HealthFraction < Traits.FleeHealthFraction ? BossPriority * 0.3f : BossPriority;
+		}
+		var interferer = Interferer();
+		if (interferer != null)
+		{
+			target = interferer;
+			closeThreat = true;
+			Detail = interferer.GivenOrTypeName;
+			return HealthFraction < Traits.FleeHealthFraction ? InterruptPriority * 0.3f : InterruptPriority;
+		}
 		float aggroRadius = Traits.Combat >= BrawlerThreshold ? 16f * (8f + Traits.Combat * 22f) : CloseThreatDistance;
 		target = Engagement.NearestHostile(Bot, aggroRadius, true);
 		float score;
@@ -77,6 +101,20 @@ public sealed class FightTask : BotTask
 		return HealthFraction < Traits.FleeHealthFraction ? score * 0.3f : score;
 	}
 
+	NPC Interferer()
+	{
+		var attacker = Bot.Vitals.RecentAttacker;
+		if (attacker != null && Engagement.IsHostileTarget(attacker) && !Bot.IsIgnoring(attacker) && Vector2.Distance(Bot.Center, attacker.Center) < AmbushRadius)
+			return attacker;
+		if (Bot.Motor.Destination is not Vector2 destination)
+			return null;
+		var blocker = Engagement.NearestHostile(Bot, BlockingRadius, true);
+		if (blocker == null)
+			return null;
+		bool ahead = System.Math.Sign(blocker.Center.X - Bot.Center.X) == System.Math.Sign(destination.X - Bot.Center.X);
+		return ahead ? blocker : null;
+	}
+
 	public override void Tick()
 	{
 		if (target == null || !Engagement.IsHostileTarget(target) || Bot.IsIgnoring(target))
@@ -84,6 +122,8 @@ public sealed class FightTask : BotTask
 			IsFinished = true;
 			return;
 		}
+		if (HealthFraction < (target.boss ? BossDrinkHealthFraction : DrinkHealthFraction))
+			Bot.Hands.DrinkHealingPotion();
 		Engagement.Fight(Bot, target);
 	}
 }

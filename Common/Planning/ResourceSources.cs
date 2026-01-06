@@ -28,6 +28,8 @@ public static class ResourceSources
 
 	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree }, true);
 
+	static readonly TileSource SurfaceMushrooms = new(new HashSet<int> { TileID.Plants }, false, (x, y) => World.WorldScan.IsMushroom(x, y, TileID.Plants), true);
+
 	static Dictionary<int, TileSource> tileSources;
 	static Dictionary<int, NpcSource> npcSources;
 
@@ -41,6 +43,8 @@ public static class ResourceSources
 	{
 		if (WoodItems.Contains(itemType))
 			return Trees;
+		if (itemType == ItemID.Mushroom)
+			return SurfaceMushrooms;
 		tileSources ??= BuildTileSources();
 		if (tileSources.TryGetValue(itemType, out var tileSource))
 			return tileSource;

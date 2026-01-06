@@ -26,11 +26,21 @@ public sealed class BotStatusReport : ModSystem
 		{
 			var settlement = faction.Settlement;
 			int built = settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
-			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}");
+			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}{DescribeBossReadiness(faction)}");
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}
 		Mod.Logger.Info(report.ToString());
+	}
+
+	static string DescribeBossReadiness(Factions.Faction faction)
+	{
+		var challenge = Bosses.BossCredit.NextChallengeFor(faction);
+		var summoner = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).MaxBy(bot => bot.Personality.Combat);
+		if (challenge == null || summoner == null)
+			return "";
+		var report = Bosses.BossReadiness.Evaluate(faction, challenge, summoner);
+		return $"\n    next boss {challenge.Name}: kill~{report.KillSeconds:0}s survive~{report.SurviveSeconds:0}s need x{report.RequiredRatio:0.0} ready={report.IsReady}";
 	}
 
 	static string DescribeConstruction(Factions.Faction faction)

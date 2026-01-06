@@ -58,6 +58,7 @@ public sealed class BotMotor
 	public Point? RopeTile { get; private set; }
 	public Point? BridgeTile { get; private set; }
 	public bool HasRoute => destination != null && follower.HasPath;
+	public Vector2? Destination => destination;
 	public bool ScaffoldingAllowed { get; set; }
 	public bool ClimbingStraightUp { get; set; }
 

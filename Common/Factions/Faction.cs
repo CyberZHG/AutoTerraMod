@@ -24,6 +24,8 @@ public sealed class Faction
 	public HouseDesign HouseDesign { get; set; }
 	public FactionKnowledge Knowledge { get; } = new();
 	public HashSet<Point> Scaffolding { get; } = new();
+	public HashSet<int> DefeatedBosses { get; } = new();
+	public (Vector2 point, uint until)? Rally { get; set; }
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);
 	public HouseBlueprint Blueprint => Settlement?.Hall;
 
@@ -46,6 +48,7 @@ public sealed class Faction
 		if (HouseDesign != null)
 			tag["house"] = HouseDesign.Save();
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
+		tag["bosses"] = DefeatedBosses.ToList();
 		return tag;
 	}
 
@@ -59,6 +62,8 @@ public sealed class Faction
 		};
 		foreach (var tile in tag.GetList<Vector2>("scaffolding"))
 			faction.Scaffolding.Add(new Point((int)tile.X, (int)tile.Y));
+		foreach (int boss in tag.GetList<int>("bosses"))
+			faction.DefeatedBosses.Add(boss);
 		return faction;
 	}
 }

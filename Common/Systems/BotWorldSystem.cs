@@ -58,6 +58,8 @@ public sealed class BotWorldSystem : ModSystem
 		ItemReservations.Clear();
 		ResourceSources.Reset();
 		ProgressionPlanner.Reset();
+		Bosses.BossCredit.Reset();
+		World.WaterFinder.Reset();
 	}
 
 	public override void SaveWorldData(TagCompound tag)
@@ -99,6 +101,7 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		GrowToConfig();
 		DesignMissingHouses();
+		HeadlessTestMode.PrepareScenario();
 		foreach (var faction in Factions)
 			BotDiagnostics.LogWorld($"[{faction.Name}] base site {faction.BaseTile}:{TerrainDump.Around(faction.BaseTile, 45, 25)}");
 		AssignAvatarSlots();

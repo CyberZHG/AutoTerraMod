@@ -45,6 +45,14 @@ public sealed class BotVitals
 
 	public int PotionSicknessTicks { get; set; }
 	public int LastHitDirection { get; private set; } = 1;
+
+	const int AttackerMemoryTicks = 180;
+
+	int lastAttacker = -1;
+	uint lastAttackedAt;
+
+	public NPC RecentAttacker =>
+		lastAttacker >= 0 && Main.GameUpdateCount - lastAttackedAt < AttackerMemoryTicks && Main.npc[lastAttacker].active ? Main.npc[lastAttacker] : null;
 	public float BreathFraction => Avatar.breathMax > 0 ? (float)Avatar.breath / Avatar.breathMax : 1f;
 
 	Player Avatar => bot.Avatar;
@@ -155,6 +163,8 @@ public sealed class BotVitals
 			if (!NPCLoader.CanHitPlayer(attacker, Avatar, ref cooldownSlot))
 				continue;
 			Hurt(Main.DamageVar(attacker.damage, -Avatar.luck), DirectionAwayFrom(body, attacker.Center));
+			lastAttacker = attacker.whoAmI;
+			lastAttackedAt = Main.GameUpdateCount;
 			return;
 		}
 	}

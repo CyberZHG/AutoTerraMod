@@ -93,12 +93,12 @@ public static class ProgressionPlanner
 
 	static PlanStep PlanRecipe(Context context, Recipe recipe, int depth)
 	{
-		if (recipe.Conditions.Count > 0)
+		if (!ConditionsAchievable(context.Bot, recipe))
 			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
 		foreach (int tile in recipe.requiredTile)
 		{
-			if (Stations.BaseHas(context.Bot.Faction, tile))
+			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
 			var stationItems = Stations.ItemsPlacing(tile);
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
@@ -122,6 +122,11 @@ public static class ProgressionPlanner
 		}
 		return new CraftStep(recipe);
 	}
+
+	static bool ConditionsAchievable(Bot bot, Recipe recipe) => recipe.Conditions.All(condition =>
+		condition == Condition.NearWater && World.WaterFinder.NearestShore(bot.Faction.BaseTile) != null);
+
+	public static bool NeedsWater(Recipe recipe) => recipe.Conditions.Contains(Condition.NearWater);
 
 	static int Readiness(Bot bot, int itemType)
 	{

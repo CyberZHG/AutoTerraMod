@@ -72,6 +72,11 @@ public sealed class CraftTask : BotTask
 			WalkToStation(missingStation);
 			return;
 		}
+		if (ProgressionPlanner.NeedsWater(recipe) && !WaterFinder.IsNearWater(Bot.CenterTile))
+		{
+			WalkToWater();
+			return;
+		}
 		Bot.Motor.Stop();
 		if (!Crafting.HasIngredients(Avatar, recipe))
 		{
@@ -87,9 +92,25 @@ public sealed class CraftTask : BotTask
 		IsFinished = true;
 	}
 
+	void WalkToWater()
+	{
+		if (WaterFinder.NearestShore(Bot.Faction.BaseTile) is not Point shore)
+		{
+			BotDiagnostics.Log(Bot, "no water found near base");
+			IsFinished = true;
+			return;
+		}
+		Bot.Motor.MoveTo(shore.ToWorldCoordinates(), StationArrivalRadius);
+		if (Bot.Motor.IsStuck)
+		{
+			BotDiagnostics.Log(Bot, $"stuck walking to water at {shore}");
+			IsFinished = true;
+		}
+	}
+
 	void WalkToStation(int stationTile)
 	{
-		var location = Stations.Locate(Bot.Faction, stationTile);
+		var location = Stations.LocateAnywhere(Bot.Faction, stationTile, Bot.CenterTile);
 		if (location is not Point station)
 		{
 			BotDiagnostics.Log(Bot, $"station tile {stationTile} not found at base");
@@ -222,7 +243,7 @@ public sealed class GatherTask : BotTask
 
 	bool TargetStillValid()
 	{
-		if (target is not Point tile || !Tiles.TileTypes.Contains(TileQuery.TypeAt(tile)))
+		if (target is not Point tile || !Tiles.TileTypes.Contains(TileQuery.TypeAt(tile)) || !Tiles.Accepts(tile.X, tile.Y))
 			return false;
 		return !Tiles.IsTree || TileQuery.IsTreeBase(tile.X, tile.Y);
 	}
@@ -238,12 +259,12 @@ public sealed class GatherTask : BotTask
 	{
 		var origin = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
-		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsTreeBase : (x, y) => !HouseInspector.IsProtected(x, y);
+		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsTreeBase : (x, y) => !HouseInspector.IsProtected(x, y) && Tiles.Accepts(x, y);
 		var visible = WorldScan.NearestVisibleTile(origin, Tiles.TileTypes, accept, unreachable, knowledge);
 		if (visible != null)
 			return visible;
 		var known = knowledge.NearestKnown(origin, Tiles.TileTypes, unreachable, KnowledgeSearchRadius);
-		return known is Point tile && (!Tiles.IsTree || TileQuery.IsTreeBase(tile.X, tile.Y)) ? known : null;
+		return known is Point tile && accept(tile.X, tile.Y) ? known : null;
 	}
 
 	void Prospect()
@@ -265,7 +286,7 @@ public sealed class GatherTask : BotTask
 	Vector2 ChooseProspectTarget()
 	{
 		var here = Bot.CenterTile;
-		if (Tiles.IsTree)
+		if (Tiles.IsTree || Tiles.OnSurface)
 		{
 			int x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, 50, Main.maxTilesX - 50);
 			return new Vector2(x * 16f, TileQuery.SurfaceY(x) * 16f - 24f);

@@ -197,6 +197,44 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	}
 }
 
+public sealed class BossGoal : ProgressionGoal
+{
+	const int ReadinessLogIntervalTicks = 1800;
+
+	uint lastReadinessLog;
+
+	public override bool AppliesTo(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) != null && IsSummoner(bot);
+
+	public override bool IsMet(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) == null;
+
+	public override string Describe() => "Boss";
+
+	public static bool IsSummoner(Bot bot) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Combat) == bot;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var challenge = Bosses.BossCredit.NextChallengeFor(bot.Faction);
+		if (Bosses.BossCatalog.IsBossAlive(challenge.BossType))
+			return PlanStep.Idle;
+		var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
+		LogReadiness(bot, challenge, report);
+		if (!report.IsReady)
+			return PlanStep.Idle;
+		if (Inventory.Count(bot.Avatar, challenge.SummonItem) == 0)
+			return ProgressionPlanner.Obtain(bot, challenge.SummonItem, 1);
+		return challenge.CanSummonNow(bot.Avatar) ? new SummonBossStep(challenge.BossType, challenge.SummonItem) : PlanStep.Idle;
+	}
+
+	void LogReadiness(Bot bot, Bosses.BossChallenge challenge, Bosses.ReadinessReport report)
+	{
+		if (Terraria.Main.GameUpdateCount - lastReadinessLog < ReadinessLogIntervalTicks)
+			return;
+		lastReadinessLog = Terraria.Main.GameUpdateCount;
+		BotDiagnostics.Log(bot, $"boss readiness for {challenge.Name}: fighters={report.Fighters} teamDps={report.TeamDps:0} bossLife={report.BossLife:0} kill={report.KillSeconds:0}s survive={report.SurviveSeconds:0}s needRatio={report.RequiredRatio:0.0} ready={report.IsReady}");
+	}
+}
+
 public sealed class StyleGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -228,6 +266,7 @@ public static class ProgressionGoals
 			new ReserveGoal(ItemID.Torch, 10, 30),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new SupportConstructionGoal(),
+			new BossGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new StyleGoal(new ReserveGoal(ItemID.WoodenArrow, 60, 120), CombatStyle.Ranged),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),

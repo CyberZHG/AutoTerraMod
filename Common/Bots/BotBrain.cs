@@ -36,6 +36,8 @@ public sealed class BotBrain
 		tasks = new BotTask[]
 		{
 			new EscapeTask(bot),
+			new SummonTask(bot),
+			new RallyTask(bot),
 			new FleeTask(bot),
 			new FightTask(bot),
 			new PickupTask(bot),

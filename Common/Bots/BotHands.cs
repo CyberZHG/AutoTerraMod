@@ -372,7 +372,7 @@ public sealed class BotHands
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
 		bool crit = Main.rand.Next(100) < Avatar.GetWeaponCrit(weapon);
 		var hit = target.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
-		target.StrikeNPC(hit);
+		Bosses.BossCredit.RecordDamage(target, bot.FactionId, target.StrikeNPC(hit));
 		bot.Watchdog.RecordProgress();
 		return true;
 	}
@@ -410,6 +410,7 @@ public sealed class BotHands
 		var origin = bot.Npc.Center;
 		int index = Projectile.NewProjectile(new EntitySource_Misc("AutoTerraMod:BotShot"), origin, Aim(origin, target, speed, projectileType), projectileType, damage, knockback, Main.myPlayer);
 		var projectile = Main.projectile[index];
+		Bosses.BossCredit.RegisterShot(projectile, bot);
 		projectile.usesLocalNPCImmunity = true;
 		projectile.localNPCHitCooldown = ProjectileHitCooldown;
 		projectile.CritChance = Avatar.GetWeaponCrit(weapon);

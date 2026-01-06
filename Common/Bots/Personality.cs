@@ -25,7 +25,8 @@ public enum Aspiration
 {
 	MonsterHunter,
 	Collector,
-	Naturalist
+	Naturalist,
+	Angler
 }
 
 public enum BuildingTaste
@@ -75,7 +76,7 @@ public sealed class Personality
 			Courage = rand.NextFloat(),
 			Cooperation = rand.NextFloat(),
 			Style = (CombatStyle)rand.Next(4),
-			Aspiration = (Aspiration)rand.Next(3),
+			Aspiration = (Aspiration)rand.Next(System.Enum.GetValues<Aspiration>().Length),
 			Taste = (BuildingTaste)rand.Next(3)
 		};
 	}

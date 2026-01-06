@@ -25,7 +25,7 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
-		if (bot.Brain.PlannedItemTypes.Contains(item.type))
+		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
 		return Inventory.Count(bot.Avatar, item.type) >= reserve;
@@ -67,8 +67,10 @@ public static class Junk
 		}
 	}
 
+	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0;
+
 	static bool IsCheapClutter(Item item) =>
-		!item.material && item.damage <= 0 && item.createTile < 0 && item.createWall <= 0 && !item.accessory
+		!IsBossSummon(item) && !item.material && item.damage <= 0 && item.createTile < 0 && item.createWall <= 0 && !item.accessory
 		&& item.headSlot < 0 && item.bodySlot < 0 && item.legSlot < 0 && !item.potion && item.value < OverflowCheapItemValue;
 
 	public static void TrashExcess(Bot bot)
@@ -90,6 +92,8 @@ public static class Junk
 
 	static int ReserveFor(Item item)
 	{
+		if (IsBossSummon(item))
+			return int.MaxValue;
 		if (item.createTile == TileID.Tombstones)
 			return 0;
 		if (Reserves.TryGetValue(item.type, out int reserve))

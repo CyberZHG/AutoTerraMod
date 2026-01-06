@@ -6,6 +6,6 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STASH="$(mktemp -d)"
 restore() { for icon in "$STASH"/*.png; do [ -e "$icon" ] && mv "$icon" "$ROOT/"; done; rmdir "$STASH"; }
 trap restore EXIT
-for icon in "$ROOT"/icon.png "$ROOT"/icon_small.png; do [ -e "$icon" ] && mv "$icon" "$STASH/"; done
+for icon in "$ROOT"/icon.png "$ROOT"/icon_small.png "$ROOT"/icon_workshop.png; do [ -e "$icon" ] && mv "$icon" "$STASH/"; done
 export PATH="$HOME/.dotnet:$PATH" DOTNET_ROOT="$HOME/.dotnet"
 cd "$ROOT" && dotnet build "$@"

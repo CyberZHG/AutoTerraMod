@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AutoTerraMod.Common.Building;
 using Terraria;
@@ -26,8 +27,13 @@ public sealed record WithdrawStep(int ItemType, int Amount) : PlanStep;
 
 public sealed record DeliverStep(int ItemType, int RecipientId) : PlanStep;
 
+public sealed record SummonBossStep(int BossType, int SummonItem) : PlanStep;
+
 public abstract record ResourceSource;
 
-public sealed record TileSource(ISet<int> TileTypes, bool IsTree) : ResourceSource;
+public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int, bool> Accept = null, bool OnSurface = false) : ResourceSource
+{
+	public bool Accepts(int x, int y) => Accept?.Invoke(x, y) ?? true;
+}
 
 public sealed record NpcSource(ISet<int> NpcTypes) : ResourceSource;

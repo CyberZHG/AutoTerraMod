@@ -127,6 +127,14 @@ public sealed class SpectatorHud : ModSystem
 				Text($"Roofs.{faction.HouseDesign.Roof}"),
 				Text($"Tastes.{faction.HouseDesign.Taste}"));
 			lines.Add((Text("UI.FactionLine", faction.Name, alive, members.Count, bestPick, house), faction.Color));
+			lines.Add((Text("UI.FactionBosses", faction.DefeatedBosses.Count, WorldBosses.InProgressionOrder.Count), faction.Color));
+			var challenge = Bosses.BossCredit.NextChallengeFor(faction);
+			var summoner = members.Where(bot => bot.IsAlive).MaxBy(bot => bot.Personality.Combat);
+			if (challenge != null && summoner != null)
+			{
+				var report = Bosses.BossReadiness.Evaluate(faction, challenge, summoner);
+				lines.Add((Text("UI.BossReadiness", challenge.Name, (int)(report.Confidence * 100)), report.IsReady ? Color.LightGreen : Color.LightGray));
+			}
 		}
 	}
 }

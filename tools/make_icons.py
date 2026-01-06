@@ -1,248 +1,188 @@
-import math
+"""Compose the mod icons from vanilla Terraria sprites.
+
+Usage: python3 tools/make_icons.py <extracted Terraria Images dir> <output dir>
+"""
 import sys
-from PIL import Image
+from PIL import Image, ImageChops
 
-OUTLINE = (34, 24, 26)
-SKY_TOP = (92, 142, 226)
-SKY_BOTTOM = (156, 196, 240)
-CLOUD = (240, 246, 252)
-CLOUD_SHADE = (206, 222, 240)
-GRASS_LIGHT = (126, 206, 78)
-GRASS = (86, 170, 52)
-GRASS_DARK = (56, 122, 40)
-DIRT = (151, 102, 60)
-DIRT_DARK = (112, 72, 40)
-DIRT_LIGHT = (176, 124, 76)
-STONE = (128, 128, 138)
-STONE_DARK = (92, 92, 104)
-WOOD_LIGHT = (196, 142, 84)
-WOOD = (166, 112, 62)
-WOOD_DARK = (116, 74, 38)
-WALL = (104, 70, 44)
-WALL_DARK = (78, 52, 32)
-DOOR = (134, 88, 46)
-DOOR_DARK = (96, 60, 30)
-METAL = (208, 200, 168)
-FLAME_CORE = (255, 248, 196)
-FLAME = (255, 196, 64)
-FLAME_EDGE = (238, 112, 34)
-GLOW = (255, 226, 150)
-GLASS = (164, 214, 238)
-GLASS_SHINE = (226, 244, 252)
+ASSETS = sys.argv[1]
+OUT = sys.argv[2]
+FRAME_W, FRAME_H = 40, 56
+TILE, STRIDE = 16, 18
 
-SPRITE_COLORS = {
-    'K': OUTLINE,
-    'H': (110, 62, 30), 'h': (150, 90, 46),
-    'F': (242, 198, 160), 'f': (214, 160, 122),
-    'E': (250, 250, 250), 'P': (40, 52, 96),
-    'R': (214, 64, 64), 'r': (160, 44, 52), 'q': (240, 112, 104),
-    'L': (66, 62, 104), 'l': (44, 42, 72),
-    'S': (96, 62, 36),
-    'W': (150, 100, 56), 'w': (102, 66, 34),
-    'C': (212, 132, 62), 'c': (156, 88, 40), 'Y': (246, 186, 112),
-}
+_cache = {}
 
-PLAYER = [
-    "....KKKKKK....",
-    "...KhHhHHhK...",
-    "..KHhHHHHHHK..",
-    "..KHHHHHHHHK..",
-    "..KHHFFFFHHK..",
-    "..KHFFFFEPFK..",
-    "..KHFFFFEPFK..",
-    "...KFFFFFFfK..",
-    "...KfFFFFFK...",
-    "....KKFFKK....",
-    "...KqRRRRRK...",
-    "..KqRRRRRRRKK.",
-    "..KRrRRRRRRFFK",
-    "..KRrRRRRRRKKK",
-    "..KRrrRRRRrK..",
-    "..KLLLLLLLLK..",
-    "..KLlLLLLLlK..",
-    "..KLlLKKLLlK..",
-    "..KLlK..KLlK..",
-    "..KLlK..KLlK..",
-    "..KSSK..KSSK..",
-    ".KSSSK..KSSSK.",
-    ".KKKKK..KKKKK.",
+
+def tex(name):
+    if name not in _cache:
+        _cache[name] = Image.open(f'{ASSETS}/{name}.png').convert('RGBA')
+    return _cache[name]
+
+
+def sub(name, x, y, w, h):
+    return tex(name).crop((x, y, x + w, y + h))
+
+
+def tint(image, color):
+    tinted = ImageChops.multiply(image, Image.new('RGBA', image.size, color + (255,)))
+    tinted.putalpha(image.getchannel('A'))
+    return tinted
+
+
+def body_cell(name, col, row):
+    return sub(name, col * FRAME_W, row * FRAME_H, FRAME_W, FRAME_H)
+
+
+def column_frame(name, index):
+    return sub(name, 0, index * FRAME_H, FRAME_W, FRAME_H)
+
+
+FACTIONS = [
+    dict(shirt=(220, 60, 60), under=(240, 200, 120), pants=(70, 60, 90), hair=(110, 60, 30), hairstyle=1),
+    dict(shirt=(70, 120, 230), under=(220, 230, 240), pants=(60, 70, 90), hair=(230, 200, 110), hairstyle=5),
+    dict(shirt=(80, 190, 90), under=(240, 230, 190), pants=(110, 80, 50), hair=(60, 40, 30), hairstyle=8),
+    dict(shirt=(235, 190, 60), under=(250, 240, 220), pants=(70, 80, 120), hair=(200, 70, 40), hairstyle=14),
 ]
-
-PICKAXE = [
-    "..KKKK.....",
-    ".KYYCCKK...",
-    "..KKKCCCK..",
-    ".....KWCCK.",
-    "....KWK.KCK",
-    "...KWK...KK",
-    "..KWK......",
-    ".KWK.......",
-    "KWK........",
-    "KK.........",
-]
+SKIN = (250, 190, 150)
+EYES = (60, 80, 140)
+SHOES = (90, 60, 40)
 
 
-class Canvas:
-    def __init__(self, size):
-        self.size = size
-        self.pixels = [[SKY_BOTTOM] * size for _ in range(size)]
-
-    def put(self, x, y, color):
-        if 0 <= x < self.size and 0 <= y < self.size and color is not None:
-            self.pixels[y][x] = color
-
-    def get(self, x, y):
-        return self.pixels[y][x]
-
-    def rect(self, x0, y0, x1, y1, color):
-        for y in range(y0, y1 + 1):
-            for x in range(x0, x1 + 1):
-                self.put(x, y, color)
-
-    def sprite(self, rows, left, top):
-        for dy, row in enumerate(rows):
-            for dx, glyph in enumerate(row):
-                if glyph != '.':
-                    self.put(left + dx, top + dy, SPRITE_COLORS[glyph])
-
-    def blend(self, x, y, color, amount):
-        if 0 <= x < self.size and 0 <= y < self.size:
-            base = self.pixels[y][x]
-            self.pixels[y][x] = tuple(int(b + (c - b) * amount) for b, c in zip(base, color))
-
-    def save(self, path, scale):
-        image = Image.new("RGB", (self.size * scale, self.size * scale))
-        for y in range(self.size):
-            for x in range(self.size):
-                image.paste(self.pixels[y][x], (x * scale, y * scale, (x + 1) * scale, (y + 1) * scale))
-        image.save(path)
+def hero(faction, arm=(2, 0)):
+    look = FACTIONS[faction]
+    layers = [
+        (column_frame('Player_0_10', 0), SKIN),
+        (column_frame('Player_0_11', 0), look['pants']),
+        (column_frame('Player_0_12', 0), SHOES),
+        (body_cell('Player_0_3', 0, 0), SKIN),
+        (body_cell('Player_0_4', 0, 0), look['under']),
+        (body_cell('Player_0_6', 0, 0), look['shirt']),
+        (column_frame('Player_0_0', 0), SKIN),
+        (column_frame('Player_0_1', 0), None),
+        (column_frame('Player_0_2', 0), EYES),
+        (column_frame(f"Player_Hair_{look['hairstyle']}", 0), look['hair']),
+        (body_cell('Player_0_7', *arm), SKIN),
+        (body_cell('Player_0_8', *arm), look['under']),
+        (body_cell('Player_0_13', *arm), look['shirt']),
+        (body_cell('Player_0_5', *arm), SKIN),
+    ]
+    sprite = Image.new('RGBA', (FRAME_W, FRAME_H))
+    for image, color in layers:
+        sprite.alpha_composite(tint(image, color) if color else image)
+    return sprite
 
 
-def lerp(a, b, t):
-    return tuple(int(x + (y - x) * t) for x, y in zip(a, b))
+def armed(canvas, faction, arm, item, grip, at):
+    canvas.alpha_composite(hero(faction, arm), at)
+    if item:
+        canvas.alpha_composite(tex(item), (at[0] + grip[0], at[1] + grip[1]))
 
 
-def sky(c, horizon):
-    for y in range(horizon):
-        c.rect(0, y, c.size - 1, y, lerp(SKY_TOP, SKY_BOTTOM, y / max(1, horizon - 1)))
+def sky(canvas, gradient_y):
+    strip = tex('Background_0').crop((0, gradient_y, 48, gradient_y + 400))
+    canvas.alpha_composite(strip.resize(canvas.size))
 
 
-def cloud(c, x, y, width):
-    c.rect(x + 1, y, x + width - 2, y, CLOUD)
-    c.rect(x, y + 1, x + width - 1, y + 1, CLOUD)
-    c.rect(x + 1, y + 2, x + width - 2, y + 2, CLOUD_SHADE)
+def scenery(canvas, name, src_x, dest_y):
+    image = tex(name)
+    image = image.resize((image.width // 2, image.height // 2), Image.NEAREST)
+    canvas.alpha_composite(image.crop((src_x, 0, src_x + canvas.width, image.height)), (0, dest_y))
 
 
-def ground(c, top):
-    noise = [7, 2, 11, 5, 13, 3, 9, 1, 12, 6, 10, 4, 8, 0]
-    for x in range(c.size):
-        c.put(x, top, GRASS_LIGHT if x % 3 else GRASS)
-        c.put(x, top + 1, GRASS)
-        c.put(x, top + 2, GRASS_DARK if noise[x % len(noise)] % 2 else GRASS)
-        for y in range(top + 3, c.size):
-            n = noise[(x * 3 + y * 5) % len(noise)]
-            c.put(x, y, DIRT_DARK if n < 2 else DIRT_LIGHT if n > 11 else DIRT)
-        if noise[x % len(noise)] > 9:
-            c.put(x, top - 1, GRASS_LIGHT)
-    for sx, sy in [(4, 6), (17, 4), (30, 7), (36, 5)]:
-        for dx, dy in [(0, 0), (1, 0), (0, 1), (1, 1), (2, 1)]:
-            c.put(sx + dx, top + sy + dy, STONE if dy == 0 else STONE_DARK)
+def tile(canvas, name, frame, x, y):
+    canvas.alpha_composite(sub(name, frame[0], frame[1], TILE, TILE), (x, y))
 
 
-def wood_block(c, x0, y0, width, height):
-    for y in range(y0, y0 + height):
-        row = y - y0
-        for x in range(x0, x0 + width):
-            offset = (x - x0 + (2 if (row // 2) % 2 else 0)) % 4
-            if row % 2 == 1:
-                color = WOOD_DARK if offset == 3 else WOOD
-            else:
-                color = WOOD_LIGHT if offset == 0 else WOOD
-            c.put(x, y, color)
+def ground(canvas, top):
+    for i, x in enumerate(range(-8, canvas.width, TILE)):
+        tile(canvas, 'Tiles_2', (STRIDE * (1 + i % 3), 0), x, top)
+        for y in range(top + TILE, canvas.height, TILE):
+            tile(canvas, 'Tiles_0', (STRIDE * (1 + (i + y // TILE) % 3), STRIDE), x, y)
 
 
-def wood_wall(c, x0, y0, x1, y1):
-    for y in range(y0, y1 + 1):
-        for x in range(x0, x1 + 1):
-            seam = (y - y0) % 4 == 3 or ((x - x0 + (2 if ((y - y0) // 4) % 2 else 0)) % 5 == 4)
-            c.put(x, y, WALL_DARK if seam else WALL)
+def block_frame(col, row, cols, rows):
+    left, right, top, bottom = col == 0, col == cols - 1, row == 0, row == rows - 1
+    variant = (col + row) % 3
+    if top and left:
+        return 0, 54
+    if top and right:
+        return 18, 54
+    if bottom and left:
+        return 0, 72
+    if bottom and right:
+        return 18, 72
+    if top:
+        return STRIDE * (1 + variant), 0
+    if bottom:
+        return STRIDE * (1 + variant), 36
+    if left:
+        return 0, STRIDE * variant
+    if right:
+        return 72, STRIDE * variant
+    return STRIDE * (1 + variant), STRIDE
 
 
-def house(c, left, floor, width, height):
-    right = left + width - 1
-    ceiling = floor - height
-    wood_wall(c, left + 2, ceiling + 2, right - 2, floor - 1)
-    wood_block(c, left, ceiling, 2, height)
-    wood_block(c, right - 1, ceiling, 2, height)
-    wood_block(c, left, ceiling, width, 2)
-    for rise in range(1, width // 2 + 1):
-        x0 = left - 2 + rise * 2
-        x1 = right + 2 - rise * 2
-        if x0 > x1:
-            break
-        wood_block(c, x0, ceiling - rise * 2, x1 - x0 + 1, 2)
-        c.rect(x0, ceiling - rise * 2 + 1, x1, ceiling - rise * 2 + 1, WOOD_DARK)
-    door_x = left + 3
-    c.rect(door_x - 1, floor - 8, door_x + 3, floor - 1, OUTLINE)
-    c.rect(door_x, floor - 7, door_x + 2, floor - 1, DOOR)
-    c.rect(door_x + 1, floor - 7, door_x + 1, floor - 1, DOOR_DARK)
-    c.rect(door_x, floor - 4, door_x + 2, floor - 4, DOOR_DARK)
-    c.put(door_x + 2, floor - 3, METAL)
-    window_x, window_y = left + 8, ceiling + 4
-    c.rect(window_x - 1, window_y - 1, window_x + 3, window_y + 3, WOOD_DARK)
-    c.rect(window_x, window_y, window_x + 2, window_y + 2, GLASS)
-    c.put(window_x, window_y, GLASS_SHINE)
-    c.put(window_x + 1, window_y, GLASS_SHINE)
-    c.put(window_x, window_y + 1, GLASS_SHINE)
-    torch_x, torch_y = right - 3, ceiling + 5
-    for dx in range(-3, 4):
-        for dy in range(-3, 4):
-            distance = math.hypot(dx, dy)
-            if distance <= 3.2:
-                c.blend(torch_x + dx, torch_y + dy, GLOW, 0.45 * (1 - distance / 3.4))
-    c.put(torch_x, torch_y + 1, WOOD_DARK)
-    c.put(torch_x, torch_y + 2, WOOD_DARK)
-    c.put(torch_x, torch_y, FLAME)
-    c.put(torch_x, torch_y - 1, FLAME_EDGE)
-    c.put(torch_x, torch_y, FLAME_CORE)
-    c.put(torch_x - 1, torch_y, FLAME_EDGE)
-    c.put(torch_x + 1, torch_y, FLAME_EDGE)
-    return ceiling - width // 2
+def house(canvas, left, top, cols, rows):
+    for row in range(1, rows - 1):
+        for col in range(1, cols - 1):
+            wall = sub('Wall_4', 36 * (1 + (row + col) % 3) + 8, 44, TILE, TILE)
+            canvas.alpha_composite(wall, (left + col * TILE, top + row * TILE))
+    door_rows = range(rows - 4, rows - 1)
+    for row in range(rows):
+        for col in range(cols):
+            is_edge = row in (0, rows - 1) or col in (0, cols - 1)
+            is_doorway = col == cols - 1 and row in door_rows
+            if is_edge and not is_doorway:
+                tile(canvas, 'Tiles_30', block_frame(col, row, cols, rows), left + col * TILE, top + row * TILE)
+    for i, row in enumerate(door_rows):
+        tile(canvas, 'Tiles_10', (0, STRIDE * i), left + (cols - 1) * TILE, top + row * TILE)
+    canvas.alpha_composite(sub('Tiles_4', 0, 0, 20, 20), (left + 2 * TILE - 2, top + 2 * TILE - 2))
+    for i in range(2):
+        tile(canvas, 'Tiles_15', (0, STRIDE * i), left + TILE, top + (rows - 3 + i) * TILE)
 
 
-def flags(c, positions):
-    colors = [(224, 70, 70), (76, 136, 240), (90, 200, 100), (240, 196, 64)]
-    for (x, base), color in zip(positions, colors):
-        c.rect(x, base - 6, x, base, OUTLINE)
-        c.rect(x + 1, base - 6, x + 3, base - 5, color)
-        c.rect(x + 1, base - 4, x + 2, base - 4, color)
-        c.put(x + 3, base - 5, lerp(color, OUTLINE, 0.35))
+def king_slime(canvas, x, bottom):
+    top = bottom - 120
+    canvas.alpha_composite(sub('NPC_50', 0, 0, 174, 120), (x, top))
+    canvas.alpha_composite(tex('Extra_39'), (x + 87 - 41, top - 20))
+
+
+def workshop_icon():
+    canvas = Image.new('RGBA', (240, 240))
+    sky(canvas, 700)
+    canvas.alpha_composite(tex('Sun').resize((57, 57), Image.NEAREST), (10, 8))
+    canvas.alpha_composite(tex('Cloud_3'), (60, 30))
+    canvas.alpha_composite(tex('Cloud_1').resize((96, 32), Image.NEAREST), (150, 10))
+    scenery(canvas, 'Background_7', 60, 46)
+    scenery(canvas, 'Background_9', 0, 100)
+    ground(canvas, 192)
+    house(canvas, -24, 96, 7, 6)
+    king_slime(canvas, 132, 190)
+    armed(canvas, 2, (3, 0), 'Item_1', (7, -8), (8, 136))
+    armed(canvas, 3, (2, 0), None, None, (32, 136))
+    armed(canvas, 1, (5, 0), 'Item_39', (20, 19), (58, 136))
+    armed(canvas, 0, (4, 0), 'Item_4', (21, -11), (92, 136))
+    return canvas.resize((480, 480), Image.NEAREST)
 
 
 def large_icon():
-    c = Canvas(40)
-    sky(c, 30)
-    cloud(c, 24, 3, 7)
-    cloud(c, 4, 6, 6)
-    house(c, 0, 30, 17, 11)
-    flags(c, [(3, 15), (6, 13), (10, 13), (13, 15)])
-    ground(c, 30)
-    c.sprite(PICKAXE, 29, 12)
-    c.sprite(PLAYER, 17, 8)
-    return c
+    canvas = Image.new('RGBA', (80, 80))
+    sky(canvas, 900)
+    canvas.alpha_composite(tex('Cloud_3').resize((44, 26), Image.NEAREST), (2, 4))
+    ground(canvas, 64)
+    canvas.alpha_composite(tex('NPC_Head_Boss_7'), (50, 0))
+    armed(canvas, 1, (5, 0), 'Item_39', (20, 19), (0, 8))
+    armed(canvas, 0, (5, 0), 'Item_4', (24, 3), (30, 8))
+    return canvas
 
 
 def small_icon():
-    c = Canvas(30)
-    sky(c, 23)
-    cloud(c, 2, 3, 6)
-    ground(c, 23)
-    flags(c, [(21, 22), (25, 22)])
-    c.sprite(PICKAXE, 13, 5)
-    c.sprite(PLAYER, 1, 1)
-    return c
+    canvas = Image.new('RGBA', (30, 30))
+    sky(canvas, 900)
+    canvas.alpha_composite(hero(0).crop((2, 6, 32, 36)))
+    return canvas
 
 
-out = sys.argv[1]
-large_icon().save(f"{out}/icon.png", 2)
-small_icon().save(f"{out}/icon_small.png", 1)
+workshop_icon().save(f'{OUT}/icon_workshop.png')
+large_icon().save(f'{OUT}/icon.png')
+small_icon().save(f'{OUT}/icon_small.png')

@@ -19,7 +19,7 @@ public static class WorldScan
 		long bestDistance = long.MaxValue;
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || IsMushroom(x, y, tileType))
 				knowledge?.Remember(new Point(x, y), tileType);
 			if (!tileTypes.Contains(tileType) || !accept(x, y))
 				return;
@@ -40,7 +40,7 @@ public static class WorldScan
 	{
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || tileType == TileID.DemonAltar || IsMushroom(x, y, tileType))
 				knowledge.Remember(new Point(x, y), tileType);
 		});
 	}
@@ -65,6 +65,10 @@ public static class WorldScan
 	public static readonly HashSet<int> TreasureTiles = new() { TileID.Heart, TileID.LifeFruit };
 
 	public static bool IsTreasure(int tileType) => TreasureTiles.Contains(tileType);
+
+	public const int MushroomPlantFrameX = 144;
+
+	public static bool IsMushroom(int x, int y, int tileType) => tileType == TileID.Plants && Main.tile[x, y].TileFrameX == MushroomPlantFrameX;
 
 	public static long DistanceSq(Point a, Point b)
 	{

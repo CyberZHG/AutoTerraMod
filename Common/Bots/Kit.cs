@@ -32,6 +32,7 @@ public static class Kit
 			bool keep = essentials.Contains(item)
 				|| item.IsACoin
 				|| (item.potion && item.healLife > 0)
+				|| Junk.IsBossSummon(item)
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType)
 				|| plannedTypes.Contains(item.type)

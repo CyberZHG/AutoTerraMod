@@ -78,9 +78,12 @@ Aspirations: {
 	Naturalist: 博物学家（生物展览馆）
 	MonsterHunter: 怪物猎人（挂旗帜）
 	Collector: 收藏家（衣架摆装备）
+	Angler: 钓鱼爱好者（钓遍各种鱼）
 }
 
 Tasks: {
+	Summon: 召唤 Boss
+	Rally: 集合
 	TidyCamp: 清理墓碑
 	Deliver: 送材料
 	Escape: 脱困
@@ -114,6 +117,9 @@ Plans: {
 }
 
 UI: {
+	BossReadiness: "  下一个 Boss {0}：准备度 {1}%"
+	FactionBosses: "  本阵营击败 Boss：{0}/{1}"
+	BossCredited: "{0}击败了{1}！伤害占比：{2}"
 	Unbound: 未绑定
 	PlayingInPerson: 你亲自下场了，再按一次回到观战。
 	BackToSpectating: 回到观战。
