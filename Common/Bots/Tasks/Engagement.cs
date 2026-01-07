@@ -65,13 +65,13 @@ public static class Engagement
 		if (bot.Motor.IsStuck)
 		{
 			bot.Motor.Stop();
-			if (!target.boss)
+			if (!Bosses.BossCatalog.IsBossPart(target))
 			{
 				bot.IgnoreTarget(target);
 				return;
 			}
 		}
-		var approach = target.boss ? target.Bottom : target.Center;
+		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
 		if (weapon == null)
 		{
@@ -103,7 +103,7 @@ public static class Engagement
 			bot.Motor.Face(target.Center);
 			bot.Hands.Strike(target, weapon);
 		}
-		if (target.boss)
+		if (Bosses.BossCatalog.IsBossPart(target))
 		{
 			bot.Motor.MoveTo(BossStandingSpot(body, target), StandingTolerance);
 			return;

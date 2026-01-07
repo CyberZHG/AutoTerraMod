@@ -26,6 +26,9 @@ public sealed class Faction
 	public HashSet<Point> Scaffolding { get; } = new();
 	public HashSet<int> DefeatedBosses { get; } = new();
 	public (Vector2 point, uint until)? Rally { get; set; }
+	public uint RallyCooldownUntil { get; set; }
+	public int RallyLeaderId { get; set; } = -1;
+	public bool RallyAssembled { get; set; }
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);
 	public HouseBlueprint Blueprint => Settlement?.Hall;
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using AutoTerraMod.Common.World;
 using Terraria;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
@@ -28,7 +29,25 @@ public static class ResourceSources
 
 	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree }, true);
 
-	static readonly TileSource SurfaceMushrooms = new(new HashSet<int> { TileID.Plants }, false, (x, y) => World.WorldScan.IsMushroom(x, y, TileID.Plants), true);
+	static readonly Dictionary<int, Landmark> ForageGrounds = new()
+	{
+		[ItemID.VileMushroom] = Landmark.Corruption,
+		[ItemID.ViciousMushroom] = Landmark.Crimson
+	};
+
+	static readonly Dictionary<int, Landmark> HuntingGrounds = new()
+	{
+		[ItemID.RottenChunk] = Landmark.Corruption,
+		[ItemID.Vertebrae] = Landmark.Crimson,
+		[ItemID.GuideVoodooDoll] = Landmark.Underworld,
+		[ItemID.Stinger] = Landmark.Jungle,
+		[ItemID.ClothierVoodooDoll] = Landmark.Dungeon
+	};
+
+	static readonly Dictionary<int, NpcSource> RareDrops = new()
+	{
+		[ItemID.ClothierVoodooDoll] = new NpcSource(new HashSet<int> { NPCID.AngryBones, NPCID.AngryBonesBig, NPCID.AngryBonesBigMuscle, NPCID.AngryBonesBigHelmet, NPCID.ShortBones }, Landmark.Dungeon)
+	};
 
 	static Dictionary<int, TileSource> tileSources;
 	static Dictionary<int, NpcSource> npcSources;
@@ -43,16 +62,23 @@ public static class ResourceSources
 	{
 		if (WoodItems.Contains(itemType))
 			return Trees;
-		if (itemType == ItemID.Mushroom)
-			return SurfaceMushrooms;
+		if (World.WorldScan.ForageTiles.TryGetValue(itemType, out var forage))
+			return ForageSource(itemType, forage.tileType);
+		if (RareDrops.TryGetValue(itemType, out var rare))
+			return rare;
 		tileSources ??= BuildTileSources();
 		if (tileSources.TryGetValue(itemType, out var tileSource))
 			return tileSource;
 		if (RecipeIndex.IsCraftable(itemType))
 			return null;
 		npcSources ??= BuildNpcSources();
-		return npcSources.TryGetValue(itemType, out var npcSource) ? npcSource : null;
+		if (!npcSources.TryGetValue(itemType, out var npcSource))
+			return null;
+		return HuntingGrounds.TryGetValue(itemType, out var ground) ? npcSource with { Ground = ground } : npcSource;
 	}
+
+	static TileSource ForageSource(int itemType, int tileType) =>
+		new(new HashSet<int> { tileType }, false, (x, y) => World.WorldScan.IsForage(x, y, tileType), true, ForageGrounds.TryGetValue(itemType, out var ground) ? ground : null);
 
 	static Dictionary<int, TileSource> BuildTileSources()
 	{

@@ -26,13 +26,14 @@ public sealed class BossWatch : ModSystem
 			if (npc.active && npc.type == last.Type)
 				continue;
 			sightings.Remove(slot);
-			BossCredit.Forget(slot);
+			if (BossCatalog.ChallengeOf(last.Type) is BossChallenge challenge)
+				BossCredit.ForgetIfOver(challenge);
 			string outcome = last.Life <= 0 || Defeated(last.Type) ? "defeated" : "despawned";
 			BotDiagnostics.LogWorld($"boss {Lang.GetNPCNameValue(last.Type)} {outcome}: life={last.Life}/{last.LifeMax} timeLeft={last.TimeLeft} target={DescribeTarget(last)} lastTile={last.Center.ToTileCoordinates()} nowTile={npc.Center.ToTileCoordinates()} ai={last.Ai} local={last.LocalAi}");
 		}
 		foreach (var npc in Main.npc)
 		{
-			if (!npc.active || !npc.boss)
+			if (!npc.active || !(npc.boss || BossCatalog.ChallengeOf(npc.type)?.BossType == npc.type))
 				continue;
 			if (!sightings.ContainsKey(npc.whoAmI))
 				BotDiagnostics.LogWorld($"boss {npc.FullName} appeared at tile {npc.Center.ToTileCoordinates()} life={npc.lifeMax}");
@@ -40,7 +41,7 @@ public sealed class BossWatch : ModSystem
 		}
 	}
 
-	static bool Defeated(int type) => BossCatalog.Challenges.FirstOrDefault(challenge => challenge.BossType == type)?.IsDefeated() == true;
+	static bool Defeated(int type) => BossCatalog.ChallengeOf(type)?.IsDefeated() == true;
 
 	static string DescribeTarget(Sighting sighting)
 	{

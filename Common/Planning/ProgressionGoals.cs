@@ -14,6 +14,7 @@ public abstract class ProgressionGoal
 	public virtual string Describe() => GetType().Name;
 	public abstract bool IsMet(Bot bot);
 	public abstract PlanStep Plan(Bot bot);
+	public virtual bool IsExpedition => false;
 }
 
 public sealed class StationGoal : ProgressionGoal
@@ -199,9 +200,9 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 
 public sealed class BossGoal : ProgressionGoal
 {
-	const int ReadinessLogIntervalTicks = 1800;
+	public override bool IsExpedition => true;
 
-	uint lastReadinessLog;
+	const int ReadinessLogIntervalTicks = 1800;
 
 	public override bool AppliesTo(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) != null && IsSummoner(bot);
 
@@ -214,23 +215,33 @@ public sealed class BossGoal : ProgressionGoal
 
 	public override PlanStep Plan(Bot bot)
 	{
-		var challenge = Bosses.BossCredit.NextChallengeFor(bot.Faction);
-		if (Bosses.BossCatalog.IsBossAlive(challenge.BossType))
+		if (Terraria.Main.GameUpdateCount < bot.Faction.RallyCooldownUntil)
 			return PlanStep.Idle;
-		var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
-		LogReadiness(bot, challenge, report);
-		if (!report.IsReady)
-			return PlanStep.Idle;
-		if (Inventory.Count(bot.Avatar, challenge.SummonItem) == 0)
-			return ProgressionPlanner.Obtain(bot, challenge.SummonItem, 1);
-		return challenge.CanSummonNow(bot.Avatar) ? new SummonBossStep(challenge.BossType, challenge.SummonItem) : PlanStep.Idle;
+		foreach (var challenge in Bosses.BossCredit.OpenChallengesFor(bot.Faction))
+		{
+			if (Bosses.BossCatalog.IsBossAlive(challenge))
+				return PlanStep.Idle;
+			var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
+			LogReadiness(bot, challenge, report);
+			if (!report.IsReady)
+				continue;
+			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
+			{
+				var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
+				if (step is not BlockedStep and not IdleStep)
+					return step;
+			}
+		}
+		return PlanStep.Idle;
 	}
+
+	readonly Dictionary<int, uint> lastReadinessLog = new();
 
 	void LogReadiness(Bot bot, Bosses.BossChallenge challenge, Bosses.ReadinessReport report)
 	{
-		if (Terraria.Main.GameUpdateCount - lastReadinessLog < ReadinessLogIntervalTicks)
+		if (lastReadinessLog.TryGetValue(challenge.BossType, out uint loggedAt) && Terraria.Main.GameUpdateCount - loggedAt < ReadinessLogIntervalTicks)
 			return;
-		lastReadinessLog = Terraria.Main.GameUpdateCount;
+		lastReadinessLog[challenge.BossType] = Terraria.Main.GameUpdateCount;
 		BotDiagnostics.Log(bot, $"boss readiness for {challenge.Name}: fighters={report.Fighters} teamDps={report.TeamDps:0} bossLife={report.BossLife:0} kill={report.KillSeconds:0}s survive={report.SurviveSeconds:0}s needRatio={report.RequiredRatio:0.0} ready={report.IsReady}");
 	}
 }

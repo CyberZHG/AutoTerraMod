@@ -286,6 +286,9 @@ public sealed class GatherTask : BotTask
 	Vector2 ChooseProspectTarget()
 	{
 		var here = Bot.CenterTile;
+		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		if (Tiles.Ground is Landmark ground && !Grounds.IsInside(knowledge, ground, here) && Grounds.PickSpot(knowledge, ground, here) is Vector2 spot)
+			return spot;
 		if (Tiles.IsTree || Tiles.OnSurface)
 		{
 			int x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, 50, Main.maxTilesX - 50);

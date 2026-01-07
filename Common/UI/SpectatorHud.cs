@@ -108,6 +108,10 @@ public sealed class SpectatorHud : ModSystem
 		BuildHouseStep build => Text("Plans.Build", Text($"BuildActions.{build.Operation.Action}")),
 		WithdrawStep withdraw => Text("Plans.Withdraw", Lang.GetItemNameValue(withdraw.ItemType), withdraw.Amount),
 		DeliverStep deliver => Text("Plans.Deliver", Lang.GetItemNameValue(deliver.ItemType), BotWorldSystem.FindBot(deliver.RecipientId)?.Name ?? "?"),
+		SummonBossStep summon => Text("Plans.Summon", summon.Challenge.Name),
+		ScoutStep scout => Text("Plans.Scout", Text($"Landmarks.{scout.Landmark}")),
+		SmashShrineStep => Text("Plans.Smash"),
+		TravelStep => Text("Plans.Travel"),
 		_ => Text("Plans.Idle")
 	};
 

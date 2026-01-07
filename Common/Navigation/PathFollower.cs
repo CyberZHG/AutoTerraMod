@@ -167,7 +167,7 @@ public sealed class PathFollower
 				break;
 			case MoveKind.Climb:
 				intent.ClimbDirection = Math.Sign(node.Feet.Y - feet.Y);
-				intent.ClimbColumn = Math.Max(PathFinder.RopeColumn(node.Feet.X, node.Feet.Y), PathFinder.RopeColumn(feet.X, feet.Y));
+				intent.ClimbColumn = node.Feet.X;
 				break;
 			case MoveKind.Swim:
 				intent.Jump = node.Feet.Y < feet.Y || body.velocity.Y > 1f;

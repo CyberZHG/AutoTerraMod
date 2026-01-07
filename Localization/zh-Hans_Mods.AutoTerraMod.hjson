@@ -84,6 +84,9 @@ Aspirations: {
 Tasks: {
 	Summon: 召唤 Boss
 	Rally: 集合
+	Scout: 侦察
+	Smash: 砸暗影珠/猩红之心
+	Travel: 远行
 	TidyCamp: 清理墓碑
 	Deliver: 送材料
 	Escape: 脱困
@@ -106,6 +109,15 @@ Tasks: {
 	Build: 建房
 }
 
+Landmarks: {
+	Dungeon: 地牢
+	Corruption: 腐化之地
+	Crimson: 猩红之地
+	Jungle: 丛林
+	Snow: 雪原
+	Underworld: 地狱
+}
+
 Plans: {
 	Deliver: 把{0}送给{1}
 	Withdraw: 从仓库取 {0} x{1}
@@ -114,6 +126,10 @@ Plans: {
 	Place: 放置 {0}
 	Idle: 暂无计划
 	Build: 建房：{0}
+	Summon: 召唤{0}
+	Scout: 寻找{0}
+	Smash: 砸暗影珠/猩红之心
+	Travel: 远行
 }
 
 UI: {

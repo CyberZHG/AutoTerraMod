@@ -122,7 +122,7 @@ public sealed class FightTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (HealthFraction < (target.boss ? BossDrinkHealthFraction : DrinkHealthFraction))
+		if (HealthFraction < (Bosses.BossCatalog.IsBossPart(target) ? BossDrinkHealthFraction : DrinkHealthFraction))
 			Bot.Hands.DrinkHealingPotion();
 		Engagement.Fight(Bot, target);
 	}

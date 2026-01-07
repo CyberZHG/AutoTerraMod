@@ -16,10 +16,40 @@ public sealed class HeadlessTestMode : ModSystem
 		ItemID.PlatinumBroadsword, ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves
 	};
 
+	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld);
+
+	static readonly System.Collections.Generic.Dictionary<string, BossScenario> BossScenarios = new()
+	{
+		["boss"] = new(Array.Empty<int>(), ItemID.SlimeCrown, false, false),
+		["eoc"] = new(new int[] { NPCID.KingSlime }, ItemID.SuspiciousLookingEye, true, false),
+		["evil"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true),
+		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true)
+	};
+
 	public static void PrepareScenario()
 	{
-		if (Scenario != "boss")
+		if (Scenario == null || !BossScenarios.TryGetValue(Scenario, out var scenario))
 			return;
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			foreach (int boss in scenario.AlreadyDefeated)
+				faction.DefeatedBosses.Add(boss);
+		}
+		if (scenario.StartAtNight)
+		{
+			Main.dayTime = false;
+			Main.time = 0;
+		}
+		if (scenario.RevealWorld)
+		{
+			foreach (var bot in BotWorldSystem.Bots)
+			{
+				Give(bot, ItemID.IronHammer, 1);
+				Give(bot, ItemID.NightmarePickaxe, 1);
+			}
+			LogEvilSpan();
+			RevealShrines();
+		}
 		foreach (var bot in BotWorldSystem.Bots)
 		{
 			Bots.Junk.TrashExcess(bot);
@@ -32,10 +62,49 @@ public sealed class HeadlessTestMode : ModSystem
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var summoner = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).MaxBy(bot => bot.Personality.Combat);
-			if (summoner != null)
-				Give(summoner, ItemID.SlimeCrown, 1);
+			if (summoner != null && scenario.SummonItem != ItemID.None)
+				Give(summoner, scenario.SummonItem, 1);
 		}
-		ModContent.GetInstance<AutoTerraMod>().Logger.Info("headless scenario 'boss' prepared");
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless scenario '{Scenario}' prepared");
+	}
+
+	static void RevealShrines()
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			var knowledge = BotWorldSystem.KnowledgeOf(faction);
+			knowledge.RememberLandmark(World.Landmark.Dungeon, new Microsoft.Xna.Framework.Point(Main.dungeonX, Main.dungeonY));
+			for (int x = 0; x < Main.maxTilesX; x++)
+			{
+				for (int y = 0; y < Main.maxTilesY; y++)
+				{
+					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.ShadowOrbs)
+						knowledge.Remember(new Microsoft.Xna.Framework.Point(x, y), TileID.ShadowOrbs);
+				}
+			}
+		}
+	}
+
+	static void LogEvilSpan()
+	{
+		int minX = int.MaxValue, maxX = -1, orbs = 0;
+		for (int x = 0; x < Main.maxTilesX; x++)
+		{
+			for (int y = 0; y < Main.maxTilesY; y++)
+			{
+				var tile = Main.tile[x, y];
+				if (!tile.HasTile)
+					continue;
+				if (tile.TileType is TileID.Ebonstone or TileID.Crimstone or TileID.CorruptGrass or TileID.CrimsonGrass)
+				{
+					minX = Math.Min(minX, x);
+					maxX = Math.Max(maxX, x);
+				}
+				if (tile.TileType == TileID.ShadowOrbs)
+					orbs++;
+			}
+		}
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: world {Main.maxTilesX}x{Main.maxTilesY} crimson={WorldGen.crimson} evil x {minX}..{maxX}, orb tiles {orbs}, dungeon x {Main.dungeonX}, spawn x {Main.spawnTileX}");
 	}
 
 	static void Give(Bots.Bot bot, int type, int stack)

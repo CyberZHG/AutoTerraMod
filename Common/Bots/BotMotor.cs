@@ -20,6 +20,7 @@ public sealed class BotMotor
 	const int StalledChecksBeforeStuck = 3;
 	const float MeaningfulProgress = 12f;
 	const float RopeClimbSpeed = 3f;
+	const float RopeLeapSpeed = 5f;
 	const float JumpReachPixels = 16f * 5f;
 	const float SurfaceForAirBelow = 0.6f;
 
@@ -61,6 +62,14 @@ public sealed class BotMotor
 	public Vector2? Destination => destination;
 	public bool ScaffoldingAllowed { get; set; }
 	public bool ClimbingStraightUp { get; set; }
+	public bool Tunneling { get; private set; }
+
+	public void TunnelTo(Vector2 target, float radius)
+	{
+		MoveTo(target, radius);
+		Tunneling = true;
+		ResetProgress();
+	}
 
 	public void MoveTo(Vector2 target, float radius = 16f)
 	{
@@ -70,6 +79,7 @@ public sealed class BotMotor
 			ResetProgress();
 			follower.Invalidate();
 			follower.ExtendNextSearch = retryingSameTarget;
+			Tunneling = false;
 		}
 		destination = target;
 		arriveRadius = radius;
@@ -83,6 +93,7 @@ public sealed class BotMotor
 			lastFailedDestination = destination;
 		destination = null;
 		HasArrived = false;
+		Tunneling = false;
 		ResetProgress();
 		follower.Invalidate();
 	}
@@ -132,6 +143,8 @@ public sealed class BotMotor
 		int jumpHoldTicks = JumpHoldTicks;
 		if (ClimbingStraightUp)
 			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
+		else if (destination is Vector2 tunnelGoal && Tunneling)
+			TunnelStep(npc, tunnelGoal, ref moveDirection, ref wantsJump);
 		else if (destination is Vector2 target)
 			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
@@ -157,6 +170,69 @@ public sealed class BotMotor
 		else if (ScaffoldTile is Point scaffold)
 			PlaceFoothold(scaffold);
 		ScaffoldingAllowed = false;
+	}
+
+	void TunnelStep(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump)
+	{
+		var delta = target - npc.Center;
+		if (Math.Abs(delta.X) <= arriveRadius && Math.Abs(delta.Y) <= arriveRadius + 24f)
+		{
+			HasArrived = true;
+			return;
+		}
+		HasArrived = false;
+		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
+		var body = BodyTiles.Of(npc);
+		bool grounded = npc.velocity.Y == 0f || npc.wet;
+		bool mostlyDown = delta.Y > Math.Abs(delta.X) * 0.5f;
+		if (mostlyDown && grounded && TunnelTile(body.Left, body.Right, body.Bottom + 1, body.Bottom + 1, pickPower) is Point floor)
+		{
+			TileToDig = floor;
+			return;
+		}
+		if (mostlyDown && !grounded)
+			return;
+		int direction = delta.X >= 0f ? 1 : -1;
+		int column = direction > 0 ? body.Right + 1 : body.Left - 1;
+		int top = delta.Y < -16f ? body.Top - 1 : body.Top;
+		int bottom = delta.Y > 16f ? body.Bottom + 1 : body.Bottom;
+		if (TunnelTile(column, column, top, bottom, pickPower) is Point wall)
+		{
+			TileToDig = wall;
+			return;
+		}
+		moveDirection = direction;
+		wantsJump = grounded && delta.Y < -16f;
+	}
+
+	static Point? TunnelTile(int left, int right, int top, int bottom, int pickPower)
+	{
+		for (int y = top; y <= bottom; y++)
+		{
+			for (int x = left; x <= right; x++)
+			{
+				if (!TileQuery.IsSolid(x, y))
+					continue;
+				if (!CanBreak(x, y, pickPower) || LavaNear(x, y))
+					return null;
+				return new Point(x, y);
+			}
+		}
+		return null;
+	}
+
+	static bool LavaNear(int x, int y)
+	{
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			for (int dy = -1; dy <= 1; dy++)
+			{
+				var tile = Main.tile[x + dx, y + dy];
+				if (tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava)
+					return true;
+			}
+		}
+		return false;
 	}
 
 	const int ClimbJumpHoldTicks = 4;
@@ -313,8 +389,8 @@ public sealed class BotMotor
 		WantsToDropThroughPlatforms = intent.DropThroughPlatforms;
 		if (intent.ClimbDirection != 0)
 		{
-			int ropeX = intent.ClimbColumn >= 0 ? intent.ClimbColumn : (int)(npc.Center.X / 16f);
-			npc.position.X = ropeX * 16 + 8 - npc.width / 2f;
+			if (intent.ClimbColumn >= 0)
+				npc.position.X = PathFinder.CenterXOf(intent.ClimbColumn) - npc.width / 2f;
 			npc.velocity = new Vector2(0f, intent.ClimbDirection * RopeClimbSpeed);
 		}
 	}
@@ -433,7 +509,12 @@ public sealed class BotMotor
 			onRope |= IsRope(centerX, y);
 		if (onRope)
 		{
-			npc.position.X = centerX * 16 + 8 - npc.width / 2f;
+			bool ropeEndsHere = !IsRope(centerX, body.Top - 1) && !bot.Hands.HasRope;
+			if (ropeEndsHere)
+			{
+				npc.velocity.Y = -RopeLeapSpeed;
+				return false;
+			}
 			npc.velocity = new Vector2(0f, -RopeClimbSpeed);
 			if (!Main.tile[centerX, body.Top - 1].HasTile)
 				RopeTile = new Point(centerX, body.Top - 1);

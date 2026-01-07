@@ -57,7 +57,7 @@ public sealed class BotWatchdog
 		EscapeRequested = true;
 		EscapeDirection = -EscapeDirection;
 		bot.Brain.SuppressCurrentGoal();
-		BotDiagnostics.Log(bot, $"watchdog: repeated navigation failures near {bot.CenterTile}, escaping");
+		BotDiagnostics.Log(bot, $"watchdog: repeated navigation failures near {bot.CenterTile}, escaping; motor: {bot.Motor.Describe()}{TerrainDump.Around(bot.CenterTile, 20, 10)}");
 		bot.Brain.ForceReconsider();
 	}
 

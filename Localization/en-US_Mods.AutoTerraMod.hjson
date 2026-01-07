@@ -84,6 +84,9 @@ Aspirations: {
 Tasks: {
 	Summon: Summoning boss
 	Rally: Rallying
+	Scout: Scouting
+	Smash: Smashing orbs
+	Travel: Travelling
 	TidyCamp: Clearing tombstones
 	Deliver: Delivering materials
 	Escape: Escaping
@@ -106,6 +109,15 @@ Tasks: {
 	Build: Building house
 }
 
+Landmarks: {
+	Dungeon: dungeon
+	Corruption: Corruption
+	Crimson: Crimson
+	Jungle: jungle
+	Snow: snow biome
+	Underworld: Underworld
+}
+
 Plans: {
 	Deliver: Bring {0} to {1}
 	Withdraw: Take {0} x{1} from storage
@@ -114,6 +126,10 @@ Plans: {
 	Place: Place {0}
 	Idle: Nothing planned
 	Build: Build house: {0}
+	Summon: Summon {0}
+	Scout: Look for the {0}
+	Smash: Smash an orb
+	Travel: Travel
 }
 
 UI: {

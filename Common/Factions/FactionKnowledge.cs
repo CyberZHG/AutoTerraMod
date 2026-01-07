@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
 
@@ -12,6 +13,23 @@ public sealed class FactionKnowledge
 	readonly Dictionary<Point, int> resourceTiles = new();
 	readonly HashSet<int> knownChests = new();
 	readonly HashSet<int> lootedChests = new();
+	readonly Dictionary<Landmark, Point> landmarks = new();
+	readonly Dictionary<Landmark, (int minX, int maxX)> landmarkSpans = new();
+
+	public int ScoutDirection { get; set; } = 1;
+	public int FruitlessShrineSearches { get; set; }
+
+	public void RememberLandmark(Landmark landmark, Point tile)
+	{
+		landmarks.TryAdd(landmark, tile);
+		landmarkSpans[landmark] = landmarkSpans.TryGetValue(landmark, out var span)
+			? (System.Math.Min(span.minX, tile.X), System.Math.Max(span.maxX, tile.X))
+			: (tile.X, tile.X);
+	}
+
+	public (int minX, int maxX)? SpanOf(Landmark landmark) => landmarkSpans.TryGetValue(landmark, out var span) ? span : null;
+
+	public Point? LandmarkOf(Landmark landmark) => landmarks.TryGetValue(landmark, out var tile) ? tile : null;
 
 	public void RememberChest(int chestIndex) => knownChests.Add(chestIndex);
 

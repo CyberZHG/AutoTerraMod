@@ -14,11 +14,24 @@ public static class ProgressionPlanner
 
 	static ProgressionGoal[] ladder;
 
-	public static void Reset() => ladder = null;
+	public static void Reset()
+	{
+		ladder = null;
+		expeditions.Clear();
+	}
+
+	const int ExpeditionCommitmentTicks = 3 * 3600;
+
+	static readonly Dictionary<int, (ProgressionGoal goal, uint until)> expeditions = new();
 
 	public static PlanStep NextStep(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{
 		ladder ??= ProgressionGoals.Build();
+		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
+		{
+			source = expeditions[bot.Id].goal;
+			return ongoing;
+		}
 		foreach (var goal in ladder)
 		{
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
@@ -26,12 +39,33 @@ public static class ProgressionPlanner
 			var step = goal.Plan(bot);
 			if (step is not BlockedStep and not IdleStep)
 			{
+				if (goal.IsExpedition)
+					expeditions[bot.Id] = (goal, Main.GameUpdateCount + ExpeditionCommitmentTicks);
 				source = goal;
 				return step;
 			}
 		}
 		source = null;
 		return PlanStep.Idle;
+	}
+
+	static PlanStep ContinueExpedition(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
+	{
+		if (!expeditions.TryGetValue(bot.Id, out var expedition))
+			return null;
+		var goal = expedition.goal;
+		if (Main.GameUpdateCount > expedition.until || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+		{
+			expeditions.Remove(bot.Id);
+			return null;
+		}
+		var step = goal.Plan(bot);
+		if (step is BlockedStep or IdleStep)
+		{
+			expeditions.Remove(bot.Id);
+			return null;
+		}
+		return step;
 	}
 
 	public static PlanStep Obtain(Bot bot, int itemType, int amount) =>
@@ -76,7 +110,7 @@ public static class ProgressionPlanner
 		{
 			var source = ResourceSources.For(itemType);
 			if (source != null)
-				return new GatherStep(itemType, amount - have, source);
+				return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
 			foreach (var recipe in RecipeIndex.For(itemType))
 			{
 				var step = PlanRecipe(context, recipe, depth);
@@ -121,6 +155,12 @@ public static class ProgressionPlanner
 			return PlanStep.Blocked;
 		}
 		return new CraftStep(recipe);
+	}
+
+	static World.Landmark? UnknownGround(Bot bot, ResourceSource source)
+	{
+		var ground = source switch { TileSource tiles => tiles.Ground, NpcSource npcs => npcs.Ground, _ => null };
+		return ground is World.Landmark landmark && BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(landmark) == null ? landmark : null;
 	}
 
 	static bool ConditionsAchievable(Bot bot, Recipe recipe) => recipe.Conditions.All(condition =>

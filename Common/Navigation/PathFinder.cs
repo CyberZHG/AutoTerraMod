@@ -184,7 +184,7 @@ public static class PathFinder
 			}
 		}
 
-		if (!onRope && supported)
+		if (supported)
 			AddJumpEdges(x, y, edges);
 
 		if (InWater(x, y))

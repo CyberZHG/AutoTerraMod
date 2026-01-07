@@ -27,13 +27,19 @@ public sealed record WithdrawStep(int ItemType, int Amount) : PlanStep;
 
 public sealed record DeliverStep(int ItemType, int RecipientId) : PlanStep;
 
-public sealed record SummonBossStep(int BossType, int SummonItem) : PlanStep;
+public sealed record SummonBossStep(Bosses.BossChallenge Challenge, Bosses.BossTrigger Trigger, Microsoft.Xna.Framework.Vector2 Place, Microsoft.Xna.Framework.Point? Shrine) : PlanStep;
+
+public sealed record ScoutStep(World.Landmark Landmark, bool Underground) : PlanStep;
+
+public sealed record SmashShrineStep(Microsoft.Xna.Framework.Point Shrine) : PlanStep;
+
+public sealed record TravelStep(Microsoft.Xna.Framework.Vector2 Place) : PlanStep;
 
 public abstract record ResourceSource;
 
-public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int, bool> Accept = null, bool OnSurface = false) : ResourceSource
+public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int, bool> Accept = null, bool OnSurface = false, World.Landmark? Ground = null) : ResourceSource
 {
 	public bool Accepts(int x, int y) => Accept?.Invoke(x, y) ?? true;
 }
 
-public sealed record NpcSource(ISet<int> NpcTypes) : ResourceSource;
+public sealed record NpcSource(ISet<int> NpcTypes, World.Landmark? Ground = null) : ResourceSource;

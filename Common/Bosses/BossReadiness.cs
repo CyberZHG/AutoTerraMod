@@ -29,10 +29,10 @@ public static class BossReadiness
 
 	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner)
 	{
-		var fighters = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).ToList();
+		var fighters = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).ToList();
 		var sample = ContentSamples.NpcsByNetId[challenge.BossType];
 		var mode = Main.GameModeInfo;
-		float bossLife = sample.lifeMax * mode.EnemyMaxLifeMultiplier;
+		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * mode.EnemyMaxLifeMultiplier;
 		if (Main.expertMode)
 			bossLife *= 1f + ExpertScalingPerExtraPlayer * Math.Max(0, fighters.Count - 1);
 		float bossDamage = sample.damage * mode.EnemyDamageMultiplier;

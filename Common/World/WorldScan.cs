@@ -19,7 +19,7 @@ public static class WorldScan
 		long bestDistance = long.MaxValue;
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || IsMushroom(x, y, tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || IsForage(x, y, tileType))
 				knowledge?.Remember(new Point(x, y), tileType);
 			if (!tileTypes.Contains(tileType) || !accept(x, y))
 				return;
@@ -40,8 +40,10 @@ public static class WorldScan
 	{
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || tileType == TileID.DemonAltar || IsMushroom(x, y, tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType))
 				knowledge.Remember(new Point(x, y), tileType);
+			if (Landmarks.Classify(y, tileType) is Landmark landmark)
+				knowledge.RememberLandmark(landmark, new Point(x, y));
 		});
 	}
 
@@ -66,9 +68,24 @@ public static class WorldScan
 
 	public static bool IsTreasure(int tileType) => TreasureTiles.Contains(tileType);
 
-	public const int MushroomPlantFrameX = 144;
+	public static bool IsBossShrine(int tileType) => tileType is TileID.DemonAltar or TileID.ShadowOrbs or TileID.Larva;
 
-	public static bool IsMushroom(int x, int y, int tileType) => tileType == TileID.Plants && Main.tile[x, y].TileFrameX == MushroomPlantFrameX;
+	public static readonly Dictionary<int, (int tileType, int frameX)> ForageTiles = new()
+	{
+		[ItemID.Mushroom] = (TileID.Plants, 144),
+		[ItemID.VileMushroom] = (TileID.CorruptPlants, 144),
+		[ItemID.ViciousMushroom] = (TileID.CrimsonPlants, 270)
+	};
+
+	public static bool IsForage(int x, int y, int tileType)
+	{
+		foreach (var (forageTile, frameX) in ForageTiles.Values)
+		{
+			if (tileType == forageTile && Main.tile[x, y].TileFrameX == frameX)
+				return true;
+		}
+		return false;
+	}
 
 	public static long DistanceSq(Point a, Point b)
 	{

@@ -5,6 +5,7 @@ using AutoTerraMod.Common.Config;
 using AutoTerraMod.Common.Factions;
 using AutoTerraMod.Common.Systems;
 using Terraria;
+using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
@@ -12,7 +13,7 @@ namespace AutoTerraMod.Common.Bosses;
 
 public sealed class BossCredit : GlobalNPC
 {
-	const float CreditShareOfLife = 0.1f;
+	const float CreditShare = 0.1f;
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId)> shots = new();
@@ -23,25 +24,34 @@ public sealed class BossCredit : GlobalNPC
 		shots.Clear();
 	}
 
-	public static void Forget(int slot) => damageByFight.Remove(slot);
+	public static void ForgetIfOver(BossChallenge challenge)
+	{
+		if (!BossCatalog.IsBossAlive(challenge))
+			damageByFight.Remove(challenge.BossType);
+	}
 
 	public static void RegisterShot(Projectile projectile, Bot shooter) => shots[projectile.whoAmI] = (projectile.identity, shooter.FactionId);
 
 	public static void RecordDamage(NPC target, int factionId, int damage)
 	{
-		var boss = BossOf(target);
-		if (boss == null || damage <= 0)
+		var challenge = BossCatalog.ChallengeOf(target.type);
+		if (challenge == null || damage <= 0)
 			return;
-		if (!damageByFight.TryGetValue(boss.whoAmI, out var byFaction))
-			damageByFight[boss.whoAmI] = byFaction = new Dictionary<int, long>();
+		if (!damageByFight.TryGetValue(challenge.BossType, out var byFaction))
+			damageByFight[challenge.BossType] = byFaction = new Dictionary<int, long>();
 		byFaction[factionId] = byFaction.GetValueOrDefault(factionId) + damage;
 	}
 
 	public static bool HasDefeated(Faction faction, BossChallenge challenge) =>
 		BotWorldSystem.Relation == FactionRelation.Cooperate ? challenge.IsDefeated() : faction.DefeatedBosses.Contains(challenge.BossType);
 
-	public static BossChallenge NextChallengeFor(Faction faction) =>
-		BossCatalog.Challenges.FirstOrDefault(challenge => !HasDefeated(faction, challenge));
+	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction) =>
+		BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge));
+
+	public static BossChallenge NextChallengeFor(Faction faction) => OpenChallengesFor(faction).FirstOrDefault();
+
+	public static int DefeatedCount(Faction faction) =>
+		BossCatalog.Challenges.Count(challenge => BossCatalog.AppliesToThisWorld(challenge) && HasDefeated(faction, challenge));
 
 	public override void OnHitByProjectile(NPC npc, Projectile projectile, NPC.HitInfo hit, int damageDone)
 	{
@@ -51,26 +61,28 @@ public sealed class BossCredit : GlobalNPC
 
 	public override void OnKill(NPC npc)
 	{
-		if (!npc.boss || !damageByFight.Remove(npc.whoAmI, out var byFaction))
+		var challenge = BossCatalog.ChallengeOf(npc.type);
+		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.Remove(challenge.BossType, out var byFaction))
 			return;
-		long total = byFaction.Values.Sum();
+		long total = System.Math.Max(1, byFaction.Values.Sum());
+		long best = byFaction.Values.Max();
 		var credited = byFaction
-			.Where(entry => entry.Value >= npc.lifeMax * CreditShareOfLife || entry.Value == byFaction.Values.Max())
-			.Select(entry => BotWorldSystem.Factions.FirstOrDefault(faction => faction.Id == entry.Key))
+			.Where(entry => entry.Value >= total * CreditShare || entry.Value == best)
+			.Select(entry => FactionById(entry.Key))
 			.Where(faction => faction != null)
 			.ToList();
 		foreach (var faction in credited)
-			faction.DefeatedBosses.Add(npc.type);
-		string shares = string.Join(", ", byFaction.OrderByDescending(entry => entry.Value)
-			.Select(entry => $"{BotWorldSystem.Factions.FirstOrDefault(faction => faction.Id == entry.Key)?.Name} {entry.Value * 100 / System.Math.Max(1, total)}%"));
-		BotDiagnostics.LogWorld($"boss {npc.FullName} defeated; damage shares: {shares}; credited: {string.Join(", ", credited.Select(faction => faction.Name))}");
+			faction.DefeatedBosses.Add(challenge.BossType);
+		string shares = string.Join(", ", byFaction.OrderByDescending(entry => entry.Value).Select(entry => $"{FactionById(entry.Key)?.Name} {entry.Value * 100 / total}%"));
+		BotDiagnostics.LogWorld($"boss {challenge.Name} defeated; damage shares: {shares}; credited: {string.Join(", ", credited.Select(faction => faction.Name))}");
 		foreach (var faction in credited)
-			Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.BossCredited", faction.Name, npc.FullName, shares), faction.Color);
+			Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.BossCredited", faction.Name, challenge.Name, shares), faction.Color);
 	}
 
-	static NPC BossOf(NPC npc)
-	{
-		var root = npc.realLife >= 0 ? Main.npc[npc.realLife] : npc;
-		return root.active && root.boss ? root : null;
-	}
+	static bool OtherPartsAlive(BossChallenge challenge, NPC dying) =>
+		Main.npc.Any(other => other.active && other.whoAmI != dying.whoAmI && other.life > 0 && challenge.IsPart(other.type) && IsEssential(challenge, other));
+
+	static bool IsEssential(BossChallenge challenge, NPC part) => part.boss || !ContentSamples.NpcsByNetId[challenge.BossType].boss;
+
+	static Faction FactionById(int id) => BotWorldSystem.Factions.FirstOrDefault(faction => faction.Id == id);
 }

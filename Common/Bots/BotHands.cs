@@ -118,6 +118,36 @@ public sealed class BotHands
 		return ToolResult.Working;
 	}
 
+	public ToolResult Smash(Point tile)
+	{
+		if (!TileQuery.HasTile(tile))
+			return ToolResult.Done;
+		var hammer = BestHammer;
+		if (hammer == null)
+			return ToolResult.NoTool;
+		if (!CanReach(hammer, tile))
+			return ToolResult.OutOfReach;
+		var target = Main.tile[tile.X, tile.Y];
+		if (!Main.tileHammer[target.TileType] || target.TileType == TileID.DemonAltar || !WorldGen.CanKillTile(tile.X, tile.Y))
+			return ToolResult.Unbreakable;
+		if (!Ready)
+			return ToolResult.Working;
+		Swing(hammer, CombinedHooks.TotalUseTime(hammer.useTime, Avatar, hammer), tile.ToWorldCoordinates());
+		int hitId = Avatar.hitTile.HitObject(tile.X, tile.Y, 1);
+		using (Systems.AvatarPresence.Enter())
+		{
+			if (Avatar.hitTile.AddDamage(hitId, hammer.hammer) >= 100)
+			{
+				Avatar.hitTile.Clear(hitId);
+				WorldGen.KillTile(tile.X, tile.Y);
+				bot.Watchdog.RecordProgress();
+				return ToolResult.Done;
+			}
+			WorldGen.KillTile(tile.X, tile.Y, fail: true);
+		}
+		return ToolResult.Working;
+	}
+
 	static readonly System.Func<Player, int, int, int, int, Tile, int> VanillaPickaxeDamage =
 		(System.Func<Player, int, int, int, int, Tile, int>)System.Delegate.CreateDelegate(
 			typeof(System.Func<Player, int, int, int, int, Tile, int>),

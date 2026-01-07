@@ -9,8 +9,10 @@ public sealed class HuntTask : BotTask
 {
 	const float SearchRadius = 16f * 100f;
 	const int WanderTiles = 60;
+	const int UndergroundMargin = 20;
 
 	NPC prey;
+	Vector2? huntingGround;
 	int wanderDirection = 1;
 
 	public HuntTask(Bot bot) : base(bot) { }
@@ -49,6 +51,10 @@ public sealed class HuntTask : BotTask
 	{
 		base.Start();
 		wanderDirection = Main.rand.NextBool() ? 1 : -1;
+		huntingGround = null;
+		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } } && !Grounds.IsInside(knowledge, ground, Bot.CenterTile))
+			huntingGround = Grounds.PickSpot(knowledge, ground, Bot.CenterTile);
 	}
 
 	public override void Tick()
@@ -58,8 +64,17 @@ public sealed class HuntTask : BotTask
 			Engagement.Fight(Bot, prey);
 			return;
 		}
+		if (huntingGround is Vector2 ground)
+		{
+			Bot.Motor.MoveTo(ground, 48f);
+			if (Bot.Motor.HasArrived || Bot.Motor.IsStuck)
+				IsFinished = true;
+			return;
+		}
 		int x = Utils.Clamp(Bot.CenterTile.X + wanderDirection * WanderTiles, 50, Main.maxTilesX - 50);
-		Bot.Motor.MoveTo(new Vector2(x * 16f, TileQuery.SurfaceY(x) * 16f - 24f), 32f);
+		bool underground = Bot.CenterTile.Y > Main.worldSurface + UndergroundMargin;
+		float y = underground ? Bot.Center.Y : TileQuery.SurfaceY(x) * 16f - 24f;
+		Bot.Motor.MoveTo(new Vector2(x * 16f, y), 32f);
 		if (Bot.Motor.HasArrived || Bot.Motor.IsStuck)
 		{
 			wanderDirection = -wanderDirection;
