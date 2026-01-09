@@ -66,11 +66,21 @@ public sealed class BotBrain
 	public string GoalName => currentGoal?.Describe() ?? "none";
 	public System.Collections.Generic.HashSet<int> PlannedItemTypes { get; private set; } = new();
 
+	public BotTask Override { get; set; }
+
 	public void Tick(NPC body)
 	{
 		bot.Vitals.Tick(body);
 		if (!bot.IsAlive)
 			return;
+		if (Override != null)
+		{
+			bot.Hands.Tick();
+			Override.Tick();
+			bot.Motor.Tick(body);
+			AnimateAvatar(body);
+			return;
+		}
 		bot.Hands.Tick();
 		bot.Watchdog.Tick();
 		if (--reconsiderTimer <= 0 || current == null || current.IsFinished)

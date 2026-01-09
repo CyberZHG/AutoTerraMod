@@ -17,7 +17,8 @@ public enum MoveKind
 	Climb,
 	Bridge,
 	Pillar,
-	Swim
+	Swim,
+	RopeDown
 }
 
 public readonly record struct PathNode(Point Feet, MoveKind Arrival);
@@ -27,7 +28,7 @@ public sealed record PathResult(List<PathNode> Nodes, bool ReachesGoal)
 	public static readonly PathResult None = new(new List<PathNode>(), false);
 }
 
-public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar);
+public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall);
 
 public static class PathFinder
 {
@@ -59,9 +60,13 @@ public static class PathFinder
 			return budgetUsed < ExpansionBudgetPerTick;
 		}
 	}
-	const int MaxJumpRise = 4;
+	const int MaxJumpRise = 5;
+	const int MaxRopeClimb = 60;
+	const int MaxRopeDescent = 120;
+	const float RopeClimbBaseCost = 4f;
+	const float RopeClimbCostPerTile = 1.2f;
 	const int MaxJumpReach = 3;
-	const int MaxSafeFall = 24;
+	public const int MaxSafeFall = 24;
 	const float DigCostPerTile = 3f;
 	const float BridgeCost = 4f;
 	const float HazardPenalty = 25f;
@@ -166,8 +171,10 @@ public static class PathFinder
 					edges.Add(new Edge(new Point(nx, y), MoveKind.Walk, 1f));
 				else
 				{
-					if (DropLanding(nx, y) is Point landing)
+					if (DropLanding(nx, y, abilities.MaxFall) is Point landing)
 						edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
+					else if (abilities.CanRope && abilities.CanBridge && supported && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
+						edges.Add(new Edge(bottom, MoveKind.RopeDown, RopeClimbBaseCost + (bottom.Y - y) * RopeClimbCostPerTile));
 					if (abilities.CanBridge && supported && !Main.tile[BridgeColumn(x, nx), y + 1].HasTile)
 						edges.Add(new Edge(new Point(nx, y), MoveKind.Bridge, BridgeCost));
 				}
@@ -200,11 +207,14 @@ public static class PathFinder
 		if (abilities.CanPillar && supported && RowClear(x, y - 3))
 			edges.Add(new Edge(new Point(x, y - 1), MoveKind.Pillar, PillarCost));
 
-		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1) is Point belowPlatform)
+		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1, abilities.MaxFall) is Point belowPlatform)
 			edges.Add(new Edge(belowPlatform, MoveKind.Drop, 1f + (belowPlatform.Y - y) * 0.3f));
 
 		if (abilities.CanDig && supported)
 			TryDig(edges, abilities, node, new Point(x, y + 1));
+
+		if (abilities.CanRope && (supported || onRope))
+			AddRopeClimbEdges(x, y, edges);
 
 		if (onRope || RopeColumn(x, y - 2) >= 0)
 		{
@@ -212,6 +222,17 @@ public static class PathFinder
 				edges.Add(new Edge(new Point(x, y - 1), MoveKind.Climb, 1f));
 			if (BodyClear(x, y + 1) && (RopeColumn(x, y + 1) >= 0 || Supported(x, y + 1)))
 				edges.Add(new Edge(new Point(x, y + 1), MoveKind.Climb, 1f));
+		}
+	}
+
+	static void AddRopeClimbEdges(int x, int y, List<Edge> edges)
+	{
+		for (int rise = MaxJumpRise + 1; rise <= MaxRopeClimb && BodyClear(x, y - rise); rise++)
+		{
+			int top = y - rise;
+			bool exit = (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
+			if (exit)
+				edges.Add(new Edge(new Point(x, top), MoveKind.Climb, RopeClimbBaseCost + rise * RopeClimbCostPerTile));
 		}
 	}
 
@@ -245,9 +266,10 @@ public static class PathFinder
 
 	public static IEnumerable<Point> CellsToClear(Point from, Point to)
 	{
+		int top = Math.Min(from.Y, to.Y) - 2;
 		for (int column = to.X; column <= to.X + 1; column++)
 		{
-			for (int row = to.Y - 2; row <= to.Y; row++)
+			for (int row = top; row <= to.Y; row++)
 				yield return new Point(column, row);
 		}
 		for (int row = to.Y - 2; row <= from.Y - 3; row++)
@@ -262,22 +284,14 @@ public static class PathFinder
 		if (!Supported(to.X, to.Y) && to.Y <= from.Y)
 			return;
 		int solids = 0;
-		for (int column = to.X; column <= to.X + 1; column++)
+		foreach (var cell in CellsToClear(from, to))
 		{
-			for (int row = to.Y - 2; row <= to.Y; row++)
-			{
-				if (!CountDiggable(column, row, abilities, ref solids))
-					return;
-			}
-		}
-		for (int row = to.Y - 2; row <= from.Y - 3; row++)
-		{
-			if (!CountDiggable(from.X, row, abilities, ref solids) || !CountDiggable(from.X + 1, row, abilities, ref solids))
+			if (!CountDiggable(cell.X, cell.Y, abilities, ref solids))
 				return;
 		}
 		if (solids == 0 || Hazardous(to.X, to.Y) || Hazardous(to.X + 1, to.Y))
 			return;
-		var landing = Supported(to.X, to.Y) ? to : DropLanding(to.X, to.Y);
+		var landing = Supported(to.X, to.Y) ? to : FallAfterDigging(to);
 		if (landing is Point destination)
 			edges.Add(new Edge(destination, MoveKind.Dig, 1f + solids * DigCostPerTile + (destination.Y - to.Y) * 0.3f));
 	}
@@ -292,14 +306,27 @@ public static class PathFinder
 		return true;
 	}
 
-	static Point? DropLanding(int x, int y)
+	static Point? DropLanding(int x, int y, int maxFall)
 	{
-		for (int fall = 0; fall <= MaxSafeFall; fall++)
+		for (int fall = 0; fall <= maxFall; fall++)
 		{
 			if (!BodyClear(x, y + fall))
 				return null;
 			if (Supported(x, y + fall) || RopeColumn(x, y + fall) >= 0 || InWater(x, y + fall))
 				return new Point(x, y + fall);
+		}
+		return null;
+	}
+
+	static Point? FallAfterDigging(Point dug)
+	{
+		for (int fall = 1; fall <= MaxSafeFall; fall++)
+		{
+			int y = dug.Y + fall;
+			if (!RowClear(dug.X, y) || Hazardous(dug.X, y) || Hazardous(dug.X + 1, y))
+				return null;
+			if (Supported(dug.X, y) || RopeColumn(dug.X, y) >= 0 || InWater(dug.X, y))
+				return new Point(dug.X, y);
 		}
 		return null;
 	}

@@ -1,0 +1,538 @@
+using System.Collections.Generic;
+using System.Linq;
+using AutoTerraMod.Common.Bots;
+using AutoTerraMod.Common.Bots.Tasks;
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace AutoTerraMod.Common.Systems;
+
+public sealed class NavigationBench : ModSystem
+{
+	sealed record BenchCase(string Name, string[] Map);
+
+	const int ArenaTop = 60;
+	const int ArenaLeft = 300;
+	const int ArenaSpacing = 60;
+	const int TimeoutTicks = 30 * 60;
+	const int SettleTicks = 60;
+	const float ArrivalDistance = 24f;
+	const int BuildingBlocks = 60;
+	const int BenchRopes = 40;
+	const int BenchPlatforms = 40;
+
+	static readonly BenchCase[] Cases =
+	{
+		new("Flat", new[]
+		{
+			"################################",
+			"#..............................#",
+			"#..............................#",
+			"#..............................#",
+			"#S............................G#",
+			"################################"
+		}),
+		new("Stairs", new[]
+		{
+			"################################",
+			"#..............................#",
+			"#..............................#",
+			"#..............................#",
+			"#..........................G...#",
+			"#.....................##########",
+			"#..................#############",
+			"#...............################",
+			"#S...........###################",
+			"################################"
+		}),
+		new("Ledge", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.............G......#",
+			"#S.........###########",
+			"#..........###########",
+			"######################"
+		}),
+		new("Shaft", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######S.#############",
+			"######################"
+		}),
+		new("RopePit", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"#######..#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######S!#############",
+			"######################"
+		}),
+		new("RopeWall", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######.!#############",
+			"#######S!#############",
+			"######################"
+		}),
+		new("SideHole", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"#########....#########",
+			"#########....#########",
+			"#########....#########",
+			"#########....#########",
+			"#########..###########",
+			"#########..###########",
+			"#########..........###",
+			"#########..........###",
+			"#########..........G.#",
+			"######################"
+		}),
+		new("Gap", new[]
+		{
+			"################################",
+			"#..............................#",
+			"#..............................#",
+			"#..............................#",
+			"#..............................#",
+			"#S...........###............G..#",
+			"##########...###################",
+			"##########...###################",
+			"##########...###################",
+			"##########...###################",
+			"##########.......###############",
+			"################################"
+		}),
+		new("Drop", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######....############",
+			"######..............##",
+			"######..............##",
+			"######..............G#",
+			"######################"
+		}),
+		new("Platforms", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.............G......#",
+			"#.....========########",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.....========.......#",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S....========.......#",
+			"######################"
+		}),
+		new("WaterShaft", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"#######~~#############",
+			"#######~~#############",
+			"#######~~#############",
+			"#######~~#############",
+			"#######~~#############",
+			"#######~~#############",
+			"#######~~#############",
+			"#######S~#############",
+			"######################"
+		}),
+		new("DirtWall", new[]
+		{
+			"################################",
+			"#..........dddddd..............#",
+			"#..........dddddd..............#",
+			"#..........dddddd..............#",
+			"#S.........dddddd.............G#",
+			"################################"
+		}),
+		new("DigDown", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"#dddddddddddddddddddd#",
+			"#dddddddddddddddddddd#",
+			"#dddddddddddddddddddd#",
+			"#dddddddddddddddddddd#",
+			"#dddddddddddddddddddd#",
+			"#dddddddddddddddddddd#",
+			"#....................#",
+			"#....................#",
+			"#..........G.........#",
+			"######################"
+		}),
+		new("RopeCliff", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#..............G.....#",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#S........############",
+			"######################"
+		}),
+		new("DirtCliff", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#..............G.....#",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#.........dddddddddd##",
+			"#S........dddddddddd##",
+			"######################"
+		}),
+		new("LavaGap", new[]
+		{
+			"################################",
+			"#..............................#",
+			"#..............................#",
+			"#..............................#",
+			"#S............................G#",
+			"###########.........############",
+			"###########%%%%%%%%%############",
+			"################################"
+		}),
+		new("Door", new[]
+		{
+			"################################",
+			"#..............#...............#",
+			"#..............................#",
+			"#..............................#",
+			"#S.............D.............G.#",
+			"################################"
+		}),
+		new("DeepChasm", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########G..###########",
+			"######################"
+		}),
+		new("ChasmClimb", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#...................G#",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########...###########",
+			"########S..###########",
+			"######################"
+		}),
+	};
+
+	int caseIndex = -1;
+	uint caseStartedAt;
+	Vector2 goal;
+	readonly List<string> results = new();
+
+	static bool Active => HeadlessTestMode.Scenario == "nav";
+
+	public override void OnWorldUnload()
+	{
+		caseIndex = -1;
+		results.Clear();
+	}
+
+	public override void PostUpdateWorld()
+	{
+		if (!Active || !BotWorldSystem.IsRunning || caseIndex >= Cases.Length)
+			return;
+		var runner = BotWorldSystem.Bots.FirstOrDefault();
+		if (runner == null || !runner.IsAlive)
+			return;
+		if (caseIndex < 0)
+		{
+			foreach (var bot in BotWorldSystem.Bots)
+				bot.Brain.Override = new HoldStillTask(bot);
+			StartCase(runner, 0);
+			return;
+		}
+		uint elapsed = Main.GameUpdateCount - caseStartedAt;
+		if (elapsed < SettleTicks)
+			return;
+		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
+		if (!arrived && elapsed < TimeoutTicks)
+			return;
+		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, 16, 8)}";
+		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
+		BotDiagnostics.LogWorld($"nav bench {Cases[caseIndex].Name}: {verdict}");
+		if (caseIndex + 1 < Cases.Length)
+		{
+			StartCase(runner, caseIndex + 1);
+			return;
+		}
+		caseIndex = Cases.Length;
+		runner.Brain.Override = new HoldStillTask(runner);
+		BotDiagnostics.LogWorld($"nav bench done: {results.Count(result => result.EndsWith("PASS"))}/{results.Count} passed ({string.Join(", ", results)})");
+	}
+
+	static string Below(Bot runner)
+	{
+		var feet = Navigation.PathFinder.FeetOf(runner.Npc);
+		return string.Join(" ", Enumerable.Range(feet.Y - 1, 5).Select(y => $"{y}:{(Main.tile[feet.X, y].HasTile ? Main.tile[feet.X, y].TileType.ToString() : "-")}/{(Main.tile[feet.X + 1, y].HasTile ? Main.tile[feet.X + 1, y].TileType.ToString() : "-")}"));
+	}
+
+	string FreshSearch(Bot runner)
+	{
+		var feet = Navigation.PathFinder.FeetOf(runner.Npc);
+		var result = Navigation.PathFinder.Find(feet, new Point((int)(goal.X / 16f), (int)((goal.Y + 21f) / 16f)), 1, runner.Motor.Abilities());
+		return $"{result.Nodes.Count} nodes reachesGoal={result.ReachesGoal} [{string.Join(" ", result.Nodes.Take(12).Select(node => $"{node.Feet.X},{node.Feet.Y}:{node.Arrival}"))}] abilities={runner.Motor.Abilities()}";
+	}
+
+	void StartCase(Bot runner, int index)
+	{
+		caseIndex = index;
+		var bench = Cases[index];
+		int left = ArenaLeft + index * ArenaSpacing;
+		Point start = default, target = default;
+		for (int row = 0; row < bench.Map.Length; row++)
+		{
+			for (int column = 0; column < bench.Map[row].Length; column++)
+			{
+				int x = left + column;
+				int y = ArenaTop + row;
+				char glyph = bench.Map[row][column];
+				Build(x, y, glyph);
+				if (glyph == 'S')
+					start = new Point(x, y);
+				if (glyph == 'G')
+					target = new Point(x, y);
+			}
+		}
+		for (int row = 0; row < bench.Map.Length; row++)
+		{
+			for (int column = 0; column < bench.Map[row].Length; column++)
+			{
+				if (bench.Map[row][column] == 'D')
+					WorldGen.PlaceDoor(left + column, ArenaTop + row - 1, TileID.ClosedDoor);
+			}
+		}
+		for (int row = 0; row < bench.Map.Length; row++)
+		{
+			for (int column = 0; column < bench.Map[row].Length; column++)
+				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
+		}
+		TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
+		TopUp(runner, ItemID.Rope, BenchRopes);
+		TopUp(runner, ItemID.WoodPlatform, BenchPlatforms);
+		var body = runner.Npc;
+		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
+		body.velocity = Vector2.Zero;
+		runner.Vitals.Teleported(body);
+		runner.Avatar.statLife = runner.Avatar.statLifeMax2;
+		runner.Motor.Stop();
+		goal = target.ToWorldCoordinates();
+		runner.Brain.Override = new BenchMoveTask(runner, goal);
+		caseStartedAt = Main.GameUpdateCount;
+	}
+
+	static void TopUp(Bot runner, int itemType, int amount)
+	{
+		int missing = amount - Inventory.Count(runner.Avatar, itemType);
+		if (missing > 0)
+			Inventory.Add(runner.Avatar, new Item(itemType, missing));
+	}
+
+	static void Build(int x, int y, char glyph)
+	{
+		var tile = Main.tile[x, y];
+		tile.ClearEverything();
+		switch (glyph)
+		{
+			case '#':
+				WorldGen.PlaceTile(x, y, TileID.LihzahrdBrick, true, true);
+				break;
+			case 'd':
+				WorldGen.PlaceTile(x, y, TileID.Dirt, true, true);
+				break;
+			case '=':
+				WorldGen.PlaceTile(x, y, TileID.Platforms, true, true);
+				break;
+			case '!':
+				WorldGen.PlaceTile(x, y, TileID.Rope, true, true);
+				break;
+			case '~':
+				tile.LiquidType = LiquidID.Water;
+				tile.LiquidAmount = byte.MaxValue;
+				break;
+			case '%':
+				tile.LiquidType = LiquidID.Lava;
+				tile.LiquidAmount = byte.MaxValue;
+				break;
+		}
+	}
+
+	sealed class BenchMoveTask : BotTask
+	{
+		readonly Vector2 target;
+
+		public BenchMoveTask(Bot bot, Vector2 target) : base(bot) => this.target = target;
+
+		public override string NameKey => "Explore";
+
+		public override float Evaluate() => 0f;
+
+		public override void Tick() => Bot.Motor.MoveTo(target, 8f);
+	}
+
+	sealed class HoldStillTask : BotTask
+	{
+		public HoldStillTask(Bot bot) : base(bot) { }
+
+		public override string NameKey => "Idle";
+
+		public override float Evaluate() => 0f;
+
+		public override void Tick() => Bot.Motor.Stop();
+	}
+}

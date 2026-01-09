@@ -368,11 +368,17 @@ public sealed class BotMotor
 		SteerGreedy(npc, target, delta, ref moveDirection, ref wantsJump);
 	}
 
-	NavigationAbilities Abilities()
+	const float AffordableFallDamageShare = 0.4f;
+	const int FallDamagePerTile = 10;
+	const int MaxMeasuredDrop = 200;
+
+	int AffordableFall => PathFinder.MaxSafeFall + (int)(bot.Avatar.statLife * AffordableFallDamageShare / FallDamagePerTile);
+
+	public NavigationAbilities Abilities()
 	{
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		bool hasBridgeMaterial = bot.Hands.HasBridgeMaterial;
-		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, ScaffoldingAllowed && hasBridgeMaterial);
+		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, ScaffoldingAllowed && hasBridgeMaterial, bot.Hands.HasRope, AffordableFall);
 	}
 
 	void ApplyIntent(NPC npc, MotorIntent intent, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
@@ -391,8 +397,46 @@ public sealed class BotMotor
 		{
 			if (intent.ClimbColumn >= 0)
 				npc.position.X = PathFinder.CenterXOf(intent.ClimbColumn) - npc.width / 2f;
+			if (intent.ClimbDirection < 0 && intent.ClimbColumn >= 0 && NextRopeTile(npc, intent.ClimbColumn) is Point rope)
+			{
+				RopeTile = rope;
+				npc.velocity = Vector2.Zero;
+				return;
+			}
+			if (intent.ClimbDirection > 0 && intent.ClimbColumn >= 0 && !PrepareRopeBelow(npc, intent.ClimbColumn))
+			{
+				npc.velocity = Vector2.Zero;
+				return;
+			}
+			if (intent.ClimbDirection > 0)
+				WantsToDropThroughPlatforms = true;
 			npc.velocity = new Vector2(0f, intent.ClimbDirection * RopeClimbSpeed);
 		}
+	}
+
+	bool PrepareRopeBelow(NPC npc, int column)
+	{
+		var body = BodyTiles.Of(npc);
+		int y = body.Bottom + 1;
+		if (Main.tile[column, y].HasTile || !bot.Hands.HasRope)
+			return true;
+		bool anchored = IsRope(column, y - 1) || Main.tile[column, y - 1].HasTile;
+		if (anchored)
+			RopeTile = new Point(column, y);
+		else
+			BridgeTile = new Point(column, y);
+		return false;
+	}
+
+	Point? NextRopeTile(NPC npc, int column)
+	{
+		var body = BodyTiles.Of(npc);
+		for (int y = body.Bottom; y >= body.Top - 1; y--)
+		{
+			if (!IsRope(column, y))
+				return bot.Hands.HasRope && !Main.tile[column, y].HasTile ? new Point(column, y) : null;
+		}
+		return null;
 	}
 
 	int EscapeHazard(NPC npc)
@@ -439,6 +483,11 @@ public sealed class BotMotor
 
 		if (wallHeight == 0)
 		{
+			if (DropDepth(aheadX, body.Bottom) > AffordableFall)
+			{
+				moveDirection = 0;
+				return;
+			}
 			if (targetBelow && grounded && delta.Y > Math.Abs(delta.X) * 0.5f && TileQuery.IsSolid(aheadX, body.Bottom + 1))
 				TileToDig = new Point(aheadX, body.Bottom + 1);
 			return;
@@ -464,6 +513,14 @@ public sealed class BotMotor
 	{
 		int tileType = TileQuery.TypeAt(tile);
 		return tileType < 0 || tileType == TileID.ClosedDoor || (!Main.tileFrameImportant[tileType] && !HouseInspector.IsProtected(tile.X, tile.Y));
+	}
+
+	static int DropDepth(int x, int feetY)
+	{
+		int depth = 0;
+		while (depth <= MaxMeasuredDrop && !TileQuery.CanStandOn(x, feetY + depth + 1) && Main.tile[x, feetY + depth + 1].LiquidAmount == 0)
+			depth++;
+		return depth;
 	}
 
 	void Descend(BodyTiles body)

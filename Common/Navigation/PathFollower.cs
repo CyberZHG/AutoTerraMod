@@ -38,6 +38,7 @@ public sealed class PathFollower
 	Point stepOrigin;
 	uint plannedAt;
 	int stepTicks;
+	MotorIntent lastIntent;
 	readonly HashSet<(Point from, Point to)> failedSteps = new();
 	uint failedStepsSince;
 
@@ -45,7 +46,7 @@ public sealed class PathFollower
 	public bool HasPath => path.Nodes.Count > 0 && index < path.Nodes.Count;
 
 	public string Describe() => HasPath
-		? $"path {index}/{path.Nodes.Count} next={path.Nodes[index].Feet}:{path.Nodes[index].Arrival} reachesGoal={path.ReachesGoal} stepTicks={stepTicks} goal={plannedGoal}"
+		? $"path {index}/{path.Nodes.Count} next={path.Nodes[index].Feet}:{path.Nodes[index].Arrival} reachesGoal={path.ReachesGoal} stepTicks={stepTicks} goal={plannedGoal} intent(move={lastIntent.MoveDirection} jump={lastIntent.Jump} dig={lastIntent.DigTile} bridge={lastIntent.BridgeTile} climb={lastIntent.ClimbDirection})"
 		: $"no path (noRoute={HasNoRoute}, plannedAgo={Main.GameUpdateCount - plannedAt})";
 	public bool ReachesGoal => path.ReachesGoal;
 
@@ -74,7 +75,8 @@ public sealed class PathFollower
 		if (index >= path.Nodes.Count)
 			return default;
 		stepTicks++;
-		return Execute(body, feet, grounded, path.Nodes[index]);
+		lastIntent = Execute(body, feet, grounded, path.Nodes[index]);
+		return lastIntent;
 	}
 
 	bool NeedsReplan(Point feet, Point goal, bool grounded)
@@ -164,6 +166,10 @@ public sealed class PathFollower
 				break;
 			case MoveKind.Dig:
 				intent.DigTile ??= FirstSolidToDig(feet, node.Feet);
+				break;
+			case MoveKind.RopeDown:
+				intent.ClimbDirection = 1;
+				intent.ClimbColumn = node.Feet.X;
 				break;
 			case MoveKind.Climb:
 				intent.ClimbDirection = Math.Sign(node.Feet.Y - feet.Y);

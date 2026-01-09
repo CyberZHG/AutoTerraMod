@@ -107,6 +107,8 @@ public sealed class BotVitals
 		suffocateDelay = 0;
 	}
 
+	public void Teleported(NPC npc) => fallStartTileY = (int)(npc.position.Y / 16f);
+
 	public void OnSpawned(NPC npc)
 	{
 		bot.Watchdog.Reset();
