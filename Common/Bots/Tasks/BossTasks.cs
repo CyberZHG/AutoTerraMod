@@ -12,8 +12,9 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 
 public sealed class SummonTask : BotTask
 {
-	const int RallyTicks = 3600;
-	const int AssembleTicks = 3600;
+	const int RallyTicks = 2 * 3600;
+	const int AssembleTicks = 3 * 3600;
+	const int TravelRetries = 3;
 	const int RallyCooldownTicks = 2 * 3600;
 	const float GatherRadius = 16f * 20f;
 	const float ArrivalRadius = 16f * 10f;
@@ -27,6 +28,7 @@ public sealed class SummonTask : BotTask
 	const int AccessorySlots = 7;
 
 	SummonBossStep step;
+	int travelFailures;
 
 	public SummonTask(Bot bot) : base(bot) { }
 
@@ -44,6 +46,7 @@ public sealed class SummonTask : BotTask
 	public override void Start()
 	{
 		base.Start();
+		travelFailures = 0;
 		var faction = Bot.Faction;
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
@@ -108,8 +111,11 @@ public sealed class SummonTask : BotTask
 		if (distance <= ArrivalRadius || (Bot.Motor.IsStuck && distance <= StuckAcceptRadius))
 			return true;
 		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
-		if (!TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
-			Abandon($"cannot reach {step.Place.ToTileCoordinates()}");
+		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
+			return false;
+		if (++travelFailures >= TravelRetries)
+			return Abandon($"cannot reach {step.Place.ToTileCoordinates()}");
+		Bot.Motor.Stop();
 		return false;
 	}
 

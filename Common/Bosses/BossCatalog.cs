@@ -27,6 +27,20 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 	public bool IsPart(int npcType) => npcType == BossType || Parts.Contains(npcType);
 
 	public bool CanSummonNow => !NightOnly || !Main.dayTime;
+
+	public Landmark? Arena => BossType switch
+	{
+		NPCID.EaterofWorldsHead => Landmark.Corruption,
+		NPCID.BrainofCthulhu => Landmark.Crimson,
+		_ => null
+	};
+
+	public static bool InArena(Player player, Landmark arena) => arena switch
+	{
+		Landmark.Corruption => player.ZoneCorrupt,
+		Landmark.Crimson => player.ZoneCrimson,
+		_ => true
+	};
 }
 
 public static class BossCatalog

@@ -30,6 +30,11 @@ public sealed class BossCredit : GlobalNPC
 			damageByFight.Remove(challenge.BossType);
 	}
 
+	public static string DescribeFight(BossChallenge challenge) =>
+		damageByFight.TryGetValue(challenge.BossType, out var byFaction)
+			? string.Join(", ", byFaction.Select(entry => $"{FactionById(entry.Key)?.Name} {entry.Value}"))
+			: "no damage yet";
+
 	public static void RegisterShot(Projectile projectile, Bot shooter) => shots[projectile.whoAmI] = (projectile.identity, shooter.FactionId);
 
 	public static void RecordDamage(NPC target, int factionId, int damage)

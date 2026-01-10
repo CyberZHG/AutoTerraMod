@@ -16,10 +16,14 @@ public sealed class BossWatch : ModSystem
 
 	public override void OnWorldUnload() => sightings.Clear();
 
+	const int ProgressLogTicks = 1800;
+
 	public override void PostUpdateNPCs()
 	{
 		if (!BotWorldSystem.IsRunning)
 			return;
+		if (Main.GameUpdateCount % ProgressLogTicks == 0)
+			LogFightProgress();
 		foreach (var (slot, last) in sightings.ToList())
 		{
 			var npc = Main.npc[slot];
@@ -38,6 +42,15 @@ public sealed class BossWatch : ModSystem
 			if (!sightings.ContainsKey(npc.whoAmI))
 				BotDiagnostics.LogWorld($"boss {npc.FullName} appeared at tile {npc.Center.ToTileCoordinates()} life={npc.lifeMax}");
 			sightings[npc.whoAmI] = new Sighting(npc.type, npc.life, npc.lifeMax, npc.timeLeft, npc.target, npc.Center, string.Join(",", npc.ai), string.Join(",", npc.localAI));
+		}
+	}
+
+	static void LogFightProgress()
+	{
+		foreach (var challenge in BossCatalog.Challenges.Where(BossCatalog.IsBossAlive))
+		{
+			var parts = Main.npc.Where(npc => npc.active && challenge.IsPart(npc.type)).ToList();
+			BotDiagnostics.LogWorld($"boss fight {challenge.Name}: {parts.Count} parts, life left {parts.Sum(npc => npc.life)}; damage {BossCredit.DescribeFight(challenge)}");
 		}
 	}
 

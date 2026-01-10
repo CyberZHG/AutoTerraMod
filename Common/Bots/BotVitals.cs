@@ -314,7 +314,26 @@ public sealed class BotVitals
 		finally
 		{
 			Main.SceneMetrics = sharedScene;
+			ApplyBiomeZones();
 		}
+	}
+
+	const int DungeonTileThreshold = 250;
+
+	void ApplyBiomeZones()
+	{
+		float tileY = Avatar.Center.Y / 16f;
+		Avatar.ZoneCorrupt = scene.EnoughTilesForCorruption;
+		Avatar.ZoneCrimson = scene.EnoughTilesForCrimson;
+		Avatar.ZoneHallow = scene.EnoughTilesForHallow;
+		Avatar.ZoneJungle = scene.EnoughTilesForJungle;
+		Avatar.ZoneSnow = scene.EnoughTilesForSnow;
+		Avatar.ZoneDesert = scene.EnoughTilesForDesert;
+		Avatar.ZoneGlowshroom = scene.EnoughTilesForGlowingMushroom;
+		Avatar.ZoneMeteor = scene.EnoughTilesForMeteor;
+		var center = Avatar.Center.ToTileCoordinates();
+		Avatar.ZoneDungeon = scene.DungeonTileCount >= DungeonTileThreshold && tileY > Main.worldSurface && Main.wallDungeon[Main.tile[center.X, center.Y].WallType];
+		Avatar.ZoneUnderworldHeight = tileY > Main.UnderworldLayer;
 	}
 
 	void MirrorHealthOnBody(NPC body)

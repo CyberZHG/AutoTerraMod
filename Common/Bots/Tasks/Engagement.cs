@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Content.NPCs;
 using Microsoft.Xna.Framework;
@@ -60,8 +61,17 @@ public static class Engagement
 		return null;
 	}
 
+	const int WormAiStyle = 6;
+	const float WormChaseHeight = 16f * 6f;
+	const float WormSearchRadius = 16f * 60f;
+
 	public static void Fight(Bot bot, NPC target)
 	{
+		if (target.aiStyle == WormAiStyle && Bosses.BossCatalog.IsBossPart(target))
+		{
+			FightWorm(bot, target);
+			return;
+		}
 		if (bot.Motor.IsStuck)
 		{
 			bot.Motor.Stop();
@@ -109,6 +119,40 @@ public static class Engagement
 			return;
 		}
 		bot.Motor.MoveTo(approach, BotHands.MeleeReach(weapon) * 0.5f);
+	}
+
+	static void FightWorm(Bot bot, NPC anyPart)
+	{
+		var body = bot.Npc;
+		var challenge = Bosses.BossCatalog.ChallengeOf(anyPart.type);
+		var segment = Main.npc
+			.Where(npc => npc.active && challenge.IsPart(npc.type) && Vector2.Distance(npc.Center, body.Center) < WormSearchRadius)
+			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
+			.FirstOrDefault() ?? anyPart;
+		if (challenge.Arena is World.Landmark arena && !Bosses.BossChallenge.InArena(bot.Avatar, arena)
+			&& World.Grounds.SurfaceSpotNear(Systems.BotWorldSystem.KnowledgeOf(bot.Faction), arena, bot.Faction.BaseTile) is Vector2 spot)
+		{
+			bot.Motor.MoveTo(spot, 32f);
+			return;
+		}
+		var weapon = bot.Hands.BestWeapon();
+		if (weapon == null)
+			return;
+		bot.Motor.Face(segment.Center);
+		if (BotHands.IsProjectileWeapon(weapon))
+		{
+			if (Collision.CanHitLine(body.position, body.width, body.height, segment.position, segment.width, segment.height))
+				bot.Hands.Fire(segment, weapon);
+			bot.Motor.Stop();
+			return;
+		}
+		if (bot.Hands.InMeleeReach(segment, weapon))
+			bot.Hands.Strike(segment, weapon);
+		bool nearSameLevel = Math.Abs(segment.Center.Y - body.Center.Y) < WormChaseHeight;
+		if (nearSameLevel)
+			bot.Motor.MoveTo(new Vector2(segment.Center.X, body.Center.Y), BotHands.MeleeReach(weapon) * 0.5f);
+		else
+			bot.Motor.Stop();
 	}
 
 	static Vector2 BossStandingSpot(NPC body, NPC boss)

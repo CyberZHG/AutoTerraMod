@@ -16,14 +16,15 @@ public sealed class HeadlessTestMode : ModSystem
 		ItemID.PlatinumBroadsword, ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves
 	};
 
-	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld);
+	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld, World.Landmark? StartIn = null);
 
 	static readonly System.Collections.Generic.Dictionary<string, BossScenario> BossScenarios = new()
 	{
 		["boss"] = new(Array.Empty<int>(), ItemID.SlimeCrown, false, false),
 		["eoc"] = new(new int[] { NPCID.KingSlime }, ItemID.SuspiciousLookingEye, true, false),
 		["evil"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true),
-		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true)
+		["evilarena"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true, World.Landmark.Corruption),
+		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon)
 	};
 
 	public static void PrepareScenario()
@@ -50,6 +51,8 @@ public sealed class HeadlessTestMode : ModSystem
 			LogEvilSpan();
 			RevealShrines();
 		}
+		if (scenario.StartIn is World.Landmark start)
+			PlaceTeamsIn(start);
 		foreach (var bot in BotWorldSystem.Bots)
 		{
 			Bots.Junk.TrashExcess(bot);
@@ -66,6 +69,21 @@ public sealed class HeadlessTestMode : ModSystem
 				Give(summoner, scenario.SummonItem, 1);
 		}
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless scenario '{Scenario}' prepared");
+	}
+
+	static void PlaceTeamsIn(World.Landmark landmark)
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (World.Grounds.SurfaceSpotNear(BotWorldSystem.KnowledgeOf(faction), landmark, faction.BaseTile) is not Microsoft.Xna.Framework.Vector2 spot)
+				continue;
+			int offset = 0;
+			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
+			{
+				int x = (int)(spot.X / 16f) + offset++ * 2;
+				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(x * 16f + 8f, World.TileQuery.SurfaceY(x) * 16f);
+			}
+		}
 	}
 
 	static void RevealShrines()

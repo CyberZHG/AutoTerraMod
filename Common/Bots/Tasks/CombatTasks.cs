@@ -20,11 +20,14 @@ public sealed class FleeTask : BotTask
 		if (HealthFraction >= Traits.FleeHealthFraction)
 			return 0f;
 		threat = Engagement.NearestHostile(Bot, ThreatRadius, false);
-		if (threat == null)
+		if (threat == null || HoldingArena(threat))
 			return 0f;
 		Detail = threat.GivenOrTypeName;
 		return 90f + (1f - Traits.Courage) * 20f;
 	}
+
+	bool HoldingArena(NPC npc) =>
+		Bosses.BossCatalog.ChallengeOf(npc.type) is { Arena: World.Landmark arena } && Bosses.BossChallenge.InArena(Avatar, arena);
 
 	public override void Tick()
 	{
@@ -54,7 +57,7 @@ public sealed class FightTask : BotTask
 	public override string NameKey => "Fight";
 	public override bool IsUrgent => closeThreat;
 
-	const float BossEngagementRange = 16f * 150f;
+	const float BossEngagementRange = 16f * 400f;
 	const float BossPriority = 92f;
 	const float InterruptPriority = 95f;
 	const float AmbushRadius = 16f * 10f;
