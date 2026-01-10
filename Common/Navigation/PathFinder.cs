@@ -227,8 +227,10 @@ public static class PathFinder
 
 	static void AddRopeClimbEdges(int x, int y, List<Edge> edges)
 	{
-		for (int rise = MaxJumpRise + 1; rise <= MaxRopeClimb && BodyClear(x, y - rise); rise++)
+		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise); rise++)
 		{
+			if (rise <= MaxJumpRise)
+				continue;
 			int top = y - rise;
 			bool exit = (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
 			if (exit)

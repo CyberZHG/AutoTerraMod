@@ -74,6 +74,8 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			var knowledge = BotWorldSystem.KnowledgeOf(faction);
 			knowledge.RememberLandmark(World.Landmark.Dungeon, new Microsoft.Xna.Framework.Point(Main.dungeonX, Main.dungeonY));
+			foreach (var (x, y) in EvilSurfaceEdges())
+				knowledge.RememberLandmark(World.Landmarks.WorldEvil, new Microsoft.Xna.Framework.Point(x, y));
 			for (int x = 0; x < Main.maxTilesX; x++)
 			{
 				for (int y = 0; y < Main.maxTilesY; y++)
@@ -82,6 +84,17 @@ public sealed class HeadlessTestMode : ModSystem
 						knowledge.Remember(new Microsoft.Xna.Framework.Point(x, y), TileID.ShadowOrbs);
 				}
 			}
+		}
+	}
+
+	static System.Collections.Generic.IEnumerable<(int x, int y)> EvilSurfaceEdges()
+	{
+		for (int x = 0; x < Main.maxTilesX; x++)
+		{
+			int y = World.TileQuery.SurfaceY(x);
+			var tile = Main.tile[x, y];
+			if (tile.HasTile && tile.TileType is TileID.CorruptGrass or TileID.CrimsonGrass or TileID.Ebonstone or TileID.Crimstone)
+				yield return (x, y);
 		}
 	}
 

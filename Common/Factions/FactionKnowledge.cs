@@ -3,6 +3,7 @@ using System.Linq;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ModLoader.IO;
 
 namespace AutoTerraMod.Common.Factions;
 
@@ -25,6 +26,28 @@ public sealed class FactionKnowledge
 		landmarkSpans[landmark] = landmarkSpans.TryGetValue(landmark, out var span)
 			? (System.Math.Min(span.minX, tile.X), System.Math.Max(span.maxX, tile.X))
 			: (tile.X, tile.X);
+	}
+
+	public TagCompound Save() => new()
+	{
+		["landmarks"] = landmarks.Select(entry => new TagCompound
+		{
+			["kind"] = (int)entry.Key,
+			["x"] = entry.Value.X,
+			["y"] = entry.Value.Y,
+			["minX"] = landmarkSpans[entry.Key].minX,
+			["maxX"] = landmarkSpans[entry.Key].maxX
+		}).ToList()
+	};
+
+	public void Load(TagCompound tag)
+	{
+		foreach (var entry in tag.GetList<TagCompound>("landmarks"))
+		{
+			var kind = (Landmark)entry.GetInt("kind");
+			landmarks[kind] = new Point(entry.GetInt("x"), entry.GetInt("y"));
+			landmarkSpans[kind] = (entry.GetInt("minX"), entry.GetInt("maxX"));
+		}
 	}
 
 	public (int minX, int maxX)? SpanOf(Landmark landmark) => landmarkSpans.TryGetValue(landmark, out var span) ? span : null;

@@ -58,7 +58,14 @@ public sealed class BotWatchdog
 		EscapeDirection = -EscapeDirection;
 		bot.Brain.SuppressCurrentGoal();
 		BotDiagnostics.Log(bot, $"watchdog: repeated navigation failures near {bot.CenterTile}, escaping; motor: {bot.Motor.Describe()}{TerrainDump.Around(bot.CenterTile, 20, 10)}");
+		CaptureTerrain();
 		bot.Brain.ForceReconsider();
+	}
+
+	void CaptureTerrain()
+	{
+		if (bot.Npc is { } body)
+			BotDiagnostics.LogWorld(TerrainDump.Capture(Navigation.PathFinder.FeetOf(body), bot.Motor.Destination));
 	}
 
 	public void EscapeFinished()
@@ -97,6 +104,8 @@ public sealed class BotWatchdog
 		BotDiagnostics.Log(bot, trapped
 			? $"watchdog: trapped near {here} for {StalledSeconds}s, escaping; motor: {bot.Motor.Describe()}{TerrainDump.Around(here)}"
 			: $"watchdog: no progress for {StalledSeconds}s, suppressing current goal; motor: {bot.Motor.Describe()}");
+		if (trapped)
+			CaptureTerrain();
 		bot.Brain.ForceReconsider();
 	}
 }

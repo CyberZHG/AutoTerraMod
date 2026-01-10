@@ -7,6 +7,30 @@ namespace AutoTerraMod.Common.World;
 
 public static class TerrainDump
 {
+	const int CaptureHalfWidth = 24;
+	const int CaptureHalfHeight = 14;
+
+	public static string Capture(Point feet, Vector2? destination)
+	{
+		var rows = new StringBuilder();
+		for (int y = feet.Y - CaptureHalfHeight; y <= feet.Y + CaptureHalfHeight; y++)
+		{
+			if (rows.Length > 0)
+				rows.Append(';');
+			for (int x = feet.X - CaptureHalfWidth; x <= feet.X + CaptureHalfWidth; x++)
+				rows.Append(CaptureGlyph(Glyph(x, y)));
+		}
+		var dest = destination?.ToTileCoordinates() ?? feet;
+		return $"navcapture origin={feet.X - CaptureHalfWidth},{feet.Y - CaptureHalfHeight} feet={feet.X},{feet.Y} dest={dest.X},{dest.Y} rows={rows}";
+	}
+
+	static char CaptureGlyph(char glyph) => glyph switch
+	{
+		'o' => '#',
+		'|' or 'f' or 'D' or 'X' => ' ',
+		_ => glyph
+	};
+
 	public static string Around(Point center, int halfWidth = 30, int halfHeight = 15)
 	{
 		var map = new StringBuilder();

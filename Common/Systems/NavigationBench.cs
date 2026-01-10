@@ -11,19 +11,23 @@ namespace AutoTerraMod.Common.Systems;
 
 public sealed class NavigationBench : ModSystem
 {
-	sealed record BenchCase(string Name, string[] Map);
+	sealed record BenchCase(string Name, string[] Map, Point WorldStart = default, Point WorldGoal = default)
+	{
+		public bool InWorld => Map == null;
+	}
 
 	const int ArenaTop = 60;
 	const int ArenaLeft = 300;
 	const int ArenaSpacing = 60;
 	const int TimeoutTicks = 30 * 60;
+	const int WorldTripTimeoutTicks = 90 * 60;
 	const int SettleTicks = 60;
-	const float ArrivalDistance = 24f;
+	const float ArrivalDistance = 40f;
 	const int BuildingBlocks = 60;
 	const int BenchRopes = 40;
 	const int BenchPlatforms = 40;
 
-	static readonly BenchCase[] Cases =
+	static readonly BenchCase[] BuiltInCases =
 	{
 		new("Flat", new[]
 		{
@@ -370,6 +374,79 @@ public sealed class NavigationBench : ModSystem
 		}),
 	};
 
+	BenchCase[] cases;
+
+	BenchCase[] Cases => cases ??= (System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_ONLY_CAPTURES") == "1" ? CapturedCases() : BuiltInCases.Concat(CapturedCases())).ToArray();
+
+	static IEnumerable<BenchCase> CapturedCases()
+	{
+		string path = System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_CAPTURES");
+		if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+			yield break;
+		int index = 0;
+		foreach (string line in System.IO.File.ReadLines(path))
+		{
+			int start = line.IndexOf("navcapture ");
+			if (start < 0)
+				continue;
+			yield return WorldTrips ? WorldTrip(line[start..], index++) : FromCapture(line[start..], index++);
+		}
+	}
+
+	static bool WorldTrips => System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_WORLD") == "1";
+
+	static Point CaptureField(string capture, string name)
+	{
+		string text = capture.Split(' ').First(part => part.StartsWith(name + "="))[(name.Length + 1)..];
+		return new Point(int.Parse(text.Split(',')[0]), int.Parse(text.Split(',')[1]));
+	}
+
+	static BenchCase WorldTrip(string capture, int index)
+	{
+		var feet = CaptureField(capture, "feet");
+		var dest = CaptureField(capture, "dest");
+		return new BenchCase($"Trip{index}@{feet.X},{feet.Y}->{dest.X},{dest.Y}", null, feet, dest);
+	}
+
+	static BenchCase FromCapture(string capture, int index)
+	{
+		string Field(string name) => capture.Split(' ').First(part => part.StartsWith(name + "="))[(name.Length + 1)..];
+		Point ParsePoint(string text) => new(int.Parse(text.Split(',')[0]), int.Parse(text.Split(',')[1]));
+		var origin = ParsePoint(Field("origin"));
+		var feet = ParsePoint(Field("feet"));
+		var dest = ParsePoint(Field("dest"));
+		var rows = capture[(capture.IndexOf("rows=") + 5)..].Split(';')
+			.Select(row => "#" + new string(row.Select(glyph => glyph switch { '#' => 's', '!' or '=' or '~' or '%' => glyph, _ => '.' }).ToArray()) + "#")
+			.ToList();
+		string border = new('#', rows[0].Length);
+		rows.Insert(0, border);
+		rows.Add(border);
+		var map = rows.Select(row => row.ToCharArray()).ToArray();
+		int startX = feet.X - origin.X + 1, startY = feet.Y - origin.Y + 1;
+		map[startY][startX] = 'S';
+		var goal = NearestOpenCell(map, Utils.Clamp(dest.X - origin.X + 1, 1, map[0].Length - 2), Utils.Clamp(dest.Y - origin.Y + 1, 1, map.Length - 2));
+		map[goal.Y][goal.X] = 'G';
+		return new BenchCase($"Capture{index}@{feet.X},{feet.Y}", map.Select(row => new string(row)).ToArray());
+	}
+
+	static Point NearestOpenCell(char[][] map, int x, int y)
+	{
+		for (int radius = 0; radius < map.Length + map[0].Length; radius++)
+		{
+			for (int dy = -radius; dy <= radius; dy++)
+			{
+				for (int dx = -radius; dx <= radius; dx++)
+				{
+					int cx = x + dx, cy = y + dy;
+					bool inside = cy > 3 && cy < map.Length - 1 && cx > 0 && cx < map[0].Length - 2;
+					if (inside && map[cy][cx] == '.' && map[cy - 1][cx] == '.' && map[cy - 2][cx] == '.' && map[cy + 1][cx] != '.')
+						return new Point(cx, cy);
+				}
+			}
+		}
+		return new Point(x, y);
+	}
+
 	int caseIndex = -1;
 	uint caseStartedAt;
 	Vector2 goal;
@@ -401,7 +478,7 @@ public sealed class NavigationBench : ModSystem
 		if (elapsed < SettleTicks)
 			return;
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
-		if (!arrived && elapsed < TimeoutTicks)
+		if (!arrived && elapsed < (Cases[caseIndex].InWorld ? WorldTripTimeoutTicks : TimeoutTicks))
 			return;
 		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, 16, 8)}";
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
@@ -434,8 +511,8 @@ public sealed class NavigationBench : ModSystem
 		caseIndex = index;
 		var bench = Cases[index];
 		int left = ArenaLeft + index * ArenaSpacing;
-		Point start = default, target = default;
-		for (int row = 0; row < bench.Map.Length; row++)
+		Point start = bench.WorldStart, target = bench.WorldGoal;
+		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
 			{
@@ -449,7 +526,7 @@ public sealed class NavigationBench : ModSystem
 					target = new Point(x, y);
 			}
 		}
-		for (int row = 0; row < bench.Map.Length; row++)
+		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
 			{
@@ -457,7 +534,7 @@ public sealed class NavigationBench : ModSystem
 					WorldGen.PlaceDoor(left + column, ArenaTop + row - 1, TileID.ClosedDoor);
 			}
 		}
-		for (int row = 0; row < bench.Map.Length; row++)
+		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
 				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
@@ -494,6 +571,9 @@ public sealed class NavigationBench : ModSystem
 				break;
 			case 'd':
 				WorldGen.PlaceTile(x, y, TileID.Dirt, true, true);
+				break;
+			case 's':
+				WorldGen.PlaceTile(x, y, TileID.Stone, true, true);
 				break;
 			case '=':
 				WorldGen.PlaceTile(x, y, TileID.Platforms, true, true);

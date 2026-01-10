@@ -155,6 +155,13 @@ public sealed class PathFollower
 		float offset = PathFinder.CenterXOf(node.Feet.X) - body.Center.X;
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
+		bool hangingOnRope = !grounded && (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0);
+		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Jump && rise >= 0)
+		{
+			intent.Jump = true;
+			intent.JumpHoldTicks = HoldTicksForRise(rise + 1);
+			return intent;
+		}
 		switch (node.Arrival)
 		{
 			case MoveKind.Jump:

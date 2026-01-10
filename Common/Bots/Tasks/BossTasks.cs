@@ -107,6 +107,7 @@ public sealed class SummonTask : BotTask
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		if (distance <= ArrivalRadius || (Bot.Motor.IsStuck && distance <= StuckAcceptRadius))
 			return true;
+		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
 		if (!TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
 			Abandon($"cannot reach {step.Place.ToTileCoordinates()}");
 		return false;

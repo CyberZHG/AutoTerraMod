@@ -70,6 +70,7 @@ public sealed class BotWorldSystem : ModSystem
 		tag["nextBotId"] = nextBotId;
 		tag["factions"] = Factions.Select(faction => faction.Save()).ToList();
 		tag["bots"] = Bots.Select(bot => bot.Save()).ToList();
+		tag["sharedKnowledge"] = sharedKnowledge.Save();
 	}
 
 	public override void LoadWorldData(TagCompound tag)
@@ -78,6 +79,8 @@ public sealed class BotWorldSystem : ModSystem
 		nextBotId = tag.GetInt("nextBotId");
 		Factions.AddRange(tag.GetList<TagCompound>("factions").Select(Faction.Load));
 		Bots.AddRange(tag.GetList<TagCompound>("bots").Select(Bot.Load));
+		if (tag.ContainsKey("sharedKnowledge"))
+			sharedKnowledge.Load(tag.GetCompound("sharedKnowledge"));
 	}
 
 	public override void PreUpdateWorld()

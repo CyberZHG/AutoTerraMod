@@ -13,7 +13,7 @@ namespace AutoTerraMod.Common.Bosses;
 
 public sealed class BossCredit : GlobalNPC
 {
-	const float CreditShare = 0.1f;
+	const float CreditShare = 0.3f;
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId)> shots = new();

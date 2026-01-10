@@ -52,6 +52,7 @@ public sealed class Faction
 			tag["house"] = HouseDesign.Save();
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
+		tag["knowledge"] = Knowledge.Save();
 		return tag;
 	}
 
@@ -67,6 +68,8 @@ public sealed class Faction
 			faction.Scaffolding.Add(new Point((int)tile.X, (int)tile.Y));
 		foreach (int boss in tag.GetList<int>("bosses"))
 			faction.DefeatedBosses.Add(boss);
+		if (tag.ContainsKey("knowledge"))
+			faction.Knowledge.Load(tag.GetCompound("knowledge"));
 		return faction;
 	}
 }

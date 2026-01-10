@@ -583,6 +583,20 @@ public sealed class BotMotor
 		return true;
 	}
 
+	static bool OnRope(NPC npc)
+	{
+		var body = BodyTiles.Of(npc);
+		for (int x = body.Left; x <= body.Right; x++)
+		{
+			for (int y = body.Top; y <= body.Bottom; y++)
+			{
+				if (IsRope(x, y))
+					return true;
+			}
+		}
+		return false;
+	}
+
 	static bool IsRope(int x, int y) => WorldGen.InWorld(x, y, 2) && Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType];
 
 	static Point? StaircaseUpTile(BodyTiles body, int aheadX)
@@ -652,7 +666,7 @@ public sealed class BotMotor
 			jumpHold = 0;
 			return;
 		}
-		if (jumpHold == 0 && (npc.velocity.Y == 0f || npc.wet))
+		if (jumpHold == 0 && (npc.velocity.Y == 0f || npc.wet || OnRope(npc)))
 		{
 			npc.velocity.Y = -JumpSpeed;
 			jumpHold = holdTicks;
