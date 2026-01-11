@@ -30,6 +30,7 @@ public sealed class HeadlessTestMode : ModSystem
 		["evil"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true),
 		["evilarena"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true, World.Landmark.Corruption),
 		["queenbee"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu }, ItemID.None, false, true, World.Landmark.Jungle, TileID.Larva, true),
+		["deerclops"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead }, ItemID.DeerThing, false, true, World.Landmark.Snow),
 		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon)
 	};
 
@@ -139,6 +140,8 @@ public sealed class HeadlessTestMode : ModSystem
 				knowledge.RememberLandmark(World.Landmarks.WorldEvil, new Microsoft.Xna.Framework.Point(x, y));
 			foreach (var (x, y) in SurfaceColumns(TileID.JungleGrass))
 				knowledge.RememberLandmark(World.Landmark.Jungle, new Microsoft.Xna.Framework.Point(x, y));
+			foreach (var (x, y) in SurfaceColumns(TileID.SnowBlock, TileID.IceBlock))
+				knowledge.RememberLandmark(World.Landmark.Snow, new Microsoft.Xna.Framework.Point(x, y));
 			for (int x = 0; x < Main.maxTilesX; x++)
 			{
 				for (int y = 0; y < Main.maxTilesY; y++)

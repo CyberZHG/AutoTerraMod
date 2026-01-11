@@ -35,6 +35,14 @@ public sealed class BossCredit : GlobalNPC
 			? string.Join(", ", byFaction.Select(entry => $"{FactionById(entry.Key)?.Name} {entry.Value}"))
 			: "no damage yet";
 
+	public static bool IsEngaged(int factionId, BossChallenge challenge) =>
+		damageByFight.TryGetValue(challenge.BossType, out var byFaction) && byFaction.ContainsKey(factionId);
+
+	public static NPC EngagedBoss(Bot bot) =>
+		Main.npc.Where(npc => npc.active && BossCatalog.ChallengeOf(npc.type) is BossChallenge challenge && challenge.BossType == npc.type && IsEngaged(bot.FactionId, challenge))
+			.OrderBy(npc => Microsoft.Xna.Framework.Vector2.Distance(npc.Center, bot.Center))
+			.FirstOrDefault();
+
 	public static void RegisterShot(Projectile projectile, Bot shooter) => shots[projectile.whoAmI] = (projectile.identity, shooter.FactionId);
 
 	public static void RecordDamage(NPC target, int factionId, int damage)

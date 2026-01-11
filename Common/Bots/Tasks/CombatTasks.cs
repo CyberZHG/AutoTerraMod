@@ -58,6 +58,7 @@ public sealed class FightTask : BotTask
 	public override bool IsUrgent => closeThreat;
 
 	const float BossEngagementRange = 16f * 400f;
+	const float BossApproachDistance = 16f * 60f;
 	const float BossPriority = 92f;
 	const float InterruptPriority = 95f;
 	const float AmbushRadius = 16f * 10f;
@@ -68,7 +69,7 @@ public sealed class FightTask : BotTask
 	public override float Evaluate()
 	{
 		closeThreat = false;
-		var boss = Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossEngagementRange);
+		var boss = Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossEngagementRange) ?? Bosses.BossCredit.EngagedBoss(Bot);
 		if (boss != null && !Bot.IsIgnoring(boss))
 		{
 			target = boss;
@@ -127,6 +128,11 @@ public sealed class FightTask : BotTask
 		}
 		if (HealthFraction < (Bosses.BossCatalog.IsBossPart(target) ? BossDrinkHealthFraction : DrinkHealthFraction))
 			Bot.Hands.DrinkHealingPotion();
+		if (Bosses.BossCatalog.IsBossPart(target) && Vector2.Distance(Bot.Center, target.Center) > BossApproachDistance)
+		{
+			TravelOrTunnel(target.Bottom, BossApproachDistance * 0.5f);
+			return;
+		}
 		Engagement.Fight(Bot, target);
 	}
 }
