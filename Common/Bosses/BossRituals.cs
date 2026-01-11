@@ -22,9 +22,14 @@ public static class BossRituals
 	};
 
 	static readonly HashSet<int> OrbTiles = new() { TileID.ShadowOrbs };
+	static readonly HashSet<int> LarvaTiles = new() { TileID.Larva };
 
-	public static bool KnowsShrine(Bot bot) =>
-		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, OrbTiles, new HashSet<Point>(), ShrineSearchRadius) != null;
+	static HashSet<int> ShrineTilesOf(Landmark landmark) => landmark == Landmark.Jungle ? LarvaTiles : OrbTiles;
+
+	public static bool KnowsShrine(Bot bot, Landmark landmark) => KnownShrine(bot, landmark) != null;
+
+	static Point? KnownShrine(Bot bot, Landmark landmark) =>
+		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, ShrineTilesOf(landmark), new HashSet<Point>(), ShrineSearchRadius);
 
 	public static IEnumerable<BossTrigger> InPreferredOrder(Bot bot, BossChallenge challenge) =>
 		challenge.Triggers.OrderBy(trigger => trigger is SummonItemTrigger item && Inventory.Count(bot.Avatar, item.Item) > 0 ? 0 : 1);
@@ -33,6 +38,7 @@ public static class BossRituals
 	{
 		SummonItemTrigger item => PlanSummonItem(bot, challenge, item),
 		SmashOrbsTrigger orbs => PlanSmashOrbs(bot, challenge, orbs),
+		SmashLarvaTrigger larva => PlanSmashLarva(bot, challenge, larva),
 		CurseOldManTrigger curse => PlanCurse(bot, challenge, curse),
 		VoodooDollTrigger voodoo => PlanVoodoo(bot, challenge, voodoo),
 		ClothierDollTrigger clothier => PlanClothier(bot, challenge, clothier),
@@ -59,7 +65,7 @@ public static class BossRituals
 		if (bot.Hands.BestHammer == null)
 			return ProgressionPlanner.ObtainAny(bot, Hammers);
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		var orb = knowledge.NearestKnown(bot.Faction.BaseTile, OrbTiles, new HashSet<Point>(), ShrineSearchRadius);
+		var orb = KnownShrine(bot, Landmarks.WorldEvil);
 		if (orb is not Point shrine)
 		{
 			if (knowledge.FruitlessShrineSearches >= ShrineSearchesBeforeGivingUp)
@@ -69,6 +75,16 @@ public static class BossRituals
 		}
 		bool final = WorldGen.shadowOrbCount >= 2;
 		return final ? new SummonBossStep(challenge, trigger, shrine.ToWorldCoordinates(), shrine) : new SmashShrineStep(shrine);
+	}
+
+	static PlanStep PlanSmashLarva(Bot bot, BossChallenge challenge, SmashLarvaTrigger trigger)
+	{
+		if (KnownShrine(bot, Landmark.Jungle) is Point larva)
+			return new SummonBossStep(challenge, trigger, larva.ToWorldCoordinates(), larva);
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		if (knowledge.FruitlessShrineSearches >= ShrineSearchesBeforeGivingUp)
+			return PlanStep.Blocked;
+		return new ScoutStep(Landmark.Jungle, knowledge.LandmarkOf(Landmark.Jungle) != null);
 	}
 
 	static PlanStep PlanCurse(Bot bot, BossChallenge challenge, CurseOldManTrigger trigger)

@@ -74,7 +74,8 @@ public sealed class BotHands
 		if (!Ready)
 			return ToolResult.Working;
 		Swing(pickaxe, (int)Math.Max(1f, CombinedHooks.TotalUseTime(pickaxe.useTime, Avatar, pickaxe) * Avatar.pickSpeed), tile.ToWorldCoordinates());
-		Avatar.PickTile(tile.X, tile.Y, pickaxe.pick);
+		using (Systems.AvatarPresence.Enter())
+			Avatar.PickTile(tile.X, tile.Y, pickaxe.pick);
 		if (!Main.tile[tile.X, tile.Y].HasTile)
 			bot.Watchdog.RecordProgress();
 		return ToolResult.Working;
@@ -209,7 +210,8 @@ public sealed class BotHands
 		if (!Ready)
 			return ToolResult.Working;
 		Swing(tool, CombinedHooks.TotalAnimationTime(tool.useAnimation, Avatar, tool), tile.ToWorldCoordinates());
-		WorldGen.KillTile(tile.X, tile.Y);
+		using (Systems.AvatarPresence.Enter())
+			WorldGen.KillTile(tile.X, tile.Y);
 		bot.Watchdog.RecordProgress();
 		return ToolResult.Working;
 	}

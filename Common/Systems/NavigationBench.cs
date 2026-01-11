@@ -246,6 +246,24 @@ public sealed class NavigationBench : ModSystem
 			"#S........############",
 			"######################"
 		}),
+		new("NoRopeCliff", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#..............G.....#",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#.........############",
+			"#S........############",
+			"######################"
+		}),
 		new("DirtCliff", new[]
 		{
 			"######################",
@@ -539,8 +557,12 @@ public sealed class NavigationBench : ModSystem
 			for (int column = 0; column < bench.Map[row].Length; column++)
 				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
 		}
+		ClearClutter(runner);
 		TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
-		TopUp(runner, ItemID.Rope, BenchRopes);
+		if (bench.Name.StartsWith("NoRope"))
+			Inventory.Consume(runner.Avatar, new int[] { ItemID.Rope }, Inventory.Count(runner.Avatar, ItemID.Rope));
+		else
+			TopUp(runner, ItemID.Rope, BenchRopes);
 		TopUp(runner, ItemID.WoodPlatform, BenchPlatforms);
 		var body = runner.Npc;
 		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
@@ -551,6 +573,16 @@ public sealed class NavigationBench : ModSystem
 		goal = target.ToWorldCoordinates();
 		runner.Brain.Override = new BenchMoveTask(runner, goal);
 		caseStartedAt = Main.GameUpdateCount;
+	}
+
+	static void ClearClutter(Bot runner)
+	{
+		var keep = new HashSet<Item> { runner.Hands.BestPickaxe, runner.Hands.BestAxe, runner.Hands.BestWeapon(), runner.Hands.BestHammer };
+		foreach (var item in runner.Avatar.inventory.Take(Inventory.MainSlotCount))
+		{
+			if (!item.IsAir && !keep.Contains(item) && !(item.potion && item.healLife > 0))
+				item.TurnToAir();
+		}
 	}
 
 	static void TopUp(Bot runner, int itemType, int amount)

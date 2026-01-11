@@ -14,6 +14,8 @@ public sealed record SummonItemTrigger(int Item, Landmark? Place = null, Func<Pl
 
 public sealed record SmashOrbsTrigger : BossTrigger;
 
+public sealed record SmashLarvaTrigger : BossTrigger;
+
 public sealed record CurseOldManTrigger : BossTrigger;
 
 public sealed record VoodooDollTrigger : BossTrigger;
@@ -28,10 +30,19 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 
 	public bool CanSummonNow => !NightOnly || !Main.dayTime;
 
+	public float ThreatMultiplier => BossType switch
+	{
+		NPCID.QueenBee => 2.5f,
+		NPCID.EaterofWorldsHead or NPCID.BrainofCthulhu or NPCID.SkeletronHead => 2f,
+		NPCID.WallofFlesh => 3f,
+		_ => 1f
+	};
+
 	public Landmark? Arena => BossType switch
 	{
 		NPCID.EaterofWorldsHead => Landmark.Corruption,
 		NPCID.BrainofCthulhu => Landmark.Crimson,
+		NPCID.QueenBee => Landmark.Jungle,
 		_ => null
 	};
 
@@ -39,6 +50,7 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 	{
 		Landmark.Corruption => player.ZoneCorrupt,
 		Landmark.Crimson => player.ZoneCrimson,
+		Landmark.Jungle => player.ZoneJungle,
 		_ => true
 	};
 }
@@ -60,7 +72,7 @@ public static class BossCatalog
 		new(NPCID.BrainofCthulhu, NoParts, () => NPC.downedBoss2, false, 3000f,
 			new BossTrigger[] { new SmashOrbsTrigger(), new SummonItemTrigger(ItemID.BloodySpine, Landmark.Crimson, player => player.ZoneCrimson) }),
 		new(NPCID.QueenBee, NoParts, () => NPC.downedQueenBee, false, 0f,
-			new BossTrigger[] { new SummonItemTrigger(ItemID.Abeemination, Landmark.Jungle, player => player.ZoneJungle) }),
+			new BossTrigger[] { new SmashLarvaTrigger(), new SummonItemTrigger(ItemID.Abeemination, Landmark.Jungle, player => player.ZoneJungle) }),
 		new(NPCID.SkeletronHead, new int[] { NPCID.SkeletronHand }, () => NPC.downedBoss3, true, 0f,
 			new BossTrigger[] { new CurseOldManTrigger(), new ClothierDollTrigger() }),
 		new(NPCID.Deerclops, NoParts, () => NPC.downedDeerclops, false, 0f,

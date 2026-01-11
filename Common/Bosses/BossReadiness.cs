@@ -35,7 +35,7 @@ public static class BossReadiness
 		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * mode.EnemyMaxLifeMultiplier;
 		if (Main.expertMode)
 			bossLife *= 1f + ExpertScalingPerExtraPlayer * Math.Max(0, fighters.Count - 1);
-		float bossDamage = sample.damage * mode.EnemyDamageMultiplier;
+		float bossDamage = sample.damage * mode.EnemyDamageMultiplier * challenge.ThreatMultiplier;
 		float teamDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense));
 		float killSeconds = teamDps > 0 ? bossLife / teamDps : float.MaxValue;
 		float requiredRatio = MathHelper.Lerp(CautiousRatio, BraveRatio, summoner.Personality.Courage);

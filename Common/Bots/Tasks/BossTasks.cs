@@ -130,6 +130,10 @@ public sealed class SummonTask : BotTask
 				ritualTarget = shrine.ToWorldCoordinates();
 				var hammer = Bot.Hands.BestHammer;
 				return hammer != null && (Bot.Hands.CanReach(hammer, shrine) || MoveCloser(ritualTarget, 24f));
+			case SmashLarvaTrigger when step.Shrine is Point larva:
+				ritualTarget = larva.ToWorldCoordinates();
+				var blade = Bot.Hands.BestWeapon();
+				return blade != null && (Bot.Hands.CanReach(blade, larva) || MoveCloser(ritualTarget, 24f));
 			case CurseOldManTrigger:
 				var oldMan = Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.OldMan && Vector2.Distance(npc.Center, step.Place) < OldManSearchRadius);
 				if (oldMan == null)
@@ -231,6 +235,14 @@ public sealed class SummonTask : BotTask
 				if (result is ToolResult.Unbreakable or ToolResult.NoTool)
 					return Abandon($"cannot smash shrine at {shrine}: {result}");
 				return result == ToolResult.Done;
+			case SmashLarvaTrigger when step.Shrine is Point larvaTile:
+				Bot.Motor.Face(ritualTarget);
+				ToolResult cut;
+				using (AvatarPresence.Enter())
+					cut = Bot.Hands.Cut(larvaTile);
+				if (cut is ToolResult.Unbreakable or ToolResult.NoTool)
+					return Abandon($"cannot break larva at {larvaTile}: {cut}");
+				return !TileQuery.HasTile(larvaTile);
 			case CurseOldManTrigger:
 				using (AvatarPresence.Enter())
 					NPC.SpawnSkeletron(Avatar.whoAmI);
@@ -354,7 +366,7 @@ public sealed class ScoutTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (SearchingShrines)
 		{
-			bool found = BossRituals.KnowsShrine(Bot);
+			bool found = BossRituals.KnowsShrine(Bot, step.Landmark);
 			if (found)
 				knowledge.FruitlessShrineSearches = 0;
 			return found;

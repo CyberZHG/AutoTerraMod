@@ -24,6 +24,19 @@ public static class TileQuery
 		return tile.HasTile && !tile.IsActuated && Main.tileSolidTop[tile.TileType];
 	}
 
+	public static bool SupportsShrine(int x, int y)
+	{
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			for (int dy = -1; dy <= 1; dy++)
+			{
+				if (WorldGen.InWorld(x + dx, y + dy, 2) && Main.tile[x + dx, y + dy].HasTile && WorldScan.IsBossShrine(Main.tile[x + dx, y + dy].TileType))
+					return true;
+			}
+		}
+		return false;
+	}
+
 	public static bool CanStandOn(int x, int y) => IsSolid(x, y) || IsPlatform(x, y);
 
 	public static bool HasTile(Point tile) => WorldGen.InWorld(tile.X, tile.Y, 2) && Main.tile[tile.X, tile.Y].HasTile;

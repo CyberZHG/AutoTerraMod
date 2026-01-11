@@ -70,7 +70,9 @@ public static class PathFinder
 	const float DigCostPerTile = 3f;
 	const float BridgeCost = 4f;
 	const float HazardPenalty = 25f;
-	const float PillarCost = 12f;
+	const float PillarCost = 8f;
+	const float PillarCostPerTile = 3f;
+	const int MaxPillar = 30;
 	const float SwimCost = 2f;
 	const int SwimmableLiquid = 64;
 	static readonly Point[] SwimOffsets = { new(-1, 0), new(1, 0), new(0, -1), new(0, 1), new(-1, -1), new(1, -1) };
@@ -204,8 +206,8 @@ public static class PathFinder
 			}
 		}
 
-		if (abilities.CanPillar && supported && RowClear(x, y - 3))
-			edges.Add(new Edge(new Point(x, y - 1), MoveKind.Pillar, PillarCost));
+		if (abilities.CanPillar && supported)
+			AddPillarEdges(x, y, edges);
 
 		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1, abilities.MaxFall) is Point belowPlatform)
 			edges.Add(new Edge(belowPlatform, MoveKind.Drop, 1f + (belowPlatform.Y - y) * 0.3f));
@@ -222,6 +224,17 @@ public static class PathFinder
 				edges.Add(new Edge(new Point(x, y - 1), MoveKind.Climb, 1f));
 			if (BodyClear(x, y + 1) && (RopeColumn(x, y + 1) >= 0 || Supported(x, y + 1)))
 				edges.Add(new Edge(new Point(x, y + 1), MoveKind.Climb, 1f));
+		}
+	}
+
+	static void AddPillarEdges(int x, int y, List<Edge> edges)
+	{
+		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise); rise++)
+		{
+			int top = y - rise;
+			bool exit = rise == 1 || (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
+			if (exit)
+				edges.Add(new Edge(new Point(x, top), MoveKind.Pillar, PillarCost + rise * PillarCostPerTile));
 		}
 	}
 
@@ -425,6 +438,7 @@ public static class PathFinder
 		int tileType = Main.tile[x, y].TileType;
 		return !Main.tileFrameImportant[tileType]
 			&& !HouseInspector.IsProtected(x, y)
+			&& !TileQuery.SupportsShrine(x, y)
 			&& PickRequirement.MinimumPick(tileType, x, y) <= abilities.PickPower
 			&& WorldGen.CanKillTile(x, y);
 	}

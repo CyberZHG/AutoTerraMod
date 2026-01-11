@@ -223,7 +223,7 @@ public sealed class BotMotor
 			{
 				if (!TileQuery.IsSolid(x, y))
 					continue;
-				if (!CanBreak(x, y, pickPower) || LavaNear(x, y))
+				if (!CanBreak(x, y, pickPower) || LavaNear(x, y) || TileQuery.SupportsShrine(x, y))
 					return null;
 				return new Point(x, y);
 			}
@@ -388,7 +388,8 @@ public sealed class BotMotor
 	{
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		bool hasBridgeMaterial = bot.Hands.HasBridgeMaterial;
-		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, ScaffoldingAllowed && hasBridgeMaterial, bot.Hands.HasRope, AffordableFall);
+		bool hasRope = bot.Hands.HasRope;
+		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, AffordableFall);
 	}
 
 	void ApplyIntent(NPC npc, MotorIntent intent, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)

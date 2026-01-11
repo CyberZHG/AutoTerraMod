@@ -11,12 +11,17 @@ public sealed class HeadlessTestMode : ModSystem
 	public static bool Enabled => Main.dedServ && Environment.GetEnvironmentVariable("AUTOTERRA_HEADLESS") == "1";
 	public static string Scenario => Enabled ? Environment.GetEnvironmentVariable("AUTOTERRA_SCENARIO") : null;
 
+	static readonly int[] StrongScenarioKit =
+	{
+		ItemID.FieryGreatsword, ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves
+	};
+
 	static readonly int[] BossScenarioKit =
 	{
 		ItemID.PlatinumBroadsword, ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves
 	};
 
-	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld, World.Landmark? StartIn = null);
+	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld, World.Landmark? StartIn = null, int StartNearTile = -1, bool StrongKit = false);
 
 	static readonly System.Collections.Generic.Dictionary<string, BossScenario> BossScenarios = new()
 	{
@@ -24,8 +29,11 @@ public sealed class HeadlessTestMode : ModSystem
 		["eoc"] = new(new int[] { NPCID.KingSlime }, ItemID.SuspiciousLookingEye, true, false),
 		["evil"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true),
 		["evilarena"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true, World.Landmark.Corruption),
+		["queenbee"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu }, ItemID.None, false, true, World.Landmark.Jungle, TileID.Larva, true),
 		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon)
 	};
+
+	public static bool BossFirst => Scenario != null && BossScenarios.ContainsKey(Scenario);
 
 	public static void PrepareScenario()
 	{
@@ -54,14 +62,18 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 		if (scenario.StartIn is World.Landmark start)
 			PlaceTeamsIn(start);
+		if (scenario.StartNearTile >= 0)
+			PlaceTeamsNear(scenario.StartNearTile);
 		foreach (var bot in BotWorldSystem.Bots)
 		{
 			Bots.Junk.TrashExcess(bot);
-			foreach (int type in BossScenarioKit)
+			foreach (int type in scenario.StrongKit ? StrongScenarioKit : BossScenarioKit)
 				Give(bot, type, 1);
-			Give(bot, ItemID.LesserHealingPotion, 10);
-			if (bot.Avatar.statLifeMax < 200)
-				Give(bot, ItemID.LifeCrystal, (200 - bot.Avatar.statLifeMax) / 20);
+			Give(bot, scenario.StrongKit ? ItemID.HealingPotion : ItemID.LesserHealingPotion, 10);
+			Give(bot, ItemID.Rope, 60);
+			int targetLife = scenario.StrongKit ? 300 : 200;
+			if (bot.Avatar.statLifeMax < targetLife)
+				Give(bot, ItemID.LifeCrystal, (targetLife - bot.Avatar.statLifeMax) / 20);
 		}
 		foreach (var faction in BotWorldSystem.Factions)
 		{
@@ -87,32 +99,64 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 	}
 
+	static void PlaceTeamsNear(int tileType)
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			var target = BotWorldSystem.KnowledgeOf(faction).NearestKnown(faction.BaseTile, new System.Collections.Generic.HashSet<int> { tileType }, new System.Collections.Generic.HashSet<Microsoft.Xna.Framework.Point>(), 5000);
+			if (target is not Microsoft.Xna.Framework.Point shrine || StandingSpotNear(shrine) is not Microsoft.Xna.Framework.Point feet)
+				continue;
+			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
+				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(feet.X * 16f + 16f, (feet.Y + 1) * 16f);
+		}
+	}
+
+	static Microsoft.Xna.Framework.Point? StandingSpotNear(Microsoft.Xna.Framework.Point center)
+	{
+		for (int radius = 2; radius < 20; radius++)
+		{
+			for (int dx = -radius; dx <= radius; dx++)
+			{
+				for (int dy = -radius; dy <= radius; dy++)
+				{
+					int x = center.X + dx, y = center.Y + dy;
+					bool clear = Enumerable.Range(0, 3).All(up => !World.TileQuery.IsSolid(x, y - up) && !World.TileQuery.IsSolid(x + 1, y - up) && Main.tile[x, y - up].LiquidAmount == 0);
+					if (clear && World.TileQuery.CanStandOn(x, y + 1))
+						return new Microsoft.Xna.Framework.Point(x, y);
+				}
+			}
+		}
+		return null;
+	}
+
 	static void RevealShrines()
 	{
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var knowledge = BotWorldSystem.KnowledgeOf(faction);
 			knowledge.RememberLandmark(World.Landmark.Dungeon, new Microsoft.Xna.Framework.Point(Main.dungeonX, Main.dungeonY));
-			foreach (var (x, y) in EvilSurfaceEdges())
+			foreach (var (x, y) in SurfaceColumns(TileID.CorruptGrass, TileID.CrimsonGrass, TileID.Ebonstone, TileID.Crimstone))
 				knowledge.RememberLandmark(World.Landmarks.WorldEvil, new Microsoft.Xna.Framework.Point(x, y));
+			foreach (var (x, y) in SurfaceColumns(TileID.JungleGrass))
+				knowledge.RememberLandmark(World.Landmark.Jungle, new Microsoft.Xna.Framework.Point(x, y));
 			for (int x = 0; x < Main.maxTilesX; x++)
 			{
 				for (int y = 0; y < Main.maxTilesY; y++)
 				{
-					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.ShadowOrbs)
-						knowledge.Remember(new Microsoft.Xna.Framework.Point(x, y), TileID.ShadowOrbs);
+					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType is TileID.ShadowOrbs or TileID.Larva)
+						knowledge.Remember(new Microsoft.Xna.Framework.Point(x, y), Main.tile[x, y].TileType);
 				}
 			}
 		}
 	}
 
-	static System.Collections.Generic.IEnumerable<(int x, int y)> EvilSurfaceEdges()
+	static System.Collections.Generic.IEnumerable<(int x, int y)> SurfaceColumns(params int[] tileTypes)
 	{
 		for (int x = 0; x < Main.maxTilesX; x++)
 		{
 			int y = World.TileQuery.SurfaceY(x);
 			var tile = Main.tile[x, y];
-			if (tile.HasTile && tile.TileType is TileID.CorruptGrass or TileID.CrimsonGrass or TileID.Ebonstone or TileID.Crimstone)
+			if (tile.HasTile && tileTypes.Contains(tile.TileType))
 				yield return (x, y);
 		}
 	}

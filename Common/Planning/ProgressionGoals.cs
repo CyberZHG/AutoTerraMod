@@ -308,6 +308,12 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.GoldBow, ItemID.PlatinumBow },
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
 			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) });
+		if (HeadlessTestMode.BossFirst)
+		{
+			var boss = goals.OfType<BossGoal>().First();
+			goals.Remove(boss);
+			goals.Insert(0, boss);
+		}
 		return goals.ToArray();
 	}
 
