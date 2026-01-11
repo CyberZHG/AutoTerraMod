@@ -17,6 +17,7 @@ public sealed class BossWatch : ModSystem
 	public override void OnWorldUnload() => sightings.Clear();
 
 	const int ProgressLogTicks = 1800;
+	const int DespawnTimeLeft = 1;
 
 	public override void PostUpdateNPCs()
 	{
@@ -32,7 +33,7 @@ public sealed class BossWatch : ModSystem
 			sightings.Remove(slot);
 			if (BossCatalog.ChallengeOf(last.Type) is BossChallenge challenge)
 				BossCredit.ForgetIfOver(challenge);
-			string outcome = last.Life <= 0 || Defeated(last.Type) ? "defeated" : "despawned";
+			string outcome = last.TimeLeft > DespawnTimeLeft && Defeated(last.Type) ? "defeated" : "despawned";
 			BotDiagnostics.LogWorld($"boss {Lang.GetNPCNameValue(last.Type)} {outcome}: life={last.Life}/{last.LifeMax} timeLeft={last.TimeLeft} target={DescribeTarget(last)} lastTile={last.Center.ToTileCoordinates()} nowTile={npc.Center.ToTileCoordinates()} ai={last.Ai} local={last.LocalAi}");
 		}
 		foreach (var npc in Main.npc)

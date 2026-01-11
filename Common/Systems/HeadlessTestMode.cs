@@ -33,6 +33,7 @@ public sealed class HeadlessTestMode : ModSystem
 			return;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
+			faction.DefeatedBosses.Clear();
 			foreach (int boss in scenario.AlreadyDefeated)
 				faction.DefeatedBosses.Add(boss);
 		}

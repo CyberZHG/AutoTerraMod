@@ -13,6 +13,7 @@ public static class Engagement
 	const float RangedStandoff = 16f * 14f;
 	const float TooCloseForRanged = 16f * 3f;
 	const float BossStandoff = 12f;
+	const float JumpStrikeHeight = 16f * 6f;
 	const float StandingTolerance = 8f;
 
 	public static bool IsHostileTarget(NPC npc) =>
@@ -116,6 +117,10 @@ public static class Engagement
 		if (Bosses.BossCatalog.IsBossPart(target))
 		{
 			bot.Motor.MoveTo(BossStandingSpot(body, target), StandingTolerance);
+			bool overhead = target.Bottom.Y < body.Top.Y && target.Bottom.Y > body.Top.Y - JumpStrikeHeight
+				&& Math.Abs(target.Center.X - body.Center.X) < target.width / 2f + BotHands.MeleeReach(weapon);
+			if (overhead)
+				bot.Motor.RequestJump();
 			return;
 		}
 		bot.Motor.MoveTo(approach, BotHands.MeleeReach(weapon) * 0.5f);

@@ -64,6 +64,10 @@ public sealed class BotMotor
 	public bool ClimbingStraightUp { get; set; }
 	public bool Tunneling { get; private set; }
 
+	bool jumpRequested;
+
+	public void RequestJump() => jumpRequested = true;
+
 	public void TunnelTo(Vector2 target, float radius)
 	{
 		MoveTo(target, radius);
@@ -149,6 +153,12 @@ public sealed class BotMotor
 			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
 			moveDirection = EscapeHazard(npc);
+		if (jumpRequested)
+		{
+			wantsJump = true;
+			jumpHoldTicks = JumpHoldTicks;
+			jumpRequested = false;
+		}
 		if (npc.wet && bot.Vitals.BreathFraction < SurfaceForAirBelow)
 		{
 			wantsJump = true;
