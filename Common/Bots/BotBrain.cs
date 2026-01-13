@@ -41,6 +41,8 @@ public sealed class BotBrain
 			new ScoutTask(bot),
 			new SmashShrineTask(bot),
 			new TravelTask(bot),
+			new BuildBridgeTask(bot),
+			new DigShaftTask(bot),
 			new FleeTask(bot),
 			new FightTask(bot),
 			new PickupTask(bot),
@@ -64,6 +66,7 @@ public sealed class BotBrain
 	public BotTask Current => current;
 	public PlanStep Plan { get; private set; } = PlanStep.Idle;
 	public string GoalName => currentGoal?.Describe() ?? "none";
+	public bool OnExpedition => currentGoal?.IsExpedition == true || Plan is BuildBridgeStep or DigShaftStep;
 	public System.Collections.Generic.HashSet<int> PlannedItemTypes { get; private set; } = new();
 
 	public BotTask Override { get; set; }

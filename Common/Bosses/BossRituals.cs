@@ -112,11 +112,57 @@ public static class BossRituals
 	{
 		if (!NPC.AnyNPCs(NPCID.Guide))
 			return PlanStep.Blocked;
-		if (KnownLandmark(bot, Landmark.Underworld) is not Point underworld)
-			return new ScoutStep(Landmark.Underworld, true);
+		var bridge = bot.Faction.Hellbridge;
+		if (bridge == null || !bridge.IsComplete)
+			return PlanStep.Idle;
 		bool inUnderworld = bot.CenterTile.Y >= Main.UnderworldLayer;
 		if (Inventory.Count(bot.Avatar, ItemID.GuideVoodooDoll) == 0)
-			return inUnderworld ? ProgressionPlanner.Obtain(bot, ItemID.GuideVoodooDoll, 1) : new TravelStep(underworld.ToWorldCoordinates());
-		return new SummonBossStep(challenge, trigger, underworld.ToWorldCoordinates(), null);
+			return inUnderworld ? ProgressionPlanner.Obtain(bot, ItemID.GuideVoodooDoll, 1) : new TravelStep(bridge.Center);
+		return new SummonBossStep(challenge, trigger, bridge.Center, null);
+	}
+
+	const int ShaftOffsetFromBase = 24;
+
+	static Hellevator PlanShaft(Factions.Faction faction)
+	{
+		int x = faction.BaseTile.X + ShaftOffsetFromBase;
+		return new Hellevator(x, TileQuery.SurfaceY(x) - 1);
+	}
+
+	public static int BridgeDirection(Bot bot) => bot.Id % 2 == 0 ? 1 : -1;
+
+	public static bool PreparingForWall(Factions.Faction faction) =>
+		BossCredit.NextChallengeFor(faction)?.BossType == NPCID.WallofFlesh && NPC.AnyNPCs(NPCID.Guide);
+
+	public static PlanStep PlanShaftWork(Bot bot)
+	{
+		var shaft = bot.Faction.Hellevator ??= PlanShaft(bot.Faction);
+		if (shaft.IsComplete || bot.CenterTile.Y >= Main.UnderworldLayer || !IsChiefDigger(bot))
+			return PlanStep.Idle;
+		return new DigShaftStep(shaft);
+	}
+
+	static bool IsChiefDigger(Bot bot) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Mining) == bot;
+
+	public static PlanStep PlanBridgeHelp(Bot bot)
+	{
+		var shaft = bot.Faction.Hellevator;
+		bool underworldReachable = bot.CenterTile.Y >= Main.UnderworldLayer || shaft?.IsComplete == true;
+		if (!underworldReachable)
+			return PlanStep.Idle;
+		if (KnownLandmark(bot, Landmark.Underworld) is not Point underworld)
+			return new ScoutStep(Landmark.Underworld, true);
+		var bridge = bot.Faction.Hellbridge ??= Hellbridge.Plan(underworld);
+		return bridge.IsComplete ? PlanStep.Idle : BridgeWork(bot, bridge);
+	}
+
+	const int BridgeMaterialRestock = 100;
+
+	static PlanStep BridgeWork(Bot bot, Hellbridge bridge)
+	{
+		if (!bot.Hands.HasBridgeMaterial)
+			return ProgressionPlanner.Obtain(bot, ItemID.WoodPlatform, BridgeMaterialRestock);
+		return new BuildBridgeStep(bridge, BridgeDirection(bot));
 	}
 }

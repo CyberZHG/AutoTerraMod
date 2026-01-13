@@ -25,7 +25,7 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
-		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item))
+		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
 		return Inventory.Count(bot.Avatar, item.type) >= reserve;
@@ -67,6 +67,8 @@ public static class Junk
 		}
 	}
 
+	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
+
 	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0;
 
 	static bool IsCheapClutter(Item item) =>
@@ -92,7 +94,7 @@ public static class Junk
 
 	static int ReserveFor(Item item)
 	{
-		if (IsBossSummon(item))
+		if (IsBossSummon(item) || IsPlatform(item))
 			return int.MaxValue;
 		if (item.createTile == TileID.Tombstones)
 			return 0;

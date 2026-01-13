@@ -29,6 +29,8 @@ public sealed class Faction
 	public uint RallyCooldownUntil { get; set; }
 	public int RallyLeaderId { get; set; } = -1;
 	public bool RallyAssembled { get; set; }
+	public World.Hellbridge Hellbridge { get; set; }
+	public World.Hellevator Hellevator { get; set; }
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);
 	public HouseBlueprint Blueprint => Settlement?.Hall;
 
@@ -53,6 +55,16 @@ public sealed class Faction
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["knowledge"] = Knowledge.Save();
+		if (Hellevator != null)
+		{
+			tag["shaftX"] = Hellevator.X;
+			tag["shaftY"] = Hellevator.TopY;
+		}
+		if (Hellbridge != null)
+		{
+			tag["bridgeX"] = Hellbridge.CenterX;
+			tag["bridgeY"] = Hellbridge.Y;
+		}
 		return tag;
 	}
 
@@ -70,6 +82,10 @@ public sealed class Faction
 			faction.DefeatedBosses.Add(boss);
 		if (tag.ContainsKey("knowledge"))
 			faction.Knowledge.Load(tag.GetCompound("knowledge"));
+		if (tag.ContainsKey("shaftX"))
+			faction.Hellevator = new World.Hellevator(tag.GetInt("shaftX"), tag.GetInt("shaftY"));
+		if (tag.ContainsKey("bridgeX"))
+			faction.Hellbridge = new World.Hellbridge(tag.GetInt("bridgeX"), tag.GetInt("bridgeY"));
 		return faction;
 	}
 }

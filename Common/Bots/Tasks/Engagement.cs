@@ -73,6 +73,11 @@ public static class Engagement
 			FightWorm(bot, target);
 			return;
 		}
+		if (target.type is NPCID.WallofFlesh or NPCID.WallofFleshEye)
+		{
+			FightWall(bot, target);
+			return;
+		}
 		if (bot.Motor.IsStuck)
 		{
 			bot.Motor.Stop();
@@ -158,6 +163,37 @@ public static class Engagement
 			bot.Motor.MoveTo(new Vector2(segment.Center.X, body.Center.Y), BotHands.MeleeReach(weapon) * 0.5f);
 		else
 			bot.Motor.Stop();
+	}
+
+	const float WallTooClose = 16f * 12f;
+	const float WallTooFar = 16f * 28f;
+	const float WallPreferred = 16f * 18f;
+
+	static void FightWall(Bot bot, NPC part)
+	{
+		var body = bot.Npc;
+		var mouth = Main.wofNPCIndex >= 0 && Main.npc[Main.wofNPCIndex].active ? Main.npc[Main.wofNPCIndex] : part;
+		float offset = body.Center.X - mouth.Center.X;
+		int away = offset >= 0f ? 1 : -1;
+		float distance = Math.Abs(offset);
+		if (distance < WallTooClose || distance > WallTooFar)
+			bot.Motor.MoveTo(new Vector2(mouth.Center.X + away * WallPreferred, body.Center.Y), 16f);
+		else
+			bot.Motor.Stop();
+		var targetPart = Main.npc
+			.Where(npc => npc.active && npc.type is NPCID.WallofFlesh or NPCID.WallofFleshEye)
+			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
+			.FirstOrDefault() ?? part;
+		bot.Motor.Face(targetPart.Center);
+		var ranged = bot.Hands.BestProjectileWeapon();
+		if (ranged != null && Collision.CanHitLine(body.position, body.width, body.height, targetPart.position, targetPart.width, targetPart.height))
+		{
+			bot.Hands.Fire(targetPart, ranged);
+			return;
+		}
+		var melee = bot.Hands.BestWeapon();
+		if (melee != null && bot.Hands.InMeleeReach(targetPart, melee))
+			bot.Hands.Strike(targetPart, melee);
 	}
 
 	static Vector2 BossStandingSpot(NPC body, NPC boss)

@@ -1,6 +1,6 @@
 Configs: {
 	AutoTerraConfig: {
-		DisplayName: 自动泰拉阵营
+		DisplayName: 自动NPC与阵营
 
 		FactionCount: {
 			Label: 阵营数量
@@ -57,7 +57,7 @@ Factions: {
 	Name0: 红队
 	Name1: 蓝队
 	Name2: 绿队
-	Name3: 金队
+	Name3: 黄队
 }
 
 Archetypes: {
@@ -87,6 +87,8 @@ Tasks: {
 	Scout: 侦察
 	Smash: 砸暗影珠/猩红之心
 	Travel: 远行
+	BuildBridge: 修地狱桥
+	DigShaft: 挖地狱直通井
 	TidyCamp: 清理墓碑
 	Deliver: 送材料
 	Escape: 脱困
@@ -130,6 +132,7 @@ Plans: {
 	Scout: 寻找{0}
 	Smash: 砸暗影珠/猩红之心
 	Travel: 远行
+	BuildBridge: 修地狱桥
 }
 
 UI: {

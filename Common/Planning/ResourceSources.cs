@@ -27,7 +27,7 @@ public static class ResourceSources
 		[ItemID.Diamond] = TileID.Diamond
 	};
 
-	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree }, true);
+	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh }, true);
 
 	static readonly Dictionary<int, Landmark> ForageGrounds = new()
 	{

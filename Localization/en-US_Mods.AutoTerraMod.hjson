@@ -87,6 +87,8 @@ Tasks: {
 	Scout: Scouting
 	Smash: Smashing orbs
 	Travel: Travelling
+	BuildBridge: Building the hellbridge
+	DigShaft: Digging the hellevator
 	TidyCamp: Clearing tombstones
 	Deliver: Delivering materials
 	Escape: Escaping
@@ -130,6 +132,7 @@ Plans: {
 	Scout: Look for the {0}
 	Smash: Smash an orb
 	Travel: Travel
+	BuildBridge: Build the hellbridge
 }
 
 UI: {

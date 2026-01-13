@@ -1,5 +1,7 @@
+using System;
 using System.Linq;
 using AutoTerraMod.Common.Bosses;
+using AutoTerraMod.Common.Navigation;
 using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Common.World;
@@ -440,5 +442,141 @@ public sealed class TravelTask : BotTask
 	{
 		if (!TravelOrTunnel(step.Place, ArrivalRadius) || Bot.Motor.HasArrived)
 			IsFinished = true;
+	}
+}
+
+public sealed class BuildBridgeTask : BotTask
+{
+	const float StandTolerance = 16f * 3f;
+
+	BuildBridgeStep step;
+
+	public BuildBridgeTask(Bot bot) : base(bot) { }
+
+	public override string NameKey => "BuildBridge";
+
+	public override float Evaluate()
+	{
+		if (Bot.Brain.Plan is not BuildBridgeStep build)
+			return 0f;
+		step = build;
+		return 65f + Traits.Building * 20f;
+	}
+
+	public override void Tick()
+	{
+		var bridge = step.Bridge;
+		int direction = step.Direction;
+		int frontier = bridge.Frontier(direction);
+		if (frontier == (direction > 0 ? bridge.RightEnd : bridge.LeftEnd) && bridge.IsBuilt(frontier))
+		{
+			IsFinished = true;
+			return;
+		}
+		var stand = new Vector2(PathFinder.CenterXOf(frontier - 2 * direction), (bridge.Y + 1) * 16f - 21f);
+		if (Vector2.Distance(Bot.Center, stand) > StandTolerance)
+		{
+			if (!TravelOrTunnel(stand, StandTolerance * 0.5f))
+			{
+				BotDiagnostics.Log(Bot, $"cannot reach bridge frontier {frontier}; motor: {Bot.Motor.Describe()}{TerrainDump.Around(new Point(frontier, bridge.Y), 16, 8)}");
+				IsFinished = true;
+			}
+			return;
+		}
+		Bot.Motor.Stop();
+		Bot.Motor.Face(new Vector2(frontier * 16f, bridge.Y * 16f));
+		foreach (int column in new[] { frontier, frontier + direction })
+		{
+			for (int y = bridge.Y - 2; y <= bridge.Y; y++)
+			{
+				if (TileQuery.IsSolid(column, y))
+				{
+					Bot.Hands.Dig(new Point(column, y));
+					return;
+				}
+			}
+		}
+		if (bridge.IsDeck(frontier))
+			return;
+		var deck = new Point(frontier, bridge.Y + 1);
+		if (TileQuery.HasTile(deck))
+		{
+			if (Main.tileCut[Main.tile[deck.X, deck.Y].TileType])
+				Bot.Hands.Cut(deck);
+			else
+				Bot.Hands.Dig(deck);
+			return;
+		}
+		if (Bot.Hands.PlaceBridge(deck))
+			Bot.Watchdog.RecordProgress();
+		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
+			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");
+	}
+}
+
+public sealed class DigShaftTask : BotTask
+{
+	const float WorkReach = 16f * 4f;
+
+	DigShaftStep step;
+
+	public DigShaftTask(Bot bot) : base(bot) { }
+
+	public override string NameKey => "DigShaft";
+
+	public override float Evaluate()
+	{
+		if (Bot.Brain.Plan is not DigShaftStep dig)
+			return 0f;
+		step = dig;
+		return 70f + Traits.Mining * 15f;
+	}
+
+	public override void Tick()
+	{
+		var shaft = step.Shaft;
+		int row = shaft.FirstUnfinishedRow();
+		if (row >= Main.UnderworldLayer)
+		{
+			IsFinished = true;
+			return;
+		}
+		if (Hellevator.LavaBelow(shaft.X, row))
+		{
+			BotDiagnostics.Log(Bot, $"hellevator stops above lava at row {row}");
+			IsFinished = true;
+			return;
+		}
+		var workSpot = new Vector2(PathFinder.CenterXOf(shaft.X), row * 16f - 21f);
+		bool withinReach = Math.Abs(Bot.Center.X - workSpot.X) < 24f && Math.Abs(workSpot.Y - Bot.Center.Y) < WorkReach;
+		if (!withinReach)
+		{
+			if (!TravelOrTunnel(workSpot, 12f))
+				IsFinished = true;
+			return;
+		}
+		Bot.Motor.Stop();
+		foreach (int column in new[] { shaft.X, shaft.X + 1 })
+		{
+			var cell = new Point(column, row);
+			if (TileQuery.IsSolid(cell.X, cell.Y) || (TileQuery.HasTile(cell) && !TileQuery.IsPlatform(cell.X, cell.Y)))
+			{
+				Bot.Hands.Dig(cell);
+				return;
+			}
+		}
+		if (shaft.NeedsPlatform(row) && !shaft.HasPlatform(row))
+		{
+			foreach (int column in new[] { shaft.X, shaft.X + 1 })
+			{
+				if (Bot.Hands.PlaceBridge(new Point(column, row)))
+				{
+					Bot.Watchdog.RecordProgress();
+					return;
+				}
+			}
+		}
+		if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
+			BotDiagnostics.Log(Bot, $"shaft row {row} idle: needsPlatform={shaft.NeedsPlatform(row)} hasPlatform={shaft.HasPlatform(row)} material={Bot.Hands.HasBridgeMaterial} cells={TileQuery.TypeAt(new Point(shaft.X, row))}/{TileQuery.TypeAt(new Point(shaft.X + 1, row))}{TerrainDump.Around(new Point(shaft.X, row), 6, 4)}");
 	}
 }

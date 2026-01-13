@@ -112,6 +112,7 @@ public sealed class SpectatorHud : ModSystem
 		ScoutStep scout => Text("Plans.Scout", Text($"Landmarks.{scout.Landmark}")),
 		SmashShrineStep => Text("Plans.Smash"),
 		TravelStep => Text("Plans.Travel"),
+		BuildBridgeStep => Text("Tasks.BuildBridge"),
 		_ => Text("Plans.Idle")
 	};
 

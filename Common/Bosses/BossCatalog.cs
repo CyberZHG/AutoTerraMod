@@ -34,7 +34,6 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 	{
 		NPCID.QueenBee => 2.5f,
 		NPCID.EaterofWorldsHead or NPCID.BrainofCthulhu or NPCID.SkeletronHead => 2f,
-		NPCID.WallofFlesh => 3f,
 		_ => 1f
 	};
 
@@ -43,6 +42,7 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 		NPCID.EaterofWorldsHead => Landmark.Corruption,
 		NPCID.BrainofCthulhu => Landmark.Crimson,
 		NPCID.QueenBee => Landmark.Jungle,
+		NPCID.WallofFlesh => Landmark.Underworld,
 		_ => null
 	};
 
@@ -51,6 +51,7 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 		Landmark.Corruption => player.ZoneCorrupt,
 		Landmark.Crimson => player.ZoneCrimson,
 		Landmark.Jungle => player.ZoneJungle,
+		Landmark.Underworld => player.ZoneUnderworldHeight,
 		_ => true
 	};
 }

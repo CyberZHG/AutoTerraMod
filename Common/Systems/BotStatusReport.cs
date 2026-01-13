@@ -26,11 +26,19 @@ public sealed class BotStatusReport : ModSystem
 		{
 			var settlement = faction.Settlement;
 			int built = settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
-			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}{DescribeBossReadiness(faction)}");
+			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}{DescribeBossReadiness(faction) + DescribeBridge(faction)}");
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}
 		Mod.Logger.Info(report.ToString());
+	}
+
+	static string DescribeBridge(Factions.Faction faction)
+	{
+		var shaft = faction.Hellevator;
+		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstUnfinishedRow()} of {Main.UnderworldLayer}";
+		var bridge = faction.Hellbridge;
+		return shaftText + (bridge == null ? "" : $"\n    hellbridge y={bridge.Y}: built {bridge.Frontier(-1)}..{bridge.Frontier(1)} of {bridge.LeftEnd}..{bridge.RightEnd}");
 	}
 
 	static string DescribeBossReadiness(Factions.Faction faction)

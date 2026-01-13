@@ -162,6 +162,8 @@ public sealed class PathFollower
 			intent.JumpHoldTicks = HoldTicksForRise(rise + 1);
 			return intent;
 		}
+		if (node.Feet.Y > feet.Y && node.Feet.X == feet.X)
+			intent.DropThroughPlatforms = true;
 		switch (node.Arrival)
 		{
 			case MoveKind.Jump:

@@ -31,6 +31,8 @@ public sealed class HeadlessTestMode : ModSystem
 		["evilarena"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu }, ItemID.WormFood, false, true, World.Landmark.Corruption),
 		["queenbee"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu }, ItemID.None, false, true, World.Landmark.Jungle, TileID.Larva, true),
 		["deerclops"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead }, ItemID.DeerThing, false, true, World.Landmark.Snow),
+		["wof"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead, NPCID.Deerclops }, ItemID.GuideVoodooDoll, false, true, World.Landmark.Underworld, -1, true),
+		["wofbase"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead, NPCID.Deerclops }, ItemID.GuideVoodooDoll, false, true, null, -1, true),
 		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon)
 	};
 
@@ -70,9 +72,15 @@ public sealed class HeadlessTestMode : ModSystem
 			Bots.Junk.TrashExcess(bot);
 			foreach (int type in scenario.StrongKit ? StrongScenarioKit : BossScenarioKit)
 				Give(bot, type, 1);
+			if (scenario.SummonItem == ItemID.GuideVoodooDoll)
+			{
+				Give(bot, ItemID.MoltenFury, 1);
+				Give(bot, ItemID.HellfireArrow, 999);
+				Give(bot, ItemID.WoodPlatform, 300);
+			}
 			Give(bot, scenario.StrongKit ? ItemID.HealingPotion : ItemID.LesserHealingPotion, 10);
 			Give(bot, ItemID.Rope, 60);
-			int targetLife = scenario.StrongKit ? 300 : 200;
+			int targetLife = scenario.SummonItem == ItemID.GuideVoodooDoll ? 400 : scenario.StrongKit ? 300 : 200;
 			if (bot.Avatar.statLifeMax < targetLife)
 				Give(bot, ItemID.LifeCrystal, (targetLife - bot.Avatar.statLifeMax) / 20);
 		}
@@ -87,6 +95,11 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static void PlaceTeamsIn(World.Landmark landmark)
 	{
+		if (landmark == World.Landmark.Underworld)
+		{
+			PlaceTeamsInUnderworld();
+			return;
+		}
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			if (World.Grounds.SurfaceSpotNear(BotWorldSystem.KnowledgeOf(faction), landmark, faction.BaseTile) is not Microsoft.Xna.Framework.Vector2 spot)
@@ -98,6 +111,37 @@ public sealed class HeadlessTestMode : ModSystem
 				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(x * 16f + 8f, World.TileQuery.SurfaceY(x) * 16f);
 			}
 		}
+	}
+
+	static void PlaceTeamsInUnderworld()
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (UnderworldGround(faction.BaseTile.X) is not Microsoft.Xna.Framework.Point feet)
+				continue;
+			BotWorldSystem.KnowledgeOf(faction).RememberLandmark(World.Landmark.Underworld, feet);
+			faction.Hellbridge = null;
+			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
+				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(feet.X * 16f + 16f, (feet.Y + 1) * 16f);
+		}
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: guide alive={NPC.AnyNPCs(NPCID.Guide)}");
+	}
+
+	static Microsoft.Xna.Framework.Point? UnderworldGround(int centerX)
+	{
+		for (int dx = 0; dx < 200; dx++)
+		{
+			foreach (int x in new[] { centerX + dx, centerX - dx })
+			{
+				for (int y = Main.UnderworldLayer + 5; y < Main.maxTilesY - 20; y++)
+				{
+					bool clear = Enumerable.Range(0, 3).All(up => !World.TileQuery.IsSolid(x, y - up) && !World.TileQuery.IsSolid(x + 1, y - up) && Main.tile[x, y - up].LiquidAmount == 0 && Main.tile[x + 1, y - up].LiquidAmount == 0);
+					if (clear && World.TileQuery.IsSolid(x, y + 1) && World.TileQuery.IsSolid(x + 1, y + 1))
+						return new Microsoft.Xna.Framework.Point(x, y);
+				}
+			}
+		}
+		return null;
 	}
 
 	static void PlaceTeamsNear(int tileType)
@@ -195,7 +239,7 @@ public sealed class HeadlessTestMode : ModSystem
 		item.SetDefaults(type);
 		item.stack = missing;
 		if (!Bots.Inventory.HasRoomFor(bot.Avatar, item))
-			bot.Avatar.inventory.Take(Bots.Inventory.MainSlotCount).Where(held => held.createTile >= 0).MaxBy(held => held.stack)?.TurnToAir();
+			bot.Avatar.inventory.Take(Bots.Inventory.MainSlotCount).Where(held => held.createTile >= 0 && !Bots.Junk.IsPlatform(held) && held.type != type).MaxBy(held => held.stack)?.TurnToAir();
 		if (!Bots.Inventory.Add(bot.Avatar, item).IsAir)
 			ModContent.GetInstance<AutoTerraMod>().Logger.Warn($"scenario: no room for {item.Name} in {bot.Name}'s inventory");
 	}

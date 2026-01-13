@@ -354,6 +354,8 @@ public sealed class BotHands
 		return CombatStyle.Melee;
 	}
 
+	public Item BestProjectileWeapon() => Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsProjectileWeapon(item)).MaxBy(item => item.damage);
+
 	bool IsUsableWeapon(Item item)
 	{
 		if (item.damage <= 0 || item.channel)

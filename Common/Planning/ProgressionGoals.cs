@@ -246,6 +246,28 @@ public sealed class BossGoal : ProgressionGoal
 	}
 }
 
+public sealed class HellevatorGoal : ProgressionGoal
+{
+	public override bool IsExpedition => true;
+
+	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
+
+	public override bool IsMet(Bot bot) => bot.Faction.Hellevator?.IsComplete == true;
+
+	public override PlanStep Plan(Bot bot) => Bosses.BossRituals.PlanShaftWork(bot);
+}
+
+public sealed class HellbridgeGoal : ProgressionGoal
+{
+	public override bool IsExpedition => true;
+
+	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
+
+	public override bool IsMet(Bot bot) => bot.Faction.Hellbridge?.IsComplete == true;
+
+	public override PlanStep Plan(Bot bot) => Bosses.BossRituals.PlanBridgeHelp(bot);
+}
+
 public sealed class StyleGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -278,6 +300,8 @@ public static class ProgressionGoals
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new SupportConstructionGoal(),
 			new BossGoal(),
+			new HellevatorGoal(),
+			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new StyleGoal(new ReserveGoal(ItemID.WoodenArrow, 60, 120), CombatStyle.Ranged),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
@@ -311,8 +335,12 @@ public static class ProgressionGoals
 		if (HeadlessTestMode.BossFirst)
 		{
 			var boss = goals.OfType<BossGoal>().First();
+			var shaft = goals.OfType<HellevatorGoal>().First();
+			var bridge = goals.OfType<HellbridgeGoal>().First();
 			goals.Remove(boss);
-			goals.Insert(0, boss);
+			goals.Remove(shaft);
+			goals.Remove(bridge);
+			goals.InsertRange(0, new ProgressionGoal[] { boss, shaft, bridge });
 		}
 		return goals.ToArray();
 	}

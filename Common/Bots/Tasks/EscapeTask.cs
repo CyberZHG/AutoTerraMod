@@ -39,7 +39,7 @@ public sealed class EscapeTask : BotTask
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
 		climbStartedAt = 0;
-		if (TryRecall())
+		if (!Bot.Brain.OnExpedition && TryRecall())
 		{
 			Finish();
 			return;
@@ -47,6 +47,12 @@ public sealed class EscapeTask : BotTask
 		var here = Bot.CenterTile;
 		int x = Utils.Clamp(here.X + Bot.Watchdog.EscapeDirection * SurfaceStepTiles, 50, Main.maxTilesX - 50);
 		int surfaceY = TileQuery.SurfaceY(x);
+		if (Bot.Brain.OnExpedition)
+		{
+			headingForSurface = false;
+			destination = Bot.Center + new Vector2(Bot.Watchdog.EscapeDirection * OpenGroundTrip * 16f, 0f);
+			return;
+		}
 		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
 		destination = headingForSurface
 			? new Vector2(x * 16f, (surfaceY - 2) * 16f)
