@@ -56,5 +56,9 @@ public sealed record Hellbridge(int CenterX, int Y)
 		return end;
 	}
 
-	public bool IsComplete => Frontier(1) == RightEnd && Frontier(-1) == LeftEnd;
+	public bool SideComplete(int direction) => Frontier(direction) == (direction > 0 ? RightEnd : LeftEnd);
+
+	public const int FightableLength = 400;
+
+	public bool IsComplete => (SideComplete(1) && SideComplete(-1)) || Frontier(1) - Frontier(-1) >= FightableLength;
 }

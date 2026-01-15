@@ -60,6 +60,7 @@ public sealed class BotVitals
 	public void Tick(NPC npc)
 	{
 		SyncAvatar(npc, Avatar);
+		FeelWallHorror();
 		RefreshVanillaStats();
 		if (PotionSicknessTicks > 0)
 			PotionSicknessTicks--;
@@ -88,6 +89,17 @@ public sealed class BotVitals
 		avatar.wet = npc.wet;
 		avatar.lavaWet = npc.lavaWet;
 		avatar.honeyWet = npc.honeyWet;
+	}
+
+	const float HorrorReach = 1920f;
+
+	void FeelWallHorror()
+	{
+		if (Main.wofNPCIndex < 0 || !Main.npc[Main.wofNPCIndex].active || Avatar.gross)
+			return;
+		float mouthX = Main.npc[Main.wofNPCIndex].position.X + 40f - (Main.npc[Main.wofNPCIndex].direction > 0 ? 96f : 0f);
+		if (Avatar.position.Y > (Main.maxTilesY - 250) * 16f && Math.Abs(Avatar.position.X - mouthX) < HorrorReach)
+			Avatar.AddBuff(BuffID.Horrified, 10);
 	}
 
 	const int MinimumRespawnLife = 100;
@@ -164,7 +176,7 @@ public sealed class BotVitals
 			int cooldownSlot = -1;
 			if (!NPCLoader.CanHitPlayer(attacker, Avatar, ref cooldownSlot))
 				continue;
-			Hurt(Main.DamageVar(attacker.damage, -Avatar.luck), DirectionAwayFrom(body, attacker.Center));
+			Hurt(Main.DamageVar(attacker.damage, -Avatar.luck), DirectionAwayFrom(body, attacker.Center), source: attacker.GivenOrTypeName);
 			lastAttacker = attacker.whoAmI;
 			lastAttackedAt = Main.GameUpdateCount;
 			return;
@@ -181,7 +193,7 @@ public sealed class BotVitals
 				continue;
 			if (!projectile.Colliding(projectile.Hitbox, hitbox))
 				continue;
-			Hurt(Main.DamageVar(projectile.damage, -Avatar.luck) * HostileProjectileDamageMultiplier, DirectionAwayFrom(body, projectile.Center));
+			Hurt(Main.DamageVar(projectile.damage, -Avatar.luck) * HostileProjectileDamageMultiplier, DirectionAwayFrom(body, projectile.Center), source: projectile.Name);
 			return;
 		}
 	}
@@ -190,7 +202,7 @@ public sealed class BotVitals
 	{
 		if (!body.lavaWet || Avatar.lavaImmune || Avatar.immune)
 			return;
-		Hurt(LavaContactDamage, 0);
+		Hurt(LavaContactDamage, 0, source: "lava");
 		Avatar.AddBuff(BuffID.OnFire, LavaBurnTicks);
 	}
 
@@ -208,11 +220,15 @@ public sealed class BotVitals
 		fallStartTileY = tileY;
 		int safeTiles = SafeFallTiles + Avatar.extraFall;
 		if (fallen > safeTiles && Avatar.equippedWings == null)
-			Hurt((fallen - safeTiles) * FallDamagePerTile, 0, ignoreImmunity: true);
+			Hurt((fallen - safeTiles) * FallDamagePerTile, 0, ignoreImmunity: true, source: $"fall of {fallen} tiles");
 	}
+
+	bool WalksOnFire => Avatar.fireWalk || Avatar.buffImmune[BuffID.Burning] || Avatar.HasBuff(BuffID.ObsidianSkin);
 
 	void TakeTouchDamage(NPC body)
 	{
+		if (WalksOnFire && Avatar.HasBuff(BuffID.Burning))
+			Avatar.ClearBuff(BuffID.Burning);
 		var touched = Collision.HurtTiles(body.position, body.width, body.height, Avatar);
 		if (touched.type < 0)
 		{
@@ -220,8 +236,11 @@ public sealed class BotVitals
 			return;
 		}
 		int tileType = touched.type;
-		if (TileID.Sets.TouchDamageHot[tileType])
+		if (TileID.Sets.TouchDamageHot[tileType] && !WalksOnFire)
+		{
 			Avatar.AddBuff(BuffID.Burning, BurningTicks);
+			LastDamageSource = $"burning on {TileID.Search.GetName(tileType)}";
+		}
 		if (TileID.Sets.Suffocate[tileType])
 		{
 			if (suffocateDelay < SuffocationGraceTicks)
@@ -237,7 +256,7 @@ public sealed class BotVitals
 			Avatar.AddBuff(BuffID.Bleeding, Main.rand.Next(240, 600));
 		int damage = TileID.Sets.TouchDamageImmediate[tileType];
 		if (damage > 0)
-			Hurt(Main.DamageVar(damage, -Avatar.luck), 0);
+			Hurt(Main.DamageVar(damage, -Avatar.luck), 0, source: "hazard tile");
 		if (TileID.Sets.TouchDamageDestroyTile[tileType])
 			WorldGen.KillTile(touched.x, touched.y);
 	}
@@ -263,10 +282,13 @@ public sealed class BotVitals
 		Avatar.statLife -= DrowningDamagePerTick;
 	}
 
-	public void Hurt(int damage, int hitDirection, bool ignoreImmunity = false)
+	public string LastDamageSource { get; private set; } = "unknown";
+
+	public void Hurt(int damage, int hitDirection, bool ignoreImmunity = false, string source = "unknown")
 	{
 		if (Avatar.immune && !ignoreImmunity)
 			return;
+		LastDamageSource = source;
 		if (hitDirection != 0)
 			LastHitDirection = hitDirection;
 		var body = bot.Npc;

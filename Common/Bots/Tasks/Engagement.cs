@@ -165,9 +165,13 @@ public static class Engagement
 			bot.Motor.Stop();
 	}
 
-	const float WallTooClose = 16f * 12f;
-	const float WallTooFar = 16f * 28f;
-	const float WallPreferred = 16f * 18f;
+	const float HungryThreat = 16f * 12f;
+
+	static float HungryReach(NPC mouth) =>
+		mouth.life < mouth.lifeMax * 0.5f ? 700f : mouth.life < mouth.lifeMax * 0.75f ? 500f : 300f;
+
+	public static bool KitingWall(Bot bot) =>
+		Main.wofNPCIndex >= 0 && Main.npc[Main.wofNPCIndex].active && bot.CenterTile.Y >= Main.UnderworldLayer;
 
 	static void FightWall(Bot bot, NPC part)
 	{
@@ -176,11 +180,17 @@ public static class Engagement
 		float offset = body.Center.X - mouth.Center.X;
 		int away = offset >= 0f ? 1 : -1;
 		float distance = Math.Abs(offset);
-		if (distance < WallTooClose || distance > WallTooFar)
-			bot.Motor.MoveTo(new Vector2(mouth.Center.X + away * WallPreferred, body.Center.Y), 16f);
+		bool hurt = bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
+		float reach = HungryReach(mouth) + (hurt ? 160f : 0f);
+		if (distance < reach || distance > reach + 16f * 16f)
+			bot.Motor.MoveTo(new Vector2(mouth.Center.X + away * (reach + 16f * 6f), body.Center.Y), 16f);
 		else
 			bot.Motor.Stop();
-		var targetPart = Main.npc
+		var hungry = Main.npc
+			.Where(npc => npc.active && npc.type == NPCID.TheHungry && Vector2.Distance(npc.Center, body.Center) < HungryThreat)
+			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
+			.FirstOrDefault();
+		var targetPart = hungry ?? Main.npc
 			.Where(npc => npc.active && npc.type is NPCID.WallofFlesh or NPCID.WallofFleshEye)
 			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
 			.FirstOrDefault() ?? part;

@@ -319,6 +319,12 @@ public sealed class BotHands
 
 	public bool PlaceBridge(Point tile) => Place(BridgeMaterial(), tile);
 
+	public string DescribeBridgePlacement(Point tile)
+	{
+		var item = BridgeMaterial();
+		return item == null ? "no material" : $"{item.Name} reach={CanReach(item, tile)} canPlace={CanPlaceAt(item, tile)} ready={Ready}";
+	}
+
 	Item BridgeMaterial() =>
 		FindPlaceable(tileType => TileID.Sets.Platforms[tileType])
 		?? Inventory.Items(Avatar).Where(IsExpendableBlock).OrderBy(item => item.type == ItemID.Wood ? 1 : 0).FirstOrDefault();
@@ -464,6 +470,18 @@ public sealed class BotHands
 	}
 
 	Item FindAmmo(int ammoType) => Inventory.Items(Avatar).FirstOrDefault(item => item.ammo == ammoType && item.ammo > 0);
+
+	public void DrinkObsidianSkinIfInHell()
+	{
+		if (bot.CenterTile.Y < Main.UnderworldLayer || Avatar.HasBuff(BuffID.ObsidianSkin))
+			return;
+		var potion = Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.ObsidianSkinPotion);
+		if (potion == null)
+			return;
+		Avatar.AddBuff(BuffID.ObsidianSkin, potion.buffTime);
+		Inventory.ConsumeOne(Avatar, potion);
+		BotDiagnostics.Log(bot, "drank an Obsidian Skin Potion");
+	}
 
 	public bool DrinkHealingPotion()
 	{

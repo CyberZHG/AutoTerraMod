@@ -20,7 +20,7 @@ public sealed class FleeTask : BotTask
 		if (HealthFraction >= Traits.FleeHealthFraction)
 			return 0f;
 		threat = Engagement.NearestHostile(Bot, ThreatRadius, false);
-		if (threat == null || HoldingArena(threat))
+		if (threat == null || HoldingArena(threat) || Engagement.KitingWall(Bot))
 			return 0f;
 		Detail = threat.GivenOrTypeName;
 		return 90f + (1f - Traits.Courage) * 20f;
@@ -75,7 +75,7 @@ public sealed class FightTask : BotTask
 			target = boss;
 			closeThreat = true;
 			Detail = boss.GivenOrTypeName;
-			return HealthFraction < Traits.FleeHealthFraction ? BossPriority * 0.3f : BossPriority;
+			return HealthFraction < Traits.FleeHealthFraction && !Engagement.KitingWall(Bot) ? BossPriority * 0.3f : BossPriority;
 		}
 		var interferer = Interferer();
 		if (interferer != null)

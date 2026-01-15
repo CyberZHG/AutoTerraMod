@@ -25,7 +25,9 @@ public sealed record Hellevator(int X, int TopY)
 		return Main.UnderworldLayer;
 	}
 
-	public bool IsComplete => FirstUnfinishedRow() >= Main.UnderworldLayer;
+	const int CompletionSlack = 6;
+
+	public bool IsComplete => FirstUnfinishedRow() >= Main.UnderworldLayer - CompletionSlack;
 
 	public static bool LavaBelow(int x, int y)
 	{

@@ -162,7 +162,7 @@ public sealed class PathFollower
 			intent.JumpHoldTicks = HoldTicksForRise(rise + 1);
 			return intent;
 		}
-		if (node.Feet.Y > feet.Y && node.Feet.X == feet.X)
+		if (grounded && node.Feet.Y > feet.Y && node.Feet.X == feet.X)
 			intent.DropThroughPlatforms = true;
 		switch (node.Arrival)
 		{
@@ -171,7 +171,7 @@ public sealed class PathFollower
 				intent.JumpHoldTicks = HoldTicksForRise(rise);
 				break;
 			case MoveKind.Drop:
-				intent.DropThroughPlatforms = node.Feet.X == feet.X;
+				intent.DropThroughPlatforms = grounded && node.Feet.X == feet.X;
 				break;
 			case MoveKind.Dig:
 				intent.DigTile ??= FirstSolidToDig(feet, node.Feet);

@@ -163,6 +163,8 @@ public static class BossRituals
 	{
 		if (!bot.Hands.HasBridgeMaterial)
 			return ProgressionPlanner.Obtain(bot, ItemID.WoodPlatform, BridgeMaterialRestock);
-		return new BuildBridgeStep(bridge, BridgeDirection(bot));
+		int preferred = BridgeDirection(bot);
+		int direction = bridge.SideComplete(preferred) ? -preferred : preferred;
+		return new BuildBridgeStep(bridge, direction);
 	}
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using AutoTerraMod.Common.Factions;
 using AutoTerraMod.Common.Systems;
@@ -87,11 +88,15 @@ public sealed class Bot
 		return new Bot(id, faction.Id, name, Personality.Roll(rand), AvatarFactory.Create(name, faction.Color, rand));
 	}
 
+	string WallDistance() =>
+		Main.wofNPCIndex >= 0 && Main.npc[Main.wofNPCIndex].active ? $"{Math.Abs(Main.npc[Main.wofNPCIndex].Center.X - Center.X) / 16f:0}" : "-";
+
 	public void Die()
 	{
 		var npc = Npc;
 		if (npc == null)
 			return;
+		BotDiagnostics.Log(this, $"died at {CenterTile} from {Vitals.LastDamageSource} while {Brain.Current?.NameKey} ({Brain.GoalName}); obsidianSkin={Avatar.HasBuff(Terraria.ID.BuffID.ObsidianSkin)} fireWalk={Avatar.fireWalk} heals={Inventory.Items(Avatar).Where(item => item.potion && item.healLife > 0).Sum(item => item.stack)} defense={Avatar.statDefense} wall={WallDistance()} lifeRegen={Avatar.lifeRegen} buffs=[{string.Join(",", Avatar.buffType.Where((type, slot) => type > 0 && Avatar.buffTime[slot] > 0).Select(type => Lang.GetBuffName(type)))}] wet={npc.wet} lavaWet={npc.lavaWet}");
 		BotVitals.SyncAvatar(npc, Avatar);
 		long coins = Utils.CoinsCount(out _, Avatar.inventory);
 		Avatar.DropTombstone(coins, NetworkText.FromLiteral(Language.GetTextValue("Mods.AutoTerraMod.UI.Epitaph", Name, Faction.Name)), Vitals.LastHitDirection);

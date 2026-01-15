@@ -507,7 +507,7 @@ public sealed class BuildBridgeTask : BotTask
 				Bot.Hands.Dig(deck);
 			return;
 		}
-		if (Bot.Hands.PlaceBridge(deck))
+		if (Bot.Hands.PlaceBridge(deck) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
 			Bot.Watchdog.RecordProgress();
 		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
 			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");
@@ -575,8 +575,11 @@ public sealed class DigShaftTask : BotTask
 					return;
 				}
 			}
+			var anchor = new Point(shaft.X - 1, row);
+			if (!TileQuery.HasTile(anchor) && Bot.Hands.PlaceScaffold(anchor))
+				return;
 		}
 		if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
-			BotDiagnostics.Log(Bot, $"shaft row {row} idle: needsPlatform={shaft.NeedsPlatform(row)} hasPlatform={shaft.HasPlatform(row)} material={Bot.Hands.HasBridgeMaterial} cells={TileQuery.TypeAt(new Point(shaft.X, row))}/{TileQuery.TypeAt(new Point(shaft.X + 1, row))}{TerrainDump.Around(new Point(shaft.X, row), 6, 4)}");
+			BotDiagnostics.Log(Bot, $"shaft row {row} idle: needsPlatform={shaft.NeedsPlatform(row)} hasPlatform={shaft.HasPlatform(row)} material={Bot.Hands.HasBridgeMaterial} place0={Bot.Hands.DescribeBridgePlacement(new Point(shaft.X, row))} place1={Bot.Hands.DescribeBridgePlacement(new Point(shaft.X + 1, row))} botFeet={PathFinder.FeetOf(Bot.Npc)} cells={TileQuery.TypeAt(new Point(shaft.X, row))}/{TileQuery.TypeAt(new Point(shaft.X + 1, row))}{TerrainDump.Around(new Point(shaft.X, row), 6, 4)}");
 	}
 }

@@ -1,3 +1,4 @@
+using Terraria.DataStructures;
 using System;
 using System.Linq;
 using Terraria;
@@ -77,6 +78,7 @@ public sealed class HeadlessTestMode : ModSystem
 				Give(bot, ItemID.MoltenFury, 1);
 				Give(bot, ItemID.HellfireArrow, 999);
 				Give(bot, ItemID.WoodPlatform, 300);
+				Give(bot, ItemID.ObsidianSkinPotion, 10);
 			}
 			Give(bot, scenario.StrongKit ? ItemID.HealingPotion : ItemID.LesserHealingPotion, 10);
 			Give(bot, ItemID.Rope, 60);
@@ -121,10 +123,34 @@ public sealed class HeadlessTestMode : ModSystem
 				continue;
 			BotWorldSystem.KnowledgeOf(faction).RememberLandmark(World.Landmark.Underworld, feet);
 			faction.Hellbridge = null;
+			CarveHellevator(faction);
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(feet.X * 16f + 16f, (feet.Y + 1) * 16f);
 		}
+		if (!NPC.AnyNPCs(NPCID.Guide))
+			NPC.NewNPC(new EntitySource_WorldEvent(), Main.spawnTileX * 16, Main.spawnTileY * 16, NPCID.Guide);
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: guide alive={NPC.AnyNPCs(NPCID.Guide)}");
+	}
+
+	static void CarveHellevator(Factions.Faction faction)
+	{
+		int x = faction.BaseTile.X + 24;
+		var shaft = faction.Hellevator ??= new World.Hellevator(x, World.TileQuery.SurfaceY(x) - 1);
+		for (int y = shaft.TopY; y < Main.UnderworldLayer; y++)
+		{
+			for (int column = shaft.X; column <= shaft.X + 1; column++)
+			{
+				if (Main.tile[column, y].HasTile && !World.TileQuery.IsPlatform(column, y))
+					WorldGen.KillTile(column, y, noItem: true);
+				if (shaft.NeedsPlatform(y) && !Main.tile[column, y].HasTile)
+				{
+					var tile = Main.tile[column, y];
+					tile.HasTile = true;
+					tile.TileType = TileID.Platforms;
+					WorldGen.SquareTileFrame(column, y);
+				}
+			}
+		}
 	}
 
 	static Microsoft.Xna.Framework.Point? UnderworldGround(int centerX)
