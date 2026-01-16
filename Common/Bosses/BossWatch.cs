@@ -51,7 +51,7 @@ public sealed class BossWatch : ModSystem
 		foreach (var challenge in BossCatalog.Challenges.Where(BossCatalog.IsBossAlive))
 		{
 			var parts = Main.npc.Where(npc => npc.active && challenge.IsPart(npc.type)).ToList();
-			BotDiagnostics.LogWorld($"boss fight {challenge.Name}: {parts.Count} parts, life left {parts.Sum(npc => npc.life)}; damage {BossCredit.DescribeFight(challenge)}");
+			BotDiagnostics.LogWorld($"boss fight {challenge.Name}: {parts.Count} parts, life left {parts.Where(npc => npc.realLife < 0 || npc.realLife == npc.whoAmI).Sum(npc => npc.life)}; damage {BossCredit.DescribeFight(challenge)}");
 		}
 	}
 

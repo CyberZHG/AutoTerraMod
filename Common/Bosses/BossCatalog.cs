@@ -51,6 +51,12 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 		_ => 1f
 	};
 
+	public float Exposure => BossType switch
+	{
+		NPCID.TheDestroyer => 3f,
+		_ => 1f
+	};
+
 	public Landmark? Arena => BossType switch
 	{
 		NPCID.EaterofWorldsHead => Landmark.Corruption,
