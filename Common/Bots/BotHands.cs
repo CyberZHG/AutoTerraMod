@@ -417,10 +417,13 @@ public sealed class BotHands
 		return true;
 	}
 
+	public int ShotsFired { get; set; }
+
 	public bool Fire(NPC target, Item weapon)
 	{
 		if (!Ready)
 			return false;
+		ShotsFired++;
 		int projectileType = weapon.shoot;
 		float speed = weapon.shootSpeed;
 		int damage = Avatar.GetWeaponDamage(weapon);
@@ -483,6 +486,25 @@ public sealed class BotHands
 		BotDiagnostics.Log(bot, "drank an Obsidian Skin Potion");
 	}
 
+	static readonly int[] BattlePotions =
+	{
+		ItemID.IronskinPotion, ItemID.RegenerationPotion, ItemID.EndurancePotion, ItemID.LifeforcePotion,
+		ItemID.SwiftnessPotion, ItemID.ArcheryPotion, ItemID.WrathPotion, ItemID.RagePotion, ItemID.ThornsPotion
+	};
+
+	public void DrinkBattlePotions()
+	{
+		foreach (int type in BattlePotions)
+		{
+			var potion = Inventory.Items(Avatar).FirstOrDefault(item => item.type == type);
+			if (potion == null || potion.buffType <= 0 || Avatar.HasBuff(potion.buffType))
+				continue;
+			Avatar.AddBuff(potion.buffType, potion.buffTime);
+			BotDiagnostics.Log(bot, $"drank {potion.Name} for the fight");
+			Inventory.ConsumeOne(Avatar, potion);
+		}
+	}
+
 	public bool DrinkHealingPotion()
 	{
 		if (bot.Vitals.PotionSicknessTicks > 0)
@@ -496,6 +518,7 @@ public sealed class BotHands
 		CombatText.NewText(bot.Npc.Hitbox, CombatText.HealLife, healed);
 		if (potion.UseSound.HasValue)
 			SoundEngine.PlaySound(potion.UseSound.Value, bot.Center);
+		BotDiagnostics.Log(bot, $"drank {potion.Name}: life {Avatar.statLife - healed} -> {Avatar.statLife}/{Avatar.statLifeMax2}");
 		Inventory.ConsumeOne(Avatar, potion);
 		return true;
 	}

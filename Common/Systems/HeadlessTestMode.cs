@@ -22,7 +22,22 @@ public sealed class HeadlessTestMode : ModSystem
 		ItemID.PlatinumBroadsword, ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves
 	};
 
-	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld, World.Landmark? StartIn = null, int StartNearTile = -1, bool StrongKit = false);
+	static readonly int[][] HardmodeKits =
+	{
+		new int[] { ItemID.Megashark, ItemID.AdamantiteMask, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings },
+		new int[] { ItemID.ChainGun, ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves },
+		new int[] { ItemID.SDMG, ItemID.VortexHelmet, ItemID.VortexBreastplate, ItemID.VortexLeggings }
+	};
+
+	static readonly int[] HardmodeAmmo = { ItemID.CrystalBullet, ItemID.ChlorophyteBullet, ItemID.ChlorophyteBullet };
+	static readonly int[] HardmodePotions = { ItemID.GreaterHealingPotion, ItemID.GreaterHealingPotion, ItemID.SuperHealingPotion };
+	static readonly int[] HardmodeLife = { 500, 500, 500 };
+
+	static readonly int[] PreHardmode = { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead, NPCID.Deerclops, NPCID.WallofFlesh };
+
+	static int[] Through(params int[] more) => PreHardmode.Concat(more).ToArray();
+
+	sealed record BossScenario(int[] AlreadyDefeated, int SummonItem, bool StartAtNight, bool RevealWorld, World.Landmark? StartIn = null, int StartNearTile = -1, bool StrongKit = false, int Tier = 0);
 
 	static readonly System.Collections.Generic.Dictionary<string, BossScenario> BossScenarios = new()
 	{
@@ -34,8 +49,78 @@ public sealed class HeadlessTestMode : ModSystem
 		["deerclops"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead }, ItemID.DeerThing, false, true, World.Landmark.Snow),
 		["wof"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead, NPCID.Deerclops }, ItemID.GuideVoodooDoll, false, true, World.Landmark.Underworld, -1, true),
 		["wofbase"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee, NPCID.SkeletronHead, NPCID.Deerclops }, ItemID.GuideVoodooDoll, false, true, null, -1, true),
-		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon)
+		["skeletron"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.QueenBee }, ItemID.None, true, true, World.Landmark.Dungeon),
+		["queenslime"] = new(Through(), ItemID.QueenSlimeCrystal, false, true, World.Landmark.Hallow, Tier: 1),
+		["destroyer"] = new(Through(NPCID.QueenSlimeBoss), ItemID.MechanicalWorm, true, true, Tier: 1),
+		["twins"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer), ItemID.MechanicalEye, true, true, Tier: 1),
+		["prime"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer), ItemID.MechanicalSkull, true, true, Tier: 1),
+		["plantera"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime), ItemID.None, false, true, null, TileID.PlanteraBulb, Tier: 2),
+		["golem"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera), ItemID.LihzahrdPowerCell, false, true, null, TileID.LihzahrdAltar, Tier: 2),
+		["fishron"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem), ItemID.TruffleWorm, false, true, World.Landmark.Ocean, Tier: 2),
+		["empress"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron), ItemID.EmpressButterfly, true, true, World.Landmark.Hallow, Tier: 3),
+		["cultist"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss), ItemID.None, false, true, World.Landmark.Dungeon, Tier: 3),
+		["moonlord"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss, NPCID.CultistBoss), ItemID.CelestialSigil, false, true, Tier: 3),
+		["pillars"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss, NPCID.CultistBoss), ItemID.None, false, true, Tier: 3)
 	};
+
+	static void MarkWorldDefeated(int boss)
+	{
+		switch (boss)
+		{
+			case NPCID.KingSlime: NPC.downedSlimeKing = true; break;
+			case NPCID.EyeofCthulhu: NPC.downedBoss1 = true; break;
+			case NPCID.EaterofWorldsHead or NPCID.BrainofCthulhu: NPC.downedBoss2 = true; break;
+			case NPCID.QueenBee: NPC.downedQueenBee = true; break;
+			case NPCID.SkeletronHead: NPC.downedBoss3 = true; break;
+			case NPCID.Deerclops: NPC.downedDeerclops = true; break;
+			case NPCID.WallofFlesh:
+				Main.hardMode = true;
+				if (NearestExposed(new Microsoft.Xna.Framework.Point(Main.spawnTileX, Main.spawnTileY), TileID.HallowedGrass, TileID.Pearlstone, TileID.Pearlsand) == null)
+					WorldGen.smCallBack(1);
+				break;
+			case NPCID.QueenSlimeBoss: NPC.downedQueenSlime = true; break;
+			case NPCID.TheDestroyer: NPC.downedMechBoss1 = true; NPC.downedMechBossAny = true; break;
+			case NPCID.Retinazer: NPC.downedMechBoss2 = true; NPC.downedMechBossAny = true; break;
+			case NPCID.SkeletronPrime: NPC.downedMechBoss3 = true; NPC.downedMechBossAny = true; break;
+			case NPCID.Plantera: NPC.downedPlantBoss = true; break;
+			case NPCID.Golem: NPC.downedGolemBoss = true; break;
+			case NPCID.DukeFishron: NPC.downedFishron = true; break;
+			case NPCID.HallowBoss: NPC.downedEmpressOfLight = true; break;
+			case NPCID.CultistBoss: NPC.downedAncientCultist = true; break;
+		}
+	}
+
+	static void PrepareHardmodeWorld()
+	{
+		if (Scenario == "plantera")
+			PlantBulb();
+		if (Scenario == "cultist")
+		{
+			Terraria.GameContent.Events.CultistRitual.delay = 0;
+			Terraria.GameContent.Events.CultistRitual.recheck = 0;
+		}
+		if (Scenario == "pillars")
+			WorldGen.TriggerLunarApocalypse();
+	}
+
+	static void PlantBulb()
+	{
+		int dungeonSide = Main.dungeonX < Main.maxTilesX / 2 ? -1 : 1;
+		for (int attempt = 0; attempt < 200000; attempt++)
+		{
+			int x = Main.rand.Next(200, Main.maxTilesX - 200);
+			int y = Main.rand.Next((int)Main.rockLayer, Main.UnderworldLayer - 50);
+			if (Main.tile[x, y].TileType != TileID.JungleGrass || !Main.tile[x, y].HasTile || Main.tile[x, y - 1].HasTile || Main.tile[x + 1, y - 1].HasTile)
+				continue;
+			WorldGen.PlaceJunglePlant(x, y - 1, TileID.PlanteraBulb, 0, 0);
+			if (Main.tile[x, y - 1].TileType == TileID.PlanteraBulb && Main.tile[x, y - 1].HasTile)
+			{
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: planted a Plantera bulb at {x},{y - 1}");
+				return;
+			}
+		}
+		ModContent.GetInstance<AutoTerraMod>().Logger.Warn("scenario: could not plant a Plantera bulb");
+	}
 
 	public static bool BossFirst => Scenario != null && BossScenarios.ContainsKey(Scenario);
 
@@ -48,6 +133,12 @@ public sealed class HeadlessTestMode : ModSystem
 			faction.DefeatedBosses.Clear();
 			foreach (int boss in scenario.AlreadyDefeated)
 				faction.DefeatedBosses.Add(boss);
+		}
+		if (scenario.Tier > 0)
+		{
+			foreach (int boss in scenario.AlreadyDefeated)
+				MarkWorldDefeated(boss);
+			PrepareHardmodeWorld();
 		}
 		if (scenario.StartAtNight)
 		{
@@ -83,7 +174,9 @@ public sealed class HeadlessTestMode : ModSystem
 			Give(bot, scenario.StrongKit ? ItemID.HealingPotion : ItemID.LesserHealingPotion, 10);
 			Give(bot, ItemID.Rope, 60);
 			int targetLife = scenario.SummonItem == ItemID.GuideVoodooDoll ? 400 : scenario.StrongKit ? 300 : 200;
-			if (bot.Avatar.statLifeMax < targetLife)
+			if (scenario.Tier > 0)
+				GiveHardmodeKit(bot, scenario.Tier - 1);
+			else if (bot.Avatar.statLifeMax < targetLife)
 				Give(bot, ItemID.LifeCrystal, (targetLife - bot.Avatar.statLifeMax) / 20);
 		}
 		foreach (var faction in BotWorldSystem.Factions)
@@ -95,6 +188,24 @@ public sealed class HeadlessTestMode : ModSystem
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless scenario '{Scenario}' prepared");
 	}
 
+	static void GiveHardmodeKit(Bots.Bot bot, int tier)
+	{
+		foreach (int type in HardmodeKits[tier])
+			Give(bot, type, 1);
+		Give(bot, HardmodeAmmo[tier], 3000);
+		Give(bot, HardmodePotions[tier], 20);
+		foreach (int buff in new int[] { ItemID.IronskinPotion, ItemID.RegenerationPotion, ItemID.EndurancePotion, ItemID.LifeforcePotion, ItemID.ArcheryPotion })
+			Give(bot, buff, 3);
+		var avatar = bot.Avatar;
+		if (avatar.ConsumedLifeCrystals < Player.LifeCrystalMax)
+			Give(bot, ItemID.LifeCrystal, Player.LifeCrystalMax - avatar.ConsumedLifeCrystals);
+		int fruit = (HardmodeLife[tier] - 400) / 5 - avatar.ConsumedLifeFruit;
+		if (fruit > 0)
+			Give(bot, ItemID.LifeFruit, fruit);
+		if (Scenario == "fishron")
+			Give(bot, ItemID.ReinforcedFishingPole, 1);
+	}
+
 	static void PlaceTeamsIn(World.Landmark landmark)
 	{
 		if (landmark == World.Landmark.Underworld)
@@ -104,14 +215,10 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 		foreach (var faction in BotWorldSystem.Factions)
 		{
-			if (World.Grounds.SurfaceSpotNear(BotWorldSystem.KnowledgeOf(faction), landmark, faction.BaseTile) is not Microsoft.Xna.Framework.Vector2 spot)
+			if (World.Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(faction), landmark, faction.BaseTile) is not Microsoft.Xna.Framework.Vector2 spot)
 				continue;
-			int offset = 0;
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
-			{
-				int x = (int)(spot.X / 16f) + offset++ * 2;
-				bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(x * 16f + 8f, World.TileQuery.SurfaceY(x) * 16f);
-			}
+				bot.SavedFeetPosition = spot;
 		}
 	}
 
@@ -212,15 +319,45 @@ public sealed class HeadlessTestMode : ModSystem
 				knowledge.RememberLandmark(World.Landmark.Jungle, new Microsoft.Xna.Framework.Point(x, y));
 			foreach (var (x, y) in SurfaceColumns(TileID.SnowBlock, TileID.IceBlock))
 				knowledge.RememberLandmark(World.Landmark.Snow, new Microsoft.Xna.Framework.Point(x, y));
+			if (NearestExposed(faction.BaseTile, TileID.HallowedGrass, TileID.Pearlstone, TileID.Pearlsand) is Microsoft.Xna.Framework.Point hallow)
+				knowledge.RememberLandmark(World.Landmark.Hallow, hallow);
+			foreach (var (x, y) in SurfaceColumns(TileID.HallowedGrass, TileID.Pearlstone, TileID.Pearlsand))
+				knowledge.RememberLandmark(World.Landmark.Hallow, new Microsoft.Xna.Framework.Point(x, y));
+			foreach (var (x, y) in SurfaceColumns(TileID.Sand).Where(column => WorldGen.oceanDepths(column.x, column.y) && (column.x < Main.maxTilesX / 2) == (faction.BaseTile.X < Main.maxTilesX / 2)))
+				knowledge.RememberLandmark(World.Landmark.Ocean, new Microsoft.Xna.Framework.Point(x, y));
 			for (int x = 0; x < Main.maxTilesX; x++)
 			{
 				for (int y = 0; y < Main.maxTilesY; y++)
 				{
-					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType is TileID.ShadowOrbs or TileID.Larva)
+					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType is TileID.ShadowOrbs or TileID.Larva or TileID.PlanteraBulb or TileID.LihzahrdAltar)
 						knowledge.Remember(new Microsoft.Xna.Framework.Point(x, y), Main.tile[x, y].TileType);
+					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.LihzahrdAltar)
+						knowledge.RememberLandmark(World.Landmark.Temple, new Microsoft.Xna.Framework.Point(x, y));
 				}
 			}
 		}
+	}
+
+	static Microsoft.Xna.Framework.Point? NearestExposed(Microsoft.Xna.Framework.Point from, params int[] tileTypes)
+	{
+		Microsoft.Xna.Framework.Point? best = null;
+		long bestDistance = long.MaxValue;
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+		{
+			for (int y = 10; y < Main.UnderworldLayer; y++)
+			{
+				var tile = Main.tile[x, y];
+				if (!tile.HasTile || !tileTypes.Contains(tile.TileType))
+					continue;
+				long distance = (long)(x - from.X) * (x - from.X) + (long)(y - from.Y) * (y - from.Y);
+				if (distance < bestDistance && World.TileQuery.IsExposed(x, y) && World.Grounds.StandingSpotNear(new Microsoft.Xna.Framework.Point(x, y)) != null)
+				{
+					bestDistance = distance;
+					best = new Microsoft.Xna.Framework.Point(x, y);
+				}
+			}
+		}
+		return best;
 	}
 
 	static System.Collections.Generic.IEnumerable<(int x, int y)> SurfaceColumns(params int[] tileTypes)

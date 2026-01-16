@@ -42,7 +42,7 @@ public static class WorldScan
 		{
 			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType))
 				knowledge.Remember(new Point(x, y), tileType);
-			if (Landmarks.Classify(y, tileType) is Landmark landmark)
+			if (Landmarks.Classify(x, y, tileType) is Landmark landmark)
 				knowledge.RememberLandmark(landmark, new Point(x, y));
 		});
 	}
@@ -68,7 +68,7 @@ public static class WorldScan
 
 	public static bool IsTreasure(int tileType) => TreasureTiles.Contains(tileType);
 
-	public static bool IsBossShrine(int tileType) => tileType is TileID.DemonAltar or TileID.ShadowOrbs or TileID.Larva;
+	public static bool IsBossShrine(int tileType) => tileType is TileID.DemonAltar or TileID.ShadowOrbs or TileID.Larva or TileID.PlanteraBulb or TileID.LihzahrdAltar;
 
 	public static readonly Dictionary<int, (int tileType, int frameX)> ForageTiles = new()
 	{

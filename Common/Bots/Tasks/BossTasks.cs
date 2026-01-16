@@ -150,6 +150,40 @@ public sealed class SummonTask : BotTask
 				ritualTarget = clothier.Center;
 				var weapon = Bot.Hands.BestWeapon();
 				return weapon != null && (Bot.Hands.InMeleeReach(clothier, weapon) || MoveCloser(clothier.Center, 16f));
+			case AltarTrigger when step.Shrine is Point altar:
+				ritualTarget = altar.ToWorldCoordinates();
+				return Vector2.Distance(Bot.Center, ritualTarget) <= TalkRadius || MoveCloser(ritualTarget, TalkRadius * 0.5f);
+			case BulbTrigger when step.Shrine is Point bulb:
+				ritualTarget = bulb.ToWorldCoordinates();
+				var pickaxe = Bot.Hands.BestPickaxe;
+				return pickaxe != null && (Bot.Hands.CanReach(pickaxe, bulb) || MoveCloser(ritualTarget, 24f));
+			case BaitTrigger:
+				var water = WaterFinder.NearestWaterSurface(Bot.CenterTile, LavaSearchRadius);
+				if (water is not Point sea)
+					return Abandon("no water found nearby");
+				ritualTarget = sea.ToWorldCoordinates();
+				return Vector2.Distance(Bot.Center, ritualTarget) <= CastRadius || MoveCloser(ritualTarget, CastRadius * 0.5f);
+			case LacewingTrigger:
+				lacewing = Lacewing() ?? ReleaseLacewing();
+				if (lacewing == null)
+				{
+					Bot.Motor.Stop();
+					Bot.Watchdog.RecordProgress();
+					return false;
+				}
+				ritualTarget = lacewing.Center;
+				return true;
+			case CultistRitualTrigger:
+				var devotee = Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.CultistDevote && Vector2.Distance(npc.Center, step.Place) < OldManSearchRadius);
+				if (devotee == null)
+				{
+					Bot.Motor.Stop();
+					Bot.Watchdog.RecordProgress();
+					return false;
+				}
+				ritualTarget = devotee.Center;
+				var blade2 = Bot.Hands.BestWeapon();
+				return blade2 != null && (Bot.Hands.InMeleeReach(devotee, blade2) || MoveCloser(devotee.Center, 16f));
 			case VoodooDollTrigger:
 				var lava = WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius);
 				if (lava is not Point surface)
@@ -191,6 +225,75 @@ public sealed class SummonTask : BotTask
 		return present * 2 >= team.Count || GiveUpRally(present, team.Count);
 	}
 
+	const float CastRadius = 16f * 15f;
+	const float LacewingSearchRadius = 16f * 80f;
+
+	NPC lacewing;
+
+	bool ConsumeAndSpawn(int itemType)
+	{
+		var item = Inventory.Items(Avatar).FirstOrDefault(candidate => candidate.type == itemType);
+		if (item == null)
+			return Abandon($"{Lang.GetItemNameValue(itemType)} missing");
+		using (AvatarPresence.Enter())
+			NPC.SpawnOnPlayer(Avatar.whoAmI, step.Challenge.BossType);
+		Inventory.ConsumeOne(Avatar, item);
+		return true;
+	}
+
+	NPC Lacewing() =>
+		Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.EmpressButterfly && Vector2.Distance(npc.Center, Bot.Center) < LacewingSearchRadius);
+
+	NPC ReleaseLacewing()
+	{
+		if (!Avatar.ZoneHallow)
+			return null;
+		var critter = Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.EmpressButterfly);
+		if (critter == null)
+			return null;
+		int index = NPC.NewNPC(new EntitySource_Misc("AutoTerraMod:ReleaseCritter"), (int)Bot.Center.X, (int)Bot.Center.Y, NPCID.EmpressButterfly);
+		Inventory.ConsumeOne(Avatar, critter);
+		return Main.npc[index];
+	}
+
+	bool KillLacewing()
+	{
+		if (lacewing == null || !lacewing.active || lacewing.type != NPCID.EmpressButterfly)
+		{
+			if (!NPC.AnyNPCs(NPCID.HallowBoss))
+				using (AvatarPresence.Enter())
+					NPC.SpawnOnPlayer(Avatar.whoAmI, NPCID.HallowBoss);
+			return true;
+		}
+		var weapon = Bot.Hands.BestWeapon();
+		if (weapon == null)
+			return Abandon("no weapon");
+		Bot.Motor.Face(lacewing.Center);
+		if (BotHands.IsProjectileWeapon(weapon))
+			Bot.Hands.Fire(lacewing, weapon);
+		else if (Bot.Hands.InMeleeReach(lacewing, weapon))
+			using (AvatarPresence.Enter())
+				Bot.Hands.Strike(lacewing, weapon);
+		else
+			Bot.Motor.MoveTo(lacewing.Center, 16f);
+		Bot.Watchdog.RecordProgress();
+		return false;
+	}
+
+	bool StrikeDevotee(Vector2 devoteeCenter)
+	{
+		var devotee = Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.CultistDevote && Vector2.Distance(npc.Center, devoteeCenter) < 32f);
+		if (devotee == null)
+			return NPC.AnyNPCs(NPCID.CultistBoss);
+		var weapon = Bot.Hands.BestWeapon();
+		if (weapon == null)
+			return Abandon("no weapon");
+		Bot.Motor.Face(devotee.Center);
+		using (AvatarPresence.Enter())
+			Bot.Hands.Strike(devotee, weapon);
+		return NPC.AnyNPCs(NPCID.CultistBoss);
+	}
+
 	bool KillClothierWearingDoll()
 	{
 		int clothierIndex = NPC.FindFirstNPC(NPCID.Clothier);
@@ -228,8 +331,31 @@ public sealed class SummonTask : BotTask
 				if (summonItem == null)
 					return Abandon("summon item missing");
 				using (AvatarPresence.Enter())
+				{
 					NPC.SpawnOnPlayer(Avatar.whoAmI, step.Challenge.BossType);
+					foreach (int extra in item.AlsoSpawns ?? System.Array.Empty<int>())
+						NPC.SpawnOnPlayer(Avatar.whoAmI, extra);
+				}
 				Inventory.ConsumeOne(Avatar, summonItem);
+				return true;
+			case AltarTrigger altarTrigger:
+				return ConsumeAndSpawn(altarTrigger.Item);
+			case BaitTrigger baitTrigger:
+				Bot.Motor.Face(ritualTarget);
+				return ConsumeAndSpawn(baitTrigger.Bait);
+			case BulbTrigger when step.Shrine is Point bulbTile:
+				Bot.Motor.Face(ritualTarget);
+				ToolResult dug;
+				using (AvatarPresence.Enter())
+					dug = Bot.Hands.Dig(bulbTile);
+				if (dug is ToolResult.Unbreakable or ToolResult.NoTool)
+					return Abandon($"cannot break the bulb at {bulbTile}: {dug}");
+				return !TileQuery.HasTile(bulbTile);
+			case LacewingTrigger:
+				return KillLacewing();
+			case CultistRitualTrigger:
+				return StrikeDevotee(ritualTarget);
+			case PillarsTrigger:
 				return true;
 			case SmashOrbsTrigger when step.Shrine is Point shrine:
 				Bot.Motor.Face(ritualTarget);

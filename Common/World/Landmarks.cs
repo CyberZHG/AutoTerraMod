@@ -10,19 +10,26 @@ public enum Landmark
 	Crimson,
 	Jungle,
 	Snow,
-	Underworld
+	Underworld,
+	Hallow,
+	Ocean,
+	Temple
 }
 
 public static class Landmarks
 {
-	public static Landmark? Classify(int y, int tileType)
+	public static Landmark? Classify(int x, int y, int tileType)
 	{
 		if (y >= Main.UnderworldLayer)
 			return Landmark.Underworld;
 		if (Main.tileDungeon[tileType])
 			return Landmark.Dungeon;
+		if (WorldGen.oceanDepths(x, y) && tileType is TileID.Sand or TileID.ShellPile)
+			return Landmark.Ocean;
 		return tileType switch
 		{
+			TileID.LihzahrdBrick => Landmark.Temple,
+			TileID.HallowedGrass or TileID.Pearlstone or TileID.Pearlsand => Landmark.Hallow,
 			TileID.Ebonstone or TileID.CorruptGrass => Landmark.Corruption,
 			TileID.Crimstone or TileID.CrimsonGrass => Landmark.Crimson,
 			TileID.JungleGrass or TileID.Hive => Landmark.Jungle,

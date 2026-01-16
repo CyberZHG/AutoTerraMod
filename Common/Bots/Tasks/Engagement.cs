@@ -11,6 +11,8 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public static class Engagement
 {
 	const float RangedStandoff = 16f * 14f;
+	const float MaxFireRange = 16f * 40f;
+	const float MinionThreat = 16f * 6f;
 	const float TooCloseForRanged = 16f * 3f;
 	const float BossStandoff = 12f;
 	const float JumpStrikeHeight = 16f * 6f;
@@ -87,6 +89,9 @@ public static class Engagement
 				return;
 			}
 		}
+		if (Bosses.BossCatalog.IsBossPart(target) && bot.Hands.BestWeapon() is Item gun && BotHands.IsProjectileWeapon(gun)
+			&& NearestHostile(bot, MinionThreat, true) is NPC minion && !Bosses.BossCatalog.IsBossPart(minion))
+			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
 		if (weapon == null)
@@ -99,19 +104,18 @@ public static class Engagement
 		if (BotHands.IsProjectileWeapon(weapon))
 		{
 			bool clearShot = Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height);
-			if (clearShot && distance < RangedStandoff)
+			bool kiting = Bosses.BossCatalog.IsBossPart(target) && bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
+			if (clearShot && distance < MaxFireRange)
 			{
 				bot.Motor.Face(target.Center);
 				bot.Hands.Fire(target, weapon);
-				if (distance < TooCloseForRanged)
-					bot.Motor.MoveTo(body.Center + new Vector2(Math.Sign(body.Center.X - target.Center.X) * 96f, 0f), 8f);
-				else
-					bot.Motor.Stop();
 			}
-			else
-			{
+			if (!clearShot || distance >= RangedStandoff)
 				bot.Motor.MoveTo(approach, RangedStandoff * 0.5f);
-			}
+			else if (kiting || distance < TooCloseForRanged)
+				bot.Motor.MoveTo(body.Center + new Vector2(Math.Sign(body.Center.X - target.Center.X) * 96f, 0f), 8f);
+			else
+				bot.Motor.Stop();
 			return;
 		}
 		if (bot.Hands.InMeleeReach(target, weapon))

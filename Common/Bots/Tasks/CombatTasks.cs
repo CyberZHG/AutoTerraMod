@@ -20,11 +20,16 @@ public sealed class FleeTask : BotTask
 		if (HealthFraction >= Traits.FleeHealthFraction)
 			return 0f;
 		threat = Engagement.NearestHostile(Bot, ThreatRadius, false);
-		if (threat == null || HoldingArena(threat) || Engagement.KitingWall(Bot))
+		if (threat == null || HoldingArena(threat) || Engagement.KitingWall(Bot) || InBossFight())
 			return 0f;
 		Detail = threat.GivenOrTypeName;
 		return 90f + (1f - Traits.Courage) * 20f;
 	}
+
+	const float BossFightRadius = 16f * 120f;
+
+	bool InBossFight() =>
+		Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossFightRadius) is NPC boss && !Bot.IsIgnoring(boss);
 
 	bool HoldingArena(NPC npc) =>
 		Bosses.BossCatalog.ChallengeOf(npc.type) is { Arena: World.Landmark arena } && Bosses.BossChallenge.InArena(Avatar, arena);
@@ -75,7 +80,7 @@ public sealed class FightTask : BotTask
 			target = boss;
 			closeThreat = true;
 			Detail = boss.GivenOrTypeName;
-			return HealthFraction < Traits.FleeHealthFraction && !Engagement.KitingWall(Bot) ? BossPriority * 0.3f : BossPriority;
+			return BossPriority;
 		}
 		var interferer = Interferer();
 		if (interferer != null)
@@ -121,13 +126,16 @@ public sealed class FightTask : BotTask
 
 	public override void Tick()
 	{
-		if (target == null || !Engagement.IsHostileTarget(target) || Bot.IsIgnoring(target))
+		bool bossPhase = target != null && target.active && Bosses.BossCatalog.IsBossPart(target);
+		if (target == null || (!bossPhase && !Engagement.IsHostileTarget(target)) || Bot.IsIgnoring(target))
 		{
 			IsFinished = true;
 			return;
 		}
 		if (HealthFraction < (Bosses.BossCatalog.IsBossPart(target) ? BossDrinkHealthFraction : DrinkHealthFraction))
 			Bot.Hands.DrinkHealingPotion();
+		if (Bosses.BossCatalog.IsBossPart(target))
+			Bot.Hands.DrinkBattlePotions();
 		if (Bosses.BossCatalog.IsBossPart(target) && Vector2.Distance(Bot.Center, target.Center) > BossApproachDistance)
 		{
 			TravelOrTunnel(target.Bottom, BossApproachDistance * 0.5f);

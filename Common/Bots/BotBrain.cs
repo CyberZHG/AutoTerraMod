@@ -72,6 +72,18 @@ public sealed class BotBrain
 
 	public BotTask Override { get; set; }
 
+	const float QuickHealFraction = 0.4f;
+	const float BossQuickHealFraction = 0.6f;
+	const float BossNearbyRadius = 16f * 150f;
+
+	void QuickHeal()
+	{
+		var avatar = bot.Avatar;
+		float threshold = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossNearbyRadius) != null ? BossQuickHealFraction : QuickHealFraction;
+		if (avatar.statLife < avatar.statLifeMax2 * threshold)
+			bot.Hands.DrinkHealingPotion();
+	}
+
 	public void Tick(NPC body)
 	{
 		bot.Vitals.Tick(body);
@@ -86,6 +98,7 @@ public sealed class BotBrain
 			return;
 		}
 		bot.Hands.Tick();
+		QuickHeal();
 		bot.Watchdog.Tick();
 		if (--reconsiderTimer <= 0 || current == null || current.IsFinished)
 			Reconsider();

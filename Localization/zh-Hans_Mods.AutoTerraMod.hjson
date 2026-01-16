@@ -118,6 +118,9 @@ Landmarks: {
 	Jungle: 丛林
 	Snow: 雪原
 	Underworld: 地狱
+	Hallow: 神圣之地
+	Ocean: 海洋
+	Temple: 丛林神庙
 }
 
 Plans: {

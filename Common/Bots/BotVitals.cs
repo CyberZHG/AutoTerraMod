@@ -356,6 +356,8 @@ public sealed class BotVitals
 		var center = Avatar.Center.ToTileCoordinates();
 		Avatar.ZoneDungeon = scene.DungeonTileCount >= DungeonTileThreshold && tileY > Main.worldSurface && Main.wallDungeon[Main.tile[center.X, center.Y].WallType];
 		Avatar.ZoneUnderworldHeight = tileY > Main.UnderworldLayer;
+		Avatar.ZoneBeach = WorldGen.oceanDepths(center.X, center.Y);
+		Avatar.ZoneLihzhardTemple = Main.tile[center.X, center.Y].WallType == WallID.LihzahrdBrickUnsafe;
 	}
 
 	void MirrorHealthOnBody(NPC body)

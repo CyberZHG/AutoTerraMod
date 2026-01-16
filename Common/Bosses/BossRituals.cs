@@ -23,13 +23,22 @@ public static class BossRituals
 
 	static readonly HashSet<int> OrbTiles = new() { TileID.ShadowOrbs };
 	static readonly HashSet<int> LarvaTiles = new() { TileID.Larva };
+	static readonly HashSet<int> BulbTiles = new() { TileID.PlanteraBulb };
+	static readonly HashSet<int> AltarTiles = new() { TileID.LihzahrdAltar };
 
-	static HashSet<int> ShrineTilesOf(Landmark landmark) => landmark == Landmark.Jungle ? LarvaTiles : OrbTiles;
+	static HashSet<int> ShrineTilesOf(Landmark landmark) => landmark switch
+	{
+		Landmark.Jungle => LarvaTiles,
+		Landmark.Temple => AltarTiles,
+		_ => OrbTiles
+	};
 
 	public static bool KnowsShrine(Bot bot, Landmark landmark) => KnownShrine(bot, landmark) != null;
 
-	static Point? KnownShrine(Bot bot, Landmark landmark) =>
-		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, ShrineTilesOf(landmark), new HashSet<Point>(), ShrineSearchRadius);
+	static Point? KnownShrine(Bot bot, Landmark landmark) => KnownTile(bot, ShrineTilesOf(landmark));
+
+	static Point? KnownTile(Bot bot, HashSet<int> tiles) =>
+		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, tiles, new HashSet<Point>(), ShrineSearchRadius);
 
 	public static IEnumerable<BossTrigger> InPreferredOrder(Bot bot, BossChallenge challenge) =>
 		challenge.Triggers.OrderBy(trigger => trigger is SummonItemTrigger item && Inventory.Count(bot.Avatar, item.Item) > 0 ? 0 : 1);
@@ -42,8 +51,73 @@ public static class BossRituals
 		CurseOldManTrigger curse => PlanCurse(bot, challenge, curse),
 		VoodooDollTrigger voodoo => PlanVoodoo(bot, challenge, voodoo),
 		ClothierDollTrigger clothier => PlanClothier(bot, challenge, clothier),
+		AltarTrigger altar => PlanAltar(bot, challenge, altar),
+		BulbTrigger bulb => PlanBulb(bot, challenge, bulb),
+		BaitTrigger bait => PlanBait(bot, challenge, bait),
+		LacewingTrigger lacewing => PlanLacewing(bot, challenge, lacewing),
+		CultistRitualTrigger ritual => PlanCultists(bot, challenge, ritual),
+		PillarsTrigger pillars => PlanPillars(bot, challenge, pillars),
 		_ => PlanStep.Blocked
 	};
+
+	static PlanStep PlanAltar(Bot bot, BossChallenge challenge, AltarTrigger trigger)
+	{
+		if (Inventory.Count(bot.Avatar, trigger.Item) == 0)
+			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
+		if (KnownTile(bot, AltarTiles) is not Point altar)
+			return new ScoutStep(trigger.Place, true);
+		return new SummonBossStep(challenge, trigger, altar.ToWorldCoordinates(), altar);
+	}
+
+	static PlanStep PlanBulb(Bot bot, BossChallenge challenge, BulbTrigger trigger)
+	{
+		if (KnownTile(bot, BulbTiles) is Point bulb)
+			return new SummonBossStep(challenge, trigger, bulb.ToWorldCoordinates(), bulb);
+		return new ScoutStep(Landmark.Jungle, true);
+	}
+
+	public static bool IsFishingPole(Item item) => item.fishingPole > 0;
+
+	static PlanStep PlanBait(Bot bot, BossChallenge challenge, BaitTrigger trigger)
+	{
+		if (!Inventory.Items(bot.Avatar).Any(IsFishingPole))
+			return ProgressionPlanner.ObtainAny(bot, new int[] { ItemID.WoodFishingPole, ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher });
+		if (Inventory.Count(bot.Avatar, trigger.Bait) == 0)
+			return ProgressionPlanner.Obtain(bot, trigger.Bait, 1);
+		return Shoreline(bot) is Vector2 shore ? new SummonBossStep(challenge, trigger, shore, null) : new ScoutStep(Landmark.Ocean, false);
+	}
+
+	static Vector2? Shoreline(Bot bot)
+	{
+		if (BotWorldSystem.KnowledgeOf(bot.Faction).SpanOf(Landmark.Ocean) is not var (minX, maxX))
+			return null;
+		int x = minX < Main.maxTilesX / 2 ? maxX : minX;
+		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+	}
+
+	static PlanStep PlanLacewing(Bot bot, BossChallenge challenge, LacewingTrigger trigger)
+	{
+		if (!challenge.CanSummonNow)
+			return PlanStep.Idle;
+		return Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), Landmark.Hallow, bot.Faction.BaseTile) is Vector2 place
+			? new SummonBossStep(challenge, trigger, place, null)
+			: new ScoutStep(Landmark.Hallow, false);
+	}
+
+	static PlanStep PlanCultists(Bot bot, BossChallenge challenge, CultistRitualTrigger trigger)
+	{
+		if (KnownLandmark(bot, Landmark.Dungeon) is not Point dungeon)
+			return new ScoutStep(Landmark.Dungeon, false);
+		return new SummonBossStep(challenge, trigger, dungeon.ToWorldCoordinates(), null);
+	}
+
+	static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
+
+	public static NPC NearestPillar(Vector2 from) =>
+		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(npc => Vector2.Distance(npc.Center, from)).FirstOrDefault();
+
+	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
+		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, pillar.Bottom, null) : PlanStep.Blocked;
 
 	static Point? KnownLandmark(Bot bot, Landmark landmark) => BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(landmark);
 
@@ -55,7 +129,7 @@ public static class BossRituals
 			return PlanStep.Idle;
 		if (trigger.Place is not Landmark landmark)
 			return new SummonBossStep(challenge, trigger, bot.Faction.BaseCenter, null);
-		return Grounds.SurfaceSpotNear(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is Vector2 place
+		return Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is Vector2 place
 			? new SummonBossStep(challenge, trigger, place, null)
 			: new ScoutStep(landmark, false);
 	}

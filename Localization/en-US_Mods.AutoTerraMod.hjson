@@ -118,6 +118,9 @@ Landmarks: {
 	Jungle: jungle
 	Snow: snow biome
 	Underworld: Underworld
+	Hallow: Hallow
+	Ocean: ocean
+	Temple: Jungle Temple
 }
 
 Plans: {

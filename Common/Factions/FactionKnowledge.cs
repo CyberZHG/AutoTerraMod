@@ -23,10 +23,14 @@ public sealed class FactionKnowledge
 	public void RememberLandmark(Landmark landmark, Point tile)
 	{
 		landmarks.TryAdd(landmark, tile);
+		if (landmark == Landmark.Ocean && OnOtherHalf(landmarks[landmark], tile))
+			return;
 		landmarkSpans[landmark] = landmarkSpans.TryGetValue(landmark, out var span)
 			? (System.Math.Min(span.minX, tile.X), System.Math.Max(span.maxX, tile.X))
 			: (tile.X, tile.X);
 	}
+
+	static bool OnOtherHalf(Point anchor, Point tile) => (anchor.X < Main.maxTilesX / 2) != (tile.X < Main.maxTilesX / 2);
 
 	public TagCompound Save() => new()
 	{

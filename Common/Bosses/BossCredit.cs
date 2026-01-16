@@ -39,7 +39,7 @@ public sealed class BossCredit : GlobalNPC
 		damageByFight.TryGetValue(challenge.BossType, out var byFaction) && byFaction.ContainsKey(factionId);
 
 	public static NPC EngagedBoss(Bot bot) =>
-		Main.npc.Where(npc => npc.active && BossCatalog.ChallengeOf(npc.type) is BossChallenge challenge && challenge.BossType == npc.type && IsEngaged(bot.FactionId, challenge))
+		Main.npc.Where(npc => npc.active && !npc.dontTakeDamage && !npc.immortal && BossCatalog.ChallengeOf(npc.type) is BossChallenge challenge && IsEngaged(bot.FactionId, challenge))
 			.OrderBy(npc => Microsoft.Xna.Framework.Vector2.Distance(npc.Center, bot.Center))
 			.FirstOrDefault();
 
@@ -59,7 +59,7 @@ public sealed class BossCredit : GlobalNPC
 		BotWorldSystem.Relation == FactionRelation.Cooperate ? challenge.IsDefeated() : faction.DefeatedBosses.Contains(challenge.BossType);
 
 	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction) =>
-		BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge));
+		BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge) && challenge.IsUnlocked);
 
 	public static BossChallenge NextChallengeFor(Faction faction) => OpenChallengesFor(faction).FirstOrDefault();
 
