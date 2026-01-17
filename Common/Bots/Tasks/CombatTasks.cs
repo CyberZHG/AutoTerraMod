@@ -64,7 +64,7 @@ public sealed class FightTask : BotTask
 
 	const float BossEngagementRange = 16f * 400f;
 	const float BossApproachDistance = 16f * 60f;
-	const float BossPriority = 92f;
+	const float BossPriority = 115f;
 	const float InterruptPriority = 95f;
 	const float AmbushRadius = 16f * 10f;
 	const float BlockingRadius = 16f * 5f;

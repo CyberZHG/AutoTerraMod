@@ -110,7 +110,9 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			int x = Main.rand.Next(200, Main.maxTilesX - 200);
 			int y = Main.rand.Next((int)Main.rockLayer, Main.UnderworldLayer - 50);
-			if (Main.tile[x, y].TileType != TileID.JungleGrass || !Main.tile[x, y].HasTile || Main.tile[x, y - 1].HasTile || Main.tile[x + 1, y - 1].HasTile)
+			bool floor = Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.JungleGrass && Main.tile[x + 1, y].HasTile && Main.tile[x + 1, y].TileType == TileID.JungleGrass;
+			bool room = !Main.tile[x, y - 1].HasTile && !Main.tile[x + 1, y - 1].HasTile && !Main.tile[x, y - 2].HasTile && !Main.tile[x + 1, y - 2].HasTile;
+			if (!floor || !room)
 				continue;
 			WorldGen.PlaceJunglePlant(x, y - 1, TileID.PlanteraBulb, 0, 0);
 			if (Main.tile[x, y - 1].TileType == TileID.PlanteraBulb && Main.tile[x, y - 1].HasTile)
