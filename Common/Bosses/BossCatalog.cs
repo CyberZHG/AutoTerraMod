@@ -42,7 +42,9 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 
 	public bool IsPart(int npcType) => npcType == BossType || Parts.Contains(npcType);
 
-	public bool CanSummonNow => !NightOnly || !Main.dayTime;
+	const double LatestSummonTime = Main.nightLength * 0.5;
+
+	public bool CanSummonNow => !NightOnly || (!Main.dayTime && Main.time < LatestSummonTime);
 
 	public float ThreatMultiplier => BossType switch
 	{
