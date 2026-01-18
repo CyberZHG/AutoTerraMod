@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Navigation;
 using AutoTerraMod.Common.World;
@@ -346,11 +347,25 @@ public sealed class BotMotor
 			bot.Hands.PlaceBridge(tile);
 	}
 
+	bool HasTempleKey => NPC.downedPlantBoss && Inventory.Count(bot.Avatar, ItemID.TempleKey) > 0;
+
+	void UnlockWithKey(Point tile)
+	{
+		var key = Inventory.Items(bot.Avatar).FirstOrDefault(item => item.type == ItemID.TempleKey);
+		if (key == null || !NPC.downedPlantBoss)
+			return;
+		Inventory.ConsumeOne(bot.Avatar, key);
+		WorldGen.UnlockDoor(tile.X, tile.Y);
+		BotDiagnostics.Log(bot, $"unlocked the temple door at {tile}");
+	}
+
 	void PassThrough(Point tile, int direction)
 	{
 		int tileType = TileQuery.TypeAt(tile);
 		if (tileType == TileID.ClosedDoor)
 		{
+			if (WorldGen.IsLockedDoor(tile.X, tile.Y))
+				UnlockWithKey(tile);
 			WorldGen.OpenDoor(tile.X, tile.Y, direction);
 			return;
 		}
@@ -389,7 +404,7 @@ public sealed class BotMotor
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		bool hasBridgeMaterial = bot.Hands.HasBridgeMaterial;
 		bool hasRope = bot.Hands.HasRope;
-		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, AffordableFall);
+		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, AffordableFall, HasTempleKey);
 	}
 
 	void ApplyIntent(NPC npc, MotorIntent intent, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)

@@ -56,6 +56,7 @@ public sealed class HeadlessTestMode : ModSystem
 		["prime"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer), ItemID.MechanicalSkull, true, true, Tier: 1),
 		["plantera"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime), ItemID.None, false, true, null, TileID.PlanteraBulb, Tier: 2),
 		["golem"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera), ItemID.LihzahrdPowerCell, false, true, null, TileID.LihzahrdAltar, Tier: 2),
+		["templedoor"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera), ItemID.LihzahrdPowerCell, false, true, Tier: 2),
 		["fishron"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem), ItemID.TruffleWorm, false, true, World.Landmark.Ocean, Tier: 2),
 		["empress"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron), ItemID.EmpressButterfly, true, true, World.Landmark.Hallow, Tier: 3),
 		["cultist"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss), ItemID.None, false, true, World.Landmark.Dungeon, Tier: 3),
@@ -161,6 +162,8 @@ public sealed class HeadlessTestMode : ModSystem
 			PlaceTeamsIn(start);
 		if (scenario.StartNearTile >= 0)
 			PlaceTeamsNear(scenario.StartNearTile);
+		if (Scenario == "templedoor")
+			PlaceTeamsOutsideTempleDoor();
 		foreach (var bot in BotWorldSystem.Bots)
 		{
 			Bots.Junk.TrashExcess(bot);
@@ -277,6 +280,53 @@ public sealed class HeadlessTestMode : ModSystem
 			}
 		}
 		return null;
+	}
+
+	const int LihzahrdDoorFrameTop = 594;
+	const int LihzahrdDoorFrameBottom = 646;
+	const int UnlockedDoorFrameOffset = 54;
+
+	static void RelockTempleDoors()
+	{
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+		{
+			for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
+			{
+				var tile = Main.tile[x, y];
+				if (tile.HasTile && tile.TileType == TileID.ClosedDoor && tile.TileFrameY >= LihzahrdDoorFrameTop && tile.TileFrameY <= LihzahrdDoorFrameBottom + UnlockedDoorFrameOffset)
+				{
+					tile.TileFrameX = (short)(tile.TileFrameX % UnlockedDoorFrameOffset);
+					if (tile.TileFrameY > LihzahrdDoorFrameBottom)
+						tile.TileFrameY -= UnlockedDoorFrameOffset;
+				}
+			}
+		}
+	}
+
+	static void PlaceTeamsOutsideTempleDoor()
+	{
+		RelockTempleDoors();
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+		{
+			for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
+			{
+				if (!Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.ClosedDoor || !WorldGen.IsLockedDoor(x, y))
+					continue;
+				foreach (int side in Enumerable.Range(3, 40).SelectMany(distance => new[] { -distance, distance }))
+				{
+					if (World.Grounds.StandingSpotNear(new Microsoft.Xna.Framework.Point(x + side, y)) is not Microsoft.Xna.Framework.Point feet || Main.tile[feet.X, feet.Y].WallType == WallID.LihzahrdBrickUnsafe)
+						continue;
+					foreach (var bot in BotWorldSystem.Bots)
+					{
+						bot.SavedFeetPosition = new Microsoft.Xna.Framework.Vector2(feet.X * 16f + 8f, (feet.Y + 1) * 16f);
+						Give(bot, ItemID.TempleKey, 1);
+					}
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: teams placed outside the temple door at {x},{y}");
+					return;
+				}
+			}
+		}
+		ModContent.GetInstance<AutoTerraMod>().Logger.Warn("scenario: no locked temple door found");
 	}
 
 	static void PlaceTeamsNear(int tileType)

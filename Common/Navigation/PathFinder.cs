@@ -28,7 +28,7 @@ public sealed record PathResult(List<PathNode> Nodes, bool ReachesGoal)
 	public static readonly PathResult None = new(new List<PathNode>(), false);
 }
 
-public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall);
+public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false);
 
 public static class PathFinder
 {
@@ -87,11 +87,18 @@ public static class PathFinder
 	{
 		int maxExpanded = MaxExpandedNodes * searchMultiplier;
 		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
-		if (Heuristic(start, goal) > LongTripTiles)
+		int searchRadius = MaxSearchRadius;
+		if (InsideMaze(goal))
+		{
+			maxExpanded *= MazeSearchMultiplier;
+			searchRadius = MazeSearchRadius;
+		}
+		else if (Heuristic(start, goal) > LongTripTiles)
 		{
 			goal = WaypointToward(start, goal);
 			goalRadius = Math.Max(goalRadius, WaypointRadius);
 		}
+		canUnlock = abilities.CanUnlock;
 		hazardCache.Clear();
 		diggableCache.Clear();
 		bodyClearCache.Clear();
@@ -121,7 +128,7 @@ public static class PathFinder
 			Expand(current, abilities, edges);
 			foreach (var edge in edges)
 			{
-				if (Math.Abs(edge.To.X - start.X) > MaxSearchRadius || Math.Abs(edge.To.Y - start.Y) > MaxSearchRadius)
+				if (Math.Abs(edge.To.X - start.X) > searchRadius || Math.Abs(edge.To.Y - start.Y) > searchRadius)
 					continue;
 				if (forbiddenSteps != null && forbiddenSteps.Contains((current, edge.To)))
 					continue;
@@ -135,6 +142,11 @@ public static class PathFinder
 		}
 		return best == start ? PathResult.None : new PathResult(Reconstruct(cameFrom, start, best), false);
 	}
+
+	const int MazeSearchMultiplier = 6;
+	const int MazeSearchRadius = 200;
+
+	static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
 
 	static bool IsGoal(Point node, Point goal, int radius) =>
 		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2;
@@ -313,7 +325,7 @@ public static class PathFinder
 
 	static bool CountDiggable(int x, int y, NavigationAbilities abilities, ref int solids)
 	{
-		if (!TileQuery.IsSolid(x, y) || IsClosedDoor(x, y))
+		if (!TileQuery.IsSolid(x, y) || IsPassableDoor(x, y))
 			return true;
 		if (!Diggable(x, y, abilities))
 			return false;
@@ -357,7 +369,11 @@ public static class PathFinder
 		return true;
 	}
 
-	static bool Clear(int x, int y) => WorldGen.InWorld(x, y, 5) && (!TileQuery.IsSolid(x, y) || IsClosedDoor(x, y));
+	static bool canUnlock;
+
+	static bool IsPassableDoor(int x, int y) => IsClosedDoor(x, y) && (canUnlock || !WorldGen.IsLockedDoor(x, y));
+
+	static bool Clear(int x, int y) => WorldGen.InWorld(x, y, 5) && (!TileQuery.IsSolid(x, y) || IsPassableDoor(x, y));
 
 	static bool RowClear(int x, int y) => Clear(x, y) && Clear(x + 1, y);
 
