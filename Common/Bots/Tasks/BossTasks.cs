@@ -160,7 +160,7 @@ public sealed class SummonTask : BotTask
 			case BaitTrigger:
 				var water = WaterFinder.NearestWaterSurface(Bot.CenterTile, LavaSearchRadius);
 				if (water is not Point sea)
-					return Abandon("no water found nearby");
+					return Abandon($"no water found near {Bot.CenterTile}");
 				ritualTarget = sea.ToWorldCoordinates();
 				return Vector2.Distance(Bot.Center, ritualTarget) <= CastRadius || MoveCloser(ritualTarget, CastRadius * 0.5f);
 			case LacewingTrigger:
@@ -241,6 +241,22 @@ public sealed class SummonTask : BotTask
 		return true;
 	}
 
+	bool FishWithBait(int baitType, Vector2 water)
+	{
+		var bait = Inventory.Items(Avatar).FirstOrDefault(item => item.type == baitType);
+		var pole = Inventory.Items(Avatar).Where(BossRituals.IsFishingPole).MaxBy(item => item.fishingPole);
+		if (bait == null || pole == null)
+			return Abandon("no bait or fishing pole");
+		using (AvatarPresence.Enter())
+		{
+			int bobber = Projectile.NewProjectile(new EntitySource_ItemUse(Avatar, pole), water, Vector2.Zero, pole.shoot, 0, 0f, Avatar.whoAmI);
+			NPC.SpawnOnPlayer(Avatar.whoAmI, step.Challenge.BossType);
+			Main.projectile[bobber].Kill();
+		}
+		Inventory.ConsumeOne(Avatar, bait);
+		return true;
+	}
+
 	NPC Lacewing() =>
 		Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.EmpressButterfly && Vector2.Distance(npc.Center, Bot.Center) < LacewingSearchRadius);
 
@@ -314,9 +330,15 @@ public sealed class SummonTask : BotTask
 		if (Avatar.armor.Any(item => item.type == ItemID.ClothierVoodooDoll))
 			return true;
 		var doll = Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.ClothierVoodooDoll);
-		int slot = System.Array.FindIndex(Avatar.armor, FirstAccessorySlot, AccessorySlots, item => item.IsAir);
-		if (doll == null || slot < 0)
+		if (doll == null)
 			return false;
+		int slot = System.Array.FindIndex(Avatar.armor, FirstAccessorySlot, AccessorySlots, item => item.IsAir);
+		if (slot < 0)
+		{
+			slot = FirstAccessorySlot;
+			if (!Inventory.Add(Avatar, Avatar.armor[slot]).IsAir)
+				return false;
+		}
 		Avatar.armor[slot] = doll.Clone();
 		doll.TurnToAir();
 		return true;
@@ -342,7 +364,7 @@ public sealed class SummonTask : BotTask
 				return ConsumeAndSpawn(altarTrigger.Item);
 			case BaitTrigger baitTrigger:
 				Bot.Motor.Face(ritualTarget);
-				return ConsumeAndSpawn(baitTrigger.Bait);
+				return FishWithBait(baitTrigger.Bait, ritualTarget);
 			case BulbTrigger when step.Shrine is Point bulbTile:
 				Bot.Motor.Face(ritualTarget);
 				ToolResult dug;

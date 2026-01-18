@@ -489,7 +489,7 @@ public sealed class BotHands
 	static readonly int[] BattlePotions =
 	{
 		ItemID.IronskinPotion, ItemID.RegenerationPotion, ItemID.EndurancePotion, ItemID.LifeforcePotion,
-		ItemID.SwiftnessPotion, ItemID.ArcheryPotion, ItemID.WrathPotion, ItemID.RagePotion, ItemID.ThornsPotion
+		ItemID.SwiftnessPotion, ItemID.ArcheryPotion, ItemID.WrathPotion, ItemID.RagePotion, ItemID.ThornsPotion, ItemID.InfernoPotion
 	};
 
 	public void DrinkBattlePotions()

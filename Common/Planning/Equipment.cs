@@ -50,6 +50,39 @@ public static class Equipment
 	public static int BestPower(Player avatar, GearKind kind) =>
 		Inventory.Items(avatar).Concat(avatar.armor.Take(3)).Select(item => PowerOf(item, kind)).DefaultIfEmpty(0).Max();
 
+	const int FirstAccessorySlot = 3;
+	const int LastAccessorySlot = 9;
+
+	static readonly int[] RitualAccessories = { ItemID.ClothierVoodooDoll };
+
+	static int AccessoryScore(Item item) =>
+		item == null || item.IsAir || !item.accessory || item.vanity || RitualAccessories.Contains(item.type)
+			? 0
+			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5;
+
+	public static void EquipBestAccessories(Player avatar)
+	{
+		for (int armorSlot = FirstAccessorySlot; armorSlot <= LastAccessorySlot; armorSlot++)
+		{
+			if (!avatar.IsItemSlotUnlockedAndUsable(armorSlot) || RitualAccessories.Contains(avatar.armor[armorSlot].type))
+				continue;
+			int equippedScore = AccessoryScore(avatar.armor[armorSlot]);
+			int bestSlot = -1;
+			for (int slot = 0; slot < Inventory.StorageSlots; slot++)
+			{
+				var candidate = avatar.inventory[slot];
+				int score = AccessoryScore(candidate);
+				if (score > equippedScore && !avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Any(worn => worn.type == candidate.type))
+				{
+					equippedScore = score;
+					bestSlot = slot;
+				}
+			}
+			if (bestSlot >= 0)
+				Utils.Swap(ref avatar.inventory[bestSlot], ref avatar.armor[armorSlot]);
+		}
+	}
+
 	public static void EquipBestArmor(Player avatar)
 	{
 		foreach (var (armorSlot, kind) in ArmorSlots)

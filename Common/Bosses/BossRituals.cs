@@ -87,12 +87,23 @@ public static class BossRituals
 		return Shoreline(bot) is Vector2 shore ? new SummonBossStep(challenge, trigger, shore, null) : new ScoutStep(Landmark.Ocean, false);
 	}
 
+	const int ShoreInset = 3;
+	const int WorldEdgeMargin = 40;
+
 	static Vector2? Shoreline(Bot bot)
 	{
 		if (BotWorldSystem.KnowledgeOf(bot.Faction).SpanOf(Landmark.Ocean) is not var (minX, maxX))
 			return null;
-		int x = minX < Main.maxTilesX / 2 ? maxX : minX;
-		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+		int seaward = minX < Main.maxTilesX / 2 ? -1 : 1;
+		int land = seaward < 0 ? maxX : minX;
+		for (int x = land; x > WorldEdgeMargin && x < Main.maxTilesX - WorldEdgeMargin; x += seaward)
+		{
+			if (Main.tile[x, TileQuery.SurfaceY(x)].LiquidAmount == 0)
+				continue;
+			int shore = x - seaward * ShoreInset;
+			return new Vector2(shore * 16f, (TileQuery.SurfaceY(shore) - 2) * 16f);
+		}
+		return new Vector2(land * 16f, (TileQuery.SurfaceY(land) - 2) * 16f);
 	}
 
 	static PlanStep PlanLacewing(Bot bot, BossChallenge challenge, LacewingTrigger trigger)

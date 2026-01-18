@@ -62,6 +62,7 @@ public sealed class BotVitals
 		SyncAvatar(npc, Avatar);
 		FeelWallHorror();
 		RefreshVanillaStats();
+		BurnInfernoRing();
 		if (PotionSicknessTicks > 0)
 			PotionSicknessTicks--;
 		TickImmunity();
@@ -89,6 +90,27 @@ public sealed class BotVitals
 		avatar.wet = npc.wet;
 		avatar.lavaWet = npc.lavaWet;
 		avatar.honeyWet = npc.honeyWet;
+	}
+
+	const float InfernoRadius = 200f;
+	const int InfernoDamage = 20;
+	const int InfernoDebuffTicks = 120;
+	const int InfernoPeriodTicks = 60;
+
+	void BurnInfernoRing()
+	{
+		if (!Avatar.inferno)
+			return;
+		bool strike = (Main.GameUpdateCount + bot.Id) % InfernoPeriodTicks == 0;
+		foreach (var npc in Main.npc)
+		{
+			if (!npc.active || npc.friendly || npc.damage <= 0 || npc.dontTakeDamage || npc.buffImmune[BuffID.OnFire3] || Vector2.Distance(Avatar.Center, npc.Center) > InfernoRadius)
+				continue;
+			if (npc.FindBuffIndex(BuffID.OnFire3) == -1)
+				npc.AddBuff(BuffID.OnFire3, InfernoDebuffTicks);
+			if (strike)
+				npc.SimpleStrikeNPC(InfernoDamage, 0);
+		}
 	}
 
 	const float HorrorReach = 1920f;

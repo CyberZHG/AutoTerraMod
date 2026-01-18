@@ -137,6 +137,7 @@ public sealed class BotBrain
 		reconsiderTimer = ReconsiderInterval;
 		BreakFailureLoops();
 		Equipment.EquipBestArmor(bot.Avatar);
+		Equipment.EquipBestAccessories(bot.Avatar);
 		StatBoosters.ConsumeUsable(bot);
 		bot.Hands.DrinkObsidianSkinIfInHell();
 		TreePlanter.PlantIfUseful(bot);

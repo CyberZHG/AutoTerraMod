@@ -128,12 +128,13 @@ public sealed class BotWorldSystem : ModSystem
 			var baseTile = firstSetup ? FindBaseTile(index, config.FactionCount) : FindBaseTileAwayFromOthers();
 			Factions.Add(new Faction { Id = index, BaseTile = baseTile });
 		}
+		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? config.BotsPerFaction;
 		foreach (var faction in Factions)
 		{
 			int members = Bots.Count(bot => bot.FactionId == faction.Id);
-			if (members >= config.BotsPerFaction)
+			if (members >= botsPerFaction)
 				continue;
-			for (; members < config.BotsPerFaction; members++)
+			for (; members < botsPerFaction; members++)
 				Bots.Add(Bot.Create(nextBotId++, faction, Main.rand, Bots.Select(bot => bot.Name).ToHashSet()));
 			faction.ForgetSettlement();
 		}

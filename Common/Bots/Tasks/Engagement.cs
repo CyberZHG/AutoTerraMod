@@ -11,8 +11,9 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public static class Engagement
 {
 	const float RangedStandoff = 16f * 14f;
-	const float MaxFireRange = 16f * 40f;
-	const float MinionThreat = 16f * 6f;
+	const float MaxFireRange = 16f * 60f;
+	const float MinionThreat = 16f * 10f;
+
 	const float TooCloseForRanged = 16f * 3f;
 	const float BossStandoff = 12f;
 	const float JumpStrikeHeight = 16f * 6f;
@@ -22,7 +23,7 @@ public static class Engagement
 		npc.active
 		&& !npc.friendly
 		&& !npc.townNPC
-		&& npc.lifeMax > 5
+		&& (npc.lifeMax > 5 || npc.damage > 0)
 		&& !npc.dontTakeDamage
 		&& !npc.immortal
 		&& !NPCID.Sets.CountsAsCritter[npc.type]
@@ -116,6 +117,7 @@ public static class Engagement
 				bot.Motor.MoveTo(body.Center + new Vector2(Math.Sign(body.Center.X - target.Center.X) * 96f, 0f), 8f);
 			else
 				bot.Motor.Stop();
+			DodgeCharge(bot, target);
 			return;
 		}
 		if (bot.Hands.InMeleeReach(target, weapon))
@@ -208,6 +210,24 @@ public static class Engagement
 		var melee = bot.Hands.BestWeapon();
 		if (melee != null && bot.Hands.InMeleeReach(targetPart, melee))
 			bot.Hands.Strike(targetPart, melee);
+	}
+
+	const float ChargeSpeed = 9f;
+	const float ChargeAlignment = 0.9f;
+	const int ChargeWarningTicks = 30;
+
+	static void DodgeCharge(Bot bot, NPC boss)
+	{
+		if (!Bosses.BossCatalog.IsBossPart(boss) || boss.velocity.Length() < ChargeSpeed)
+			return;
+		var toBot = bot.Center - boss.Center;
+		float distance = toBot.Length();
+		if (distance > boss.velocity.Length() * ChargeWarningTicks || Vector2.Dot(Vector2.Normalize(toBot), Vector2.Normalize(boss.velocity)) < ChargeAlignment)
+			return;
+		if (Math.Abs(boss.velocity.X) > Math.Abs(boss.velocity.Y))
+			bot.Motor.RequestJump();
+		else
+			bot.Motor.MoveTo(bot.Center + new Vector2((bot.Center.X >= boss.Center.X ? 1 : -1) * 96f, 0f), 8f);
 	}
 
 	static Vector2 BossStandingSpot(NPC body, NPC boss)

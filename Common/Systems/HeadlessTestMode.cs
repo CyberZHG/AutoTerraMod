@@ -11,6 +11,7 @@ public sealed class HeadlessTestMode : ModSystem
 {
 	public static bool Enabled => Main.dedServ && Environment.GetEnvironmentVariable("AUTOTERRA_HEADLESS") == "1";
 	public static string Scenario => Enabled ? Environment.GetEnvironmentVariable("AUTOTERRA_SCENARIO") : null;
+	public static int? BotsPerFactionOverride => Enabled && int.TryParse(Environment.GetEnvironmentVariable("AUTOTERRA_BOTS"), out int bots) ? bots : null;
 
 	static readonly int[] StrongScenarioKit =
 	{
@@ -27,6 +28,13 @@ public sealed class HeadlessTestMode : ModSystem
 		new int[] { ItemID.Megashark, ItemID.AdamantiteMask, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings },
 		new int[] { ItemID.ChainGun, ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves },
 		new int[] { ItemID.SDMG, ItemID.VortexHelmet, ItemID.VortexBreastplate, ItemID.VortexLeggings }
+	};
+
+	static readonly int[][] HardmodeAccessories =
+	{
+		new int[] { ItemID.FrozenTurtleShell, ItemID.CrossNecklace, ItemID.CobaltShield, ItemID.BandofRegeneration },
+		new int[] { ItemID.FrozenShield, ItemID.CharmofMyths, ItemID.RangerEmblem, ItemID.WormScarf },
+		new int[] { ItemID.AnkhShield, ItemID.CharmofMyths, ItemID.DestroyerEmblem, ItemID.WormScarf, ItemID.FrozenShield }
 	};
 
 	static readonly int[] HardmodeAmmo = { ItemID.CrystalBullet, ItemID.ChlorophyteBullet, ItemID.ChlorophyteBullet };
@@ -57,7 +65,7 @@ public sealed class HeadlessTestMode : ModSystem
 		["plantera"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime), ItemID.None, false, true, null, TileID.PlanteraBulb, Tier: 2),
 		["golem"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera), ItemID.LihzahrdPowerCell, false, true, null, TileID.LihzahrdAltar, Tier: 2),
 		["templedoor"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera), ItemID.LihzahrdPowerCell, false, true, Tier: 2),
-		["fishron"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem), ItemID.TruffleWorm, false, true, World.Landmark.Ocean, Tier: 2),
+		["fishron"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem), ItemID.TruffleWorm, false, true, World.Landmark.Ocean, Tier: 3),
 		["empress"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron), ItemID.EmpressButterfly, true, true, World.Landmark.Hallow, Tier: 3),
 		["cultist"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss), ItemID.None, false, true, World.Landmark.Dungeon, Tier: 3),
 		["moonlord"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss, NPCID.CultistBoss), ItemID.CelestialSigil, false, true, Tier: 3),
@@ -195,11 +203,11 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static void GiveHardmodeKit(Bots.Bot bot, int tier)
 	{
-		foreach (int type in HardmodeKits[tier])
+		foreach (int type in HardmodeKits[tier].Concat(HardmodeAccessories[tier]))
 			Give(bot, type, 1);
 		Give(bot, HardmodeAmmo[tier], 3000);
 		Give(bot, HardmodePotions[tier], 20);
-		foreach (int buff in new int[] { ItemID.IronskinPotion, ItemID.RegenerationPotion, ItemID.EndurancePotion, ItemID.LifeforcePotion, ItemID.ArcheryPotion })
+		foreach (int buff in new int[] { ItemID.IronskinPotion, ItemID.RegenerationPotion, ItemID.EndurancePotion, ItemID.LifeforcePotion, ItemID.ArcheryPotion, ItemID.InfernoPotion })
 			Give(bot, buff, 3);
 		var avatar = bot.Avatar;
 		if (avatar.ConsumedLifeCrystals < Player.LifeCrystalMax)
