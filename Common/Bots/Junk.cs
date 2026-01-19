@@ -69,7 +69,12 @@ public static class Junk
 
 	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
 
-	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0;
+	static readonly HashSet<int> RitualItems = new()
+	{
+		ItemID.EmpressButterfly, ItemID.TruffleWorm, ItemID.LihzahrdPowerCell, ItemID.TempleKey, ItemID.GuideVoodooDoll, ItemID.ClothierVoodooDoll
+	};
+
+	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0 || RitualItems.Contains(item.type);
 
 	static bool IsCheapClutter(Item item) =>
 		!IsBossSummon(item) && !item.material && item.damage <= 0 && item.createTile < 0 && item.createWall <= 0 && !item.accessory

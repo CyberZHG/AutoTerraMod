@@ -196,7 +196,10 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			var summoner = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).MaxBy(bot => bot.Personality.Combat);
 			if (summoner != null && scenario.SummonItem != ItemID.None)
+			{
 				Give(summoner, scenario.SummonItem, 1);
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: {summoner.Name} holds {Bots.Inventory.Count(summoner.Avatar, scenario.SummonItem)} x {Lang.GetItemNameValue(scenario.SummonItem)}");
+			}
 		}
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless scenario '{Scenario}' prepared");
 	}

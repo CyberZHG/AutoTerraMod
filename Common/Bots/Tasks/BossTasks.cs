@@ -49,6 +49,7 @@ public sealed class SummonTask : BotTask
 	{
 		base.Start();
 		travelFailures = 0;
+		lacewing = null;
 		var faction = Bot.Faction;
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
@@ -164,15 +165,7 @@ public sealed class SummonTask : BotTask
 				ritualTarget = sea.ToWorldCoordinates();
 				return Vector2.Distance(Bot.Center, ritualTarget) <= CastRadius || MoveCloser(ritualTarget, CastRadius * 0.5f);
 			case LacewingTrigger:
-				lacewing = Lacewing() ?? ReleaseLacewing();
-				if (lacewing == null)
-				{
-					Bot.Motor.Stop();
-					Bot.Watchdog.RecordProgress();
-					return false;
-				}
-				ritualTarget = lacewing.Center;
-				return true;
+				return Avatar.ZoneHallow || MoveCloser(step.Place, 16f);
 			case CultistRitualTrigger:
 				var devotee = Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.CultistDevote && Vector2.Distance(npc.Center, step.Place) < OldManSearchRadius);
 				if (devotee == null)
@@ -274,7 +267,18 @@ public sealed class SummonTask : BotTask
 
 	bool KillLacewing()
 	{
-		if (lacewing == null || !lacewing.active || lacewing.type != NPCID.EmpressButterfly)
+		if (lacewing == null)
+		{
+			lacewing = Lacewing() ?? ReleaseLacewing();
+			if (lacewing == null)
+			{
+				if (Main.GameUpdateCount % 600 == 0)
+					BotDiagnostics.Log(Bot, $"waiting for a Prismatic Lacewing at {Bot.CenterTile}");
+				Bot.Watchdog.RecordProgress();
+				return false;
+			}
+		}
+		if (!lacewing.active || lacewing.type != NPCID.EmpressButterfly)
 		{
 			if (!NPC.AnyNPCs(NPCID.HallowBoss))
 				using (AvatarPresence.Enter())
