@@ -16,7 +16,7 @@ public sealed class BossCredit : GlobalNPC
 	const float CreditShare = 0.3f;
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
-	static readonly Dictionary<int, (int identity, int factionId)> shots = new();
+	static readonly Dictionary<int, (int identity, int factionId, int botId)> shots = new();
 
 	public static void Reset()
 	{
@@ -43,7 +43,13 @@ public sealed class BossCredit : GlobalNPC
 			.OrderBy(npc => Microsoft.Xna.Framework.Vector2.Distance(npc.Center, bot.Center))
 			.FirstOrDefault();
 
-	public static void RegisterShot(Projectile projectile, Bot shooter) => shots[projectile.whoAmI] = (projectile.identity, shooter.FactionId);
+	public static void RegisterShot(Projectile projectile, Bot shooter) => shots[projectile.whoAmI] = (projectile.identity, shooter.FactionId, shooter.Id);
+
+	public static Bot ShooterBot(Projectile projectile) =>
+		shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity ? BotWorldSystem.FindBot(shot.botId) : null;
+
+	public static int? ShooterFaction(Projectile projectile) =>
+		shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity ? shot.factionId : null;
 
 	public static void RecordDamage(NPC target, int factionId, int damage)
 	{
@@ -93,7 +99,7 @@ public sealed class BossCredit : GlobalNPC
 	}
 
 	static bool OtherPartsAlive(BossChallenge challenge, NPC dying) =>
-		Main.npc.Any(other => other.active && other.whoAmI != dying.whoAmI && other.life > 0 && challenge.IsPart(other.type) && IsEssential(challenge, other));
+		Main.npc.Any(other => other.active && other.whoAmI != dying.whoAmI && other.life > 0 && !other.dontTakeDamage && challenge.IsPart(other.type) && IsEssential(challenge, other));
 
 	static bool IsEssential(BossChallenge challenge, NPC part) => part.boss || !ContentSamples.NpcsByNetId[challenge.BossType].boss;
 
