@@ -42,7 +42,7 @@ public static class Grounds
 
 	public static Vector2? ArenaSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
-		if (SurfaceSpotNear(knowledge, ground, from) is Vector2 surface && IsGroundBeneath(ground, surface.ToTileCoordinates()))
+		if (SurfaceSpotNear(knowledge, ground, from) is Vector2 surface && (ground != Landmark.Hallow || IsGroundBeneath(ground, surface.ToTileCoordinates())))
 			return surface;
 		if (knowledge.LandmarkOf(ground) is not Point anchor || OpenSpotNear(anchor, ground) is not Point feet)
 			return null;
