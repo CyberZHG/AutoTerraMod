@@ -29,6 +29,13 @@ public static class Engagement
 		&& !NPCID.Sets.CountsAsCritter[npc.type]
 		&& npc.ModNPC is not BotNPC;
 
+	public static bool AtWar(int factionA, int factionB) => BotWorldSystem.Relation == Config.FactionRelation.War && factionA != factionB;
+
+	public static Bot EnemyBotOf(Bot bot, NPC npc) =>
+		npc.active && npc.ModNPC is BotNPC body && body.Bot is { IsAlive: true } other && AtWar(bot.FactionId, other.FactionId) ? other : null;
+
+	public static bool IsHostileTo(Bot bot, NPC npc) => IsHostileTarget(npc) || EnemyBotOf(bot, npc) != null;
+
 	public static NPC NearestHostile(Bot bot, float radius, bool requireSight)
 	{
 		NPC nearest = null;
@@ -37,7 +44,7 @@ public static class Engagement
 		for (int i = 0; i < Main.maxNPCs; i++)
 		{
 			var npc = Main.npc[i];
-			if (!IsHostileTarget(npc) || bot.IsIgnoring(npc))
+			if (!IsHostileTo(bot, npc) || bot.IsIgnoring(npc))
 				continue;
 			float distance = Vector2.Distance(body.Center, npc.Center);
 			if (distance >= nearestDistance)

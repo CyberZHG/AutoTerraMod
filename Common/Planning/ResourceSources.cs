@@ -35,6 +35,11 @@ public static class ResourceSources
 		[ItemID.ViciousMushroom] = Landmark.Crimson
 	};
 
+	static readonly Dictionary<int, (int tileType, Landmark ground)> FurnitureLoot = new()
+	{
+		[ItemID.Hellforge] = (TileID.Hellforge, Landmark.Underworld)
+	};
+
 	static readonly Dictionary<int, Landmark> HuntingGrounds = new()
 	{
 		[ItemID.RottenChunk] = Landmark.Corruption,
@@ -66,6 +71,8 @@ public static class ResourceSources
 			return ForageSource(itemType, forage.tileType);
 		if (RareDrops.TryGetValue(itemType, out var rare))
 			return rare;
+		if (FurnitureLoot.TryGetValue(itemType, out var furniture))
+			return new TileSource(new HashSet<int> { furniture.tileType }, false, null, false, furniture.ground);
 		tileSources ??= BuildTileSources();
 		if (tileSources.TryGetValue(itemType, out var tileSource))
 			return tileSource;

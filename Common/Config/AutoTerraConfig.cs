@@ -6,7 +6,8 @@ namespace AutoTerraMod.Common.Config;
 public enum FactionRelation
 {
 	Race,
-	Cooperate
+	Cooperate,
+	War
 }
 
 public sealed class AutoTerraConfig : ModConfig

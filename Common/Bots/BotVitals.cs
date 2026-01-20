@@ -205,12 +205,34 @@ public sealed class BotVitals
 		}
 	}
 
+	public void RememberAttacker(NPC attacker)
+	{
+		lastAttacker = attacker.whoAmI;
+		lastAttackedAt = Main.GameUpdateCount;
+	}
+
+	void TakeEnemyShot(Projectile projectile)
+	{
+		var shooter = Bosses.BossCredit.ShooterBot(projectile);
+		Hurt(Main.DamageVar(projectile.damage, -Avatar.luck), DirectionAwayFrom(bot.Npc, projectile.Center), source: shooter != null ? $"{shooter.Faction.Name}/{shooter.Name}'s {projectile.Name}" : projectile.Name);
+		if (shooter?.Npc is NPC shooterBody)
+			RememberAttacker(shooterBody);
+		if (projectile.penetrate > 0 && --projectile.penetrate == 0)
+			projectile.Kill();
+	}
+
 	void TakeProjectileDamage(NPC body)
 	{
 		var hitbox = body.Hitbox;
 		for (int i = 0; i < Main.maxProjectiles; i++)
 		{
 			var projectile = Main.projectile[i];
+			if (projectile.active && projectile.friendly && projectile.damage > 0 && Bosses.BossCredit.ShooterFaction(projectile) is int faction
+				&& Tasks.Engagement.AtWar(faction, bot.FactionId) && projectile.Colliding(projectile.Hitbox, hitbox))
+			{
+				TakeEnemyShot(projectile);
+				return;
+			}
 			if (!projectile.active || !projectile.hostile || projectile.damage <= 0)
 				continue;
 			if (!projectile.Colliding(projectile.Hitbox, hitbox))

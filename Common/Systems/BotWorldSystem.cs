@@ -121,7 +121,7 @@ public sealed class BotWorldSystem : ModSystem
 	static void GrowToConfig()
 	{
 		var config = ModContent.GetInstance<AutoTerraConfig>();
-		Relation = config.Relation;
+		Relation = HeadlessTestMode.RelationOverride ?? config.Relation;
 		bool firstSetup = Factions.Count == 0;
 		for (int index = Factions.Count; index < config.FactionCount; index++)
 		{

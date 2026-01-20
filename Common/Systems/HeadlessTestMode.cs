@@ -11,6 +11,9 @@ public sealed class HeadlessTestMode : ModSystem
 {
 	public static bool Enabled => Main.dedServ && Environment.GetEnvironmentVariable("AUTOTERRA_HEADLESS") == "1";
 	public static string Scenario => Enabled ? Environment.GetEnvironmentVariable("AUTOTERRA_SCENARIO") : null;
+	public static Config.FactionRelation? RelationOverride =>
+		Enabled && Enum.TryParse<Config.FactionRelation>(Environment.GetEnvironmentVariable("AUTOTERRA_RELATION"), out var relation) ? relation : null;
+
 	public static int? BotsPerFactionOverride => Enabled && int.TryParse(Environment.GetEnvironmentVariable("AUTOTERRA_BOTS"), out int bots) ? bots : null;
 
 	static readonly int[] StrongScenarioKit =
@@ -72,7 +75,7 @@ public sealed class HeadlessTestMode : ModSystem
 		["pillars"] = new(Through(NPCID.QueenSlimeBoss, NPCID.TheDestroyer, NPCID.Retinazer, NPCID.SkeletronPrime, NPCID.Plantera, NPCID.Golem, NPCID.DukeFishron, NPCID.HallowBoss, NPCID.CultistBoss), ItemID.None, false, true, Tier: 3)
 	};
 
-	static void MarkWorldDefeated(int boss)
+	internal static void MarkWorldDefeated(int boss)
 	{
 		switch (boss)
 		{
@@ -137,6 +140,8 @@ public sealed class HeadlessTestMode : ModSystem
 
 	public static void PrepareScenario()
 	{
+		UpgradeScenarios.Prepare();
+		WarScenario.Prepare();
 		if (Scenario == null || !BossScenarios.TryGetValue(Scenario, out var scenario))
 			return;
 		foreach (var faction in BotWorldSystem.Factions)
@@ -456,7 +461,7 @@ public sealed class HeadlessTestMode : ModSystem
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: world {Main.maxTilesX}x{Main.maxTilesY} crimson={WorldGen.crimson} evil x {minX}..{maxX}, orb tiles {orbs}, dungeon x {Main.dungeonX}, spawn x {Main.spawnTileX}");
 	}
 
-	static void Give(Bots.Bot bot, int type, int stack)
+	internal static void Give(Bots.Bot bot, int type, int stack)
 	{
 		int missing = stack - Bots.Inventory.Count(bot.Avatar, type) - bot.Avatar.armor.Count(item => item.type == type);
 		if (missing <= 0)

@@ -64,6 +64,8 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
+		if (InOtherBase(tile))
+			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
 			return ToolResult.NoTool;
@@ -119,17 +121,23 @@ public sealed class BotHands
 		return ToolResult.Working;
 	}
 
+	public const int AltarHammerPower = 80;
+
+	public static bool CanSmashAltars(Item hammer) => Main.hardMode && hammer.hammer >= AltarHammerPower;
+
 	public ToolResult Smash(Point tile)
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
+		if (InOtherBase(tile))
+			return ToolResult.Unbreakable;
 		var hammer = BestHammer;
 		if (hammer == null)
 			return ToolResult.NoTool;
 		if (!CanReach(hammer, tile))
 			return ToolResult.OutOfReach;
 		var target = Main.tile[tile.X, tile.Y];
-		if (!Main.tileHammer[target.TileType] || target.TileType == TileID.DemonAltar || !WorldGen.CanKillTile(tile.X, tile.Y))
+		if (!Main.tileHammer[target.TileType] || (target.TileType == TileID.DemonAltar && !CanSmashAltars(hammer)) || !WorldGen.CanKillTile(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		if (!Ready)
 			return ToolResult.Working;
@@ -200,6 +208,8 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
+		if (InOtherBase(tile))
+			return ToolResult.Unbreakable;
 		var tool = BestWeapon() ?? BestPickaxe;
 		if (tool == null)
 			return ToolResult.NoTool;
@@ -411,6 +421,14 @@ public sealed class BotHands
 		int direction = target.Center.X >= bot.Center.X ? 1 : -1;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
 		bool crit = Main.rand.Next(100) < Avatar.GetWeaponCrit(weapon);
+		if (Tasks.Engagement.EnemyBotOf(bot, target) is Bot enemy)
+		{
+			int damage = Avatar.GetWeaponDamage(weapon) * (crit ? 2 : 1);
+			enemy.Vitals.Hurt(Main.DamageVar(damage, Avatar.luck), direction, source: $"{bot.Faction.Name}/{bot.Name}'s {weapon.Name}");
+			enemy.Vitals.RememberAttacker(bot.Npc);
+			bot.Watchdog.RecordProgress();
+			return true;
+		}
 		var hit = target.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
 		Bosses.BossCredit.RecordDamage(target, bot.FactionId, target.StrikeNPC(hit));
 		bot.Watchdog.RecordProgress();
@@ -523,6 +541,11 @@ public sealed class BotHands
 		return true;
 	}
 
+	bool InOtherBase(Vector2 position) => InOtherBase(position.ToTileCoordinates());
+
+	public bool InOtherBase(Point tile) =>
+		Systems.BotWorldSystem.Factions.Any(faction => faction.Id != bot.FactionId && faction.Settlement?.Contains(tile.X, tile.Y) == true);
+
 	public void CollectNearbyItems()
 	{
 		var npc = bot.Npc;
@@ -531,7 +554,7 @@ public sealed class BotHands
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) || ItemReservations.IsReservedForOther(i, bot))
+			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) || ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center))
 				continue;
 			if (ItemID.Sets.IsAPickup[item.type])
 			{

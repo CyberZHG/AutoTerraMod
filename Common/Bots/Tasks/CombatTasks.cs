@@ -113,7 +113,7 @@ public sealed class FightTask : BotTask
 	NPC Interferer()
 	{
 		var attacker = Bot.Vitals.RecentAttacker;
-		if (attacker != null && Engagement.IsHostileTarget(attacker) && !Bot.IsIgnoring(attacker) && Vector2.Distance(Bot.Center, attacker.Center) < AmbushRadius)
+		if (attacker != null && Engagement.IsHostileTo(Bot, attacker) && !Bot.IsIgnoring(attacker) && Vector2.Distance(Bot.Center, attacker.Center) < AmbushRadius)
 			return attacker;
 		if (Bot.Motor.Destination is not Vector2 destination)
 			return null;
@@ -127,7 +127,7 @@ public sealed class FightTask : BotTask
 	public override void Tick()
 	{
 		bool bossPhase = target != null && target.active && Bosses.BossCatalog.IsBossPart(target);
-		if (target == null || (!bossPhase && !Engagement.IsHostileTarget(target)) || Bot.IsIgnoring(target))
+		if (target == null || (!bossPhase && !Engagement.IsHostileTo(Bot, target)) || Bot.IsIgnoring(target))
 		{
 			IsFinished = true;
 			return;

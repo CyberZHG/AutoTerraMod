@@ -14,7 +14,7 @@ Configs: {
 
 		Relation: {
 			Label: 阵营关系
-			Tooltip: 竞速：各阵营情报独立；合作：共享已发现的资源位置。
+			Tooltip: 竞速：各阵营情报独立；合作：共享已发现的资源位置；敌对：阵营之间可以互相攻击，但不会破坏或偷取其他阵营的基地。
 		}
 
 		SpectatorMode: {
@@ -36,6 +36,11 @@ Configs: {
 
 		Cooperate: {
 			Label: 合作
+			// Tooltip: ""
+		}
+
+		War: {
+			Label: 敌对
 			// Tooltip: ""
 		}
 
@@ -169,6 +174,7 @@ UI: {
 	Aspiration: 人生目标：{0}   审美：{1}
 	RelationRace: 模式：竞速
 	RelationCooperate: 模式：合作
+	RelationWar: 模式：敌对
 	FactionLine: "{0}：存活 {1}/{2}，最好的镐 {3}%，房子 {4}"
 	HouseDone: 已建成（{0}，{1}）
 	HousePending: 建造中（{0}，{1}）

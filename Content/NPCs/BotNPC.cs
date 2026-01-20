@@ -14,7 +14,7 @@ public sealed class BotNPC : ModNPC
 
 	public override string Texture => $"Terraria/Images/NPC_{NPCID.Guide}";
 
-	Bot Bot => BotWorldSystem.FindBot(BotId);
+	public Bot Bot => BotWorldSystem.FindBot(BotId);
 
 	public override void SetStaticDefaults()
 	{

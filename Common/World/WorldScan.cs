@@ -40,7 +40,7 @@ public static class WorldScan
 	{
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType))
 				knowledge.Remember(new Point(x, y), tileType);
 			if (Landmarks.Classify(x, y, tileType) is Landmark landmark)
 				knowledge.RememberLandmark(landmark, new Point(x, y));
@@ -67,6 +67,8 @@ public static class WorldScan
 	public static readonly HashSet<int> TreasureTiles = new() { TileID.Heart, TileID.LifeFruit };
 
 	public static bool IsTreasure(int tileType) => TreasureTiles.Contains(tileType);
+
+	static readonly HashSet<int> LootableFurniture = new() { TileID.Hellforge };
 
 	public static bool IsBossShrine(int tileType) => tileType is TileID.DemonAltar or TileID.ShadowOrbs or TileID.Larva or TileID.PlanteraBulb or TileID.LihzahrdAltar;
 

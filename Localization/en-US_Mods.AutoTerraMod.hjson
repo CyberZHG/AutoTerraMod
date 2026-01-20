@@ -14,7 +14,7 @@ Configs: {
 
 		Relation: {
 			Label: Faction relation
-			Tooltip: Race keeps knowledge separate; Cooperate shares discovered resources between factions.
+			Tooltip: Race keeps knowledge separate; Cooperate shares discovered resources between factions; War lets factions fight each other but never wreck or rob each other's bases.
 		}
 
 		SpectatorMode: {
@@ -36,6 +36,11 @@ Configs: {
 
 		Cooperate: {
 			Label: Cooperate
+			Tooltip: ""
+		}
+
+		War: {
+			Label: War
 			Tooltip: ""
 		}
 
@@ -169,6 +174,7 @@ UI: {
 	Aspiration: Life goal: {0}   Taste: {1}
 	RelationRace: Mode: Race
 	RelationCooperate: Mode: Cooperate
+	RelationWar: Mode: War
 	FactionLine: "{0}: {1}/{2} alive, best pickaxe {3}%, house {4}"
 	HouseDone: done ({0}, {1})
 	HousePending: building ({0}, {1})

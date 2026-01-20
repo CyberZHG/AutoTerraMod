@@ -48,8 +48,28 @@ public sealed class GearGoal : ProgressionGoal
 		requiredPower = Math.Max(1, options.Min(option => Equipment.SamplePower(option, kind)));
 	}
 
-	public override bool IsMet(Bot bot) => Equipment.BestPower(bot.Avatar, kind) >= requiredPower;
+	public override bool IsMet(Bot bot) => Equipment.BestPower(bot.Avatar, kind) >= requiredPower || Outgrown(bot);
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
+
+	public List<GearGoal> Successors { get; } = new();
+
+	const int OutgrownCacheTicks = 600;
+
+	readonly Dictionary<int, (uint at, bool outgrown)> outgrownCache = new();
+
+	bool Outgrown(Bot bot)
+	{
+		if (Successors.Count == 0)
+			return false;
+		if (outgrownCache.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < OutgrownCacheTicks)
+			return cached.outgrown;
+		bool outgrown = Successors.Any(successor => successor.ReadyToMake(bot));
+		outgrownCache[bot.Id] = (Terraria.Main.GameUpdateCount, outgrown);
+		return outgrown;
+	}
+
+	bool ReadyToMake(Bot bot) =>
+		Equipment.BestPower(bot.Avatar, kind) < requiredPower && ProgressionPlanner.ObtainAny(bot, options) is CraftStep or WithdrawStep or PlaceStationStep;
 }
 
 public sealed class ReserveGoal : ProgressionGoal
@@ -284,7 +304,33 @@ public sealed class StyleGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
 
+	public ProgressionGoal Inner => inner;
+
 	public static CombatStyle EffectiveStyle(CombatStyle style) => style == CombatStyle.Summon ? CombatStyle.Melee : style;
+}
+
+public sealed class SmashAltarsGoal : ProgressionGoal
+{
+	const int AltarsForAllOreTiers = 3;
+	const int AltarSearchRadius = 3000;
+
+	static readonly HashSet<int> AltarTiles = new() { TileID.DemonAltar };
+
+	static readonly int[] Pwnhammers = { ItemID.Pwnhammer, ItemID.Hammush };
+
+	public override bool AppliesTo(Bot bot) => Terraria.Main.hardMode;
+
+	public override bool IsMet(Bot bot) => Terraria.WorldGen.altarCount >= AltarsForAllOreTiers;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (bot.Hands.BestHammer is not { } hammer || !BotHands.CanSmashAltars(hammer))
+			return ProgressionPlanner.ObtainAny(bot, Pwnhammers);
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		return knowledge.NearestKnown(bot.Faction.BaseTile, AltarTiles, new HashSet<Microsoft.Xna.Framework.Point>(), AltarSearchRadius) is Microsoft.Xna.Framework.Point altar
+			? new SmashShrineStep(altar)
+			: new ScoutStep(World.Landmarks.WorldEvil, true);
+	}
 }
 
 public static class ProgressionGoals
@@ -332,6 +378,71 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.GoldBow, ItemID.PlatinumBow },
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
 			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) });
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.NightmarePickaxe, ItemID.DeathbringerPickaxe },
+			swords: new int[] { ItemID.LightsBane, ItemID.BloodButcherer },
+			bows: new int[] { ItemID.DemonBow, ItemID.TendonBow },
+			staffs: new int[] { ItemID.Vilethorn, ItemID.CrimsonRod },
+			armor: new (int, int, int)[] { (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves), (ItemID.CrimsonHelmet, ItemID.CrimsonScalemail, ItemID.CrimsonGreaves) });
+		goals.Add(new StationGoal(TileID.Hellforge, ItemID.Hellforge));
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.MoltenPickaxe },
+			swords: new int[] { ItemID.FieryGreatsword },
+			bows: new int[] { ItemID.MoltenFury },
+			staffs: new int[] { ItemID.Flamelash },
+			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
+		goals.Add(new SmashAltarsGoal());
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.CobaltPickaxe, ItemID.PalladiumPickaxe },
+			swords: new int[] { ItemID.CobaltSword, ItemID.PalladiumSword },
+			bows: new int[] { ItemID.CobaltRepeater, ItemID.PalladiumRepeater },
+			staffs: new int[] { ItemID.CrystalStorm },
+			armor: new (int, int, int)[]
+			{
+				(ItemID.CobaltHelmet, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltMask, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltHat, ItemID.CobaltBreastplate, ItemID.CobaltLeggings),
+				(ItemID.PalladiumMask, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHelmet, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHeadgear, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings)
+			});
+		goals.Add(new StationGoal(TileID.MythrilAnvil, ItemID.MythrilAnvil, ItemID.OrichalcumAnvil));
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.MythrilPickaxe, ItemID.OrichalcumPickaxe },
+			swords: new int[] { ItemID.MythrilSword, ItemID.OrichalcumSword },
+			bows: new int[] { ItemID.MythrilRepeater, ItemID.OrichalcumRepeater },
+			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
+			armor: new (int, int, int)[]
+			{
+				(ItemID.MythrilHelmet, ItemID.MythrilChainmail, ItemID.MythrilGreaves), (ItemID.MythrilHat, ItemID.MythrilChainmail, ItemID.MythrilGreaves), (ItemID.MythrilHood, ItemID.MythrilChainmail, ItemID.MythrilGreaves),
+				(ItemID.OrichalcumMask, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings), (ItemID.OrichalcumHelmet, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings), (ItemID.OrichalcumHeadgear, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings)
+			});
+		goals.Add(new StationGoal(TileID.AdamantiteForge, ItemID.AdamantiteForge, ItemID.TitaniumForge));
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.AdamantitePickaxe, ItemID.TitaniumPickaxe },
+			swords: new int[] { ItemID.AdamantiteSword, ItemID.TitaniumSword },
+			bows: new int[] { ItemID.AdamantiteRepeater, ItemID.TitaniumRepeater },
+			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
+			armor: new (int, int, int)[]
+			{
+				(ItemID.AdamantiteHelmet, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings), (ItemID.AdamantiteMask, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings), (ItemID.AdamantiteHeadgear, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings),
+				(ItemID.TitaniumMask, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings), (ItemID.TitaniumHelmet, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings), (ItemID.TitaniumHeadgear, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings)
+			});
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.PickaxeAxe, ItemID.Drax },
+			swords: new int[] { ItemID.Excalibur },
+			bows: new int[] { ItemID.HallowedRepeater },
+			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
+			armor: new (int, int, int)[] { (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves) });
+		AddOreTier(goals,
+			pickaxes: new int[] { ItemID.ChlorophytePickaxe },
+			swords: new int[] { ItemID.ChlorophyteClaymore, ItemID.ChlorophyteSaber },
+			bows: new int[] { ItemID.ChlorophyteShotbow },
+			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
+			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
+		LinkSuccessors(goals);
+		if (UpgradeScenarios.GearFirst)
+		{
+			var gear = goals.Where(goal => goal is StationGoal or GearGoal or StyleGoal or SmashAltarsGoal).ToList();
+			goals.RemoveAll(gear.Contains);
+			goals.InsertRange(0, gear);
+		}
 		if (HeadlessTestMode.BossFirst)
 		{
 			var boss = goals.OfType<BossGoal>().First();
@@ -343,6 +454,13 @@ public static class ProgressionGoals
 			goals.InsertRange(0, new ProgressionGoal[] { boss, shaft, bridge });
 		}
 		return goals.ToArray();
+	}
+
+	static void LinkSuccessors(List<ProgressionGoal> goals)
+	{
+		var gear = goals.Select(goal => goal is StyleGoal style ? style.Inner : goal).OfType<GearGoal>().ToList();
+		for (int i = 0; i < gear.Count; i++)
+			gear[i].Successors.AddRange(gear.Skip(i + 1).Where(later => later.Kind == gear[i].Kind));
 	}
 
 	static readonly int[] Hooks =
