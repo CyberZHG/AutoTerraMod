@@ -49,9 +49,11 @@ public static class Stations
 			return cached.locations;
 		var locations = new Dictionary<int, Point>();
 		var origin = faction.BaseTile;
-		for (int x = origin.X - BaseHalfWidth; x <= origin.X + BaseHalfWidth; x++)
+		var columns = Enumerable.Range(origin.X - BaseHalfWidth, BaseHalfWidth * 2 + 1).Select(x => (x, groundY: origin.Y))
+			.Concat(OutdoorColumns(faction).Select(x => (x, groundY: World.TileQuery.SurfaceY(x))));
+		foreach (var (x, groundY) in columns)
 		{
-			for (int y = origin.Y - BaseRowsAbove; y <= origin.Y + BaseRowsBelow; y++)
+			for (int y = groundY - BaseRowsAbove; y <= groundY + BaseRowsBelow; y++)
 			{
 				if (!WorldGen.InWorld(x, y, 2) || !Main.tile[x, y].HasTile)
 					continue;
@@ -124,6 +126,23 @@ public static class Stations
 			int groundY = GroundBelow(spot.X, settlement.Hall.Ceiling);
 			if (groundY > 0)
 				yield return new Point(spot.X, groundY - 1);
+		}
+		foreach (int x in OutdoorColumns(faction))
+			yield return new Point(x, World.TileQuery.SurfaceY(x) - 1);
+	}
+
+	const int OutdoorPlacementRange = 30;
+	const int OutdoorClearance = 2;
+
+	static IEnumerable<int> OutdoorColumns(Faction faction)
+	{
+		var settlement = faction.Settlement;
+		int left = (settlement?.Left ?? faction.BaseTile.X - BaseHalfWidth) - OutdoorClearance;
+		int right = (settlement?.Right ?? faction.BaseTile.X + BaseHalfWidth) + OutdoorClearance;
+		for (int offset = 0; offset <= OutdoorPlacementRange; offset++)
+		{
+			yield return right + offset;
+			yield return left - offset;
 		}
 	}
 

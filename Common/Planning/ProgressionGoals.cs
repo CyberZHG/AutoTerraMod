@@ -309,6 +309,25 @@ public sealed class StyleGoal : ProgressionGoal
 	public static CombatStyle EffectiveStyle(CombatStyle style) => style == CombatStyle.Summon ? CombatStyle.Melee : style;
 }
 
+public sealed class GatedGoal : ProgressionGoal
+{
+	readonly ProgressionGoal inner;
+	readonly Func<bool> open;
+
+	public GatedGoal(ProgressionGoal inner, Func<bool> open)
+	{
+		this.inner = inner;
+		this.open = open;
+	}
+
+	public ProgressionGoal Inner => inner;
+	public override bool AppliesTo(Bot bot) => open() && inner.AppliesTo(bot);
+	public override string Describe() => inner.Describe();
+	public override bool IsMet(Bot bot) => inner.IsMet(bot);
+	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
+	public override bool IsExpedition => inner.IsExpedition;
+}
+
 public sealed class SmashAltarsGoal : ProgressionGoal
 {
 	const int AltarsForAllOreTiers = 3;
@@ -391,6 +410,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.MoltenFury },
 			staffs: new int[] { ItemID.Flamelash },
 			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
+		int hardmodeStart = goals.Count;
 		goals.Add(new SmashAltarsGoal());
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.CobaltPickaxe, ItemID.PalladiumPickaxe },
@@ -436,10 +456,12 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.ChlorophyteShotbow },
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
+		for (int i = hardmodeStart; i < goals.Count; i++)
+			goals[i] = new GatedGoal(goals[i], () => Terraria.Main.hardMode);
 		LinkSuccessors(goals);
 		if (UpgradeScenarios.GearFirst)
 		{
-			var gear = goals.Where(goal => goal is StationGoal or GearGoal or StyleGoal or SmashAltarsGoal).ToList();
+			var gear = goals.Where(goal => Unwrap(goal) is StationGoal or GearGoal or SmashAltarsGoal).ToList();
 			goals.RemoveAll(gear.Contains);
 			goals.InsertRange(0, gear);
 		}
@@ -456,9 +478,16 @@ public static class ProgressionGoals
 		return goals.ToArray();
 	}
 
+	static ProgressionGoal Unwrap(ProgressionGoal goal) => goal switch
+	{
+		GatedGoal gated => Unwrap(gated.Inner),
+		StyleGoal style => Unwrap(style.Inner),
+		_ => goal
+	};
+
 	static void LinkSuccessors(List<ProgressionGoal> goals)
 	{
-		var gear = goals.Select(goal => goal is StyleGoal style ? style.Inner : goal).OfType<GearGoal>().ToList();
+		var gear = goals.Select(Unwrap).OfType<GearGoal>().ToList();
 		for (int i = 0; i < gear.Count; i++)
 			gear[i].Successors.AddRange(gear.Skip(i + 1).Where(later => later.Kind == gear[i].Kind));
 	}

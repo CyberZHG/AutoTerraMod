@@ -34,7 +34,7 @@ public sealed class UpgradeScenarios : ModSystem
 			bot => Pick(bot) >= 65 && WearsAny(bot, (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves)),
 			"nightmare pickaxe and full shadow armor"),
 		["upgrade-hell"] = new(PreHardmode,
-			new (int, int)[] { (ItemID.Hellstone, 240), (ItemID.Obsidian, 80), (ItemID.Hellforge, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
+			new (int, int)[] { (ItemID.Hellstone, 360), (ItemID.Obsidian, 120), (ItemID.Hellforge, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 100 && WearsAny(bot, (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves)),
 			"molten pickaxe and full molten armor"),
 		["upgrade-hardmode"] = new(Hardmode,

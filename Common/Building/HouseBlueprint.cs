@@ -260,6 +260,14 @@ public sealed class HouseBlueprint
 					yield return new Point(x, y);
 			}
 		}
+		foreach (int x in new[] { Left - 1, Right + 1 })
+		{
+			for (int y = Floor - DoorHeight; y < Floor; y++)
+			{
+				if (TileQuery.IsSolid(x, y) && !Main.tileFrameImportant[Main.tile[x, y].TileType] && !HouseInspector.IsProtected(x, y))
+					yield return new Point(x, y);
+			}
+		}
 	}
 
 	static Point TreeBaseBelow(int x, int y)

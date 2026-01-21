@@ -35,7 +35,8 @@ public static class Junk
 		Inventory.UsedSlots(bot.Avatar) >= OverflowSlots && !Building.BaseStorage.HasRoom(bot.Faction);
 
 	static int OverflowReserveFor(Item item) =>
-		IsNaturalBlock(item) ? OverflowNaturalBlockReserve
+		CraftingBlocks.Contains(item.type) ? int.MaxValue
+		: IsNaturalBlock(item) ? OverflowNaturalBlockReserve
 		: IsGrassSeed(item) || item.type == ItemID.Acorn || IsCheapClutter(item) ? 0
 		: ReserveFor(item);
 
@@ -97,9 +98,11 @@ public static class Junk
 		}
 	}
 
+	static readonly HashSet<int> CraftingBlocks = new() { ItemID.Obsidian };
+
 	static int ReserveFor(Item item)
 	{
-		if (IsBossSummon(item) || IsPlatform(item))
+		if (IsBossSummon(item) || IsPlatform(item) || CraftingBlocks.Contains(item.type))
 			return int.MaxValue;
 		if (item.createTile == TileID.Tombstones)
 			return 0;
