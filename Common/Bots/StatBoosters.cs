@@ -23,20 +23,28 @@ public static class StatBoosters
 		var avatar = bot.Avatar;
 		return itemType switch
 		{
-			ItemID.LifeCrystal => WantsLifeCrystals(avatar) && !LeavesForNeedierMate(bot, mate => mate.ConsumedLifeCrystals < avatar.ConsumedLifeCrystals),
-			ItemID.LifeFruit => WantsLifeFruit(avatar) && !LeavesForNeedierMate(bot, mate => mate.ConsumedLifeFruit < avatar.ConsumedLifeFruit),
+			ItemID.LifeCrystal => WantsLifeCrystals(avatar) && !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedLifeCrystals < avatar.ConsumedLifeCrystals),
+			ItemID.LifeFruit => WantsLifeFruit(avatar) && !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedLifeFruit < avatar.ConsumedLifeFruit),
 			ItemID.ManaCrystal or ItemID.FallenStar => avatar.ConsumedManaCrystals < Player.ManaCrystalMax
-				&& !LeavesForNeedierMate(bot, mate => mate.ConsumedManaCrystals < avatar.ConsumedManaCrystals),
+				&& !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedManaCrystals < avatar.ConsumedManaCrystals),
 			_ => false
 		};
 	}
 
-	static bool LeavesForNeedierMate(Bot bot, System.Func<Player, bool> isNeedier) =>
+	static bool LeavesForNeedierMate(Bot bot, int itemType, System.Func<Player, bool> isNeedier) =>
 		bot.Personality.Cooperation >= SharingCooperation
-		&& Systems.BotWorldSystem.Bots.Any(mate => mate != bot && mate.FactionId == bot.FactionId && isNeedier(mate.Avatar));
+		&& Systems.BotWorldSystem.Bots.Any(mate => mate != bot && mate.FactionId == bot.FactionId && isNeedier(mate.Avatar) && Inventory.Count(mate.Avatar, itemType) == 0);
 
 	public static bool CarriesBoostersToShare(Bot bot) =>
-		Inventory.Items(bot.Avatar).Any(item => IsBooster(item.type) && !KeepsForSelf(bot, item.type));
+		Inventory.Items(bot.Avatar).Any(item => IsBooster(item.type) && !KeepsForSelf(bot, item.type) && SomeMateWants(bot, item.type));
+
+	static bool SomeMateWants(Bot bot, int itemType) =>
+		Systems.BotWorldSystem.Bots.Any(mate => mate != bot && mate.FactionId == bot.FactionId && itemType switch
+		{
+			ItemID.LifeCrystal => WantsLifeCrystals(mate.Avatar),
+			ItemID.LifeFruit => WantsLifeFruit(mate.Avatar),
+			_ => mate.Avatar.ConsumedManaCrystals < Player.ManaCrystalMax
+		});
 
 	public static bool WantsLifeCrystals(Player avatar) => avatar.ConsumedLifeCrystals < Player.LifeCrystalMax;
 

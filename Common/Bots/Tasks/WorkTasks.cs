@@ -275,13 +275,28 @@ public sealed class GatherTask : BotTask
 			prospectTarget = destination;
 			Bot.Motor.Stop();
 		}
-		Bot.Motor.MoveTo(destination, 32f);
-		if (!Bot.Motor.IsStuck)
+		bool moving = DeepOre() ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
+		if (moving)
 			return;
 		prospectDirection = -prospectDirection;
 		prospectTarget = null;
 		Bot.Motor.Stop();
 	}
+
+	bool MoveToward(Vector2 destination)
+	{
+		Bot.Motor.MoveTo(destination, 32f);
+		return !Bot.Motor.IsStuck;
+	}
+
+	const int DeepOreMarginTiles = 20;
+
+	static readonly HashSet<int> DeepOres = new()
+	{
+		TileID.Cobalt, TileID.Palladium, TileID.Mythril, TileID.Orichalcum, TileID.Adamantite, TileID.Titanium
+	};
+
+	bool DeepOre() => Tiles.TileTypes.Overlaps(DeepOres);
 
 	Vector2 ChooseProspectTarget()
 	{
@@ -294,7 +309,12 @@ public sealed class GatherTask : BotTask
 			int x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, 50, Main.maxTilesX - 50);
 			return new Vector2(x * 16f, TileQuery.SurfaceY(x) * 16f - 24f);
 		}
-		if (CaveFinder.NearestUnvisitedCave(here, visitedCaves) is Point cave)
+		if (DeepOre() && here.Y < Main.rockLayer + DeepOreMarginTiles)
+		{
+			int x = Utils.Clamp(here.X + prospectDirection * ProspectStepTiles, 50, Main.maxTilesX - 50);
+			return new Vector2(x * 16f, (float)(Main.rockLayer + DeepOreMarginTiles * 2) * 16f);
+		}
+		if (CaveFinder.NearestUnvisitedCave(here, visitedCaves) is Point cave && (!DeepOre() || cave.Y > Main.rockLayer))
 		{
 			visitedCaves.Add(CaveFinder.RegionOf(cave));
 			return cave.ToWorldCoordinates();

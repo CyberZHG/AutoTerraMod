@@ -109,6 +109,8 @@ public static class ProgressionPlanner
 		try
 		{
 			var source = ResourceSources.For(itemType);
+			if (source is TileSource { IsTree: false } tiles && tiles.TileTypes.All(tile => Navigation.PickRequirement.MinimumPick(tile, 0, Main.maxTilesY) > (context.Bot.Hands.BestPickaxe?.pick ?? 0)))
+				return PlanStep.Blocked;
 			if (source != null)
 				return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
 			foreach (var recipe in RecipeIndex.For(itemType))

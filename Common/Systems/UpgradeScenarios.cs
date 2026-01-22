@@ -38,11 +38,11 @@ public sealed class UpgradeScenarios : ModSystem
 			bot => Pick(bot) >= 100 && WearsAny(bot, (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves)),
 			"molten pickaxe and full molten armor"),
 		["upgrade-hardmode"] = new(Hardmode,
-			new (int, int)[] { (ItemID.Pwnhammer, 1), (ItemID.MoltenPickaxe, 1), (ItemID.Hellforge, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
+			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.Pwnhammer, 1), (ItemID.MoltenPickaxe, 1), (ItemID.Hellforge, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => WorldGen.altarCount >= 3 && Pick(bot) >= 110,
 			"three altars smashed and a cobalt/palladium pickaxe from mined ore"),
 		["upgrade-hallowed"] = new(AfterMechs,
-			new (int, int)[] { (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
+			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
 			"pickaxe axe/drax and full hallowed armor")
 	};
@@ -76,7 +76,19 @@ public sealed class UpgradeScenarios : ModSystem
 		Main.dayTime = true;
 		Main.time = 0;
 		RevealAltars();
-		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"upgrade scenario '{HeadlessTestMode.Scenario}' prepared; expecting {scenario.ExpectationText}");
+		LogOre(TileID.Cobalt, TileID.Palladium);
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"upgrade scenario '{HeadlessTestMode.Scenario}' prepared; expecting {scenario.ExpectationText}; altars smashed so far {WorldGen.altarCount}");
+	}
+
+	static void LogOre(params int[] oreTiles)
+	{
+		var found = new List<int>();
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+			for (int y = 10; y < Main.maxTilesY - 10; y++)
+				if (Main.tile[x, y].HasTile && oreTiles.Contains(Main.tile[x, y].TileType))
+					found.Add(y);
+		var bases = string.Join(", ", BotWorldSystem.Factions.Select(faction => faction.BaseTile.ToString()));
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"upgrade scenario ore: {found.Count} tiles, depth {(found.Count > 0 ? $"{found.Min()}..{found.Max()} median {found.OrderBy(y => y).ElementAt(found.Count / 2)}" : "-")}, rockLayer {(int)Main.rockLayer}, bases {bases}");
 	}
 
 	static void RevealAltars()
