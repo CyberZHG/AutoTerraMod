@@ -12,6 +12,7 @@ public sealed class Settlement
 	const int RoomInteriorHeight = 5;
 	const int MinimumStorageInteriorHeight = 4;
 	public const int GuestRoomCount = 3;
+	public const int GuestStories = 3;
 
 	readonly List<HouseBlueprint> structures = new();
 	readonly HashSet<Point> shell = new();
@@ -29,11 +30,23 @@ public sealed class Settlement
 			nextRight = bedroom.Left;
 		}
 		int nextLeft = Storage.Right;
+		var groundRooms = new List<HouseBlueprint>();
 		for (int i = 0; i < GuestRoomCount; i++)
 		{
-			var guestRoom = Add(StructurePurpose.GuestRoom, nextLeft, RoomWidth, floor, RoomInteriorHeight, design.Roof);
+			var guestRoom = Add(StructurePurpose.GuestRoom, nextLeft, RoomWidth, floor, RoomInteriorHeight, GuestStories > 1 ? RoofStyle.Flat : design.Roof);
 			GuestRooms.Add(guestRoom);
+			groundRooms.Add(guestRoom);
 			nextLeft = guestRoom.Right;
+		}
+		foreach (var ground in groundRooms)
+		{
+			var below = ground;
+			for (int story = 1; story < GuestStories; story++)
+			{
+				var roof = story == GuestStories - 1 ? design.Roof : RoofStyle.Flat;
+				below = Add(StructurePurpose.GuestRoom, below.Left, RoomWidth, below.Ceiling, RoomInteriorHeight, roof);
+				GuestRooms.Add(below);
+			}
 		}
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);

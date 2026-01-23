@@ -87,6 +87,8 @@ Aspirations: {
 }
 
 Tasks: {
+	Buy: Shopping
+	Rescue: Rescuing
 	Summon: Summoning boss
 	Rally: Rallying
 	Scout: Scouting
@@ -129,6 +131,7 @@ Landmarks: {
 }
 
 Plans: {
+	Buy: Buy {0} x{1} from the {2}
 	Deliver: Bring {0} to {1}
 	Withdraw: Take {0} x{1} from storage
 	Gather: Gather {0} x{1}

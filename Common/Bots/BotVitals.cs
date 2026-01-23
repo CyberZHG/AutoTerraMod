@@ -367,7 +367,8 @@ public sealed class BotVitals
 				BiomeScanCenterPositionInWorld = Avatar.Center,
 				ScanOreFinderData = false
 			});
-			Avatar.UpdateBiomes();
+			if (!Main.dedServ)
+				Avatar.UpdateBiomes();
 		}
 		catch (Exception exception)
 		{

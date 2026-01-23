@@ -17,6 +17,18 @@ public sealed class VanillaHooks : ModSystem
 		On_NPC.SpawnNPC += SpawnAroundBots;
 		On_NPC.CheckActive += KeepNpcsNearBotsActive;
 		On_Main.DrawPlayers_AfterProjectiles += DrawBotAvatars;
+		On_Main.UpdateTime_SpawnTownNPCs += LetBotsAttractTownNpcs;
+	}
+
+	static void LetBotsAttractTownNpcs(On_Main.orig_UpdateTime_SpawnTownNPCs orig)
+	{
+		if (!BotWorldSystem.IsRunning)
+		{
+			orig();
+			return;
+		}
+		using (AvatarPresence.Enter())
+			orig();
 	}
 
 	static void LetHostilesTargetBots(On_NPC.orig_AI orig, NPC self)

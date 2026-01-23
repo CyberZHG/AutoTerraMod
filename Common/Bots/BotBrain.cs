@@ -52,6 +52,8 @@ public sealed class BotBrain
 			new HuntTask(bot),
 			new LootTask(bot),
 			new TreasureTask(bot),
+			new RescueTask(bot),
+			new BuyTask(bot),
 			new StoreTask(bot),
 			new DeliverTask(bot),
 			new TidyCampTask(bot),

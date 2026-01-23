@@ -57,6 +57,7 @@ public sealed class BotWorldSystem : ModSystem
 		BaseStorage.Reset();
 		ItemReservations.Clear();
 		ResourceSources.Reset();
+		Planning.Shops.Reset();
 		ProgressionPlanner.Reset();
 		Bosses.BossCredit.Reset();
 		World.WaterFinder.Reset();

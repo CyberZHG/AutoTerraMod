@@ -306,6 +306,8 @@ public sealed class StyleGoal : ProgressionGoal
 
 	public ProgressionGoal Inner => inner;
 
+	public HashSet<CombatStyle> Styles => styles;
+
 	public static CombatStyle EffectiveStyle(CombatStyle style) => style == CombatStyle.Summon ? CombatStyle.Melee : style;
 }
 
@@ -372,7 +374,8 @@ public static class ProgressionGoals
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),
-			new StationGoal(TileID.Anvils, ItemID.IronAnvil, ItemID.LeadAnvil)
+			new StationGoal(TileID.Anvils, ItemID.IronAnvil, ItemID.LeadAnvil),
+			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop)
 		};
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
 		goals.Add(new StorageGoal());
@@ -485,12 +488,26 @@ public static class ProgressionGoals
 		_ => goal
 	};
 
+	static HashSet<CombatStyle> StylesOf(ProgressionGoal goal) => goal switch
+	{
+		GatedGoal gated => StylesOf(gated.Inner),
+		StyleGoal style => style.Styles,
+		_ => null
+	};
+
 	static void LinkSuccessors(List<ProgressionGoal> goals)
 	{
-		var gear = goals.Select(Unwrap).OfType<GearGoal>().ToList();
+		var gear = goals.Select(goal => (gear: Unwrap(goal) as GearGoal, styles: StylesOf(goal))).Where(entry => entry.gear != null).ToList();
 		for (int i = 0; i < gear.Count; i++)
-			gear[i].Successors.AddRange(gear.Skip(i + 1).Where(later => later.Kind == gear[i].Kind));
+		{
+			var (goal, styles) = gear[i];
+			goal.Successors.AddRange(gear.Skip(i + 1)
+				.Where(later => later.gear.Kind == goal.Kind && (later.styles == null || styles == null || later.styles.SetEquals(styles)))
+				.Select(later => later.gear));
+		}
 	}
+
+	static readonly CombatStyle[] HeadStyles = { CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic };
 
 	static readonly int[] Hooks =
 	{
@@ -506,7 +523,18 @@ public static class ProgressionGoals
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, staffs), CombatStyle.Magic));
 		goals.Add(new GearGoal(GearKind.Body, armor.Select(set => set.body).ToArray()));
-		goals.Add(new GearGoal(GearKind.Head, armor.Select(set => set.head).ToArray()));
+		if (armor.Length % HeadStyles.Length == 0 && armor.Length > HeadStyles.Length - 1)
+		{
+			for (int style = 0; style < HeadStyles.Length; style++)
+			{
+				var heads = armor.Where((set, index) => index % HeadStyles.Length == style).Select(set => set.head).ToArray();
+				goals.Add(new StyleGoal(new GearGoal(GearKind.Head, heads), HeadStyles[style]));
+			}
+		}
+		else
+		{
+			goals.Add(new GearGoal(GearKind.Head, armor.Select(set => set.head).ToArray()));
+		}
 		goals.Add(new GearGoal(GearKind.Legs, armor.Select(set => set.legs).ToArray()));
 	}
 }

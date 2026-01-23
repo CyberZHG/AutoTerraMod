@@ -75,7 +75,7 @@ public sealed class StoreTask : ChestVisitTask
 			return 55f;
 		}
 		Detail = "";
-		if (used < OpportunisticSlots)
+		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any())
 			return 0f;
 		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
 		if (used >= FullishSlots)

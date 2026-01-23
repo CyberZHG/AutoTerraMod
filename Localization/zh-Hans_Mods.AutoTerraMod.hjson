@@ -87,6 +87,8 @@ Aspirations: {
 }
 
 Tasks: {
+	Buy: 购物
+	Rescue: 解救
 	Summon: 召唤 Boss
 	Rally: 集合
 	Scout: 侦察
@@ -129,6 +131,7 @@ Landmarks: {
 }
 
 Plans: {
+	Buy: 向{2}购买 {0} x{1}
 	Deliver: 把{0}送给{1}
 	Withdraw: 从仓库取 {0} x{1}
 	Gather: 收集 {0} x{1}

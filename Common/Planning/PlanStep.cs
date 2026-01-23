@@ -37,6 +37,8 @@ public sealed record DigShaftStep(World.Hellevator Shaft) : PlanStep;
 
 public sealed record BuildBridgeStep(World.Hellbridge Bridge, int Direction) : PlanStep;
 
+public sealed record BuyStep(int ItemType, int Amount, int SellerType) : PlanStep;
+
 public sealed record TravelStep(Microsoft.Xna.Framework.Vector2 Place) : PlanStep;
 
 public abstract record ResourceSource;

@@ -119,7 +119,7 @@ public static class ProgressionPlanner
 				if (step is not BlockedStep)
 					return step;
 			}
-			return PlanStep.Blocked;
+			return PlanPurchase(context.Bot, itemType, amount - have);
 		}
 		finally
 		{
@@ -157,6 +157,14 @@ public static class ProgressionPlanner
 			return PlanStep.Blocked;
 		}
 		return new CraftStep(recipe);
+	}
+
+	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
+	{
+		if (Shops.Offer(itemType) is not var (seller, price))
+			return PlanStep.Blocked;
+		long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
+		return coins >= (long)price * amount ? new BuyStep(itemType, amount, seller.type) : PlanStep.Blocked;
 	}
 
 	static World.Landmark? UnknownGround(Bot bot, ResourceSource source)
