@@ -1,2 +1,13 @@
-Up to four AI factions with up to six bots each play Terraria by vanilla rules: they mine, chop, craft, gear up and fight, while you spectate.
+Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spectate or play along.
+- Gather, craft and build houses, storage and guest rooms; upgrade gear tier by tier to Chlorophyte, equip accessories, drink potions.
+- Fight every boss from King Slime to Moon Lord: readiness checks, summon rituals (orbs, hellbridge, altar, truffle worm...), credit per faction.
+- Rescue town NPCs, house them and buy stations from their shops.
+- Modes: Race, Cooperate, War (factions fight but never wreck or rob each other's bases).
 Single-player only.
+
+最多 4 个 AI 阵营（每阵营 1-6 人）按原版规则游玩泰拉瑞亚，你可以观战或一起玩。
+- 采集、合成、建造房屋、仓库和客房；逐级升级装备直到叶绿，佩戴饰品，喝药水。
+- 挑战从史莱姆王到月亮领主的所有 Boss：评估战力，完成召唤仪式（暗影珠、地狱桥、祭坛、松露虫……），按阵营结算击杀。
+- 解救城镇 NPC，为他们盖房，并从商店购买制作站。
+- 模式：竞速、合作、敌对（阵营间可互相攻击，但不会破坏或偷取对方基地）。
+仅支持单人模式。

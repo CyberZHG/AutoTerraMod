@@ -17,6 +17,11 @@ Configs: {
 			Tooltip: 竞速：各阵营情报独立；合作：共享已发现的资源位置；敌对：阵营之间可以互相攻击，但不会破坏或偷取其他阵营的基地。
 		}
 
+		ShowInfoPanel: {
+			Label: 显示阵营/角色信息面板
+			Tooltip: 在左侧显示阵营进度和当前跟随角色的详细信息。
+		}
+
 		SpectatorMode: {
 			Label: 观战模式
 			Tooltip: 你会变成不会被攻击的幽灵，镜头跟随 AI 角色。

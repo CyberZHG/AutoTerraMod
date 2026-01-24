@@ -26,7 +26,8 @@ public sealed class SpectatorHud : ModSystem
 		if (index < 0)
 			index = layers.Count;
 		layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Bot Inventory", BotInventoryPanel.Draw, InterfaceScaleType.UI));
-		layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI));
+		if (ModContent.GetInstance<Config.AutoTerraConfig>().ShowInfoPanel)
+			layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI));
 		layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Bot Labels", DrawLabels, InterfaceScaleType.Game));
 	}
 

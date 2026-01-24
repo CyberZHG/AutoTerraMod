@@ -31,5 +31,8 @@ public sealed class AutoTerraConfig : ModConfig
 	public bool SpectatorMode;
 
 	[DefaultValue(true)]
+	public bool ShowInfoPanel;
+
+	[DefaultValue(true)]
 	public bool DiagnosticLogging;
 }

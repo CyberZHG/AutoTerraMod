@@ -17,6 +17,11 @@ Configs: {
 			Tooltip: Race keeps knowledge separate; Cooperate shares discovered resources between factions; War lets factions fight each other but never wreck or rob each other's bases.
 		}
 
+		ShowInfoPanel: {
+			Label: Show faction/bot info panel
+			Tooltip: Shows the panel on the left with faction progress and the followed bot's details.
+		}
+
 		SpectatorMode: {
 			Label: Spectator mode
 			Tooltip: Turns you into an untargetable ghost and lets the camera follow bots.
