@@ -59,6 +59,7 @@ public static class ResourceSources
 
 	public static void Reset()
 	{
+		soulSources.Clear();
 		tileSources = null;
 		npcSources = null;
 	}
@@ -71,6 +72,8 @@ public static class ResourceSources
 			return ForageSource(itemType, forage.tileType);
 		if (RareDrops.TryGetValue(itemType, out var rare))
 			return rare;
+		if (BiomeSouls.TryGetValue(itemType, out var soul))
+			return soulSources.TryGetValue(itemType, out var cachedSoul) ? cachedSoul : soulSources[itemType] = new NpcSource(NpcsLivingIn(soul.bestiaryKeys), soul.ground()) { Underground = true };
 		if (FurnitureLoot.TryGetValue(itemType, out var furniture))
 			return new TileSource(new HashSet<int> { furniture.tileType }, false, null, false, furniture.ground);
 		tileSources ??= BuildTileSources();
@@ -116,7 +119,7 @@ public static class ResourceSources
 
 	static Dictionary<int, NpcSource> BuildNpcSources()
 	{
-		var npcsByItem = new Dictionary<int, HashSet<int>>();
+		var npcsByItem = new Dictionary<int, Dictionary<int, float>>();
 		var drops = new List<DropRateInfo>();
 		for (int npcType = 1; npcType < NPCLoader.NPCCount; npcType++)
 		{
@@ -125,13 +128,74 @@ public static class ResourceSources
 			drops.Clear();
 			foreach (var rule in Main.ItemDropsDB.GetRulesForNPCID(npcType, false))
 				rule.ReportDroprates(drops, new DropRateInfoChainFeed(1f));
-			foreach (var drop in drops.Where(drop => drop.dropRate >= MinimumHuntDropRate && (drop.conditions == null || drop.conditions.Count == 0)))
+			foreach (var drop in drops.Where(drop => drop.conditions == null || drop.conditions.Count == 0))
 			{
 				if (!npcsByItem.TryGetValue(drop.itemId, out var npcs))
-					npcsByItem[drop.itemId] = npcs = new HashSet<int>();
-				npcs.Add(npcType);
+					npcsByItem[drop.itemId] = npcs = new Dictionary<int, float>();
+				npcs[npcType] = System.Math.Max(npcs.GetValueOrDefault(npcType), drop.dropRate);
 			}
 		}
-		return npcsByItem.ToDictionary(entry => entry.Key, entry => new NpcSource(entry.Value));
+		return npcsByItem.ToDictionary(entry => entry.Key, entry => SourceFrom(entry.Value));
+	}
+
+	static NpcSource SourceFrom(Dictionary<int, float> rates)
+	{
+		bool common = rates.Values.Any(rate => rate >= MinimumHuntDropRate);
+		var hunted = rates.Where(entry => !common || entry.Value >= MinimumHuntDropRate).Select(entry => entry.Key).ToHashSet();
+		var ground = hunted.Select(GroundOf).Where(landmark => landmark != null).GroupBy(landmark => landmark).OrderByDescending(group => group.Count()).Select(group => group.Key).FirstOrDefault();
+		return new NpcSource(hunted, ground) { IsRare = !common };
+	}
+
+	static readonly Dictionary<int, (string[] bestiaryKeys, System.Func<Landmark> ground)> BiomeSouls = new()
+	{
+		[ItemID.SoulofLight] = (new[] { "Bestiary_Biomes.UndergroundHallow" }, () => Landmark.Hallow),
+		[ItemID.SoulofNight] = (new[] { "Bestiary_Biomes.UndergroundCorruption", "Bestiary_Biomes.UndergroundCrimson" }, () => Landmarks.WorldEvil)
+	};
+
+	static readonly Dictionary<int, NpcSource> soulSources = new();
+
+	static HashSet<int> NpcsLivingIn(string[] bestiaryKeys)
+	{
+		var npcs = new HashSet<int>();
+		for (int npcType = 1; npcType < NPCLoader.NPCCount; npcType++)
+		{
+			if (!ContentSamples.NpcsByNetId.TryGetValue(npcType, out var sample) || sample.friendly || sample.townNPC || sample.boss || sample.lifeMax <= 5)
+				continue;
+			var entry = Main.BestiaryDB.FindEntryByNPCID(npcType);
+			if (entry?.Info != null && entry.Info.OfType<Terraria.GameContent.Bestiary.SpawnConditionBestiaryInfoElement>().Any(element => bestiaryKeys.Contains(element.GetDisplayNameKey())))
+				npcs.Add(npcType);
+		}
+		return npcs;
+	}
+
+	static readonly Dictionary<string, Landmark> BestiaryGrounds = new()
+	{
+		["Bestiary_Biomes.TheDungeon"] = Landmark.Dungeon,
+		["Bestiary_Biomes.TheCorruption"] = Landmark.Corruption,
+		["Bestiary_Biomes.UndergroundCorruption"] = Landmark.Corruption,
+		["Bestiary_Biomes.TheCrimson"] = Landmark.Crimson,
+		["Bestiary_Biomes.UndergroundCrimson"] = Landmark.Crimson,
+		["Bestiary_Biomes.Jungle"] = Landmark.Jungle,
+		["Bestiary_Biomes.UndergroundJungle"] = Landmark.Jungle,
+		["Bestiary_Biomes.Snow"] = Landmark.Snow,
+		["Bestiary_Biomes.UndergroundSnow"] = Landmark.Snow,
+		["Bestiary_Biomes.TheUnderworld"] = Landmark.Underworld,
+		["Bestiary_Biomes.TheHallow"] = Landmark.Hallow,
+		["Bestiary_Biomes.UndergroundHallow"] = Landmark.Hallow,
+		["Bestiary_Biomes.Ocean"] = Landmark.Ocean,
+		["Bestiary_Biomes.TheTemple"] = Landmark.Temple
+	};
+
+	static Landmark? GroundOf(int npcType)
+	{
+		var entry = Main.BestiaryDB.FindEntryByNPCID(npcType);
+		if (entry?.Info == null)
+			return null;
+		foreach (var element in entry.Info.OfType<Terraria.GameContent.Bestiary.SpawnConditionBestiaryInfoElement>())
+		{
+			if (BestiaryGrounds.TryGetValue(element.GetDisplayNameKey(), out var ground))
+				return ground;
+		}
+		return null;
 	}
 }

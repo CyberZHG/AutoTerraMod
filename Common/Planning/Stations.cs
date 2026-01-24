@@ -49,11 +49,14 @@ public static class Stations
 			return cached.locations;
 		var locations = new Dictionary<int, Point>();
 		var origin = faction.BaseTile;
-		var columns = Enumerable.Range(origin.X - BaseHalfWidth, BaseHalfWidth * 2 + 1).Select(x => (x, groundY: origin.Y))
-			.Concat(OutdoorColumns(faction).Select(x => (x, groundY: World.TileQuery.SurfaceY(x))));
-		foreach (var (x, groundY) in columns)
+		var settlement = faction.Settlement;
+		var columns = settlement != null
+			? Enumerable.Range(settlement.Left, settlement.Right - settlement.Left + 1).Select(x => (x, top: settlement.Top, bottom: settlement.Floor))
+			: Enumerable.Range(origin.X - BaseHalfWidth, BaseHalfWidth * 2 + 1).Select(x => (x, top: origin.Y - BaseRowsAbove, bottom: origin.Y + BaseRowsBelow));
+		columns = columns.Concat(OutdoorColumns(faction).Select(x => (x, top: World.TileQuery.SurfaceY(x) - BaseRowsAbove, bottom: World.TileQuery.SurfaceY(x) + BaseRowsBelow)));
+		foreach (var (x, top, bottom) in columns)
 		{
-			for (int y = groundY - BaseRowsAbove; y <= groundY + BaseRowsBelow; y++)
+			for (int y = top; y <= bottom; y++)
 			{
 				if (!WorldGen.InWorld(x, y, 2) || !Main.tile[x, y].HasTile)
 					continue;
@@ -115,6 +118,8 @@ public static class Stations
 				yield return slot;
 			yield break;
 		}
+		foreach (var spot in settlement.Workshop.FloorSpotsNearCenter())
+			yield return spot;
 		foreach (var spot in settlement.Hall.FloorSpotsNearCenter())
 		{
 			yield return spot;
@@ -123,7 +128,7 @@ public static class Stations
 		}
 		foreach (var spot in settlement.Hall.FloorSpotsNearCenter())
 		{
-			int groundY = GroundBelow(spot.X, settlement.Hall.Ceiling);
+			int groundY = GroundBelow(spot.X, settlement.Hall.Ceiling + 1);
 			if (groundY > 0)
 				yield return new Point(spot.X, groundY - 1);
 		}

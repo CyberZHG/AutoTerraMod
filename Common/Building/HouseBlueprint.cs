@@ -27,6 +27,7 @@ public enum StructurePurpose
 {
 	Hall,
 	Storage,
+	Workshop,
 	Bedroom,
 	GuestRoom
 }

@@ -299,7 +299,7 @@ public sealed class StyleGoal : ProgressionGoal
 		this.styles = styles.ToHashSet();
 	}
 
-	public override bool AppliesTo(Bot bot) => styles.Contains(EffectiveStyle(bot.Personality.Style));
+	public override bool AppliesTo(Bot bot) => (styles.Contains(bot.Personality.Style) || styles.Contains(EffectiveStyle(bot.Personality.Style))) && inner.AppliesTo(bot);
 	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
@@ -309,6 +309,20 @@ public sealed class StyleGoal : ProgressionGoal
 	public HashSet<CombatStyle> Styles => styles;
 
 	public static CombatStyle EffectiveStyle(CombatStyle style) => style == CombatStyle.Summon ? CombatStyle.Melee : style;
+}
+
+public sealed class OwnGoal : ProgressionGoal
+{
+	readonly int[] options;
+
+	public OwnGoal(params int[] options) => this.options = options;
+
+	public override string Describe() => $"Own({Terraria.Lang.GetItemNameValue(options[0])})";
+
+	public override bool IsMet(Bot bot) =>
+		options.Any(option => Inventory.Count(bot.Avatar, option) > 0 || bot.Avatar.armor.Any(worn => worn.type == option));
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
 }
 
 public sealed class GatedGoal : ProgressionGoal
@@ -378,6 +392,7 @@ public static class ProgressionGoals
 			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop)
 		};
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
+		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
@@ -459,6 +474,21 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.ChlorophyteShotbow },
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
+		goals.Add(new OwnGoal(ItemID.TerrasparkBoots));
+		goals.Add(new OwnGoal(ItemID.AnkhShield));
+		goals.Add(new OwnGoal(ItemID.CellPhone));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.BerserkerGlove), CombatStyle.Melee));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.FireGauntlet), CombatStyle.Melee));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.SniperScope), CombatStyle.Ranged));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.MoltenQuiver), CombatStyle.Ranged));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.CelestialEmblem), CombatStyle.Magic));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.CelestialShell), CombatStyle.Magic));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.PapyrusScarab), CombatStyle.Summon));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.NecromanticScroll), CombatStyle.Summon));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.Zenith), CombatStyle.Melee));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.VortexBeater), CombatStyle.Ranged));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, ItemID.LastPrism), CombatStyle.Magic));
+		goals.Add(new StyleGoal(new OwnGoal(ItemID.EmpressBlade), CombatStyle.Summon));
 		for (int i = hardmodeStart; i < goals.Count; i++)
 			goals[i] = new GatedGoal(goals[i], () => Terraria.Main.hardMode);
 		LinkSuccessors(goals);
@@ -481,7 +511,7 @@ public static class ProgressionGoals
 		return goals.ToArray();
 	}
 
-	static ProgressionGoal Unwrap(ProgressionGoal goal) => goal switch
+	internal static ProgressionGoal Unwrap(ProgressionGoal goal) => goal switch
 	{
 		GatedGoal gated => Unwrap(gated.Inner),
 		StyleGoal style => Unwrap(style.Inner),

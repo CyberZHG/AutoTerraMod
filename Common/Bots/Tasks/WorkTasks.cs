@@ -16,6 +16,7 @@ public sealed class CraftTask : BotTask
 	const int CraftDelayTicks = 20;
 	const float BaseArrivalRadius = 16f * 2f;
 	const float StationArrivalRadius = 16f * 3f;
+	const float RecallTripDistance = 16f * 120f;
 
 	int craftTimer;
 
@@ -78,6 +79,7 @@ public sealed class CraftTask : BotTask
 			return;
 		}
 		Bot.Motor.Stop();
+		Equipment.UnequipIngredients(Avatar, recipe);
 		if (!Crafting.HasIngredients(Avatar, recipe))
 		{
 			BotDiagnostics.Log(Bot, $"missing ingredients for {recipe.createItem.Name}");
@@ -118,13 +120,19 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		Bot.Motor.MoveTo(station.ToWorldCoordinates(), StationArrivalRadius);
+		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && TryRecallHome())
+			return;
+		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? feet.ToWorldCoordinates() : station.ToWorldCoordinates();
+		Bot.Motor.MoveTo(standAt, StationArrivalRadius);
 		if (Bot.Motor.IsStuck)
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}; motor: {Bot.Motor.Describe()}{World.TerrainDump.Around(Bot.CenterTile, 30, 12)}");
 			IsFinished = true;
 		}
 	}
+
+	static bool OnGround(Point spot) =>
+		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType];
 
 	void TickPlace(int itemType)
 	{
@@ -134,7 +142,7 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Bot.Hands.CanPlaceAt(item, candidate.Value));
+		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 		if (spot is not Point target)
 		{
 			BotDiagnostics.Log(Bot, $"no valid spot to place {item.Name} near base {Bot.Faction.BaseTile}");

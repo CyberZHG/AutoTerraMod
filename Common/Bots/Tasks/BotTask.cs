@@ -1,5 +1,9 @@
+using System.Linq;
+using AutoTerraMod.Common.Systems;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.Audio;
+using Terraria.ID;
 
 namespace AutoTerraMod.Common.Bots.Tasks;
 
@@ -26,6 +30,26 @@ public abstract class BotTask
 	public virtual void Stop() => Bot.Motor.Stop();
 
 	const float MaxTunnelDistance = 16f * 200f;
+
+	static readonly int[] RecallItems = { ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone, ItemID.RecallPotion };
+
+	protected bool TryRecallHome()
+	{
+		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
+		var body = Bot.Npc;
+		if (recall == null || body == null)
+			return false;
+		if (recall.consumable)
+			Inventory.ConsumeOne(Avatar, recall);
+		SoundEngine.PlaySound(SoundID.Item6, body.Center);
+		var home = BotWorldSystem.RespawnFeet(Bot);
+		body.position = home - new Vector2(body.width / 2f, body.height);
+		body.velocity = Vector2.Zero;
+		Bot.Vitals.Teleported(body);
+		Bot.Motor.Stop();
+		BotDiagnostics.Log(Bot, $"used {recall.Name} to return home");
+		return true;
+	}
 
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{

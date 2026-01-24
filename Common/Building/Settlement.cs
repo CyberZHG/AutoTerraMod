@@ -8,6 +8,7 @@ namespace AutoTerraMod.Common.Building;
 public sealed class Settlement
 {
 	const int StorageWidth = 16;
+	const int WorkshopWidth = 24;
 	const int RoomWidth = 10;
 	const int RoomInteriorHeight = 5;
 	const int MinimumStorageInteriorHeight = 4;
@@ -29,7 +30,8 @@ public sealed class Settlement
 			Bedrooms.Add(bedroom);
 			nextRight = bedroom.Left;
 		}
-		int nextLeft = Storage.Right;
+		Workshop = Add(StructurePurpose.Workshop, Storage.Right, WorkshopWidth, floor, RoomInteriorHeight, design.Roof);
+		int nextLeft = Workshop.Right;
 		var groundRooms = new List<HouseBlueprint>();
 		for (int i = 0; i < GuestRoomCount; i++)
 		{
@@ -56,6 +58,7 @@ public sealed class Settlement
 
 	public HouseBlueprint Hall { get; }
 	public HouseBlueprint Storage { get; }
+	public HouseBlueprint Workshop { get; }
 	public List<HouseBlueprint> Bedrooms { get; } = new();
 	public List<HouseBlueprint> GuestRooms { get; } = new();
 	public IReadOnlyList<HouseBlueprint> Structures => structures;

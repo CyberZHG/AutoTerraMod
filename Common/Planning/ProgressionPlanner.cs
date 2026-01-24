@@ -32,6 +32,11 @@ public static class ProgressionPlanner
 			source = expeditions[bot.Id].goal;
 			return ongoing;
 		}
+		if (ReadyUpgrade(bot, isSuppressed) is (ProgressionGoal upgrade, PlanStep ready))
+		{
+			source = upgrade;
+			return ready;
+		}
 		foreach (var goal in ladder)
 		{
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
@@ -48,6 +53,35 @@ public static class ProgressionPlanner
 		source = null;
 		return PlanStep.Idle;
 	}
+
+	const int UpgradeScanTicks = 600;
+
+	static readonly Dictionary<int, (uint at, ProgressionGoal goal)> readyUpgrades = new();
+
+	static (ProgressionGoal, PlanStep)? ReadyUpgrade(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
+	{
+		if (readyUpgrades.TryGetValue(bot.Id, out var cached) && Main.GameUpdateCount - cached.at < UpgradeScanTicks)
+		{
+			if (cached.goal == null)
+				return null;
+			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(cached.goal.Plan(bot)) is PlanStep again)
+				return (cached.goal, again);
+		}
+		foreach (var goal in ladder)
+		{
+			if (ProgressionGoals.Unwrap(goal) is not (GearGoal or OwnGoal) || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+				continue;
+			if (IsHandsOn(goal.Plan(bot)) is PlanStep step)
+			{
+				readyUpgrades[bot.Id] = (Main.GameUpdateCount, goal);
+				return (goal, step);
+			}
+		}
+		readyUpgrades[bot.Id] = (Main.GameUpdateCount, null);
+		return null;
+	}
+
+	static PlanStep IsHandsOn(PlanStep step) => step is CraftStep or WithdrawStep or PlaceStationStep ? step : null;
 
 	static PlanStep ContinueExpedition(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
 	{
@@ -77,15 +111,18 @@ public static class ProgressionPlanner
 
 	static PlanStep ObtainAny(Context context, IEnumerable<int> options, int depth)
 	{
+		PlanStep grind = null;
 		foreach (int option in options.OrderByDescending(option => Readiness(context.Bot, option)))
 		{
 			var step = Resolve(context, option, 1, depth);
 			if (step == null)
 				return PlanStep.Idle;
-			if (step is not BlockedStep)
+			if (step is GatherStep { Source: NpcSource { IsRare: true } })
+				grind ??= step;
+			else if (step is not BlockedStep)
 				return step;
 		}
-		return PlanStep.Blocked;
+		return grind ?? PlanStep.Blocked;
 	}
 
 	static PlanStep PlanStation(Context context, IEnumerable<int> stationItems, int depth)
@@ -98,7 +135,7 @@ public static class ProgressionPlanner
 	static PlanStep Resolve(Context context, int itemType, int amount, int depth)
 	{
 		var avatar = context.Bot.Avatar;
-		int have = Inventory.Count(avatar, itemType);
+		int have = Inventory.Count(avatar, itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
 			return null;
 		int stored = BaseStorage.Count(context.Bot.Faction, itemType);
@@ -142,7 +179,7 @@ public static class ProgressionPlanner
 		foreach (var required in recipe.requiredItem)
 		{
 			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
-			int have = Inventory.CountAny(avatar, accepted);
+			int have = Inventory.CountAny(avatar, accepted) + accepted.Sum(type => Equipment.WornCount(avatar, type));
 			if (have >= required.stack)
 				continue;
 			foreach (int candidate in accepted.OrderByDescending(type => Inventory.Count(avatar, type)))

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using AutoTerraMod.Common.Bots;
 using Terraria;
@@ -60,7 +61,23 @@ public static class Equipment
 			? 0
 			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5;
 
-	public static void EquipBestAccessories(Player avatar)
+	public static int WornCount(Player avatar, int itemType) =>
+		avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Count(item => item.type == itemType);
+
+	public static void UnequipIngredients(Player avatar, Recipe recipe)
+	{
+		foreach (var required in recipe.requiredItem)
+		{
+			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
+			for (int slot = FirstAccessorySlot; slot <= LastAccessorySlot && Inventory.CountAny(avatar, accepted) < required.stack; slot++)
+			{
+				if (accepted.Contains(avatar.armor[slot].type) && Inventory.Add(avatar, avatar.armor[slot].Clone()).IsAir)
+					avatar.armor[slot].TurnToAir();
+			}
+		}
+	}
+
+	public static void EquipBestAccessories(Player avatar, ICollection<int> reserved)
 	{
 		for (int armorSlot = FirstAccessorySlot; armorSlot <= LastAccessorySlot; armorSlot++)
 		{
@@ -71,7 +88,7 @@ public static class Equipment
 			for (int slot = 0; slot < Inventory.StorageSlots; slot++)
 			{
 				var candidate = avatar.inventory[slot];
-				int score = AccessoryScore(candidate);
+				int score = reserved.Contains(candidate.type) ? 0 : AccessoryScore(candidate);
 				if (score > equippedScore && !avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Any(worn => worn.type == candidate.type))
 				{
 					equippedScore = score;

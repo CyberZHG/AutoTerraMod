@@ -53,8 +53,8 @@ public sealed class HuntTask : BotTask
 		wanderDirection = Main.rand.NextBool() ? 1 : -1;
 		huntingGround = null;
 		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
-		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } } && !Grounds.IsInside(knowledge, ground, Bot.CenterTile))
-			huntingGround = Grounds.PickSpot(knowledge, ground, Bot.CenterTile);
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } source } && (source.Underground || !Grounds.IsInside(knowledge, ground, Bot.CenterTile)))
+			huntingGround = source.Underground ? Grounds.PickUndergroundSpot(knowledge, ground) : Grounds.PickSpot(knowledge, ground, Bot.CenterTile);
 	}
 
 	public override void Tick()
@@ -66,9 +66,8 @@ public sealed class HuntTask : BotTask
 		}
 		if (huntingGround is Vector2 ground)
 		{
-			Bot.Motor.MoveTo(ground, 48f);
-			if (Bot.Motor.HasArrived || Bot.Motor.IsStuck)
-				IsFinished = true;
+			if (!TravelOrTunnel(ground, 48f) || Bot.Motor.HasArrived)
+				huntingGround = null;
 			return;
 		}
 		int x = Utils.Clamp(Bot.CenterTile.X + wanderDirection * WanderTiles, 50, Main.maxTilesX - 50);

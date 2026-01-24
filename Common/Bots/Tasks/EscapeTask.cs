@@ -18,8 +18,6 @@ public sealed class EscapeTask : BotTask
 	const int SurfaceStepTiles = 8;
 	const int OpenGroundTrip = 30;
 
-	static readonly int[] RecallItems = { ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone, ItemID.RecallPotion };
-
 	Vector2 destination;
 	Vector2 start;
 	bool headingForSurface;
@@ -39,7 +37,7 @@ public sealed class EscapeTask : BotTask
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
 		climbStartedAt = 0;
-		if (!Bot.Brain.OnExpedition && TryRecall())
+		if (!Bot.Brain.OnExpedition && TryRecallHome())
 		{
 			Finish();
 			return;
@@ -98,21 +96,5 @@ public sealed class EscapeTask : BotTask
 		Bot.Motor.ClimbingStraightUp = false;
 		IsFinished = true;
 		Bot.Watchdog.EscapeFinished();
-	}
-
-	bool TryRecall()
-	{
-		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
-		var body = Bot.Npc;
-		if (recall == null || body == null)
-			return false;
-		if (recall.consumable)
-			Inventory.ConsumeOne(Avatar, recall);
-		SoundEngine.PlaySound(SoundID.Item6, body.Center);
-		var home = BotWorldSystem.RespawnFeet(Bot);
-		body.position = home - new Vector2(body.width / 2f, body.height);
-		body.velocity = Vector2.Zero;
-		BotDiagnostics.Log(Bot, $"used {recall.Name} to return home");
-		return true;
 	}
 }

@@ -52,7 +52,7 @@ public static class HouseInspector
 		var probe = structure.InsideProbe;
 		if (!WorldGen.StartRoomCheck(probe.X, probe.Y))
 			return false;
-		if (structure.Purpose == StructurePurpose.Storage)
+		if (structure.Purpose is StructurePurpose.Storage or StructurePurpose.Workshop)
 			return true;
 		if (!WorldGen.RoomNeeds(NPCID.Guide))
 			return false;

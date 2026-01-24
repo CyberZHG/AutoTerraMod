@@ -48,4 +48,8 @@ public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int,
 	public bool Accepts(int x, int y) => Accept?.Invoke(x, y) ?? true;
 }
 
-public sealed record NpcSource(ISet<int> NpcTypes, World.Landmark? Ground = null) : ResourceSource;
+public sealed record NpcSource(ISet<int> NpcTypes, World.Landmark? Ground = null) : ResourceSource
+{
+	public bool IsRare { get; init; }
+	public bool Underground { get; init; }
+}

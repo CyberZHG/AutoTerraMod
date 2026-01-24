@@ -130,6 +130,18 @@ public static class Grounds
 		return null;
 	}
 
+	const int UndergroundHuntMinDepth = 30;
+	const int UndergroundHuntMaxDepth = 200;
+
+	public static Vector2? PickUndergroundSpot(FactionKnowledge knowledge, Landmark ground)
+	{
+		if (knowledge.SpanOf(ground) is not var (minX, maxX))
+			return null;
+		int x = Main.rand.Next(minX, maxX + 1);
+		int y = (int)Main.rockLayer + Main.rand.Next(UndergroundHuntMinDepth, UndergroundHuntMaxDepth);
+		return new Vector2(x * 16f, y * 16f);
+	}
+
 	public static Vector2? PickSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
 		if (knowledge.LandmarkOf(ground) is not Point anchor || knowledge.SpanOf(ground) is not var (minX, maxX))
