@@ -72,6 +72,8 @@ public static class ResourceSources
 			return ForageSource(itemType, forage.tileType);
 		if (RareDrops.TryGetValue(itemType, out var rare))
 			return rare;
+		if (itemType == ItemID.SoulofFlight)
+			return SkySoul;
 		if (BiomeSouls.TryGetValue(itemType, out var soul))
 			return soulSources.TryGetValue(itemType, out var cachedSoul) ? cachedSoul : soulSources[itemType] = new NpcSource(NpcsLivingIn(soul.bestiaryKeys), soul.ground()) { Underground = true };
 		if (FurnitureLoot.TryGetValue(itemType, out var furniture))
@@ -153,6 +155,8 @@ public static class ResourceSources
 	};
 
 	static readonly Dictionary<int, NpcSource> soulSources = new();
+
+	static readonly NpcSource SkySoul = new(new HashSet<int> { NPCID.WyvernHead }) { Sky = true };
 
 	static HashSet<int> NpcsLivingIn(string[] bestiaryKeys)
 	{

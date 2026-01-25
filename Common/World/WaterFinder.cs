@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
@@ -54,6 +55,40 @@ public static class WaterFinder
 		}
 		cache[anchor] = (Main.GameUpdateCount, best);
 		return best;
+	}
+
+	const int PondCandidates = 40;
+
+	public static Point? NearestPond(Point center, int radius, int minimumSize)
+	{
+		var candidates = new List<Point>();
+		for (int x = center.X - radius; x <= center.X + radius; x++)
+		{
+			for (int y = center.Y - radius; y <= center.Y + radius; y++)
+			{
+				if (WorldGen.InWorld(x, y, 5) && IsWater(x, y) && !IsWater(x, y - 1) && !TileQuery.IsSolid(x, y - 1))
+					candidates.Add(new Point(x, y));
+			}
+		}
+		return candidates.OrderBy(tile => WorldScan.DistanceSq(center, tile)).Take(PondCandidates)
+			.Cast<Point?>().FirstOrDefault(tile => PondSize(tile.Value, minimumSize) >= minimumSize);
+	}
+
+	public static int PondSize(Point surface, int cap)
+	{
+		var seen = new HashSet<Point> { surface };
+		var frontier = new Queue<Point>();
+		frontier.Enqueue(surface);
+		while (frontier.Count > 0 && seen.Count < cap)
+		{
+			var tile = frontier.Dequeue();
+			foreach (var next in new[] { new Point(tile.X + 1, tile.Y), new Point(tile.X - 1, tile.Y), new Point(tile.X, tile.Y + 1), new Point(tile.X, tile.Y - 1) })
+			{
+				if (!seen.Contains(next) && WorldGen.InWorld(next.X, next.Y, 5) && IsWater(next.X, next.Y) && seen.Add(next))
+					frontier.Enqueue(next);
+			}
+		}
+		return seen.Count;
 	}
 
 	public static Point? NearestLavaSurface(Point center, int radius) => NearestLiquidSurface(center, radius, LiquidID.Lava);

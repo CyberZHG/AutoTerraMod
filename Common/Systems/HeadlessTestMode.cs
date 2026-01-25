@@ -143,6 +143,7 @@ public sealed class HeadlessTestMode : ModSystem
 		UpgradeScenarios.Prepare();
 		WarScenario.Prepare();
 		TownScenario.Prepare();
+		FishingScenario.Prepare();
 		if (Scenario == null || !BossScenarios.TryGetValue(Scenario, out var scenario))
 			return;
 		foreach (var faction in BotWorldSystem.Factions)

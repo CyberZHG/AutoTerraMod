@@ -11,7 +11,7 @@ namespace AutoTerraMod.Common.Systems;
 
 public sealed class UpgradeScenarios : ModSystem
 {
-	sealed record UpgradeScenario(int[] AlreadyDefeated, (int item, int count)[] Supplies, Func<Bot, bool> Expectation, string ExpectationText);
+	sealed record UpgradeScenario(int[] AlreadyDefeated, (int item, int count)[] Supplies, Func<Bot, bool> Expectation, string ExpectationText, int[] Focus = null);
 
 	static int Pick(Bot bot) => Equipment.BestPower(bot.Avatar, GearKind.Pickaxe);
 
@@ -49,6 +49,15 @@ public sealed class UpgradeScenarios : ModSystem
 			},
 			bot => bot.Avatar.armor.Any(item => item.type == ItemID.AnkhShield) || Inventory.Count(bot.Avatar, ItemID.AnkhShield) > 0,
 			"an Ankh Shield assembled at a Tinkerer's Workshop"),
+		["flight"] = new(AfterMechs,
+			new (int, int)[]
+			{
+				(ItemID.LifeCrystal, 15), (ItemID.GreaterHealingPotion, 30), (ItemID.Megashark, 1), (ItemID.CrystalBullet, 3000),
+				(ItemID.AdamantiteMask, 1), (ItemID.AdamantiteBreastplate, 1), (ItemID.AdamantiteLeggings, 1),
+				(ItemID.DirtBlock, 400), (ItemID.WoodPlatform, 300), (ItemID.SoulofLight, 25), (ItemID.Feather, 10), (ItemID.MythrilAnvil, 1)
+			},
+			bot => bot.Avatar.armor.Any(item => item.type is ItemID.AngelWings or ItemID.DemonWings) || Inventory.Count(bot.Avatar, ItemID.AngelWings) > 0,
+			"angel wings from souls of flight farmed in the sky", new int[] { ItemID.AngelWings }),
 		["upgrade-hallowed"] = new(AfterMechs,
 			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
@@ -56,6 +65,8 @@ public sealed class UpgradeScenarios : ModSystem
 	};
 
 	public static bool GearFirst => Active != null;
+
+	public static int[] Focus => Active?.Focus;
 
 	static UpgradeScenario Active => HeadlessTestMode.Scenario is string name && Scenarios.TryGetValue(name, out var scenario) ? scenario : null;
 
@@ -131,7 +142,7 @@ public sealed class UpgradeScenarios : ModSystem
 			return;
 		var logger = ModContent.GetInstance<AutoTerraMod>().Logger;
 		foreach (var bot in BotWorldSystem.Bots)
-			logger.Info($"upgrade report {bot.Faction.Name}/{bot.Name}: pick={Pick(bot)} weapon={bot.Hands.BestWeapon()?.Name ?? "-"} armor=[{string.Join(", ", bot.Avatar.armor.Take(3).Where(item => !item.IsAir).Select(item => item.Name))}] defense={bot.Avatar.statDefense} met={scenario.Expectation(bot)}");
+			logger.Info($"upgrade report {bot.Faction.Name}/{bot.Name}: pick={Pick(bot)} weapon={bot.Hands.BestWeapon()?.Name ?? "-"} armor=[{string.Join(", ", bot.Avatar.armor.Take(3).Where(item => !item.IsAir).Select(item => item.Name))}] defense={bot.Avatar.statDefense} flightSouls={Inventory.Count(bot.Avatar, ItemID.SoulofFlight)} met={scenario.Expectation(bot)}");
 		if (BotWorldSystem.Bots.All(scenario.Expectation))
 		{
 			passed = true;

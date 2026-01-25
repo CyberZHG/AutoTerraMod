@@ -40,7 +40,7 @@ public sealed class Personality
 {
 	public CombatStyle Style { get; init; }
 	public BuildingTaste Taste { get; init; }
-	public Aspiration Aspiration { get; init; }
+	public Aspiration Aspiration { get; set; }
 	public float Mining { get; init; }
 	public float Exploring { get; init; }
 	public float Building { get; init; }

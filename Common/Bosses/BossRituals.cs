@@ -90,7 +90,7 @@ public static class BossRituals
 	const int ShoreInset = 3;
 	const int WorldEdgeMargin = 40;
 
-	static Vector2? Shoreline(Bot bot)
+	public static Vector2? Shoreline(Bot bot)
 	{
 		if (BotWorldSystem.KnowledgeOf(bot.Faction).SpanOf(Landmark.Ocean) is not var (minX, maxX))
 			return null;

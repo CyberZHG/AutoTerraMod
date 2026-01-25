@@ -68,6 +68,19 @@ public static class Junk
 		}
 	}
 
+	public static bool MakeRoomFor(Bot bot, Item incoming)
+	{
+		var planned = bot.Brain.PlannedItemTypes;
+		var cheapest = Kit.ItemsToStore(bot)
+			.Where(item => item.type != incoming.type && !planned.Contains(item.type))
+			.MinBy(item => (long)item.value * item.stack);
+		if (cheapest == null)
+			return false;
+		BotDiagnostics.Log(bot, $"trashed {cheapest.Name} x{cheapest.stack} to make room for {incoming.Name}");
+		cheapest.TurnToAir();
+		return Inventory.HasRoomFor(bot.Avatar, incoming);
+	}
+
 	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
 
 	static readonly HashSet<int> RitualItems = new()
@@ -75,7 +88,7 @@ public static class Junk
 		ItemID.EmpressButterfly, ItemID.TruffleWorm, ItemID.LihzahrdPowerCell, ItemID.TempleKey, ItemID.GuideVoodooDoll, ItemID.ClothierVoodooDoll
 	};
 
-	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0 || RitualItems.Contains(item.type);
+	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0 || RitualItems.Contains(item.type) || item.questItem;
 
 	static bool IsCheapClutter(Item item) =>
 		!IsBossSummon(item) && !item.material && item.damage <= 0 && item.createTile < 0 && item.createWall <= 0 && !item.accessory

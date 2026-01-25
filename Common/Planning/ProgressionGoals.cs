@@ -325,6 +325,24 @@ public sealed class OwnGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
 }
 
+public sealed class AspirationGoal : ProgressionGoal
+{
+	readonly ProgressionGoal inner;
+	readonly Aspiration aspiration;
+
+	public AspirationGoal(Aspiration aspiration, ProgressionGoal inner)
+	{
+		this.aspiration = aspiration;
+		this.inner = inner;
+	}
+
+	public ProgressionGoal Inner => inner;
+	public override bool AppliesTo(Bot bot) => bot.Personality.Aspiration == aspiration && inner.AppliesTo(bot);
+	public override string Describe() => inner.Describe();
+	public override bool IsMet(Bot bot) => inner.IsMet(bot);
+	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
+}
+
 public sealed class GatedGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -428,6 +446,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.MoltenFury },
 			staffs: new int[] { ItemID.Flamelash },
 			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
+		goals.Add(new AspirationGoal(Aspiration.Angler, new OwnGoal(ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher, ItemID.WoodFishingPole)));
 		int hardmodeStart = goals.Count;
 		goals.Add(new SmashAltarsGoal());
 		AddOreTier(goals,
@@ -474,6 +493,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.ChlorophyteShotbow },
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
+		goals.Add(new OwnGoal(ItemID.AngelWings, ItemID.DemonWings));
 		goals.Add(new OwnGoal(ItemID.TerrasparkBoots));
 		goals.Add(new OwnGoal(ItemID.AnkhShield));
 		goals.Add(new OwnGoal(ItemID.CellPhone));
@@ -498,6 +518,8 @@ public static class ProgressionGoals
 			goals.RemoveAll(gear.Contains);
 			goals.InsertRange(0, gear);
 		}
+		if (UpgradeScenarios.Focus is int[] focus)
+			goals.Insert(0, new OwnGoal(focus));
 		if (HeadlessTestMode.BossFirst)
 		{
 			var boss = goals.OfType<BossGoal>().First();
@@ -514,6 +536,7 @@ public static class ProgressionGoals
 	internal static ProgressionGoal Unwrap(ProgressionGoal goal) => goal switch
 	{
 		GatedGoal gated => Unwrap(gated.Inner),
+		AspirationGoal aspiration => Unwrap(aspiration.Inner),
 		StyleGoal style => Unwrap(style.Inner),
 		_ => goal
 	};

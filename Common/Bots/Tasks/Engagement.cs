@@ -91,7 +91,7 @@ public static class Engagement
 		if (bot.Motor.IsStuck)
 		{
 			bot.Motor.Stop();
-			if (!Bosses.BossCatalog.IsBossPart(target))
+			if (!Bosses.BossCatalog.IsBossPart(target) && !CanShootFromHere(bot, target))
 			{
 				bot.IgnoreTarget(target);
 				return;
@@ -235,6 +235,14 @@ public static class Engagement
 			bot.Motor.RequestJump();
 		else
 			bot.Motor.MoveTo(bot.Center + new Vector2((bot.Center.X >= boss.Center.X ? 1 : -1) * 96f, 0f), 8f);
+	}
+
+	static bool CanShootFromHere(Bot bot, NPC target)
+	{
+		var body = bot.Npc;
+		return bot.Hands.BestWeapon() is Item weapon && BotHands.IsProjectileWeapon(weapon)
+			&& Vector2.Distance(body.Center, target.Center) < MaxFireRange
+			&& Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height);
 	}
 
 	static Vector2 BossStandingSpot(NPC body, NPC boss)

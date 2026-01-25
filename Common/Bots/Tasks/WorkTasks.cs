@@ -375,7 +375,9 @@ public sealed class PickupTask : BotTask
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || unreachable.Contains(i) || !Inventory.HasRoomFor(Avatar, item) || Junk.IsUnwanted(Bot, item))
+			if (!item.active || unreachable.Contains(i) || Junk.IsUnwanted(Bot, item))
+				continue;
+			if (!Inventory.HasRoomFor(Avatar, item) && !Bot.Brain.PlannedItemTypes.Contains(item.type))
 				continue;
 			float distance = Vector2.Distance(item.Center, Bot.Center);
 			if (distance < nearestDistance)
@@ -384,6 +386,8 @@ public sealed class PickupTask : BotTask
 				nearestDistance = distance;
 			}
 		}
+		if (nearest >= 0 && !Inventory.HasRoomFor(Avatar, Main.item[nearest]) && !Junk.MakeRoomFor(Bot, Main.item[nearest]))
+			return -1;
 		return nearest;
 	}
 

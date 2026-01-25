@@ -386,6 +386,7 @@ public sealed class BotVitals
 	}
 
 	const int DungeonTileThreshold = 250;
+	const double SkyFraction = 0.35;
 
 	void ApplyBiomeZones()
 	{
@@ -401,6 +402,10 @@ public sealed class BotVitals
 		var center = Avatar.Center.ToTileCoordinates();
 		Avatar.ZoneDungeon = scene.DungeonTileCount >= DungeonTileThreshold && tileY > Main.worldSurface && Main.wallDungeon[Main.tile[center.X, center.Y].WallType];
 		Avatar.ZoneUnderworldHeight = tileY > Main.UnderworldLayer;
+		Avatar.ZoneRockLayerHeight = tileY <= Main.UnderworldLayer && tileY > Main.rockLayer;
+		Avatar.ZoneDirtLayerHeight = tileY <= Main.rockLayer && tileY > Main.worldSurface;
+		Avatar.ZoneOverworldHeight = tileY <= Main.worldSurface && tileY > Main.worldSurface * SkyFraction;
+		Avatar.ZoneSkyHeight = tileY <= Main.worldSurface * SkyFraction;
 		Avatar.ZoneBeach = WorldGen.oceanDepths(center.X, center.Y);
 		Avatar.ZoneLihzhardTemple = Main.tile[center.X, center.Y].WallType == WallID.LihzahrdBrickUnsafe;
 	}
