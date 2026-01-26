@@ -26,7 +26,7 @@ public sealed class BuyTask : BotTask
 	public override void Tick()
 	{
 		int index = NPC.FindFirstNPC(step.SellerType);
-		if (index < 0 || Shops.Offer(step.ItemType) is not var (seller, price))
+		if (index < 0 || Shops.Offer(Bot, step.ItemType) is not var (seller, price))
 		{
 			IsFinished = true;
 			return;

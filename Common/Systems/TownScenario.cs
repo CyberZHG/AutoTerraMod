@@ -12,12 +12,22 @@ public sealed class TownScenario : ModSystem
 	const int CaptiveOffset = 15;
 	const int ReportIntervalTicks = 3600;
 
-	static bool Active => HeadlessTestMode.Scenario == "town";
+	static bool Active => HeadlessTestMode.Scenario is "town" or "pylon";
+
+	static readonly int[] Townsfolk = { NPCID.Merchant, NPCID.Nurse, NPCID.Dryad };
 
 	public static void Prepare()
 	{
 		if (!Active)
 			return;
+		if (HeadlessTestMode.Scenario == "pylon")
+		{
+			foreach (var faction in BotWorldSystem.Factions)
+			{
+				foreach (int type in Townsfolk.Where(type => !Main.npc.Any(npc => npc.active && npc.type == type && Vector2.Distance(npc.Center, faction.BaseCenter) < 16f * 60f)))
+					NPC.NewNPC(new EntitySource_WorldEvent(), (int)faction.BaseCenter.X, (int)faction.BaseCenter.Y, type);
+			}
+		}
 		SpawnCaptives();
 		foreach (var bot in BotWorldSystem.Bots)
 			HeadlessTestMode.Give(bot, ItemID.GoldCoin, 30);
@@ -46,7 +56,7 @@ public sealed class TownScenario : ModSystem
 		var captives = Main.npc.Where(npc => npc.active && Bots.Tasks.RescueTask.RescuedForms.ContainsKey(npc.type)).Select(npc => $"{npc.TypeName} at {npc.Center.ToTileCoordinates()}");
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"town captives: [{string.Join(", ", captives)}]");
 		var towns = Main.npc.Where(npc => npc.active && npc.townNPC).Select(npc => $"{npc.TypeName}{(npc.homeless ? " (homeless)" : $" home {npc.homeTileX},{npc.homeTileY}")}");
-		var workshops = BotWorldSystem.Factions.Select(faction => $"{faction.Name} workshop={Planning.Stations.BaseHas(faction, TileID.TinkerersWorkbench)}");
+		var workshops = BotWorldSystem.Factions.Select(faction => $"{faction.Name} workshop={Planning.Stations.BaseHas(faction, TileID.TinkerersWorkbench)} pylon={Planning.Stations.BaseHas(faction, TileID.TeleportationPylon)}");
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"town report: [{string.Join(", ", towns)}] {string.Join(", ", workshops)}");
 	}
 }

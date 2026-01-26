@@ -198,7 +198,7 @@ public static class ProgressionPlanner
 
 	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
 	{
-		if (Shops.Offer(itemType) is not var (seller, price))
+		if (Shops.Offer(bot, itemType) is not var (seller, price))
 			return PlanStep.Blocked;
 		long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
 		return coins >= (long)price * amount ? new BuyStep(itemType, amount, seller.type) : PlanStep.Blocked;

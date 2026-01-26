@@ -28,20 +28,51 @@ public static class Shops
 		return sellers;
 	}
 
-	public static int Price(Item item) => item.shopCustomPrice ?? item.value;
-
-	public static (NPC seller, int price)? Offer(int itemType)
+	public static (NPC seller, int price)? Offer(Bots.Bot bot, int itemType)
 	{
 		if (!Sellers().TryGetValue(itemType, out var offers))
 			return null;
 		foreach (var (npcType, entry) in offers)
 		{
 			int index = NPC.FindFirstNPC(npcType);
-			if (index < 0 || !entry.ConditionsMet())
+			if (index < 0)
 				continue;
-			return (Main.npc[index], Price(entry.Item));
+			var seller = Main.npc[index];
+			using (new ShopperScope(bot.Avatar, seller))
+			{
+				if (!entry.ConditionsMet())
+					continue;
+				double adjustment = bot.Avatar.currentShoppingSettings.PriceAdjustment;
+				return (seller, (int)System.Math.Round((entry.Item.shopCustomPrice ?? entry.Item.value) * adjustment));
+			}
 		}
 		return null;
+	}
+
+	readonly struct ShopperScope : System.IDisposable
+	{
+		readonly Player shopper;
+		readonly int previousLocalPlayer;
+		readonly Microsoft.Xna.Framework.Vector2 previousPosition;
+		readonly Systems.AvatarPresence presence;
+
+		public ShopperScope(Player shopper, NPC seller)
+		{
+			this.shopper = shopper;
+			previousLocalPlayer = Main.myPlayer;
+			previousPosition = shopper.position;
+			presence = Systems.AvatarPresence.Enter();
+			shopper.Center = seller.Center;
+			Main.myPlayer = shopper.whoAmI;
+			shopper.currentShoppingSettings = Main.ShopHelper.GetShoppingSettings(shopper, seller);
+		}
+
+		public void Dispose()
+		{
+			Main.myPlayer = previousLocalPlayer;
+			shopper.position = previousPosition;
+			presence.Dispose();
+		}
 	}
 
 	public static bool IsSold(int itemType) => Sellers().ContainsKey(itemType);

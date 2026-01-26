@@ -407,7 +407,9 @@ public static class ProgressionGoals
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),
 			new StationGoal(TileID.Anvils, ItemID.IronAnvil, ItemID.LeadAnvil),
-			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop)
+			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop),
+			new StationGoal(TileID.TeleportationPylon, ItemID.TeleportationPylonPurity, ItemID.TeleportationPylonSnow, ItemID.TeleportationPylonDesert,
+				ItemID.TeleportationPylonJungle, ItemID.TeleportationPylonOcean, ItemID.TeleportationPylonHallow, ItemID.TeleportationPylonUnderground, ItemID.TeleportationPylonMushroom)
 		};
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
