@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using AutoTerraMod.Content.NPCs;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -157,11 +158,24 @@ public sealed class BotVitals
 		}
 	}
 
+	void RecountOwnedProjectiles()
+	{
+		System.Array.Clear(Avatar.ownedProjectileCounts);
+		Avatar.slotsMinions = 0f;
+		Avatar.numMinions = 0;
+		foreach (var projectile in Main.projectile)
+		{
+			if (projectile.active && projectile.owner == Avatar.whoAmI)
+				Avatar.ownedProjectileCounts[projectile.type]++;
+		}
+	}
+
 	void RefreshVanillaStats()
 	{
 		try
 		{
 			Avatar.ResetEffects();
+			RecountOwnedProjectiles();
 			Avatar.UpdateBuffs(Avatar.whoAmI);
 			Avatar.UpdateEquips(Avatar.whoAmI);
 			Avatar.UpdateArmorSets(Avatar.whoAmI);

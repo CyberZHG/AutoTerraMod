@@ -450,6 +450,7 @@ public static class ProgressionGoals
 			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
 		goals.Add(new AspirationGoal(Aspiration.Angler, new OwnGoal(ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher, ItemID.WoodFishingPole)));
 		int hardmodeStart = goals.Count;
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon));
 		goals.Add(new SmashAltarsGoal());
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.CobaltPickaxe, ItemID.PalladiumPickaxe },
@@ -461,6 +462,7 @@ public static class ProgressionGoals
 				(ItemID.CobaltHelmet, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltMask, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltHat, ItemID.CobaltBreastplate, ItemID.CobaltLeggings),
 				(ItemID.PalladiumMask, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHelmet, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHeadgear, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings)
 			});
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.SpiderStaff), CombatStyle.Summon));
 		goals.Add(new StationGoal(TileID.MythrilAnvil, ItemID.MythrilAnvil, ItemID.OrichalcumAnvil));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.MythrilPickaxe, ItemID.OrichalcumPickaxe },
@@ -489,6 +491,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.HallowedRepeater },
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves) });
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.OpticStaff), CombatStyle.Summon));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.ChlorophytePickaxe },
 			swords: new int[] { ItemID.ChlorophyteClaymore, ItemID.ChlorophyteSaber },

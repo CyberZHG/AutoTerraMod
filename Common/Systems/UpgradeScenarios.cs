@@ -58,6 +58,10 @@ public sealed class UpgradeScenarios : ModSystem
 			},
 			bot => bot.Avatar.armor.Any(item => item.type is ItemID.AngelWings or ItemID.DemonWings) || Inventory.Count(bot.Avatar, ItemID.AngelWings) > 0,
 			"angel wings from souls of flight farmed in the sky", new int[] { ItemID.AngelWings }),
+		["summoner"] = new(PreHardmode,
+			new (int, int)[] { (ItemID.ImpStaff, 1), (ItemID.ManaCrystal, 5), (ItemID.HealingPotion, 20), (ItemID.LifeCrystal, 10), (ItemID.MoltenHelmet, 1), (ItemID.MoltenBreastplate, 1), (ItemID.MoltenGreaves, 1) },
+			bot => bot.Avatar.ownedProjectileCounts[ProjectileID.FlyingImp] > 0,
+			"an imp minion fighting beside every bot"),
 		["upgrade-hallowed"] = new(AfterMechs,
 			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
@@ -87,6 +91,8 @@ public sealed class UpgradeScenarios : ModSystem
 			HeadlessTestMode.MarkWorldDefeated(boss);
 		foreach (var bot in BotWorldSystem.Bots)
 		{
+			if (HeadlessTestMode.Scenario == "summoner")
+				bot.Personality.Style = CombatStyle.Summon;
 			HeadlessTestMode.Give(bot, ItemID.GrapplingHook, 1);
 			HeadlessTestMode.Give(bot, ItemID.MagicMirror, 1);
 			foreach (var (item, count) in scenario.Supplies)

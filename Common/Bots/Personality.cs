@@ -38,7 +38,7 @@ public enum BuildingTaste
 
 public sealed class Personality
 {
-	public CombatStyle Style { get; init; }
+	public CombatStyle Style { get; set; }
 	public BuildingTaste Taste { get; init; }
 	public Aspiration Aspiration { get; set; }
 	public float Mining { get; init; }

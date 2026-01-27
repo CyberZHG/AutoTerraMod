@@ -15,6 +15,7 @@ public enum GearKind
 	MeleeWeapon,
 	RangedWeapon,
 	MagicWeapon,
+	SummonWeapon,
 	Hook
 }
 
@@ -40,6 +41,7 @@ public static class Equipment
 			GearKind.MeleeWeapon => BotHands.StyleOf(item) == CombatStyle.Melee && !BotHands.IsProjectileWeapon(item) && item.pick == 0 && item.axe == 0 ? item.damage : 0,
 			GearKind.RangedWeapon => BotHands.IsRangedWeapon(item) ? item.damage : 0,
 			GearKind.MagicWeapon => BotHands.IsMagicWeapon(item) ? item.damage : 0,
+			GearKind.SummonWeapon => BotHands.IsSummonWeapon(item) ? item.damage : 0,
 			GearKind.Hook => item.shoot > ProjectileID.None && item.shoot < Main.projHook.Length && Main.projHook[item.shoot] ? (int)BotGrapple.RangeOf(item.shoot) : 0,
 			_ => 0
 		};

@@ -78,6 +78,7 @@ public static class Engagement
 
 	public static void Fight(Bot bot, NPC target)
 	{
+		CommandMinions(bot, target);
 		if (target.aiStyle == WormAiStyle && Bosses.BossCatalog.IsBossPart(target))
 		{
 			FightWorm(bot, target);
@@ -243,6 +244,12 @@ public static class Engagement
 		return bot.Hands.BestWeapon() is Item weapon && BotHands.IsProjectileWeapon(weapon)
 			&& Vector2.Distance(body.Center, target.Center) < MaxFireRange
 			&& Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height);
+	}
+
+	static void CommandMinions(Bot bot, NPC target)
+	{
+		if (bot.Personality.Style == CombatStyle.Summon)
+			bot.Avatar.MinionAttackTargetNPC = target.whoAmI;
 	}
 
 	static Vector2 BossStandingSpot(NPC body, NPC boss)

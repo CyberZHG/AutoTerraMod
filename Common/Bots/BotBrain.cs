@@ -102,6 +102,8 @@ public sealed class BotBrain
 		}
 		bot.Hands.Tick();
 		QuickHeal();
+		if (bot.Personality.Style == CombatStyle.Summon && bot.Hands.BestSummonWeapon() is Item staff)
+			bot.Hands.Summon(staff);
 		bot.Watchdog.Tick();
 		if (--reconsiderTimer <= 0 || current == null || current.IsFinished)
 			Reconsider();

@@ -370,11 +370,40 @@ public sealed class BotHands
 		return CombatStyle.Melee;
 	}
 
+	public static bool IsSummonWeapon(Item item) =>
+		item.damage > 0 && item.shoot > ProjectileID.None && item.buffType > 0 && ContentSamples.ProjectilesByType.TryGetValue(item.shoot, out var minion) && minion.minion;
+
+	public Item BestSummonWeapon() => Inventory.Items(Avatar).Where(IsSummonWeapon).MaxBy(item => item.damage);
+
+	public bool Summon(Item weapon)
+	{
+		float used = Main.projectile.Where(projectile => projectile.active && projectile.minion && projectile.owner == Avatar.whoAmI).Sum(projectile => projectile.minionSlots);
+		if (!Ready || used + ContentSamples.ProjectilesByType[weapon.shoot].minionSlots > Avatar.maxMinions)
+			return false;
+		int manaCost = Avatar.GetManaCost(weapon);
+		if (Avatar.statMana < manaCost)
+			return false;
+		Avatar.statMana -= manaCost;
+		Avatar.AddBuff(weapon.buffType, MinionBuffTicks);
+		var origin = bot.Npc.Center;
+		int index;
+		using (Systems.AvatarPresence.Enter())
+			index = Projectile.NewProjectile(new EntitySource_ItemUse(Avatar, weapon), origin, Vector2.Zero, weapon.shoot, Avatar.GetWeaponDamage(weapon), Avatar.GetWeaponKnockback(weapon), Avatar.whoAmI);
+		var minion = Main.projectile[index];
+		minion.originalDamage = weapon.damage;
+		Bosses.BossCredit.RegisterShot(minion, bot);
+		Swing(weapon, CombinedHooks.TotalUseTime(weapon.useTime, Avatar, weapon), origin);
+		BotDiagnostics.Log(bot, $"summoned {minion.Name} ({used + minion.minionSlots}/{Avatar.maxMinions} slots)");
+		return true;
+	}
+
+	const int MinionBuffTicks = 18000;
+
 	public Item BestProjectileWeapon() => Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsProjectileWeapon(item)).MaxBy(item => item.damage);
 
 	bool IsUsableWeapon(Item item)
 	{
-		if (item.damage <= 0 || item.channel)
+		if (item.damage <= 0 || item.channel || IsSummonWeapon(item))
 			return false;
 		if (IsMeleeSwing(item))
 			return true;

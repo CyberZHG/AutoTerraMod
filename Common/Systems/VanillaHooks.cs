@@ -18,6 +18,35 @@ public sealed class VanillaHooks : ModSystem
 		On_NPC.CheckActive += KeepNpcsNearBotsActive;
 		On_Main.DrawPlayers_AfterProjectiles += DrawBotAvatars;
 		On_Main.UpdateTime_SpawnTownNPCs += LetBotsAttractTownNpcs;
+		On_Projectile.Update += UpdateAvatarProjectiles;
+	}
+
+	const int FirstAvatarSlot = 200;
+	const int MinionKeepAliveTicks = 10;
+
+	static void UpdateAvatarProjectiles(On_Projectile.orig_Update orig, Projectile self, int i)
+	{
+		if (!BotWorldSystem.IsRunning || self.owner < FirstAvatarSlot || self.owner >= Main.maxPlayers)
+		{
+			orig(self, i);
+			return;
+		}
+		int localPlayer = Main.myPlayer;
+		using (Perf.Measure(PerfSection.VanillaHooks))
+		using (AvatarPresence.Enter())
+		{
+			Main.myPlayer = self.owner;
+			try
+			{
+				orig(self, i);
+				if (self.active && self.minion && !Main.player[self.owner].dead)
+					self.timeLeft = MinionKeepAliveTicks;
+			}
+			finally
+			{
+				Main.myPlayer = localPlayer;
+			}
+		}
 	}
 
 	static void LetBotsAttractTownNpcs(On_Main.orig_UpdateTime_SpawnTownNPCs orig)
