@@ -62,6 +62,10 @@ public sealed class UpgradeScenarios : ModSystem
 			new (int, int)[] { (ItemID.ImpStaff, 1), (ItemID.ManaCrystal, 5), (ItemID.HealingPotion, 20), (ItemID.LifeCrystal, 10), (ItemID.MoltenHelmet, 1), (ItemID.MoltenBreastplate, 1), (ItemID.MoltenGreaves, 1) },
 			bot => bot.Avatar.ownedProjectileCounts[ProjectileID.FlyingImp] > 0,
 			"an imp minion fighting beside every bot"),
+		["channel"] = new(Hardmode,
+			new (int, int)[] { (ItemID.VortexBeater, 1), (ItemID.LastPrism, 1), (ItemID.ChlorophyteBullet, 2000), (ItemID.ManaCrystal, 9), (ItemID.LifeCrystal, 15), (ItemID.GreaterHealingPotion, 20), (ItemID.GreaterManaPotion, 30) },
+			bot => bot.Hands.BestWeapon()?.type is ItemID.VortexBeater or ItemID.LastPrism && bot.Hands.ShotsFired > 20,
+			"vortex beater and last prism firing at enemies"),
 		["upgrade-hallowed"] = new(AfterMechs,
 			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
@@ -93,6 +97,8 @@ public sealed class UpgradeScenarios : ModSystem
 		{
 			if (HeadlessTestMode.Scenario == "summoner")
 				bot.Personality.Style = CombatStyle.Summon;
+			if (HeadlessTestMode.Scenario == "channel")
+				bot.Personality.Style = bot.Id % 2 == 0 ? CombatStyle.Ranged : CombatStyle.Magic;
 			HeadlessTestMode.Give(bot, ItemID.GrapplingHook, 1);
 			HeadlessTestMode.Give(bot, ItemID.MagicMirror, 1);
 			foreach (var (item, count) in scenario.Supplies)
@@ -148,7 +154,7 @@ public sealed class UpgradeScenarios : ModSystem
 			return;
 		var logger = ModContent.GetInstance<AutoTerraMod>().Logger;
 		foreach (var bot in BotWorldSystem.Bots)
-			logger.Info($"upgrade report {bot.Faction.Name}/{bot.Name}: pick={Pick(bot)} weapon={bot.Hands.BestWeapon()?.Name ?? "-"} armor=[{string.Join(", ", bot.Avatar.armor.Take(3).Where(item => !item.IsAir).Select(item => item.Name))}] defense={bot.Avatar.statDefense} flightSouls={Inventory.Count(bot.Avatar, ItemID.SoulofFlight)} met={scenario.Expectation(bot)}");
+			logger.Info($"upgrade report {bot.Faction.Name}/{bot.Name}: pick={Pick(bot)} weapon={bot.Hands.BestWeapon()?.Name ?? "-"} armor=[{string.Join(", ", bot.Avatar.armor.Take(3).Where(item => !item.IsAir).Select(item => item.Name))}] defense={bot.Avatar.statDefense} shots={bot.Hands.ShotsFired} flightSouls={Inventory.Count(bot.Avatar, ItemID.SoulofFlight)} met={scenario.Expectation(bot)}");
 		if (BotWorldSystem.Bots.All(scenario.Expectation))
 		{
 			passed = true;

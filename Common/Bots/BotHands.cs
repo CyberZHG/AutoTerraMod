@@ -403,7 +403,9 @@ public sealed class BotHands
 
 	bool IsUsableWeapon(Item item)
 	{
-		if (item.damage <= 0 || item.channel || IsSummonWeapon(item))
+		if (item.damage <= 0 || IsSummonWeapon(item))
+			return false;
+		if (item.channel && !IsRangedWeapon(item) && !IsMagicWeapon(item) && !IsYoyo(item))
 			return false;
 		if (IsMeleeSwing(item))
 			return true;
@@ -414,21 +416,28 @@ public sealed class BotHands
 
 	static bool IsMeleeSwing(Item item) =>
 		item.DamageType.CountsAsClass(DamageClass.Melee)
-		&& (item.useStyle == ItemUseStyleID.Swing || item.useStyle == ItemUseStyleID.Rapier);
+		&& (item.useStyle == ItemUseStyleID.Swing || item.useStyle == ItemUseStyleID.Rapier || IsYoyo(item));
+
+	public static bool IsYoyo(Item item) => ItemID.Sets.Yoyo[item.type];
+
+	const float YoyoReach = 16f * 12f;
+
+	const float StylePreference = 5f;
 
 	float PreferenceScore(Item weapon)
 	{
-		float score = Avatar.GetWeaponDamage(weapon) * 60f / Math.Max(1, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon));
+		int cadence = IsProjectileWeapon(weapon) ? CombinedHooks.TotalUseTime(weapon.useTime, Avatar, weapon) : CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon);
+		float score = Avatar.GetWeaponDamage(weapon) * 60f / Math.Max(1, cadence);
 		if (weapon.pick > 0 || weapon.axe > 0 || weapon.hammer > 0)
 			score *= 0.7f;
 		if (IsProjectileWeapon(weapon))
 			score *= 1.2f;
 		if (StyleOf(weapon) == bot.Personality.Style)
-			score *= 1.6f;
+			score *= StylePreference;
 		return score;
 	}
 
-	public static float MeleeReach(Item weapon) => 10f + Math.Max(weapon.width, weapon.height) * weapon.scale;
+	public static float MeleeReach(Item weapon) => IsYoyo(weapon) ? YoyoReach : 10f + Math.Max(weapon.width, weapon.height) * weapon.scale;
 
 	public bool InMeleeReach(NPC target, Item weapon)
 	{
@@ -466,6 +475,8 @@ public sealed class BotHands
 
 	public int ShotsFired { get; set; }
 
+	const int ChannelledBeam = ProjectileID.ShadowBeamFriendly;
+
 	public bool Fire(NPC target, Item weapon)
 	{
 		if (!Ready)
@@ -497,6 +508,8 @@ public sealed class BotHands
 			Avatar.manaRegenDelay = (int)Avatar.maxRegenDelay;
 		}
 
+		if (weapon.channel && IsMagicWeapon(weapon))
+			projectileType = ChannelledBeam;
 		var origin = bot.Npc.Center;
 		int index = Projectile.NewProjectile(new EntitySource_Misc("AutoTerraMod:BotShot"), origin, Aim(origin, target, speed, projectileType), projectileType, damage, knockback, Main.myPlayer);
 		var projectile = Main.projectile[index];
