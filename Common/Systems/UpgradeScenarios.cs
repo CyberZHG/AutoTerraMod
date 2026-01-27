@@ -59,7 +59,7 @@ public sealed class UpgradeScenarios : ModSystem
 			bot => bot.Avatar.armor.Any(item => item.type is ItemID.AngelWings or ItemID.DemonWings) || Inventory.Count(bot.Avatar, ItemID.AngelWings) > 0,
 			"angel wings from souls of flight farmed in the sky", new int[] { ItemID.AngelWings }),
 		["summoner"] = new(PreHardmode,
-			new (int, int)[] { (ItemID.ImpStaff, 1), (ItemID.ManaCrystal, 5), (ItemID.HealingPotion, 20), (ItemID.LifeCrystal, 10), (ItemID.MoltenHelmet, 1), (ItemID.MoltenBreastplate, 1), (ItemID.MoltenGreaves, 1) },
+			new (int, int)[] { (ItemID.ImpStaff, 1), (ItemID.ThornWhip, 1), (ItemID.ManaCrystal, 5), (ItemID.HealingPotion, 20), (ItemID.LifeCrystal, 10), (ItemID.MoltenHelmet, 1), (ItemID.MoltenBreastplate, 1), (ItemID.MoltenGreaves, 1) },
 			bot => bot.Avatar.ownedProjectileCounts[ProjectileID.FlyingImp] > 0,
 			"an imp minion fighting beside every bot"),
 		["channel"] = new(Hardmode,

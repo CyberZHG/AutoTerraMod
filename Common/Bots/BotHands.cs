@@ -415,8 +415,11 @@ public sealed class BotHands
 	}
 
 	static bool IsMeleeSwing(Item item) =>
-		item.DamageType.CountsAsClass(DamageClass.Melee)
-		&& (item.useStyle == ItemUseStyleID.Swing || item.useStyle == ItemUseStyleID.Rapier || IsYoyo(item));
+		(item.DamageType.CountsAsClass(DamageClass.Melee) && (item.useStyle == ItemUseStyleID.Swing || item.useStyle == ItemUseStyleID.Rapier || IsYoyo(item))) || IsWhip(item);
+
+	public static bool IsWhip(Item item) => item.shoot > ProjectileID.None && ProjectileID.Sets.IsAWhip[item.shoot];
+
+	const float WhipReach = 16f * 8f;
 
 	public static bool IsYoyo(Item item) => ItemID.Sets.Yoyo[item.type];
 
@@ -437,7 +440,7 @@ public sealed class BotHands
 		return score;
 	}
 
-	public static float MeleeReach(Item weapon) => IsYoyo(weapon) ? YoyoReach : 10f + Math.Max(weapon.width, weapon.height) * weapon.scale;
+	public static float MeleeReach(Item weapon) => IsYoyo(weapon) ? YoyoReach : IsWhip(weapon) ? WhipReach : 10f + Math.Max(weapon.width, weapon.height) * weapon.scale;
 
 	public bool InMeleeReach(NPC target, Item weapon)
 	{
