@@ -92,6 +92,8 @@ Aspirations: {
 }
 
 Tasks: {
+	Display: 摆放盔甲
+	Decorate: 布置装饰
 	Fish: 钓鱼
 	Buy: 购物
 	Rescue: 解救

@@ -66,13 +66,21 @@ public sealed class UpgradeScenarios : ModSystem
 			new (int, int)[] { (ItemID.VortexBeater, 1), (ItemID.LastPrism, 1), (ItemID.ChlorophyteBullet, 2000), (ItemID.ManaCrystal, 9), (ItemID.LifeCrystal, 15), (ItemID.GreaterHealingPotion, 20), (ItemID.GreaterManaPotion, 30) },
 			bot => bot.Hands.BestWeapon()?.type is ItemID.VortexBeater or ItemID.LastPrism && bot.Hands.ShotsFired > 20,
 			"vortex beater and last prism firing at enemies"),
+		["banners"] = new(PreHardmode,
+			new (int, int)[] { (ItemID.ZombieBanner, 1), (ItemID.SlimeBanner, 1), (ItemID.DemonEyeBanner, 1) },
+			bot => !Inventory.Items(bot.Avatar).Any(item => item.createTile == TileID.Banners),
+			"every banner hung under a ceiling at base"),
+		["collector"] = new(PreHardmode,
+			new (int, int)[] { (ItemID.Mannequin, 1), (ItemID.IronHelmet, 1), (ItemID.IronChainmail, 1), (ItemID.IronGreaves, 1), (ItemID.GoldHelmet, 1), (ItemID.GoldChainmail, 1), (ItemID.GoldGreaves, 1) },
+			bot => !Inventory.Items(bot.Avatar).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail) || bot.Avatar.armor.Take(3).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail) && !Inventory.Items(bot.Avatar).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail),
+			"spare armor sets dressed on mannequins"),
 		["upgrade-hallowed"] = new(AfterMechs,
 			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
 			"pickaxe axe/drax and full hallowed armor")
 	};
 
-	public static bool GearFirst => Active != null;
+	public static bool GearFirst => Active != null && HeadlessTestMode.Scenario is not ("banners" or "collector");
 
 	public static int[] Focus => Active?.Focus;
 
@@ -97,6 +105,10 @@ public sealed class UpgradeScenarios : ModSystem
 		{
 			if (HeadlessTestMode.Scenario == "summoner")
 				bot.Personality.Style = CombatStyle.Summon;
+			if (HeadlessTestMode.Scenario == "collector")
+				bot.Personality.Aspiration = Aspiration.Collector;
+			if (HeadlessTestMode.Scenario == "banners")
+				bot.Personality.Aspiration = Aspiration.MonsterHunter;
 			if (HeadlessTestMode.Scenario == "channel")
 				bot.Personality.Style = bot.Id % 2 == 0 ? CombatStyle.Ranged : CombatStyle.Magic;
 			HeadlessTestMode.Give(bot, ItemID.GrapplingHook, 1);

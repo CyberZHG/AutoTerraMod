@@ -36,6 +36,8 @@ public static class Kit
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType)
 				|| plannedTypes.Contains(item.type)
+				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
+				|| (Tasks.CollectorTask.CollectsArmor(bot) && !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
 				|| WithinReserve(item, keptByReserve);
 			if (!keep)
 				toStore.Add(item);

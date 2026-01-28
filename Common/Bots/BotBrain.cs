@@ -55,6 +55,8 @@ public sealed class BotBrain
 			new RescueTask(bot),
 			new BuyTask(bot),
 			new FishingTask(bot),
+			new DecorateTask(bot),
+			new CollectorTask(bot),
 			new StoreTask(bot),
 			new DeliverTask(bot),
 			new TidyCampTask(bot),
