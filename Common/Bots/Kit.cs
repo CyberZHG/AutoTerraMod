@@ -37,6 +37,7 @@ public static class Kit
 				|| (ammoType > 0 && item.ammo == ammoType)
 				|| plannedTypes.Contains(item.type)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
+				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
 				|| (Tasks.CollectorTask.CollectsArmor(bot) && !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
 				|| WithinReserve(item, keptByReserve);
 			if (!keep)

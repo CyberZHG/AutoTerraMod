@@ -3,7 +3,7 @@ Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spe
 - Melee, ranged, magic and summoner bots (minions follow their owner and attack its target).
 - Fight every boss from King Slime to Moon Lord: readiness checks, summon rituals (orbs, hellbridge, altar, truffle worm...), credit per faction.
 - Chase end-game gear: Ankh Shield, Terraspark Boots, Cell Phone and style picks (Zenith, Vortex Beater, Last Prism...), farming rare drops and souls where they live; climb sky ladders to hunt wyverns for wings.
-- Rescue town NPCs, house them and buy stations and pylons from their shops; anglers fish and turn in Angler quests; monster hunters hang banners and collectors dress mannequins.
+- Rescue town NPCs, house them and buy stations and pylons from their shops; anglers fish and turn in Angler quests; monster hunters hang banners, collectors dress mannequins, naturalists cage critters.
 - Modes: Race, Cooperate, War (factions fight but never wreck or rob each other's bases).
 Single-player only.
 
@@ -12,6 +12,6 @@ Single-player only.
 - 近战、射手、法师、召唤师四种职业（召唤物跟随主人并攻击其目标）。
 - 挑战从史莱姆王到月亮领主的所有 Boss：评估战力，完成召唤仪式（暗影珠、地狱桥、祭坛、松露虫……），按阵营结算击杀。
 - 追求终局装备：十字章护盾、泰拉闪耀靴、手机及各职业武器饰品（天顶剑、星旋机枪、最后的棱镜……），去对应环境刷稀有掉落和魂；搭天梯打飞龙做翅膀。
-- 解救城镇 NPC，为他们盖房，并从商店购买制作站和传送晶塔；爱钓鱼的角色会钓鱼并提交渔夫任务，怪物猎人挂旗帜，收藏家给人体模型穿套装。
+- 解救城镇 NPC，为他们盖房，并从商店购买制作站和传送晶塔；爱钓鱼的角色会钓鱼并提交渔夫任务，怪物猎人挂旗帜，收藏家给人体模型穿套装，博物学家抓小动物放进笼子。
 - 模式：竞速、合作、敌对（阵营间可互相攻击，但不会破坏或偷取对方基地）。
 仅支持单人模式。

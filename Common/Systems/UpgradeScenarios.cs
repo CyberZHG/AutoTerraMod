@@ -74,13 +74,29 @@ public sealed class UpgradeScenarios : ModSystem
 			new (int, int)[] { (ItemID.Mannequin, 1), (ItemID.IronHelmet, 1), (ItemID.IronChainmail, 1), (ItemID.IronGreaves, 1), (ItemID.GoldHelmet, 1), (ItemID.GoldChainmail, 1), (ItemID.GoldGreaves, 1) },
 			bot => !Inventory.Items(bot.Avatar).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail) || bot.Avatar.armor.Take(3).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail) && !Inventory.Items(bot.Avatar).Any(item => item.type is ItemID.IronChainmail or ItemID.GoldChainmail),
 			"spare armor sets dressed on mannequins"),
+		["naturalist"] = new(PreHardmode,
+			new (int, int)[] { (ItemID.BugNet, 1), (ItemID.Terrarium, 3) },
+			bot => HasCageAtBase(bot.Faction),
+			"a caught critter displayed in a cage at base"),
 		["upgrade-hallowed"] = new(AfterMechs,
 			new (int, int)[] { (ItemID.LifeCrystal, 15), (ItemID.HealingPotion, 20), (ItemID.HallowedBar, 80), (ItemID.SoulofFright, 1), (ItemID.SoulofMight, 1), (ItemID.SoulofSight, 1), (ItemID.MythrilAnvil, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 200 && WearsAny(bot, (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves)),
 			"pickaxe axe/drax and full hallowed armor")
 	};
 
-	public static bool GearFirst => Active != null && HeadlessTestMode.Scenario is not ("banners" or "collector");
+	public static bool GearFirst => Active != null && HeadlessTestMode.Scenario is not ("banners" or "collector" or "naturalist");
+
+	static bool HasCageAtBase(Factions.Faction faction)
+	{
+		var settlement = faction.Settlement;
+		if (settlement == null)
+			return false;
+		for (int x = settlement.Left; x <= settlement.Right; x++)
+			for (int y = settlement.Top; y <= settlement.Floor; y++)
+				if (Main.tile[x, y].HasTile && TileID.Sets.CritterCageLidStyle[Main.tile[x, y].TileType] != -1)
+					return true;
+		return false;
+	}
 
 	public static int[] Focus => Active?.Focus;
 
@@ -105,6 +121,8 @@ public sealed class UpgradeScenarios : ModSystem
 		{
 			if (HeadlessTestMode.Scenario == "summoner")
 				bot.Personality.Style = CombatStyle.Summon;
+			if (HeadlessTestMode.Scenario == "naturalist")
+				bot.Personality.Aspiration = Aspiration.Naturalist;
 			if (HeadlessTestMode.Scenario == "collector")
 				bot.Personality.Aspiration = Aspiration.Collector;
 			if (HeadlessTestMode.Scenario == "banners")
@@ -121,6 +139,12 @@ public sealed class UpgradeScenarios : ModSystem
 		if (HeadlessTestMode.Scenario == "accessories")
 			RemoveTiles(TileID.TinkerersWorkbench);
 		RevealAltars();
+		if (HeadlessTestMode.Scenario == "naturalist")
+		{
+			foreach (var faction in BotWorldSystem.Factions)
+				foreach (int critter in new int[] { NPCID.Bunny, NPCID.Squirrel, NPCID.Bird })
+					NPC.NewNPC(new Terraria.DataStructures.EntitySource_WorldEvent(), (int)faction.BaseCenter.X + Main.rand.Next(-200, 200), (int)faction.BaseCenter.Y - 32, critter);
+		}
 		LogOre(TileID.Cobalt, TileID.Palladium);
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"upgrade scenario '{HeadlessTestMode.Scenario}' prepared; expecting {scenario.ExpectationText}; altars smashed so far {WorldGen.altarCount}");
 	}

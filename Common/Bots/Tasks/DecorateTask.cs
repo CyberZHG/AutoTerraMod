@@ -11,6 +11,7 @@ public sealed class DecorateTask : BotTask
 
 	Item decor;
 	Point? spot;
+	bool hanging;
 
 	public DecorateTask(Bot bot) : base(bot) { }
 
@@ -22,14 +23,17 @@ public sealed class DecorateTask : BotTask
 		bot.Brain.Plan is Planning.IdleStep || !Main.dayTime || Vector2.Distance(bot.Center, bot.Faction.BaseCenter) < NearBase;
 
 	public static bool IsWantedDecor(Bot bot, Item item) =>
-		bot.Personality.Aspiration == Aspiration.MonsterHunter && item.createTile == TileID.Banners;
+		(bot.Personality.Aspiration == Aspiration.MonsterHunter && item.createTile == TileID.Banners)
+		|| (NaturalistTask.StudiesCritters(bot) && NaturalistTask.IsCage(item));
 
 	public override float Evaluate()
 	{
 		decor = Inventory.Items(Avatar).FirstOrDefault(item => IsWantedDecor(Bot, item));
 		if (decor == null || !Leisure(Bot))
 			return 0f;
-		spot = CeilingSpot(decor);
+		var floor = decor.createTile == TileID.Banners ? null : FloorSpot(decor);
+		hanging = floor == null;
+		spot = floor ?? CeilingSpot(decor);
 		if (spot == null)
 			return 0f;
 		Detail = decor.Name;
@@ -53,6 +57,9 @@ public sealed class DecorateTask : BotTask
 		return null;
 	}
 
+	Point? FloorSpot(Item item) =>
+		Planning.Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Bot.Hands.CanPlaceAt(item, candidate.Value));
+
 	public override void Tick()
 	{
 		if (spot is not Point target || decor == null || decor.IsAir)
@@ -60,7 +67,7 @@ public sealed class DecorateTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var below = new Vector2(target.X * 16f + 8f, (target.Y + 3) * 16f);
+		var below = hanging ? new Vector2(target.X * 16f + 8f, (target.Y + 3) * 16f) : target.ToWorldCoordinates();
 		if (Vector2.Distance(Bot.Center, below) > PlaceReach)
 		{
 			if (!TravelOrTunnel(below, PlaceReach * 0.5f))
@@ -71,7 +78,7 @@ public sealed class DecorateTask : BotTask
 		string name = decor.Name;
 		if (Bot.Hands.Place(decor, target))
 		{
-			BotDiagnostics.Log(Bot, $"hung {name} at {target}");
+			BotDiagnostics.Log(Bot, $"put up {name} at {target}");
 			IsFinished = true;
 		}
 	}

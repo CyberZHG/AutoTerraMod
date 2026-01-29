@@ -69,7 +69,7 @@ public static class ProgressionPlanner
 		}
 		foreach (var goal in ladder)
 		{
-			if (ProgressionGoals.Unwrap(goal) is not (GearGoal or OwnGoal) || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+			if (ProgressionGoals.Unwrap(goal) is not (GearGoal or OwnGoal or CageGoal) || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
 			if (IsHandsOn(goal.Plan(bot)) is PlanStep step)
 			{

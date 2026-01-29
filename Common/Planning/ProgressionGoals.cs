@@ -325,6 +325,37 @@ public sealed class OwnGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
 }
 
+public sealed class CageGoal : ProgressionGoal
+{
+	static Dictionary<int, int[]> cagesByCritter;
+
+	public static IReadOnlyList<int> CagesFor(int critterItem) => CagesByCritter().TryGetValue(critterItem, out var cages) ? cages : System.Array.Empty<int>();
+
+	static Dictionary<int, int[]> CagesByCritter() => cagesByCritter ??= Terraria.Main.recipe.Take(Terraria.Recipe.numRecipes)
+		.Where(recipe => recipe.createItem.createTile >= 0 && TileID.Sets.CritterCageLidStyle[recipe.createItem.createTile] != -1)
+		.SelectMany(recipe => recipe.requiredItem.Where(ingredient => !ingredient.IsAir && ingredient.makeNPC > 0).Select(ingredient => (critter: ingredient.type, cage: recipe.createItem.type)))
+		.GroupBy(pair => pair.critter)
+		.ToDictionary(group => group.Key, group => group.Select(pair => pair.cage).Distinct().ToArray());
+
+	IEnumerable<int[]> PendingCages(Bot bot) =>
+		Inventory.Items(bot.Avatar).Select(item => item.type).Distinct()
+			.Where(type => CagesByCritter().ContainsKey(type))
+			.Select(type => CagesByCritter()[type]);
+
+	public override bool IsMet(Bot bot) => !PendingCages(bot).Any();
+
+	public override PlanStep Plan(Bot bot)
+	{
+		foreach (var cages in PendingCages(bot))
+		{
+			var step = ProgressionPlanner.ObtainAny(bot, cages);
+			if (step is not BlockedStep and not IdleStep)
+				return step;
+		}
+		return PlanStep.Blocked;
+	}
+}
+
 public sealed class AspirationGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -449,6 +480,8 @@ public static class ProgressionGoals
 			staffs: new int[] { ItemID.Flamelash },
 			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
 		goals.Add(new AspirationGoal(Aspiration.Collector, new OwnGoal(ItemID.Mannequin)));
+		goals.Add(new AspirationGoal(Aspiration.Naturalist, new OwnGoal(ItemID.BugNet, ItemID.GoldenBugNet)));
+		goals.Add(new AspirationGoal(Aspiration.Naturalist, new CageGoal()));
 		goals.Add(new AspirationGoal(Aspiration.Angler, new OwnGoal(ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher, ItemID.WoodFishingPole)));
 		int hardmodeStart = goals.Count;
 		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon));
