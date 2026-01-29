@@ -30,8 +30,7 @@ public sealed class Settlement
 			Bedrooms.Add(bedroom);
 			nextRight = bedroom.Left;
 		}
-		Workshop = Add(StructurePurpose.Workshop, Storage.Right, WorkshopWidth, floor, RoomInteriorHeight, design.Roof);
-		int nextLeft = Workshop.Right;
+		int nextLeft = Storage.Right;
 		var groundRooms = new List<HouseBlueprint>();
 		for (int i = 0; i < GuestRoomCount; i++)
 		{
@@ -40,6 +39,7 @@ public sealed class Settlement
 			groundRooms.Add(guestRoom);
 			nextLeft = guestRoom.Right;
 		}
+		Workshop = Add(StructurePurpose.Workshop, nextLeft, WorkshopWidth, floor, RoomInteriorHeight, design.Roof);
 		foreach (var ground in groundRooms)
 		{
 			var below = ground;
