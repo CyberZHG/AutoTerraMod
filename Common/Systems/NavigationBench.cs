@@ -584,7 +584,7 @@ public sealed class NavigationBench : ModSystem
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
 		if (!arrived && elapsed < (Cases[caseIndex].InWorld ? WorldTripTimeoutTicks : TimeoutTicks))
 			return;
-		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, 16, 8)}";
+		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
 		BotDiagnostics.LogWorld($"nav bench {Cases[caseIndex].Name}: {verdict}");
 		if (caseIndex + 1 < Cases.Length)
@@ -607,7 +607,11 @@ public sealed class NavigationBench : ModSystem
 	{
 		var feet = Navigation.PathFinder.FeetOf(runner.Npc);
 		var result = Navigation.PathFinder.Find(feet, new Point((int)(goal.X / 16f), (int)((goal.Y + 21f) / 16f)), 1, runner.Motor.Abilities());
-		return $"{result.Nodes.Count} nodes reachesGoal={result.ReachesGoal} [{string.Join(" ", result.Nodes.Take(12).Select(node => $"{node.Feet.X},{node.Feet.Y}:{node.Arrival}"))}] abilities={runner.Motor.Abilities()}";
+		string fresh = $"{result.Nodes.Count} nodes reachesGoal={result.ReachesGoal} [{string.Join(" ", result.Nodes.Take(12).Select(node => $"{node.Feet.X},{node.Feet.Y}:{node.Arrival}"))}] abilities={runner.Motor.Abilities()}";
+		if (!Cases[caseIndex].InWorld)
+			return fresh;
+		var whole = Navigation.PathFinder.FindLongRoute(feet, new Point((int)(goal.X / 16f), (int)((goal.Y + 21f) / 16f)), 1, runner.Motor.Abilities(), 120000);
+		return $"{fresh}; whole route: {whole.Nodes.Count} nodes reachesGoal={whole.ReachesGoal} end={(whole.Nodes.Count > 0 ? whole.Nodes[^1].Feet : feet)} [{string.Join(" ", whole.Nodes.Where((node, i) => i % 8 == 0).Select(node => $"{node.Feet.X},{node.Feet.Y}:{node.Arrival}"))}]";
 	}
 
 	void StartCase(Bot runner, int index)

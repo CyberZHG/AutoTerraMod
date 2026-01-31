@@ -165,7 +165,7 @@ UI: {
 	BossProgress: 世界 Boss {0}/{1}，下一个：{2}
 	AllBossesDefeated: 全部击败
 	Stalled: 已 {0} 秒无进展
-	SettlementProgress: 已建成 {0}/{1} 栋（{2}，{3}）
+	SettlementProgress: 已建成 {0}/{1} 栋（{2}）
 	InventoryOf: "{0} 的背包（只读）"
 	SharingBoosters: 带回营地给队友
 	Respawning: 已阵亡，{0} 秒后复活
@@ -182,8 +182,7 @@ UI: {
 	Task: 任务：{0} {1}
 	Plan: 计划：{0}
 	Gear: 镐：{0}   武器：{1}   手持：{2}
-	Traits: 挖矿 {0}  探索 {1}  建筑 {2}  战斗 {3}  勇气 {4}  合作 {5}
-	Aspiration: 人生目标：{0}   审美：{1}
+	Aspiration: 人生目标：{0}
 	RelationRace: 模式：竞速
 	RelationCooperate: 模式：合作
 	RelationWar: 模式：敌对
@@ -205,12 +204,6 @@ BuildActions: {
 	RenovateWall: 翻新背景墙
 	PlaceBed: 床
 	PlaceChair: 椅子
-}
-
-Tastes: {
-	Rustic: 原木风
-	StoneBrick: 灰砖
-	RedBrick: 红砖
 }
 
 Roofs: {

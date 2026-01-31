@@ -17,6 +17,7 @@ public struct MotorIntent
 	public int ClimbDirection;
 	public int ClimbColumn;
 	public Point? ScaffoldTile;
+	public bool Brake;
 }
 
 public sealed class PathFollower
@@ -76,6 +77,11 @@ public sealed class PathFollower
 			return default;
 		stepTicks++;
 		lastIntent = Execute(body, feet, grounded, path.Nodes[index]);
+		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall))
+		{
+			lastIntent.MoveDirection = 0;
+			lastIntent.Brake = true;
+		}
 		return lastIntent;
 	}
 
@@ -204,6 +210,26 @@ public sealed class PathFollower
 				break;
 		}
 		return intent;
+	}
+
+	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall)
+	{
+		if (intent.Jump || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar || body.wet)
+			return false;
+		int heading = intent.MoveDirection != 0 ? intent.MoveDirection : Math.Sign(body.velocity.X);
+		if (heading == 0)
+			return false;
+		int aheadX = heading > 0 ? feet.X + 2 : feet.X - 1;
+		bool insideNodeFootprint = aheadX >= node.Feet.X && aheadX <= node.Feet.X + 1;
+		return !insideNodeFootprint && DropBelow(aheadX, feet.Y) > maxFall;
+	}
+
+	static int DropBelow(int x, int feetY)
+	{
+		int depth = 0;
+		while (depth <= PathFinder.MaxSafeFall * 4 && !TileQuery.CanStandOn(x, feetY + depth + 1) && Main.tile[x, feetY + depth + 1].LiquidAmount == 0)
+			depth++;
+		return depth;
 	}
 
 	static int HoldTicksForRise(int rise) => rise <= 1 ? 1 : Math.Min(15, (rise * 16 - 21) / 5 + 2);

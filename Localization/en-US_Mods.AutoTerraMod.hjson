@@ -165,7 +165,7 @@ UI: {
 	BossProgress: Bosses defeated {0}/{1} - next: {2}
 	AllBossesDefeated: all defeated
 	Stalled: No progress for {0}s
-	SettlementProgress: "{0}/{1} buildings ({2}, {3})"
+	SettlementProgress: "{0}/{1} buildings ({2})"
 	InventoryOf: "{0}'s inventory (read-only)"
 	SharingBoosters: bringing boosters home
 	Respawning: Dead, respawning in {0}s
@@ -182,8 +182,7 @@ UI: {
 	Task: Task: {0} {1}
 	Plan: Plan: {0}
 	Gear: Pickaxe: {0}   Weapon: {1}   Holding: {2}
-	Traits: Mine {0}  Explore {1}  Build {2}  Fight {3}  Courage {4}  Coop {5}
-	Aspiration: Life goal: {0}   Taste: {1}
+	Aspiration: Life goal: {0}
 	RelationRace: Mode: Race
 	RelationCooperate: Mode: Cooperate
 	RelationWar: Mode: War
@@ -205,12 +204,6 @@ BuildActions: {
 	RenovateWall: renovate background walls
 	PlaceBed: bed
 	PlaceChair: chair
-}
-
-Tastes: {
-	Rustic: rustic wood
-	StoneBrick: gray brick
-	RedBrick: red brick
 }
 
 Roofs: {

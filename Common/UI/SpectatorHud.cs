@@ -93,13 +93,8 @@ public sealed class SpectatorHud : ModSystem
 		var held = avatar.inventory[avatar.selectedItem];
 		var weapon = bot.Hands.BestWeapon();
 		lines.Add((Text("UI.Gear", bot.Hands.BestPickaxe?.Name ?? "-", weapon?.Name ?? "-", held.IsAir ? "-" : held.Name), Color.White));
-		lines.Add((Text("UI.Traits",
-			Percent(traits.Mining), Percent(traits.Exploring), Percent(traits.Building),
-			Percent(traits.Combat), Percent(traits.Courage), Percent(traits.Cooperation)), Color.LightGray));
-		lines.Add((Text("UI.Aspiration", Text($"Aspirations.{traits.Aspiration}"), Text($"Tastes.{traits.Taste}")), Color.LightGray));
+		lines.Add((Text("UI.Aspiration", Text($"Aspirations.{traits.Aspiration}")), Color.LightGray));
 	}
-
-	static string Percent(float value) => $"{(int)(value * 100)}";
 
 	static string DescribePlan(PlanStep plan) => plan switch
 	{
@@ -131,8 +126,7 @@ public sealed class SpectatorHud : ModSystem
 			string house = faction.Settlement == null ? "-" : Text("UI.SettlementProgress",
 				faction.Settlement.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)),
 				faction.Settlement.Structures.Count,
-				Text($"Roofs.{faction.HouseDesign.Roof}"),
-				Text($"Tastes.{faction.HouseDesign.Taste}"));
+				Text($"Roofs.{faction.HouseDesign.Roof}"));
 			lines.Add((Text("UI.FactionLine", faction.Name, alive, members.Count, bestPick, house), faction.Color));
 			lines.Add((Text("UI.FactionBosses", faction.DefeatedBosses.Count, WorldBosses.InProgressionOrder.Count), faction.Color));
 			var challenge = Bosses.BossCredit.NextChallengeFor(faction);

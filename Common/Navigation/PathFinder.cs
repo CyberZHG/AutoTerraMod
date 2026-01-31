@@ -145,7 +145,7 @@ public static class PathFinder
 				best = current;
 			}
 			edges.Clear();
-			Expand(current, abilities, edges);
+			Expand(current, abilities, edges, cameFrom.TryGetValue(current, out var arrival) && arrival.kind == MoveKind.Bridge);
 			foreach (var edge in edges)
 			{
 				if (Math.Abs(edge.To.X - start.X) > searchRadius || Math.Abs(edge.To.Y - start.Y) > searchRadius)
@@ -190,12 +190,13 @@ public static class PathFinder
 		return nodes;
 	}
 
-	static void Expand(Point node, NavigationAbilities abilities, List<Edge> edges)
+	static void Expand(Point node, NavigationAbilities abilities, List<Edge> edges, bool standsOnBridge)
 	{
 		int x = node.X;
 		int y = node.Y;
 		bool onRope = RopeColumn(x, y) >= 0 || RopeColumn(x, y - 1) >= 0;
-		bool supported = Supported(x, y);
+		bool supported = standsOnBridge || Supported(x, y);
+		bool anchored = supported || onRope;
 
 		foreach (int dir in Directions)
 		{
@@ -208,9 +209,9 @@ public static class PathFinder
 				{
 					if (DropLanding(nx, y, abilities.MaxFall) is Point landing)
 						edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
-					else if (abilities.CanRope && abilities.CanBridge && supported && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
+					else if (abilities.CanRope && abilities.CanBridge && anchored && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
 						edges.Add(new Edge(bottom, MoveKind.RopeDown, RopeClimbBaseCost + (bottom.Y - y) * RopeClimbCostPerTile));
-					if (abilities.CanBridge && supported && !Main.tile[BridgeColumn(x, nx), y + 1].HasTile)
+					if (abilities.CanBridge && anchored && !Main.tile[BridgeColumn(x, nx), y + 1].HasTile)
 						edges.Add(new Edge(new Point(nx, y), MoveKind.Bridge, BridgeCost));
 				}
 			}
@@ -218,7 +219,7 @@ public static class PathFinder
 			{
 				edges.Add(new Edge(new Point(nx, y - 1), MoveKind.Walk, 1.5f));
 			}
-			if (abilities.CanDig && supported)
+			if (abilities.CanDig && anchored)
 			{
 				TryDig(edges, abilities, node, new Point(nx, y));
 				TryDig(edges, abilities, node, new Point(nx, y - 1));

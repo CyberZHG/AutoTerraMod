@@ -175,6 +175,7 @@ public sealed class BotMotor
 
 		Run(npc, moveDirection);
 		Jump(npc, wantsJump, jumpHoldTicks);
+		HoldRopeOverDrop(npc, wantsJump);
 		Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
 		npc.spriteDirection = npc.direction;
 		TrackProgress(npc);
@@ -481,12 +482,17 @@ public sealed class BotMotor
 		wantsJump = intent.Jump;
 		if (intent.JumpHoldTicks > 0)
 			jumpHoldTicks = intent.JumpHoldTicks;
+		if (intent.Brake)
+			npc.velocity.X = 0f;
 		TileToDig = intent.DigTile;
 		BridgeTile = intent.BridgeTile;
+		if (BridgeTile != null && npc.velocity.Y == 0f)
+			npc.velocity.X = 0f;
 		ScaffoldTile = intent.ScaffoldTile;
 		WantsToDropThroughPlatforms = intent.DropThroughPlatforms;
 		if (intent.ClimbDirection != 0)
 		{
+			climbingRopeAt = Main.GameUpdateCount;
 			if (intent.ClimbColumn >= 0)
 				npc.position.X = PathFinder.CenterXOf(intent.ClimbColumn) - npc.width / 2f;
 			if (intent.ClimbDirection < 0 && intent.ClimbColumn >= 0 && NextRopeTile(npc, intent.ClimbColumn) is Point rope)
@@ -673,6 +679,19 @@ public sealed class BotMotor
 			return false;
 		RopeTile = new Point(centerX, body.Bottom);
 		return true;
+	}
+
+	uint climbingRopeAt;
+
+	void HoldRopeOverDrop(NPC npc, bool wantsJump)
+	{
+		if (climbingRopeAt == Main.GameUpdateCount || wantsJump || npc.velocity.Y < 0f || !OnRope(npc))
+			return;
+		var body = BodyTiles.Of(npc);
+		if (Math.Min(DropDepth(body.Left, body.Bottom), DropDepth(body.Right, body.Bottom)) <= AffordableFall)
+			return;
+		npc.velocity.Y = 0f;
+		npc.GravityMultiplier = MultipliableFloat.One * 0f;
 	}
 
 	static bool OnRope(NPC npc)

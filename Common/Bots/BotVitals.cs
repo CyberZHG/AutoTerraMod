@@ -34,6 +34,7 @@ public sealed class BotVitals
 	readonly SceneMetrics scene = new();
 	int biomeScanTimer;
 	int fallStartTileY;
+	const int DeepFallTiles = 30;
 	int suffocateDelay;
 	bool statsFailureLogged;
 	bool biomeFailureLogged;
@@ -273,7 +274,11 @@ public sealed class BotVitals
 			return;
 		}
 		if (body.velocity.Y != 0f)
+		{
+			if (tileY - fallStartTileY == DeepFallTiles)
+				BotDiagnostics.Log(bot, $"falling deep from row {fallStartTileY} while {bot.Brain.Current?.NameKey}; motor: {bot.Motor.Describe()}{World.TerrainDump.Around(body.Center.ToTileCoordinates() - new Point(0, DeepFallTiles / 2), 16, 14)}");
 			return;
+		}
 		int fallen = tileY - fallStartTileY;
 		fallStartTileY = tileY;
 		int safeTiles = SafeFallTiles + Avatar.extraFall;
