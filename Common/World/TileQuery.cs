@@ -73,9 +73,29 @@ public static class TileQuery
 		int top = (int)(Main.worldSurface * 0.35);
 		for (int y = top; y < Main.maxTilesY - 200; y++)
 		{
-			if (IsSolid(x, y) || Main.tile[x, y].LiquidAmount > 0)
+			if (!IsSolid(x, y) && Main.tile[x, y].LiquidAmount == 0)
+				continue;
+			if (y >= Main.worldSurface * 0.6 || SkyBelow(x, y) is not int skyEnd)
 				return y;
+			y = skyEnd;
 		}
 		return (int)Main.worldSurface;
+	}
+
+	const int IslandMaxThickness = 30;
+	const int SkyGapRows = 8;
+
+	static int? SkyBelow(int x, int y)
+	{
+		int gap = 0;
+		for (int below = y + 1; below <= y + IslandMaxThickness + SkyGapRows; below++)
+		{
+			var tile = Main.tile[x, below];
+			bool open = !IsSolid(x, below) && tile.LiquidAmount == 0 && tile.WallType == 0;
+			gap = open ? gap + 1 : 0;
+			if (gap >= SkyGapRows)
+				return below;
+		}
+		return null;
 	}
 }

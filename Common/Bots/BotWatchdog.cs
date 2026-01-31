@@ -68,6 +68,12 @@ public sealed class BotWatchdog
 			BotDiagnostics.LogWorld(TerrainDump.Capture(Navigation.PathFinder.FeetOf(body), bot.Motor.Destination));
 	}
 
+	public void RequestEscape()
+	{
+		EscapeRequested = true;
+		bot.Brain.ForceReconsider();
+	}
+
 	public void EscapeFinished()
 	{
 		EscapeRequested = false;

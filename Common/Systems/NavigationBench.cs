@@ -573,6 +573,12 @@ public sealed class NavigationBench : ModSystem
 			return;
 		}
 		uint elapsed = Main.GameUpdateCount - caseStartedAt;
+		if (Cases[caseIndex].InWorld)
+		{
+			runner.Avatar.statLife = runner.Avatar.statLifeMax2;
+			runner.Avatar.immune = true;
+			runner.Avatar.immuneTime = SettleTicks;
+		}
 		if (elapsed < SettleTicks)
 			return;
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
@@ -644,6 +650,8 @@ public sealed class NavigationBench : ModSystem
 		else
 			TopUp(runner, ItemID.Rope, BenchRopes);
 		TopUp(runner, ItemID.WoodPlatform, BenchPlatforms);
+		if (bench.InWorld)
+			TopUp(runner, ItemID.TempleKey, 1);
 		var body = runner.Npc;
 		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
 		body.velocity = Vector2.Zero;

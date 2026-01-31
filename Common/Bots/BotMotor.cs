@@ -29,6 +29,10 @@ public sealed class BotMotor
 
 	readonly Bot bot;
 	readonly PathFollower follower = new();
+	readonly MacroRoute longRoute = new();
+	bool needsWholeRoute;
+	const int StalledChecksBeforeWholeRoute = 2;
+	const float LegRadius = 32f;
 	Vector2? destination;
 	float arriveRadius;
 	int jumpHold;
@@ -84,7 +88,9 @@ public sealed class BotMotor
 			ResetProgress();
 			follower.Invalidate();
 			follower.ExtendNextSearch = retryingSameTarget;
+			needsWholeRoute = retryingSameTarget;
 			Tunneling = false;
+			pylonHop = PlanPylonHop(target);
 		}
 		destination = target;
 		arriveRadius = radius;
@@ -97,6 +103,7 @@ public sealed class BotMotor
 		if (stalledChecks >= StalledChecksBeforeStuck)
 			lastFailedDestination = destination;
 		destination = null;
+		pylonHop = null;
 		HasArrived = false;
 		Tunneling = false;
 		ResetProgress();
@@ -196,7 +203,7 @@ public sealed class BotMotor
 		var body = BodyTiles.Of(npc);
 		bool grounded = npc.velocity.Y == 0f || npc.wet;
 		bool mostlyDown = delta.Y > Math.Abs(delta.X) * 0.5f;
-		if (mostlyDown && grounded && TunnelTile(body.Left, body.Right, body.Bottom + 1, body.Bottom + 1, pickPower) is Point floor)
+		if (mostlyDown && grounded && TunnelTile(body.Left, body.Right, body.Bottom + 1, body.Bottom + 1, pickPower) is Point floor && DropDepth(floor.X, floor.Y) <= AffordableFall)
 		{
 			TileToDig = floor;
 			return;
@@ -210,6 +217,12 @@ public sealed class BotMotor
 		if (TunnelTile(column, column, top, bottom, pickPower) is Point wall)
 		{
 			TileToDig = wall;
+			return;
+		}
+		if (grounded && DropDepth(column, body.Bottom) > AffordableFall)
+		{
+			if (bot.Hands.HasBridgeMaterial && !TileQuery.CanStandOn(column, body.Bottom + 1))
+				BridgeTile = new Point(column, body.Bottom + 1);
 			return;
 		}
 		moveDirection = direction;
@@ -291,7 +304,8 @@ public sealed class BotMotor
 			bool blocked = false;
 			for (int x = column; x <= column + 1 && !blocked; x++)
 			{
-				for (int y = feet.Y - 4; y <= feet.Y; y++)
+				blocked = SandAbove(x, feet.Y);
+				for (int y = feet.Y - 4; y <= feet.Y && !blocked; y++)
 				{
 					if (!TileQuery.IsSolid(x, y))
 						continue;
@@ -307,6 +321,19 @@ public sealed class BotMotor
 			}
 		}
 		return best;
+	}
+
+	const int SandLookUpTiles = 10;
+
+	static bool SandAbove(int x, int feetY)
+	{
+		for (int y = feetY - 1; y >= feetY - SandLookUpTiles; y--)
+		{
+			var tile = Main.tile[x, y];
+			if (tile.HasTile && TileID.Sets.Falling[tile.TileType])
+				return true;
+		}
+		return false;
 	}
 
 	static Point? FirstSolidAbove(int column, int feetY)
@@ -373,10 +400,41 @@ public sealed class BotMotor
 			bot.Hands.Dig(tile);
 	}
 
+	PylonHop? pylonHop;
+	uint pylonRefusedAt;
+	const int PylonRetryTicks = 3600;
+	const float PylonWorthyTrip = 16f * 150f;
+
+	PylonHop? PlanPylonHop(Vector2 target)
+	{
+		bool recentlyRefused = pylonRefusedAt != 0 && Main.GameUpdateCount - pylonRefusedAt < PylonRetryTicks;
+		if (recentlyRefused || Vector2.Distance(bot.Center, target) < PylonWorthyTrip)
+			return null;
+		return PylonTravel.Plan(bot.Center, target);
+	}
+
+	bool HopThroughPylon(ref Vector2 target)
+	{
+		if (pylonHop is not PylonHop hop)
+			return false;
+		if (!PylonTravel.InRange(bot, hop))
+		{
+			target = hop.StandingSpot;
+			return true;
+		}
+		pylonHop = null;
+		if (!PylonTravel.TryTeleport(bot, hop))
+			pylonRefusedAt = Main.GameUpdateCount;
+		follower.Invalidate();
+		ResetProgress();
+		return false;
+	}
+
 	void Steer(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
 	{
+		bool hopping = HopThroughPylon(ref target);
 		var delta = target - npc.Center;
-		if (Math.Abs(delta.X) <= arriveRadius && Math.Abs(delta.Y) <= arriveRadius + 24f)
+		if (!hopping && Math.Abs(delta.X) <= arriveRadius && Math.Abs(delta.Y) <= arriveRadius + 24f)
 		{
 			HasArrived = true;
 			moveDirection = EscapeHazard(npc);
@@ -384,7 +442,15 @@ public sealed class BotMotor
 		}
 		HasArrived = false;
 
-		var intent = follower.Follow(npc, target, arriveRadius, Abilities());
+		var abilities = Abilities();
+		var goalTile = new Point((int)(target.X / 16f), (int)((target.Y + 21f) / 16f));
+		var leg = longRoute.LegToward(PathFinder.FeetOf(npc), goalTile, Math.Max(1, (int)(arriveRadius / 16f)), abilities, needsWholeRoute);
+		if (longRoute.Planned != null)
+		{
+			BotDiagnostics.Log(bot, longRoute.Planned);
+			longRoute.ClearPlanned();
+		}
+		var intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
 		if (follower.HasPath)
 		{
 			ApplyIntent(npc, intent, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
@@ -722,6 +788,7 @@ public sealed class BotMotor
 			return;
 		}
 		stalledChecks++;
+		needsWholeRoute |= stalledChecks >= StalledChecksBeforeWholeRoute;
 	}
 }
 

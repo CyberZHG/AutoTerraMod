@@ -144,6 +144,8 @@ public sealed class HeadlessTestMode : ModSystem
 		WarScenario.Prepare();
 		TownScenario.Prepare();
 		FishingScenario.Prepare();
+		EscapeScenario.Prepare();
+		PylonHopScenario.Prepare();
 		if (Scenario == null || !BossScenarios.TryGetValue(Scenario, out var scenario))
 			return;
 		foreach (var faction in BotWorldSystem.Factions)
@@ -321,6 +323,27 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 	}
 
+	static void ProbeMazeRoute(Microsoft.Xna.Framework.Point door)
+	{
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+		{
+			for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
+			{
+				if (!Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.LihzahrdAltar)
+					continue;
+				foreach (bool rope in new[] { false, true })
+				{
+					var watch = System.Diagnostics.Stopwatch.StartNew();
+					var abilities = new Navigation.NavigationAbilities(0, false, rope, false, rope, Navigation.PathFinder.MaxSafeFall, true);
+					var route = Navigation.PathFinder.FindLongRoute(door, new Microsoft.Xna.Framework.Point(x, y), 3, abilities, 60000);
+					var end = route.Nodes.Count > 0 ? route.Nodes[^1].Feet : door;
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: maze route (rope={rope}) door {door} -> altar {x},{y}: nodes={route.Nodes.Count} reaches={route.ReachesGoal} end={end} in {watch.ElapsedMilliseconds}ms");
+				}
+				return;
+			}
+		}
+	}
+
 	static void PlaceTeamsOutsideTempleDoor()
 	{
 		RelockTempleDoors();
@@ -340,6 +363,7 @@ public sealed class HeadlessTestMode : ModSystem
 						Give(bot, ItemID.TempleKey, 1);
 					}
 					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"scenario: teams placed outside the temple door at {x},{y}");
+					ProbeMazeRoute(feet);
 					return;
 				}
 			}

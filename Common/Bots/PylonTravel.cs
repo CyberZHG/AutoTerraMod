@@ -1,0 +1,70 @@
+using System.Linq;
+using AutoTerraMod.Common.Systems;
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.DataStructures;
+using Terraria.GameContent;
+
+namespace AutoTerraMod.Common.Bots;
+
+public readonly record struct PylonHop(TeleportPylonInfo From, TeleportPylonInfo To)
+{
+	public Vector2 StandingSpot => PylonTravel.StandingSpot(From);
+}
+
+public static class PylonTravel
+{
+	const float MaxWalkToPylon = 16f * 80f;
+	const float MinSaving = 16f * 150f;
+	const int TownNpcsNeeded = 2;
+
+	public static Vector2 StandingSpot(TeleportPylonInfo pylon) => new((pylon.PositionInTiles.X + 1) * 16f + 8f, (pylon.PositionInTiles.Y + 3) * 16f - 13f);
+
+	static Vector2 Center(TeleportPylonInfo pylon) => new((pylon.PositionInTiles.X + 1.5f) * 16f, (pylon.PositionInTiles.Y + 2f) * 16f);
+
+	public static PylonHop? Plan(Vector2 from, Vector2 to)
+	{
+		var pylons = Main.PylonSystem.Pylons.Where(HasEnoughNpcs).ToList();
+		if (pylons.Count < 2)
+			return null;
+		var near = pylons.MinBy(pylon => Vector2.Distance(Center(pylon), from));
+		var far = pylons.MinBy(pylon => Vector2.Distance(Center(pylon), to));
+		if (near.Equals(far))
+			return null;
+		float walkToPylon = Vector2.Distance(Center(near), from);
+		float hopped = walkToPylon + Vector2.Distance(Center(far), to);
+		if (walkToPylon > MaxWalkToPylon || hopped + MinSaving > Vector2.Distance(from, to))
+			return null;
+		return new PylonHop(near, far);
+	}
+
+	static bool HasEnoughNpcs(TeleportPylonInfo pylon) =>
+		pylon.TypeOfPylon == TeleportPylonType.Victory || TeleportPylonsSystem.DoesPositionHaveEnoughNPCs(TownNpcsNeeded, pylon.PositionInTiles);
+
+	public static bool InRange(Bot bot, PylonHop hop)
+	{
+		if (bot.Npc is not NPC body)
+			return false;
+		BotVitals.SyncAvatar(body, bot.Avatar);
+		return bot.Avatar.InInteractionRange(hop.From.PositionInTiles.X, hop.From.PositionInTiles.Y, TileReachCheckSettings.Pylons);
+	}
+
+	public static bool TryTeleport(Bot bot, PylonHop hop)
+	{
+		if (bot.Npc is not NPC body)
+			return false;
+		var before = bot.Avatar.position;
+		using (AvatarPresence.Enter())
+			Main.PylonSystem.HandleTeleportRequest(hop.To, bot.Avatar.whoAmI);
+		if (bot.Avatar.position == before)
+		{
+			BotDiagnostics.Log(bot, $"pylon at {hop.From.PositionInTiles} refused to send me to {hop.To.PositionInTiles}");
+			return false;
+		}
+		body.Bottom = bot.Avatar.Bottom;
+		body.velocity = Vector2.Zero;
+		bot.Vitals.Teleported(body);
+		BotDiagnostics.Log(bot, $"teleported by pylon from {hop.From.PositionInTiles} to {hop.To.PositionInTiles}");
+		return true;
+	}
+}

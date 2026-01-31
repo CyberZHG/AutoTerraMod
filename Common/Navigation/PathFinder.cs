@@ -36,7 +36,7 @@ public static class PathFinder
 	const int MaxSearchRadius = 90;
 	const int ExpansionBudgetPerTick = 3000;
 	const float HeuristicWeight = 1.3f;
-	const int LongTripTiles = 60;
+	public const int LongTripTiles = 60;
 	const int WaypointTiles = 50;
 	const int WaypointRadius = 4;
 
@@ -70,6 +70,7 @@ public static class PathFinder
 	const float DigCostPerTile = 3f;
 	const float BridgeCost = 4f;
 	const float HazardPenalty = 25f;
+	const float LooseSandPenalty = 15f;
 	const float PillarCost = 8f;
 	const float PillarCostPerTile = 3f;
 	const int MaxPillar = 30;
@@ -98,6 +99,25 @@ public static class PathFinder
 			goal = WaypointToward(start, goal);
 			goalRadius = Math.Max(goalRadius, WaypointRadius);
 		}
+		return Search(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), forbiddenSteps, maxExpanded, searchRadius);
+	}
+
+	public static PathResult FindExit(Point start, NavigationAbilities abilities, Func<Point, float> distanceToExit, int searchMultiplier)
+	{
+		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
+		return Search(start, abilities, node => distanceToExit(node) <= 0f, distanceToExit, null, MaxExpandedNodes * searchMultiplier, ExitSearchRadius);
+	}
+
+	const int LongRouteRadius = 250;
+
+	public static PathResult FindLongRoute(Point start, Point goal, int goalRadius, NavigationAbilities abilities, int maxNodes)
+	{
+		using var measurement = Systems.Perf.Measure(Systems.PerfSection.Pathfinding);
+		return Search(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), null, maxNodes, LongRouteRadius);
+	}
+
+	static PathResult Search(Point start, NavigationAbilities abilities, Func<Point, bool> isGoal, Func<Point, float> heuristic, ISet<(Point from, Point to)> forbiddenSteps, int maxExpanded, int searchRadius)
+	{
 		canUnlock = abilities.CanUnlock;
 		hazardCache.Clear();
 		diggableCache.Clear();
@@ -107,18 +127,18 @@ public static class PathFinder
 		var cameFrom = new Dictionary<Point, (Point parent, MoveKind kind)>();
 		var costSoFar = new Dictionary<Point, float> { [start] = 0f };
 		var edges = new List<Edge>(32);
-		open.Enqueue(start, HeuristicWeight * Heuristic(start, goal));
+		open.Enqueue(start, HeuristicWeight * heuristic(start));
 		var best = start;
-		float bestHeuristic = Heuristic(start, goal);
+		float bestHeuristic = heuristic(start);
 		int expanded = 0;
 
 		while (open.TryDequeue(out var current, out _) && expanded++ < maxExpanded)
 		{
 			budgetUsed++;
 			Systems.Perf.CountPathNodes(1);
-			if (IsGoal(current, goal, goalRadius))
+			if (isGoal(current))
 				return new PathResult(Reconstruct(cameFrom, start, current), true);
-			float h = Heuristic(current, goal);
+			float h = heuristic(current);
 			if (h < bestHeuristic)
 			{
 				bestHeuristic = h;
@@ -137,16 +157,17 @@ public static class PathFinder
 					continue;
 				costSoFar[edge.To] = cost;
 				cameFrom[edge.To] = (current, edge.Kind);
-				open.Enqueue(edge.To, cost + HeuristicWeight * Heuristic(edge.To, goal));
+				open.Enqueue(edge.To, cost + HeuristicWeight * heuristic(edge.To));
 			}
 		}
 		return best == start ? PathResult.None : new PathResult(Reconstruct(cameFrom, start, best), false);
 	}
 
+	const int ExitSearchRadius = 200;
 	const int MazeSearchMultiplier = 6;
 	const int MazeSearchRadius = 200;
 
-	static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
+	public static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
 
 	static bool IsGoal(Point node, Point goal, int radius) =>
 		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2;
@@ -311,16 +332,20 @@ public static class PathFinder
 		if (!Supported(to.X, to.Y) && to.Y <= from.Y)
 			return;
 		int solids = 0;
+		bool loosensSand = false;
 		foreach (var cell in CellsToClear(from, to))
 		{
 			if (!CountDiggable(cell.X, cell.Y, abilities, ref solids))
 				return;
+			loosensSand |= TileQuery.IsSolid(cell.X, cell.Y) && UnderFallingBlock(cell.X, cell.Y);
 		}
+		if (loosensSand && to.Y < from.Y)
+			return;
 		if (solids == 0 || Hazardous(to.X, to.Y) || Hazardous(to.X + 1, to.Y))
 			return;
 		var landing = Supported(to.X, to.Y) ? to : FallAfterDigging(to);
 		if (landing is Point destination)
-			edges.Add(new Edge(destination, MoveKind.Dig, 1f + solids * DigCostPerTile + (destination.Y - to.Y) * 0.3f));
+			edges.Add(new Edge(destination, MoveKind.Dig, 1f + solids * DigCostPerTile + (destination.Y - to.Y) * 0.3f + (loosensSand ? LooseSandPenalty : 0f)));
 	}
 
 	static bool CountDiggable(int x, int y, NavigationAbilities abilities, ref int solids)
@@ -457,5 +482,11 @@ public static class PathFinder
 			&& !TileQuery.SupportsShrine(x, y)
 			&& PickRequirement.MinimumPick(tileType, x, y) <= abilities.PickPower
 			&& WorldGen.CanKillTile(x, y);
+	}
+
+	public static bool UnderFallingBlock(int x, int y)
+	{
+		var above = Main.tile[x, y - 1];
+		return above.HasTile && TileID.Sets.Falling[above.TileType];
 	}
 }

@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using AutoTerraMod.Common.Navigation;
 using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
@@ -17,12 +19,22 @@ public sealed class EscapeTask : BotTask
 	const int SurfaceMarginTiles = 5;
 	const int SurfaceStepTiles = 8;
 	const int OpenGroundTrip = 30;
+	const int ExitSearchMultiplier = 6;
+	const int ExitLegTiles = 45;
+	const int ExitReplanTicks = 300;
+	const int ExitMinReplanTicks = 60;
+	const int TrivialLegTiles = 2;
 
 	Vector2 destination;
 	Vector2 start;
 	bool headingForSurface;
 	uint climbStartedAt;
 	uint startedAt;
+	uint exitPlannedAt;
+	bool followingExit;
+	bool legReached;
+	int highestY;
+	uint climbedAt;
 
 	public EscapeTask(Bot bot) : base(bot) { }
 
@@ -52,6 +64,11 @@ public sealed class EscapeTask : BotTask
 			return;
 		}
 		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
+		exitPlannedAt = 0;
+		followingExit = false;
+		legReached = false;
+		highestY = here.Y;
+		climbedAt = startedAt;
 		destination = headingForSurface
 			? new Vector2(x * 16f, (surfaceY - 2) * 16f)
 			: Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > 16f * 40f
@@ -73,16 +90,54 @@ public sealed class EscapeTask : BotTask
 			Finish();
 			return;
 		}
+		if (headingForSurface && climbStartedAt == 0)
+			PlanExitLeg();
 		Bot.Motor.MoveTo(destination, 32f);
 		var here = Bot.CenterTile;
 		bool reachedSurface = headingForSurface && here.Y <= TileQuery.SurfaceY(here.X) + SurfaceMarginTiles;
-		if (reachedSurface || Bot.Motor.HasArrived || Main.GameUpdateCount - startedAt > MaxEscapeTicks)
+		if (here.Y < highestY)
+		{
+			highestY = here.Y;
+			climbedAt = Main.GameUpdateCount;
+		}
+		uint sinceProgress = Main.GameUpdateCount - (followingExit ? climbedAt : startedAt);
+		if (reachedSurface || sinceProgress > MaxEscapeTicks || !followingExit && Bot.Motor.HasArrived)
 			Finish();
+		else if (Bot.Motor.HasArrived)
+			legReached = true;
+	}
+
+	void PlanExitLeg()
+	{
+		uint sincePlanned = Main.GameUpdateCount - exitPlannedAt;
+		bool due = exitPlannedAt == 0 || sincePlanned > ExitReplanTicks || legReached && sincePlanned > ExitMinReplanTicks;
+		if (!due || Bot.Npc is not NPC body || !PathFinder.HasBudget)
+			return;
+		exitPlannedAt = Main.GameUpdateCount;
+		legReached = false;
+		var feet = PathFinder.FeetOf(body);
+		var surface = new System.Collections.Generic.Dictionary<int, int>();
+		float BelowSurface(Point node)
+		{
+			if (!surface.TryGetValue(node.X, out int y))
+				surface[node.X] = y = TileQuery.SurfaceY(node.X) + SurfaceMarginTiles;
+			return Math.Max(0, node.Y - y);
+		}
+		var route = PathFinder.FindExit(feet, Bot.Motor.Abilities(), BelowSurface, ExitSearchMultiplier);
+		if (route.Nodes.Count == 0 || route.Nodes[^1].Feet.Y >= feet.Y)
+			return;
+		var leg = route.Nodes.Last(node => Math.Max(Math.Abs(node.Feet.X - feet.X), Math.Abs(node.Feet.Y - feet.Y)) <= ExitLegTiles).Feet;
+		if (Math.Max(Math.Abs(leg.X - feet.X), Math.Abs(leg.Y - feet.Y)) <= TrivialLegTiles)
+			return;
+		destination = new Vector2(leg.X * 16f + 8f, leg.Y * 16f - 13f);
+		if (!followingExit)
+			BotDiagnostics.Log(Bot, $"escaping toward exit {route.Nodes[^1].Feet} (reaches surface={route.ReachesGoal}) via {leg}");
+		followingExit = true;
 	}
 
 	bool ShouldClimbStraightUp() =>
 		headingForSurface
-		&& Main.GameUpdateCount - startedAt > NavigationGraceTicks
+		&& Main.GameUpdateCount - (followingExit ? climbedAt : startedAt) > NavigationGraceTicks
 		&& Vector2.Distance(Bot.Center, start) < StillTrappedTiles * 16f;
 
 	public override void Stop()

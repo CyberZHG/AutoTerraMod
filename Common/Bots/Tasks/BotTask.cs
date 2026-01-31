@@ -56,7 +56,7 @@ public abstract class BotTask
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
-		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null)
+		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
 			return false;
 		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
