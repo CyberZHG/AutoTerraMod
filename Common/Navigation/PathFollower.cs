@@ -18,6 +18,7 @@ public struct MotorIntent
 	public int ClimbColumn;
 	public Point? ScaffoldTile;
 	public bool Brake;
+	public bool Creep;
 }
 
 public sealed class PathFollower
@@ -32,6 +33,7 @@ public sealed class PathFollower
 	const int NoRouteBackoffTicks = 120;
 	const int SkipAheadWindow = 4;
 	const float CenteringTolerance = 3f;
+	const float CreepToDropPixels = 40f;
 
 	PathResult path = PathResult.None;
 	int index;
@@ -82,6 +84,8 @@ public sealed class PathFollower
 			lastIntent.MoveDirection = 0;
 			lastIntent.Brake = true;
 		}
+		else if (grounded && path.Nodes[index].Arrival == MoveKind.Drop && Math.Abs(PathFinder.CenterXOf(path.Nodes[index].Feet.X) - body.Center.X) < CreepToDropPixels)
+			lastIntent.Creep = true;
 		return lastIntent;
 	}
 
@@ -202,9 +206,9 @@ public sealed class PathFollower
 					intent.ScaffoldTile = new Point(node.Feet.X + (body.Center.X >= PathFinder.CenterXOf(node.Feet.X) ? 1 : 0), feet.Y + 1);
 				break;
 			case MoveKind.Bridge:
-				if (!PathFinder.IsSupportedNow(node.Feet.X, node.Feet.Y))
+				if (MissingBridgeTile(feet, node.Feet) is Point gap)
 				{
-					intent.BridgeTile = new Point(PathFinder.BridgeColumn(feet.X, node.Feet.X), node.Feet.Y + 1);
+					intent.BridgeTile = gap;
 					intent.MoveDirection = 0;
 				}
 				break;
@@ -220,8 +224,12 @@ public sealed class PathFollower
 		if (heading == 0)
 			return false;
 		int aheadX = heading > 0 ? feet.X + 2 : feet.X - 1;
+		int depth = DropBelow(aheadX, feet.Y);
+		if (depth <= maxFall)
+			return false;
 		bool insideNodeFootprint = aheadX >= node.Feet.X && aheadX <= node.Feet.X + 1;
-		return !insideNodeFootprint && DropBelow(aheadX, feet.Y) > maxFall;
+		bool steppingOntoNode = node.Feet.Y == feet.Y && PathFinder.IsSupportedNow(node.Feet.X, node.Feet.Y);
+		return !insideNodeFootprint || !steppingOntoNode;
 	}
 
 	static int DropBelow(int x, int feetY)
@@ -230,6 +238,18 @@ public sealed class PathFollower
 		while (depth <= PathFinder.MaxSafeFall * 4 && !TileQuery.CanStandOn(x, feetY + depth + 1) && Main.tile[x, feetY + depth + 1].LiquidAmount == 0)
 			depth++;
 		return depth;
+	}
+
+	static Point? MissingBridgeTile(Point feet, Point node)
+	{
+		int near = node.X > feet.X ? node.X : node.X + 1;
+		int far = node.X > feet.X ? node.X + 1 : node.X;
+		foreach (int x in new[] { near, far })
+		{
+			if (!TileQuery.CanStandOn(x, node.Y + 1) && !Main.tile[x, node.Y + 1].HasTile)
+				return new Point(x, node.Y + 1);
+		}
+		return null;
 	}
 
 	static int HoldTicksForRise(int rise) => rise <= 1 ? 1 : Math.Min(15, (rise * 16 - 21) / 5 + 2);

@@ -21,6 +21,7 @@ public sealed class BotMotor
 	const int StalledChecksBeforeStuck = 3;
 	const float MeaningfulProgress = 12f;
 	const float RopeClimbSpeed = 3f;
+	const float CreepSpeed = 1.2f;
 	const float RopeLeapSpeed = 5f;
 	const float JumpReachPixels = 16f * 5f;
 	const float SurfaceForAirBelow = 0.6f;
@@ -484,6 +485,8 @@ public sealed class BotMotor
 			jumpHoldTicks = intent.JumpHoldTicks;
 		if (intent.Brake)
 			npc.velocity.X = 0f;
+		else if (intent.Creep)
+			npc.velocity.X = Math.Clamp(npc.velocity.X, -CreepSpeed, CreepSpeed);
 		TileToDig = intent.DigTile;
 		BridgeTile = intent.BridgeTile;
 		if (BridgeTile != null && npc.velocity.Y == 0f)
