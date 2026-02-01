@@ -76,6 +76,18 @@ public static class Engagement
 	const float WormChaseHeight = 16f * 6f;
 	const float WormSearchRadius = 16f * 60f;
 
+	const float SpreadDistance = 16f * 5f;
+	const float SpreadStep = 16f * 6f;
+
+	static Bot CrowdingTeammate(Bot bot) =>
+		BotWorldSystem.Bots.FirstOrDefault(mate => mate != bot && mate.FactionId == bot.FactionId && mate.IsAlive && Vector2.Distance(mate.Center, bot.Center) < SpreadDistance);
+
+	static int SpreadDirection(Bot bot, Bot mate)
+	{
+		float apart = bot.Center.X - mate.Center.X;
+		return Math.Abs(apart) > 1f ? Math.Sign(apart) : bot.Id > mate.Id ? 1 : -1;
+	}
+
 	public static void Fight(Bot bot, NPC target)
 	{
 		CommandMinions(bot, target);
@@ -123,6 +135,8 @@ public static class Engagement
 				bot.Motor.MoveTo(approach, RangedStandoff * 0.5f);
 			else if (kiting || distance < TooCloseForRanged)
 				bot.Motor.MoveTo(body.Center + new Vector2(Math.Sign(body.Center.X - target.Center.X) * 96f, 0f), 8f);
+			else if (Bosses.BossCatalog.IsBossPart(target) && CrowdingTeammate(bot) is Bot mate)
+				bot.Motor.MoveTo(body.Center + new Vector2(SpreadDirection(bot, mate) * SpreadStep, 0f), 8f);
 			else
 				bot.Motor.Stop();
 			DodgeCharge(bot, target);
