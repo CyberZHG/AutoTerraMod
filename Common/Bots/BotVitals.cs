@@ -34,6 +34,7 @@ public sealed class BotVitals
 	readonly SceneMetrics scene = new();
 	int biomeScanTimer;
 	int fallStartTileY;
+	public uint HurtByTileAt { get; private set; }
 	const int DeepFallTiles = 30;
 	int suffocateDelay;
 	bool statsFailureLogged;
@@ -318,6 +319,8 @@ public sealed class BotVitals
 		if (TileID.Sets.TouchDamageBleeding[tileType])
 			Avatar.AddBuff(BuffID.Bleeding, Main.rand.Next(240, 600));
 		int damage = TileID.Sets.TouchDamageImmediate[tileType];
+		if (damage > 0)
+			HurtByTileAt = Main.GameUpdateCount;
 		if (damage > 0)
 			Hurt(Main.DamageVar(damage, -Avatar.luck), 0, source: $"hazard tile {TileID.Search.GetName(tileType)}");
 		if (damage > 0 && Main.tileCut[tileType])

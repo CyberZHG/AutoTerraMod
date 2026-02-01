@@ -69,7 +69,7 @@ public static class PathFinder
 	public const int MaxSafeFall = 24;
 	const float DigCostPerTile = 3f;
 	const float BridgeCost = 4f;
-	const float HazardPenalty = 25f;
+	const float HazardPenalty = 60f;
 	const float LooseSandPenalty = 15f;
 	const float PillarCost = 8f;
 	const float PillarCostPerTile = 3f;

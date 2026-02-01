@@ -162,6 +162,11 @@ public sealed class BotMotor
 			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
 			moveDirection = EscapeHazard(npc);
+		if (StandingInHazard() && EscapeHazard(npc) is int away && away != 0)
+		{
+			moveDirection = away;
+			wantsJump = npc.velocity.Y == 0f;
+		}
 		if (jumpRequested)
 		{
 			wantsJump = true;
@@ -539,6 +544,11 @@ public sealed class BotMotor
 		}
 		return null;
 	}
+
+	const int HazardContactTicks = 30;
+
+	bool StandingInHazard() =>
+		stalledChecks >= 1 && Main.GameUpdateCount - bot.Vitals.HurtByTileAt < HazardContactTicks;
 
 	int EscapeHazard(NPC npc)
 	{
