@@ -42,7 +42,7 @@ public sealed class SummonTask : BotTask
 			return 0f;
 		step = summon;
 		Detail = summon.Challenge.Name;
-		return 85f;
+		return Engagement.NearestHostile(Bot, RallyTask.SelfDefenseRadius, true) != null ? RallyTask.YieldToSelfDefense : 85f;
 	}
 
 	public override void Start()
@@ -210,7 +210,8 @@ public sealed class SummonTask : BotTask
 		bool stillWaiting = Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
 		if (present == team.Count)
 			return true;
-		if (stillWaiting)
+		bool hostileGround = PathFinder.InsideMaze(step.Place.ToTileCoordinates());
+		if (stillWaiting && !(hostileGround && present * 2 >= team.Count))
 		{
 			Bot.Watchdog.RecordProgress();
 			return false;
@@ -421,13 +422,19 @@ public sealed class SummonTask : BotTask
 public sealed class RallyTask : BotTask
 {
 	const float ArrivalRadius = 16f * 8f;
+	public const float SelfDefenseRadius = 16f * 10f;
+	public const float YieldToSelfDefense = 40f;
 
 	public RallyTask(Bot bot) : base(bot) { }
 
 	public override string NameKey => "Rally";
 
-	public override float Evaluate() =>
-		Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until && Bot.Brain.Plan is not SummonBossStep ? 88f : 0f;
+	public override float Evaluate()
+	{
+		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep)
+			return 0f;
+		return Engagement.NearestHostile(Bot, SelfDefenseRadius, true) != null ? YieldToSelfDefense : 88f;
+	}
 
 	public override void Tick()
 	{

@@ -191,7 +191,7 @@ public sealed class BotBrain
 
 	void BreakFailureLoops()
 	{
-		if (current is not { IsFinished: true })
+		if (current is not { IsFinished: true } || current is Tasks.FightTask or Tasks.FleeTask)
 			return;
 		if (Main.GameUpdateCount - currentStartedAt > QuickFailureTicks)
 		{

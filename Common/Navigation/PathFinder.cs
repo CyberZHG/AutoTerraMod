@@ -453,6 +453,19 @@ public static class PathFinder
 		return false;
 	}
 
+	static bool OnPressurePlate(int x, int feetY)
+	{
+		for (int cx = x; cx <= x + 1; cx++)
+		{
+			for (int cy = feetY - 2; cy <= feetY; cy++)
+			{
+				if (WorldGen.InWorld(cx, cy, 5) && Main.tile[cx, cy].HasTile && Main.tile[cx, cy].TileType == TileID.PressurePlates)
+					return true;
+			}
+		}
+		return false;
+	}
+
 	static bool IsHurtful(int tileType) =>
 		TileID.Sets.TouchDamageImmediate[tileType] > 0 || TileID.Sets.TouchDamageHot[tileType] || TileID.Sets.TouchDamageBleeding[tileType];
 
@@ -461,7 +474,7 @@ public static class PathFinder
 	static bool IsHazardousStand(Point feet)
 	{
 		if (!hazardCache.TryGetValue(feet, out bool hazardous))
-			hazardCache[feet] = hazardous = NearHurtfulTile(feet.X, feet.Y);
+			hazardCache[feet] = hazardous = NearHurtfulTile(feet.X, feet.Y) || OnPressurePlate(feet.X, feet.Y);
 		return hazardous;
 	}
 

@@ -20,7 +20,7 @@ public sealed class FleeTask : BotTask
 		if (HealthFraction >= Traits.FleeHealthFraction)
 			return 0f;
 		threat = Engagement.NearestHostile(Bot, ThreatRadius, false);
-		if (threat == null || HoldingArena(threat) || Engagement.KitingWall(Bot) || InBossFight())
+		if (threat == null || HoldingArena(threat) || Engagement.KitingWall(Bot) || InBossFight() || Navigation.PathFinder.InsideMaze(Bot.CenterTile))
 			return 0f;
 		Detail = threat.GivenOrTypeName;
 		return 90f + (1f - Traits.Courage) * 20f;

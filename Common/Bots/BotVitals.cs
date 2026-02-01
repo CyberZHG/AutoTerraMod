@@ -319,7 +319,9 @@ public sealed class BotVitals
 			Avatar.AddBuff(BuffID.Bleeding, Main.rand.Next(240, 600));
 		int damage = TileID.Sets.TouchDamageImmediate[tileType];
 		if (damage > 0)
-			Hurt(Main.DamageVar(damage, -Avatar.luck), 0, source: "hazard tile");
+			Hurt(Main.DamageVar(damage, -Avatar.luck), 0, source: $"hazard tile {TileID.Search.GetName(tileType)}");
+		if (damage > 0 && Main.tileCut[tileType])
+			bot.Hands.Cut(new Point(touched.x, touched.y));
 		if (TileID.Sets.TouchDamageDestroyTile[tileType])
 			WorldGen.KillTile(touched.x, touched.y);
 	}

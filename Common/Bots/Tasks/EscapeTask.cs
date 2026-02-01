@@ -57,7 +57,7 @@ public sealed class EscapeTask : BotTask
 		var here = Bot.CenterTile;
 		int x = Utils.Clamp(here.X + Bot.Watchdog.EscapeDirection * SurfaceStepTiles, 50, Main.maxTilesX - 50);
 		int surfaceY = TileQuery.SurfaceY(x);
-		if (Bot.Brain.OnExpedition)
+		if (Bot.Brain.OnExpedition || PathFinder.InsideMaze(here))
 		{
 			headingForSurface = false;
 			destination = Bot.Center + new Vector2(Bot.Watchdog.EscapeDirection * OpenGroundTrip * 16f, 0f);

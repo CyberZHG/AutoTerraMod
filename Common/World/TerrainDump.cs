@@ -27,7 +27,7 @@ public static class TerrainDump
 	static char CaptureGlyph(char glyph) => glyph switch
 	{
 		'o' => '#',
-		'|' or 'f' or 'D' or 'X' => ' ',
+		'|' or 'f' or 'D' or 'X' or '^' => ' ',
 		_ => glyph
 	};
 
@@ -61,6 +61,8 @@ public static class TerrainDump
 				return '=';
 			if (Main.tileSolid[type])
 				return TileID.Sets.Ore[type] ? 'o' : '#';
+			if (TileID.Sets.TouchDamageImmediate[type] > 0)
+				return '^';
 			if (Main.tileFrameImportant[type])
 				return 'f';
 		}
