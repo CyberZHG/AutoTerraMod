@@ -61,7 +61,12 @@ public static class Equipment
 	static int AccessoryScore(Item item) =>
 		item == null || item.IsAir || !item.accessory || item.vanity || RitualAccessories.Contains(item.type)
 			? 0
-			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5;
+			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5 + (item.wingSlot > 0 ? WingPreference : 0);
+
+	const int WingPreference = 60;
+
+	static bool WearsOtherWings(Player avatar, int exceptSlot) =>
+		Enumerable.Range(FirstAccessorySlot, LastAccessorySlot - FirstAccessorySlot + 1).Any(slot => slot != exceptSlot && avatar.armor[slot].wingSlot > 0);
 
 	public static int WornCount(Player avatar, int itemType) =>
 		avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Count(item => item.type == itemType);
@@ -90,7 +95,7 @@ public static class Equipment
 			for (int slot = 0; slot < Inventory.StorageSlots; slot++)
 			{
 				var candidate = avatar.inventory[slot];
-				int score = reserved.Contains(candidate.type) ? 0 : AccessoryScore(candidate);
+				int score = reserved.Contains(candidate.type) || candidate.wingSlot > 0 && WearsOtherWings(avatar, armorSlot) ? 0 : AccessoryScore(candidate);
 				if (score > equippedScore && !avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Any(worn => worn.type == candidate.type))
 				{
 					equippedScore = score;

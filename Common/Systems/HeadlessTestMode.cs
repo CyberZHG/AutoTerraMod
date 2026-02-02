@@ -36,8 +36,8 @@ public sealed class HeadlessTestMode : ModSystem
 	static readonly int[][] HardmodeAccessories =
 	{
 		new int[] { ItemID.FrozenTurtleShell, ItemID.CrossNecklace, ItemID.CobaltShield, ItemID.BandofRegeneration },
-		new int[] { ItemID.FrozenShield, ItemID.CharmofMyths, ItemID.RangerEmblem, ItemID.WormScarf },
-		new int[] { ItemID.AnkhShield, ItemID.CharmofMyths, ItemID.DestroyerEmblem, ItemID.WormScarf, ItemID.FrozenShield }
+		new int[] { ItemID.FrozenShield, ItemID.CharmofMyths, ItemID.RangerEmblem, ItemID.WormScarf, ItemID.AngelWings },
+		new int[] { ItemID.AnkhShield, ItemID.CharmofMyths, ItemID.DestroyerEmblem, ItemID.WormScarf, ItemID.FrozenShield, ItemID.AngelWings }
 	};
 
 	static readonly int[] HardmodeAmmo = { ItemID.CrystalBullet, ItemID.ChlorophyteBullet, ItemID.ChlorophyteBullet };

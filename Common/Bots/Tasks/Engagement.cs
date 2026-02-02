@@ -237,6 +237,7 @@ public static class Engagement
 	const float ChargeSpeed = 9f;
 	const float ChargeAlignment = 0.9f;
 	const int ChargeWarningTicks = 30;
+	const int ChargeFlightTicks = 40;
 
 	static void DodgeCharge(Bot bot, NPC boss)
 	{
@@ -246,7 +247,9 @@ public static class Engagement
 		float distance = toBot.Length();
 		if (distance > boss.velocity.Length() * ChargeWarningTicks || Vector2.Dot(Vector2.Normalize(toBot), Vector2.Normalize(boss.velocity)) < ChargeAlignment)
 			return;
-		if (Math.Abs(boss.velocity.X) > Math.Abs(boss.velocity.Y))
+		if (Math.Abs(boss.velocity.X) > Math.Abs(boss.velocity.Y) && bot.Motor.CanFly)
+			bot.Motor.RequestFlight(ChargeFlightTicks);
+		else if (Math.Abs(boss.velocity.X) > Math.Abs(boss.velocity.Y))
 			bot.Motor.RequestJump();
 		else
 			bot.Motor.MoveTo(bot.Center + new Vector2((bot.Center.X >= boss.Center.X ? 1 : -1) * 96f, 0f), 8f);

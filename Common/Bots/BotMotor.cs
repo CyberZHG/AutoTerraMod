@@ -173,6 +173,9 @@ public sealed class BotMotor
 			jumpHoldTicks = JumpHoldTicks;
 			jumpRequested = false;
 		}
+		RefuelWings(npc);
+		if (flightTicks > 0)
+			wantsJump = true;
 		if (npc.wet && bot.Vitals.BreathFraction < SurfaceForAirBelow)
 		{
 			wantsJump = true;
@@ -181,6 +184,8 @@ public sealed class BotMotor
 
 		Run(npc, moveDirection);
 		Jump(npc, wantsJump, jumpHoldTicks);
+		if (flightTicks > 0)
+			flightTicks--;
 		HoldRopeOverDrop(npc, wantsJump);
 		Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
 		npc.spriteDirection = npc.direction;
@@ -800,6 +805,26 @@ public sealed class BotMotor
 			npc.velocity.Y = -JumpSpeed;
 			jumpHold--;
 		}
+		else if (flightTicks > 0 && wingTimeLeft > 0)
+		{
+			npc.velocity.Y = Math.Max(npc.velocity.Y - WingLift, -WingRiseSpeed);
+			wingTimeLeft--;
+		}
+	}
+
+	const float WingLift = 0.6f;
+	const float WingRiseSpeed = 6f;
+	int wingTimeLeft;
+	int flightTicks;
+
+	public bool CanFly => bot.Avatar.wingTimeMax > 0;
+
+	public void RequestFlight(int ticks) => flightTicks = Math.Max(flightTicks, ticks);
+
+	void RefuelWings(NPC npc)
+	{
+		if (npc.velocity.Y == 0f || npc.wet)
+			wingTimeLeft = bot.Avatar.wingTimeMax;
 	}
 
 	void TrackProgress(NPC npc)
