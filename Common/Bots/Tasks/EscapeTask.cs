@@ -70,6 +70,7 @@ public sealed class EscapeTask : BotTask
 		}
 		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
 		exitPlannedAt = 0;
+		exitSearch = null;
 		followingExit = false;
 		legReached = false;
 		highestY = here.Y;
@@ -112,23 +113,34 @@ public sealed class EscapeTask : BotTask
 			legReached = true;
 	}
 
+	PathSearch exitSearch;
+
 	void PlanExitLeg()
 	{
-		uint sincePlanned = Main.GameUpdateCount - exitPlannedAt;
-		bool due = exitPlannedAt == 0 || sincePlanned > ExitReplanTicks || legReached && sincePlanned > ExitMinReplanTicks;
-		if (!due || Bot.Npc is not NPC body || !PathFinder.HasBudget)
+		if (Bot.Npc is not NPC body)
 			return;
-		exitPlannedAt = Main.GameUpdateCount;
-		legReached = false;
 		var feet = PathFinder.FeetOf(body);
-		var surface = new System.Collections.Generic.Dictionary<int, int>();
-		float BelowSurface(Point node)
+		if (exitSearch == null)
 		{
-			if (!surface.TryGetValue(node.X, out int y))
-				surface[node.X] = y = TileQuery.SurfaceY(node.X) + SurfaceMarginTiles;
-			return Math.Max(0, node.Y - y);
+			uint sincePlanned = Main.GameUpdateCount - exitPlannedAt;
+			bool due = exitPlannedAt == 0 || sincePlanned > ExitReplanTicks || legReached && sincePlanned > ExitMinReplanTicks;
+			if (!due)
+				return;
+			exitPlannedAt = Main.GameUpdateCount;
+			legReached = false;
+			var surface = new System.Collections.Generic.Dictionary<int, int>();
+			float BelowSurface(Point node)
+			{
+				if (!surface.TryGetValue(node.X, out int y))
+					surface[node.X] = y = TileQuery.SurfaceY(node.X) + SurfaceMarginTiles;
+				return Math.Max(0, node.Y - y);
+			}
+			exitSearch = PathFinder.BeginExit(feet, Bot.Motor.Abilities(), BelowSurface, ExitSearchMultiplier);
 		}
-		var route = PathFinder.FindExit(feet, Bot.Motor.Abilities(), BelowSurface, ExitSearchMultiplier);
+		if (!PathFinder.Advance(exitSearch))
+			return;
+		var route = exitSearch.Result;
+		exitSearch = null;
 		if (route.Nodes.Count == 0 || route.Nodes[^1].Feet.Y >= feet.Y)
 			return;
 		var leg = route.Nodes.Last(node => Math.Max(Math.Abs(node.Feet.X - feet.X), Math.Abs(node.Feet.Y - feet.Y)) <= ExitLegTiles).Feet;

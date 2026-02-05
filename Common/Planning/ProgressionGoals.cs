@@ -61,7 +61,8 @@ public sealed class GearGoal : ProgressionGoal
 	{
 		if (Successors.Count == 0)
 			return false;
-		if (outgrownCache.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < OutgrownCacheTicks)
+		int lifetime = OutgrownCacheTicks + (bot.Id * 131 + requiredPower * 17) % OutgrownCacheTicks;
+		if (outgrownCache.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < lifetime)
 			return cached.outgrown;
 		bool outgrown = Successors.Any(successor => successor.ReadyToMake(bot));
 		outgrownCache[bot.Id] = (Terraria.Main.GameUpdateCount, outgrown);

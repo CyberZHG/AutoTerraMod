@@ -55,6 +55,7 @@ public sealed class PathFollower
 
 	public void Invalidate()
 	{
+		pending = null;
 		path = PathResult.None;
 		index = 0;
 		HasNoRoute = false;
@@ -67,11 +68,10 @@ public sealed class PathFollower
 		var goal = new Point((int)(destination.X / 16f), (int)((destination.Y + 21f) / 16f));
 		bool grounded = body.velocity.Y == 0f || body.wet;
 		RememberFailedStep(feet);
-		if (NeedsReplan(feet, goal, grounded) && MayReplan() && PathFinder.HasBudget)
-		{
-			Replan(feet, goal, arriveRadius, abilities);
-			HasNoRoute = path.Nodes.Count == 0;
-		}
+		if (pending == null && NeedsReplan(feet, goal, grounded) && MayReplan())
+			BeginReplan(feet, goal, arriveRadius, abilities);
+		if (pending != null && PathFinder.Advance(pending))
+			InstallPending(feet);
 		if (path.Nodes.Count == 0)
 			return default;
 		SkipReachedNodes(feet, grounded);
@@ -122,17 +122,31 @@ public sealed class PathFollower
 
 	public bool ExtendNextSearch { get; set; }
 
-	void Replan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
+	PathSearch pending;
+	Point pendingGoal;
+
+	void BeginReplan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
 	{
 		int goalRadius = Math.Max(1, (int)(arriveRadius / 16f));
 		int multiplier = ExtendNextSearch ? ExtendedSearchMultiplier : 1;
 		ExtendNextSearch = false;
-		path = PathFinder.Find(feet, goal, goalRadius, abilities, failedSteps, multiplier);
+		pending = PathFinder.BeginFind(feet, goal, goalRadius, abilities, failedSteps, multiplier);
+		pendingGoal = goal;
+	}
+
+	void InstallPending(Point feet)
+	{
+		path = pending.Result;
+		var origin = pending.Start;
+		pending = null;
 		index = 0;
-		plannedGoal = goal;
+		plannedGoal = pendingGoal;
 		plannedAt = Main.GameUpdateCount;
 		stepTicks = 0;
-		stepOrigin = feet;
+		stepOrigin = origin;
+		HasNoRoute = path.Nodes.Count == 0;
+		if (feet != origin)
+			SkipReachedNodes(feet, true);
 	}
 
 	void SkipReachedNodes(Point feet, bool grounded)

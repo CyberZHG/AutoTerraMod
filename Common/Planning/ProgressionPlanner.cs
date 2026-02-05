@@ -17,6 +17,7 @@ public static class ProgressionPlanner
 	public static void Reset()
 	{
 		ladder = null;
+		upgradeGoals = null;
 		expeditions.Clear();
 	}
 
@@ -24,7 +25,19 @@ public static class ProgressionPlanner
 
 	static readonly Dictionary<int, (ProgressionGoal goal, uint until)> expeditions = new();
 
+	const double SlowPlanMilliseconds = 10.0;
+
 	public static PlanStep NextStep(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
+	{
+		long began = System.Diagnostics.Stopwatch.GetTimestamp();
+		var result = NextStepInner(bot, isSuppressed, out source);
+		double total = (System.Diagnostics.Stopwatch.GetTimestamp() - began) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+		if (total > SlowPlanMilliseconds)
+			BotDiagnostics.Log(bot, $"slow plan {total:0.0}ms toward {source?.Describe() ?? "nothing"}");
+		return result;
+	}
+
+	static PlanStep NextStepInner(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{
 		ladder ??= ProgressionGoals.Build();
 		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
@@ -58,26 +71,36 @@ public static class ProgressionPlanner
 
 	static readonly Dictionary<int, (uint at, ProgressionGoal goal)> readyUpgrades = new();
 
+	const int UpgradeChecksPerStep = 3;
+
+	static readonly Dictionary<int, int> upgradeCursor = new();
+	static List<ProgressionGoal> upgradeGoals;
+
 	static (ProgressionGoal, PlanStep)? ReadyUpgrade(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
 	{
-		if (readyUpgrades.TryGetValue(bot.Id, out var cached) && Main.GameUpdateCount - cached.at < UpgradeScanTicks)
+		if (readyUpgrades.TryGetValue(bot.Id, out var cached) && cached.goal != null && Main.GameUpdateCount - cached.at < UpgradeScanTicks)
 		{
-			if (cached.goal == null)
-				return null;
 			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(cached.goal.Plan(bot)) is PlanStep again)
 				return (cached.goal, again);
+			readyUpgrades.Remove(bot.Id);
 		}
-		foreach (var goal in ladder)
+		upgradeGoals ??= ladder.Where(goal => ProgressionGoals.Unwrap(goal) is GearGoal or OwnGoal or CageGoal).ToList();
+		if (upgradeGoals.Count == 0)
+			return null;
+		int cursor = upgradeCursor.GetValueOrDefault(bot.Id);
+		for (int checkedGoals = 0; checkedGoals < UpgradeChecksPerStep; checkedGoals++)
 		{
-			if (ProgressionGoals.Unwrap(goal) is not (GearGoal or OwnGoal or CageGoal) || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+			var goal = upgradeGoals[(cursor + checkedGoals) % upgradeGoals.Count];
+			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
 			if (IsHandsOn(goal.Plan(bot)) is PlanStep step)
 			{
+				upgradeCursor[bot.Id] = (cursor + checkedGoals + 1) % upgradeGoals.Count;
 				readyUpgrades[bot.Id] = (Main.GameUpdateCount, goal);
 				return (goal, step);
 			}
 		}
-		readyUpgrades[bot.Id] = (Main.GameUpdateCount, null);
+		upgradeCursor[bot.Id] = (cursor + UpgradeChecksPerStep) % upgradeGoals.Count;
 		return null;
 	}
 

@@ -29,6 +29,7 @@ public sealed class MacroRoute
 		route = PathResult.None;
 		legIndex = -1;
 		plannedAt = 0;
+		pending = null;
 	}
 
 	public Vector2? LegToward(Point feet, Point target, int goalRadius, NavigationAbilities abilities, bool straightLineFailed)
@@ -39,8 +40,10 @@ public sealed class MacroRoute
 			Clear();
 			return null;
 		}
-		if (NeedsPlan(feet, target) && PathFinder.HasBudget)
+		if (pending == null && NeedsPlan(feet, target))
 			Plan(feet, target, goalRadius, abilities, maze ? MazeRouteNodes : LongTripRouteNodes);
+		if (pending != null && PathFinder.Advance(pending))
+			Install(feet);
 		if (legIndex < 0)
 			return null;
 		if (Distance(feet, route.Nodes[legIndex].Feet) <= LegReachedTiles)
@@ -62,13 +65,22 @@ public sealed class MacroRoute
 		return goalMoved || reachedPartialEnd || legIndex < 0 || since > ReplanTicks && OffRoute(feet);
 	}
 
+	PathSearch pending;
+
 	void Plan(Point feet, Point target, int goalRadius, NavigationAbilities abilities, int maxNodes)
 	{
 		plannedAt = Main.GameUpdateCount;
 		goal = target;
-		route = PathFinder.FindLongRoute(feet, target, goalRadius, abilities, maxNodes);
+		pending = PathFinder.BeginLongRoute(feet, target, goalRadius, abilities, maxNodes);
+	}
+
+	void Install(Point feet)
+	{
+		route = pending.Result;
+		Planned = $"long route {pending.Start} -> {goal}: nodes={route.Nodes.Count} reaches={route.ReachesGoal} after {Main.GameUpdateCount - plannedAt} ticks";
+		pending = null;
+		plannedAt = Main.GameUpdateCount;
 		legIndex = route.Nodes.Count == 0 ? -1 : FarthestLegFrom(feet, 0);
-		Planned = $"long route {feet} -> {target}: nodes={route.Nodes.Count} reaches={route.ReachesGoal}";
 	}
 
 	int FarthestLegFrom(Point feet, int from)
