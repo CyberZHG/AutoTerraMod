@@ -283,7 +283,7 @@ public sealed class BotVitals
 		int fallen = tileY - fallStartTileY;
 		fallStartTileY = tileY;
 		int safeTiles = SafeFallTiles + Avatar.extraFall;
-		if (fallen > safeTiles && Avatar.equippedWings == null)
+		if (fallen > safeTiles && !bot.Motor.CanFly)
 			Hurt((fallen - safeTiles) * FallDamagePerTile, 0, ignoreImmunity: true, source: $"fall of {fallen} tiles");
 	}
 

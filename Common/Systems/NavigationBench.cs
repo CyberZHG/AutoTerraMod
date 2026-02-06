@@ -470,6 +470,52 @@ public sealed class NavigationBench : ModSystem
 			"########S~############",
 			"######################"
 		}),
+		new("WingShaft", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######..#############",
+			"#######S.#############",
+			"######################"
+		}),
+		new("CloudLedge", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#.............G......#",
+			"#..........###########",
+			"#..........###########",
+			"#..........###########",
+			"#..........###########",
+			"#..........###########",
+			"#..........###########",
+			"#..........###########",
+			"#S.........###########",
+			"######################"
+		}),
 	};
 
 	BenchCase[] cases;
@@ -648,12 +694,18 @@ public sealed class NavigationBench : ModSystem
 				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
 		}
 		ClearClutter(runner);
-		TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
-		if (bench.Name.StartsWith("NoRope"))
+		EquipBenchGear(runner, bench.Name);
+		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud");
+		if (!toolless)
+			TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
+		if (bench.Name.StartsWith("NoRope") || toolless)
 			Inventory.Consume(runner.Avatar, new int[] { ItemID.Rope }, Inventory.Count(runner.Avatar, ItemID.Rope));
 		else
 			TopUp(runner, ItemID.Rope, BenchRopes);
-		TopUp(runner, ItemID.WoodPlatform, BenchPlatforms);
+		if (!toolless)
+			TopUp(runner, ItemID.WoodPlatform, BenchPlatforms);
+		if (toolless)
+			StripTools(runner);
 		if (bench.InWorld)
 			TopUp(runner, ItemID.TempleKey, 1);
 		var body = runner.Npc;
@@ -665,6 +717,31 @@ public sealed class NavigationBench : ModSystem
 		goal = target.ToWorldCoordinates();
 		runner.Brain.Override = new BenchMoveTask(runner, goal);
 		caseStartedAt = Main.GameUpdateCount;
+	}
+
+	static readonly int[] BenchAccessories = { ItemID.AngelWings, ItemID.CloudinaBottle };
+
+	static void EquipBenchGear(Bot runner, string name)
+	{
+		var armor = runner.Avatar.armor;
+		for (int slot = Planning.Equipment.FirstAccessorySlot; slot <= Planning.Equipment.LastAccessorySlot; slot++)
+		{
+			if (BenchAccessories.Contains(armor[slot].type))
+				armor[slot].TurnToAir();
+		}
+		int wanted = name.StartsWith("Wing") ? ItemID.AngelWings : name.StartsWith("Cloud") ? ItemID.CloudinaBottle : ItemID.None;
+		if (wanted != ItemID.None)
+			armor[Planning.Equipment.LastAccessorySlot].SetDefaults(wanted);
+		runner.Avatar.UpdateEquips(runner.Avatar.whoAmI);
+	}
+
+	static void StripTools(Bot runner)
+	{
+		foreach (var item in runner.Avatar.inventory.Take(Inventory.MainSlotCount))
+		{
+			if (item.pick > 0 || item.createTile >= 0)
+				item.TurnToAir();
+		}
 	}
 
 	static void ClearClutter(Bot runner)

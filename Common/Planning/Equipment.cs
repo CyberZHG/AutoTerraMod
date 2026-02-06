@@ -53,8 +53,8 @@ public static class Equipment
 	public static int BestPower(Player avatar, GearKind kind) =>
 		Inventory.Items(avatar).Concat(avatar.armor.Take(3)).Select(item => PowerOf(item, kind)).DefaultIfEmpty(0).Max();
 
-	const int FirstAccessorySlot = 3;
-	const int LastAccessorySlot = 9;
+	public const int FirstAccessorySlot = 3;
+	public const int LastAccessorySlot = 9;
 
 	static readonly int[] RitualAccessories = { ItemID.ClothierVoodooDoll };
 

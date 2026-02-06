@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Navigation;
+using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -22,6 +23,8 @@ public sealed class BotMotor
 	const float MeaningfulProgress = 12f;
 	const float RopeClimbSpeed = 3f;
 	const float CreepSpeed = 1.2f;
+	const int FlightIntentTicks = 2;
+	const int SprintLookahead = 6;
 	const float RopeLeapSpeed = 5f;
 	const float JumpReachPixels = 16f * 5f;
 	const float SurfaceForAirBelow = 0.6f;
@@ -138,6 +141,7 @@ public sealed class BotMotor
 	{
 		npc.GravityMultiplier = MultipliableFloat.One * (PlayerGravity / NpcBaseGravity);
 		TileToDig = null;
+		sprinting = false;
 		ScaffoldTile = null;
 		RopeTile = null;
 		BridgeTile = null;
@@ -313,6 +317,8 @@ public sealed class BotMotor
 		for (int column = feet.X - 1; column <= feet.X + 1; column++)
 		{
 			int cost = Math.Abs(column - feet.X);
+			if (cost > 0 && !PathFinder.IsSupportedNow(column, feet.Y))
+				continue;
 			bool blocked = false;
 			for (int x = column; x <= column + 1 && !blocked; x++)
 			{
@@ -465,6 +471,7 @@ public sealed class BotMotor
 		var intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
 		if (follower.HasPath)
 		{
+			sprinting = npc.velocity.Y == 0f && follower.FlatAhead(SprintLookahead);
 			ApplyIntent(npc, intent, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 			return;
 		}
@@ -482,8 +489,42 @@ public sealed class BotMotor
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		bool hasBridgeMaterial = bot.Hands.HasBridgeMaterial;
 		bool hasRope = bot.Hands.HasRope;
-		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, AffordableFall, HasTempleKey);
+		int flyRise = FlightRise;
+		int maxFall = flyRise > 0 ? WingedSafeFall : AffordableFall;
+		int jumpRise = PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0);
+		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, maxFall, HasTempleKey, jumpRise, flyRise);
 	}
+
+	const int WingedSafeFall = 120;
+	const int ExtraJumpRise = 4;
+	const int MaxFlightRise = 40;
+	const float FlightRiseEfficiency = 0.6f;
+
+	const int RocketBootTicks = 70;
+
+	int FlightTicks
+	{
+		get
+		{
+			var wings = WornAccessories.FirstOrDefault(item => item.wingSlot > 0);
+			int wingTicks = wings == null ? 0 : ArmorIDs.Wing.Sets.Stats[wings.wingSlot].FlyTime;
+			return wingTicks + (bot.Avatar.rocketBoots > 0 ? RocketBootTicks : 0);
+		}
+	}
+
+	int FlightRise => FlightTicks <= 0 ? 0 : Math.Min(MaxFlightRise, (int)(FlightTicks * WingRiseSpeed * FlightRiseEfficiency / 16f));
+
+	static readonly int[] DoubleJumpAccessories =
+	{
+		ItemID.CloudinaBottle, ItemID.BlizzardinaBottle, ItemID.SandstorminaBottle, ItemID.FartinaJar, ItemID.TsunamiInABottle,
+		ItemID.CloudinaBalloon, ItemID.BlizzardinaBalloon, ItemID.SandstorminaBalloon, ItemID.FartInABalloon, ItemID.SharkronBalloon,
+		ItemID.BundleofBalloons, ItemID.BalloonHorseshoeFart, ItemID.BalloonHorseshoeSharkron, ItemID.HorseshoeBundle
+	};
+
+	bool HasExtraJump => WornAccessories.Any(item => DoubleJumpAccessories.Contains(item.type));
+
+	System.Collections.Generic.IEnumerable<Item> WornAccessories =>
+		bot.Avatar.armor.Skip(Equipment.FirstAccessorySlot).Take(Equipment.LastAccessorySlot - Equipment.FirstAccessorySlot + 1);
 
 	void ApplyIntent(NPC npc, MotorIntent intent, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
 	{
@@ -493,6 +534,11 @@ public sealed class BotMotor
 		wantsJump = intent.Jump;
 		if (intent.JumpHoldTicks > 0)
 			jumpHoldTicks = intent.JumpHoldTicks;
+		if (intent.Fly && CanFly)
+		{
+			RequestFlight(FlightIntentTicks);
+			wantsJump = true;
+		}
 		if (intent.Brake)
 			npc.velocity.X = 0f;
 		else if (intent.Creep)
@@ -772,7 +818,7 @@ public sealed class BotMotor
 	void Run(NPC npc, int direction)
 	{
 		var avatar = bot.Avatar;
-		float maxSpeed = avatar.maxRunSpeed * avatar.moveSpeed;
+		float maxSpeed = (sprinting ? Math.Max(avatar.maxRunSpeed, avatar.accRunSpeed) : avatar.maxRunSpeed) * avatar.moveSpeed;
 		float acceleration = avatar.runAcceleration * avatar.moveSpeed;
 		if (direction != 0)
 		{
@@ -805,6 +851,12 @@ public sealed class BotMotor
 			npc.velocity.Y = -JumpSpeed;
 			jumpHold--;
 		}
+		else if (extraJumpReady && flightTicks == 0 && npc.velocity.Y >= 0f)
+		{
+			npc.velocity.Y = -JumpSpeed;
+			jumpHold = holdTicks;
+			extraJumpReady = false;
+		}
 		else if (flightTicks > 0 && wingTimeLeft > 0)
 		{
 			npc.velocity.Y = Math.Max(npc.velocity.Y - WingLift, -WingRiseSpeed);
@@ -817,14 +869,19 @@ public sealed class BotMotor
 	int wingTimeLeft;
 	int flightTicks;
 
-	public bool CanFly => bot.Avatar.wingTimeMax > 0;
+	public bool CanFly => FlightTicks > 0;
 
 	public void RequestFlight(int ticks) => flightTicks = Math.Max(flightTicks, ticks);
 
+	bool extraJumpReady;
+	bool sprinting;
+
 	void RefuelWings(NPC npc)
 	{
-		if (npc.velocity.Y == 0f || npc.wet)
-			wingTimeLeft = bot.Avatar.wingTimeMax;
+		if (npc.velocity.Y != 0f && !npc.wet)
+			return;
+		wingTimeLeft = FlightTicks;
+		extraJumpReady = HasExtraJump;
 	}
 
 	void TrackProgress(NPC npc)
@@ -846,7 +903,12 @@ public sealed class BotMotor
 		}
 		stalledChecks++;
 		needsWholeRoute |= stalledChecks >= StalledChecksBeforeWholeRoute;
+		if (stalledChecks == StalledChecksBeforeHook && target.Y < npc.Center.Y - HookWorthyRise && !bot.Grapple.IsAttached && bot.Grapple.TryLatch(npc, target))
+			BotDiagnostics.Log(bot, $"stuck below {target.ToTileCoordinates()}, hooking up");
 	}
+
+	const int StalledChecksBeforeHook = 2;
+	const float HookWorthyRise = 16f * 3f;
 }
 
 public readonly record struct BodyTiles(int Left, int Right, int Top, int Bottom)

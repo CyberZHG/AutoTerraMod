@@ -19,6 +19,7 @@ public struct MotorIntent
 	public Point? ScaffoldTile;
 	public bool Brake;
 	public bool Creep;
+	public bool Fly;
 }
 
 public sealed class PathFollower
@@ -79,6 +80,8 @@ public sealed class PathFollower
 			return default;
 		stepTicks++;
 		lastIntent = Execute(body, feet, grounded, path.Nodes[index]);
+		if (!grounded && index > 0 && path.Nodes[index - 1].Arrival == MoveKind.Fly)
+			lastIntent.Fly = true;
 		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall))
 		{
 			lastIntent.MoveDirection = 0;
@@ -176,7 +179,7 @@ public sealed class PathFollower
 			if (PathFinder.IsClosedDoor(cell.X, cell.Y))
 				intent.DigTile = cell;
 		}
-		float offset = PathFinder.CenterXOf(node.Feet.X) - body.Center.X;
+		float offset = FootingCenterX(node.Feet) - body.Center.X;
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
 		bool hangingOnRope = !grounded && (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0);
@@ -191,8 +194,14 @@ public sealed class PathFollower
 		switch (node.Arrival)
 		{
 			case MoveKind.Jump:
-				intent.Jump = grounded || body.velocity.Y < 0f;
-				intent.JumpHoldTicks = HoldTicksForRise(rise);
+				intent.Jump = grounded || body.velocity.Y < 0f || rise > PathFinder.BaseJumpRise;
+				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, PathFinder.BaseJumpRise));
+				break;
+			case MoveKind.Fly:
+				intent.Fly = true;
+				intent.Jump = true;
+				if (rise > 0)
+					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Drop:
 				intent.DropThroughPlatforms = grounded && node.Feet.X == feet.X;
@@ -230,9 +239,32 @@ public sealed class PathFollower
 		return intent;
 	}
 
+	const float FootingShift = 8f;
+
+	static float FootingCenterX(Point feet)
+	{
+		bool left = TileQuery.CanStandOn(feet.X, feet.Y + 1);
+		bool right = TileQuery.CanStandOn(feet.X + 1, feet.Y + 1);
+		float center = PathFinder.CenterXOf(feet.X);
+		return left == right ? center : right ? center + FootingShift : center - FootingShift;
+	}
+
+	public bool FlatAhead(int nodes)
+	{
+		if (!HasPath)
+			return false;
+		int y = path.Nodes[index].Feet.Y;
+		for (int i = index; i < Math.Min(path.Nodes.Count, index + nodes); i++)
+		{
+			if (path.Nodes[i].Arrival != MoveKind.Walk || path.Nodes[i].Feet.Y != y)
+				return false;
+		}
+		return index + nodes <= path.Nodes.Count;
+	}
+
 	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall)
 	{
-		if (intent.Jump || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar || body.wet)
+		if (intent.Jump || intent.Fly || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly || body.wet)
 			return false;
 		int heading = intent.MoveDirection != 0 ? intent.MoveDirection : Math.Sign(body.velocity.X);
 		if (heading == 0)

@@ -198,6 +198,9 @@ public sealed class PathSearch
 		if (abilities.CanPillar && supported)
 			AddPillarEdges(x, y);
 
+		if (abilities.FlyRise > abilities.JumpRise && supported)
+			AddFlyEdges(x, y);
+
 		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1, abilities.MaxFall) is Point belowPlatform)
 			edges.Add(new Edge(belowPlatform, MoveKind.Drop, 1f + (belowPlatform.Y - y) * 0.3f));
 
@@ -227,6 +230,22 @@ public sealed class PathSearch
 		}
 	}
 
+	const float FlyCost = 3f;
+	const float FlyCostPerTile = 0.4f;
+
+	void AddFlyEdges(int x, int y)
+	{
+		for (int rise = 1; rise <= abilities.FlyRise && BodyClear(x, y - rise); rise++)
+		{
+			if (rise <= abilities.JumpRise)
+				continue;
+			int top = y - rise;
+			bool exit = (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
+			if (exit)
+				edges.Add(new Edge(new Point(x, top), MoveKind.Fly, FlyCost + rise * FlyCostPerTile));
+		}
+	}
+
 	void AddRopeClimbEdges(int x, int y)
 	{
 		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise); rise++)
@@ -243,7 +262,7 @@ public sealed class PathSearch
 	void AddJumpEdges(int x, int y)
 	{
 		int headroom = 0;
-		while (headroom < MaxJumpRise && RowClear(x, y - 3 - headroom))
+		while (headroom < abilities.JumpRise && RowClear(x, y - 3 - headroom))
 			headroom++;
 		for (int dx = -MaxJumpReach; dx <= MaxJumpReach; dx++)
 		{

@@ -18,7 +18,8 @@ public enum MoveKind
 	Bridge,
 	Pillar,
 	Swim,
-	RopeDown
+	RopeDown,
+	Fly
 }
 
 public readonly record struct PathNode(Point Feet, MoveKind Arrival);
@@ -28,7 +29,7 @@ public sealed record PathResult(List<PathNode> Nodes, bool ReachesGoal)
 	public static readonly PathResult None = new(new List<PathNode>(), false);
 }
 
-public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false);
+public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false, int JumpRise = PathFinder.BaseJumpRise, int FlyRise = 0);
 
 public static class PathFinder
 {
@@ -42,6 +43,7 @@ public static class PathFinder
 	const int MazeSearchRadius = 200;
 	const int LongRouteRadius = 250;
 	public const int MaxSafeFall = 24;
+	public const int BaseJumpRise = 5;
 	const int SwimmableLiquid = 64;
 	const double TickBudgetMilliseconds = 3.0;
 	const double SliceMilliseconds = 1.0;
