@@ -9,7 +9,25 @@ public static class Shops
 {
 	static Dictionary<int, List<(int npcType, NPCShop.Entry entry)>> sellers;
 
-	public static void Reset() => sellers = null;
+	public static void Reset()
+	{
+		sellers = null;
+		shopkeepers = null;
+	}
+
+	static HashSet<int> shopkeepers;
+
+	const float SellingReach = 16f * 12f;
+	const int SellValueDivisor = 5;
+
+	public static NPC NearbyShopkeeper(Microsoft.Xna.Framework.Vector2 position)
+	{
+		shopkeepers ??= NPCShopDatabase.AllShops.OfType<NPCShop>().Select(shop => shop.NpcType).ToHashSet();
+		return Main.npc.FirstOrDefault(npc => npc.active && npc.townNPC && shopkeepers.Contains(npc.type)
+			&& Microsoft.Xna.Framework.Vector2.Distance(npc.Center, position) < SellingReach);
+	}
+
+	public static long SellPrice(Item item, int amount) => (long)item.value / SellValueDivisor * amount;
 
 	static Dictionary<int, List<(int npcType, NPCShop.Entry entry)>> Sellers()
 	{

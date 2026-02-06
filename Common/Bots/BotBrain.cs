@@ -155,6 +155,7 @@ public sealed class BotBrain
 			World.WorldScan.Observe(bot.CenterTile, Systems.BotWorldSystem.KnowledgeOf(bot.Faction));
 		}
 		Junk.TrashExcessIfCrowded(bot);
+		Junk.SellOutgrownLoot(bot);
 		TorchPlacer.LightUpIfDark(bot);
 		using (Systems.Perf.Measure(Systems.PerfSection.Planner))
 			Plan = ProgressionPlanner.NextStep(bot, IsSuppressed, out currentGoal);

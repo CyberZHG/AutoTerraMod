@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace AutoTerraMod.Common.Bots;
@@ -52,6 +53,18 @@ public static class Inventory
 		if (incoming.stack <= 0)
 			incoming.TurnToAir();
 		return incoming;
+	}
+
+	static readonly int[] CoinTypes = { ItemID.CopperCoin, ItemID.SilverCoin, ItemID.GoldCoin, ItemID.PlatinumCoin };
+
+	public static void AddCoins(Player avatar, long copper)
+	{
+		int[] split = Utils.CoinsSplit(copper);
+		for (int tier = 0; tier < CoinTypes.Length; tier++)
+		{
+			if (split[tier] > 0)
+				Add(avatar, new Item(CoinTypes[tier], split[tier]));
+		}
 	}
 
 	public static bool Consume(Player avatar, IEnumerable<int> acceptedTypes, int amount)

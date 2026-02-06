@@ -40,6 +40,17 @@ public static class ProgressionPlanner
 	static PlanStep NextStepInner(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{
 		ladder ??= ProgressionGoals.Build();
+		foreach (var goal in ladder)
+		{
+			if (!goal.IsUrgent(bot) || isSuppressed(goal))
+				continue;
+			var step = goal.Plan(bot);
+			if (step is not BlockedStep and not IdleStep)
+			{
+				source = goal;
+				return step;
+			}
+		}
 		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
 		{
 			source = expeditions[bot.Id].goal;
@@ -129,6 +140,22 @@ public static class ProgressionPlanner
 		Resolve(new Context(bot), itemType, amount, 0) ?? PlanStep.Idle;
 
 	public static PlanStep ObtainAny(Bot bot, IEnumerable<int> options) => ObtainAny(new Context(bot), options, 0);
+
+	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount)
+	{
+		PlanStep cheapest = null;
+		foreach (int option in strongestFirst)
+		{
+			var step = Resolve(new Context(bot), option, amount, 0);
+			if (step == null)
+				return PlanStep.Idle;
+			if (step is CraftStep or WithdrawStep or BuyStep)
+				return step;
+			if (step is not BlockedStep && step is not GatherStep { Source: NpcSource { IsRare: true } })
+				cheapest = step;
+		}
+		return cheapest ?? PlanStep.Blocked;
+	}
 
 	public static PlanStep PlanStation(Bot bot, IEnumerable<int> stationItems) => PlanStation(new Context(bot), stationItems, 0);
 

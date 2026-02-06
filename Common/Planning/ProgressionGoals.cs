@@ -11,6 +11,7 @@ namespace AutoTerraMod.Common.Planning;
 public abstract class ProgressionGoal
 {
 	public virtual bool AppliesTo(Bot bot) => true;
+	public virtual bool IsUrgent(Bot bot) => false;
 	public virtual string Describe() => GetType().Name;
 	public abstract bool IsMet(Bot bot);
 	public abstract PlanStep Plan(Bot bot);
@@ -88,6 +89,51 @@ public sealed class ReserveGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => Inventory.Count(bot.Avatar, itemType) >= minimum;
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, itemType, restockTo);
+}
+
+public sealed class AmmoGoal : ProgressionGoal
+{
+	const int Minimum = 100;
+	const int RestockTo = 300;
+
+	static readonly int[] Arrows =
+	{
+		ItemID.ChlorophyteArrow, ItemID.IchorArrow, ItemID.CursedArrow, ItemID.HolyArrow, ItemID.HellfireArrow,
+		ItemID.JestersArrow, ItemID.UnholyArrow, ItemID.FrostburnArrow, ItemID.FlamingArrow, ItemID.WoodenArrow
+	};
+
+	static readonly int[] Bullets =
+	{
+		ItemID.ChlorophyteBullet, ItemID.CrystalBullet, ItemID.IchorBullet, ItemID.CursedBullet, ItemID.PartyBullet,
+		ItemID.MeteorShot, ItemID.SilverBullet, ItemID.TungstenBullet, ItemID.MusketBall
+	};
+
+	public override string Describe() => "Ammo";
+
+	static int AmmoClass(Bot bot) => Inventory.Items(bot.Avatar)
+		.Where(item => item.damage > 0 && (item.useAmmo == AmmoID.Arrow || item.useAmmo == AmmoID.Bullet) && item.shoot > ProjectileID.None)
+		.OrderByDescending(item => item.damage)
+		.Select(item => item.useAmmo)
+		.FirstOrDefault();
+
+	static int[] OptionsFor(int ammoClass) => ammoClass == AmmoID.Bullet ? Bullets : Arrows;
+
+	public override bool AppliesTo(Bot bot) => AmmoClass(bot) != 0;
+
+	const int Critical = 30;
+
+	public override bool IsMet(Bot bot) => Supply(bot) >= Minimum;
+
+	public override bool IsUrgent(Bot bot) => AppliesTo(bot) && Supply(bot) < Critical;
+
+	static int Supply(Bot bot)
+	{
+		int ammoClass = AmmoClass(bot);
+		var ammo = Inventory.Items(bot.Avatar).Where(item => item.ammo == ammoClass).ToList();
+		return ammo.Any(item => !item.consumable) ? int.MaxValue : ammo.Sum(item => item.stack);
+	}
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, OptionsFor(AmmoClass(bot)), RestockTo);
 }
 
 public sealed class RopeGoal : ProgressionGoal
@@ -434,7 +480,7 @@ public static class ProgressionGoals
 			new HellevatorGoal(),
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
-			new StyleGoal(new ReserveGoal(ItemID.WoodenArrow, 60, 120), CombatStyle.Ranged),
+			new AmmoGoal(),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),

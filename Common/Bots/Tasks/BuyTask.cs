@@ -38,15 +38,16 @@ public sealed class BuyTask : BotTask
 			return;
 		}
 		Bot.Motor.Stop();
-		for (int bought = 0; bought < step.Amount; bought++)
+		int bought = 0;
+		while (bought < step.Amount && Avatar.BuyItem(price))
 		{
-			if (!Avatar.BuyItem(price))
-				break;
 			var item = new Item();
 			item.SetDefaults(step.ItemType);
 			Inventory.Add(Avatar, item);
-			BotDiagnostics.Log(Bot, $"bought {item.Name} from {seller.GivenOrTypeName} for {price} copper");
+			bought++;
 		}
+		if (bought > 0)
+			BotDiagnostics.Log(Bot, $"bought {Lang.GetItemNameValue(step.ItemType)} x{bought} from {seller.GivenOrTypeName} for {price * bought} copper");
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;
 	}

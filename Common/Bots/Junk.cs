@@ -63,8 +63,7 @@ public static class Junk
 			int excess = group.Sum(item => item.stack) - reserve;
 			if (excess <= 0)
 				continue;
-			Inventory.Consume(bot.Avatar, new[] { group.Key }, excess);
-			BotDiagnostics.Log(bot, $"inventory full, trashed {sample.Name} x{excess}");
+			Discard(bot, sample, excess, "inventory full");
 		}
 	}
 
@@ -76,9 +75,49 @@ public static class Junk
 			.MinBy(item => (long)item.value * item.stack);
 		if (cheapest == null)
 			return false;
-		BotDiagnostics.Log(bot, $"trashed {cheapest.Name} x{cheapest.stack} to make room for {incoming.Name}");
-		cheapest.TurnToAir();
+		Discard(bot, cheapest, cheapest.stack, $"making room for {incoming.Name}");
 		return Inventory.HasRoomFor(bot.Avatar, incoming);
+	}
+
+	public static void SellOutgrownLoot(Bot bot)
+	{
+		var shopkeeper = Planning.Shops.NearbyShopkeeper(bot.Center);
+		if (shopkeeper == null)
+			return;
+		var hammer = bot.Hands.BestHammer;
+		var loot = Kit.ItemsToStore(bot).Where(item => item != hammer && IsSellableLoot(item) && (item.damage <= 0 || Outclassed(bot, item))).ToList();
+		if (loot.Count == 0)
+			return;
+		long earned = 0;
+		foreach (var item in loot)
+		{
+			earned += Planning.Shops.SellPrice(item, item.stack);
+			item.TurnToAir();
+		}
+		Inventory.AddCoins(bot.Avatar, earned);
+		BotDiagnostics.Log(bot, $"sold {loot.Count} pieces of outgrown loot to the {shopkeeper.TypeName} for {earned} copper");
+	}
+
+	static bool Outclassed(Bot bot, Item weapon) =>
+		Inventory.Items(bot.Avatar).Any(other => other != weapon && other.damage > weapon.damage && other.DamageType == weapon.DamageType && other.useAmmo == weapon.useAmmo);
+
+	static bool IsSellableLoot(Item item) =>
+		item.value > 0 && !item.material && item.createTile < 0 && item.createWall <= 0 && !item.consumable && item.ammo == 0
+		&& !item.questItem && item.fishingPole <= 0 && item.bait <= 0 && !IsBossSummon(item) && !item.IsACoin;
+
+	static void Discard(Bot bot, Item sample, int amount, string reason)
+	{
+		var name = sample.Name;
+		long price = Planning.Shops.SellPrice(sample, amount);
+		var shopkeeper = price > 0 ? Planning.Shops.NearbyShopkeeper(bot.Center) : null;
+		Inventory.Consume(bot.Avatar, new[] { sample.type }, amount);
+		if (shopkeeper == null)
+		{
+			BotDiagnostics.Log(bot, $"trashed {name} x{amount} ({reason})");
+			return;
+		}
+		Inventory.AddCoins(bot.Avatar, price);
+		BotDiagnostics.Log(bot, $"sold {name} x{amount} to the {shopkeeper.TypeName} for {price} copper ({reason})");
 	}
 
 	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
@@ -106,8 +145,7 @@ public static class Junk
 			int excess = group.Sum(item => item.stack) - reserve;
 			if (excess <= 0)
 				continue;
-			Inventory.Consume(avatar, new[] { group.Key }, excess);
-			BotDiagnostics.Log(bot, $"trashed {group.First().Name} x{excess}");
+			Discard(bot, group.First(), excess, "excess");
 		}
 	}
 
