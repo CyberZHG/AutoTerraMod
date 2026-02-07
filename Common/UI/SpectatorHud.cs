@@ -22,14 +22,20 @@ public sealed class SpectatorHud : ModSystem
 	{
 		if (!BotWorldSystem.IsRunning)
 			return;
-		int index = layers.FindIndex(layer => layer.Name == "Vanilla: Mouse Text");
+		int index = layers.FindIndex(IsMouseText);
 		if (index < 0)
 			index = layers.Count;
-		layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Bot Inventory", BotInventoryPanel.Draw, InterfaceScaleType.UI));
+		layers.Insert(index, inventoryLayer);
 		if (ModContent.GetInstance<Config.AutoTerraConfig>().ShowInfoPanel)
-			layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI));
-		layers.Insert(index, new LegacyGameInterfaceLayer("AutoTerraMod: Bot Labels", DrawLabels, InterfaceScaleType.Game));
+			layers.Insert(index, panelLayer);
+		layers.Insert(index, labelLayer);
 	}
+
+	static readonly System.Predicate<GameInterfaceLayer> IsMouseText = layer => layer.Name == "Vanilla: Mouse Text";
+
+	static readonly GameInterfaceLayer inventoryLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Inventory", BotInventoryPanel.Draw, InterfaceScaleType.UI);
+	static readonly GameInterfaceLayer panelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI);
+	static readonly GameInterfaceLayer labelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Labels", DrawLabels, InterfaceScaleType.Game);
 
 	static string Text(string key, params object[] args) => Language.GetTextValue($"Mods.AutoTerraMod.{key}", args);
 
@@ -42,15 +48,49 @@ public sealed class SpectatorHud : ModSystem
 				continue;
 			var anchor = body.Top - Main.screenPosition + new Vector2(0f, -30f);
 			Utils.DrawBorderString(Main.spriteBatch, bot.Name, anchor, bot.Faction.Color, 0.8f, 0.5f, 1f);
-			string task = bot.Brain.Current == null ? "" : Text($"Tasks.{bot.Brain.Current.NameKey}");
+			string task = bot.Brain.Current == null ? "" : TaskName(bot.Brain.Current.NameKey);
 			Utils.DrawBorderString(Main.spriteBatch, task, anchor + new Vector2(0f, 14f), Color.LightGray, 0.6f, 0.5f, 1f);
 		}
 		return true;
 	}
 
+	static readonly Dictionary<string, string> taskNames = new();
+
+	static string TaskName(string nameKey)
+	{
+		if (!taskNames.TryGetValue(nameKey, out string name))
+			taskNames[nameKey] = name = Text($"Tasks.{nameKey}");
+		return name;
+	}
+
+	public override void OnWorldUnload() => taskNames.Clear();
+
+	const int PanelRefreshFrames = 15;
+
+	static readonly List<(string text, Color color)> lines = new();
+	static int framesUntilRefresh;
+	static Bot describedBot;
+
 	static bool DrawPanel()
 	{
-		var lines = new List<(string text, Color color)>();
+		if (--framesUntilRefresh <= 0 || describedBot != SpectatorSystem.Followed)
+		{
+			framesUntilRefresh = PanelRefreshFrames;
+			describedBot = SpectatorSystem.Followed;
+			RebuildPanel();
+		}
+		var position = new Vector2(PanelLeft, PanelTop);
+		foreach (var (text, color) in lines)
+		{
+			Utils.DrawBorderString(Main.spriteBatch, text, position, color, 0.85f);
+			position.Y += LineHeight;
+		}
+		return true;
+	}
+
+	static void RebuildPanel()
+	{
+		lines.Clear();
 		var bot = SpectatorSystem.Followed;
 		if (bot != null)
 			DescribeBot(bot, lines);
@@ -64,14 +104,6 @@ public sealed class SpectatorHud : ModSystem
 			SpectatorSystem.KeysOf(SpectatorSystem.FreeCameraKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.InventoryKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.PlayInPersonKey)), Color.Gray));
-
-		var position = new Vector2(PanelLeft, PanelTop);
-		foreach (var (text, color) in lines)
-		{
-			Utils.DrawBorderString(Main.spriteBatch, text, position, color, 0.85f);
-			position.Y += LineHeight;
-		}
-		return true;
 	}
 
 	static void DescribeBot(Bot bot, List<(string, Color)> lines)

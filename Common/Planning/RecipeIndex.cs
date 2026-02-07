@@ -33,7 +33,13 @@ public sealed class RecipeIndex : ModSystem
 		return forward.Count > 0 ? forward : recipes;
 	}
 
-	public override void Unload() => recipesByResult = new();
+	public override void Unload()
+	{
+		recipesByResult = new();
+		acceptedTypes.Clear();
+	}
+
+	static readonly Dictionary<(Recipe, int), int[]> acceptedTypes = new();
 
 	public static IReadOnlyList<Recipe> For(int itemType) =>
 		recipesByResult.TryGetValue(itemType, out var recipes) ? recipes : Array.Empty<Recipe>();
@@ -42,12 +48,19 @@ public sealed class RecipeIndex : ModSystem
 
 	public static IReadOnlyList<int> AcceptedTypes(Recipe recipe, Item required)
 	{
+		if (!acceptedTypes.TryGetValue((recipe, required.type), out var types))
+			acceptedTypes[(recipe, required.type)] = types = FindAcceptedTypes(recipe, required.type);
+		return types;
+	}
+
+	static int[] FindAcceptedTypes(Recipe recipe, int requiredType)
+	{
 		foreach (int groupId in recipe.acceptedGroups)
 		{
-			if (!RecipeGroup.recipeGroups.TryGetValue(groupId, out var group) || !group.ContainsItem(required.type))
+			if (!RecipeGroup.recipeGroups.TryGetValue(groupId, out var group) || !group.ContainsItem(requiredType))
 				continue;
-			return group.ValidItems.OrderBy(type => type == required.type ? 0 : 1).ThenBy(type => type).ToList();
+			return group.ValidItems.OrderBy(type => type == requiredType ? 0 : 1).ThenBy(type => type).ToArray();
 		}
-		return new[] { required.type };
+		return new[] { requiredType };
 	}
 }

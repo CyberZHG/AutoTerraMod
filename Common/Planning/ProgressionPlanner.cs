@@ -21,6 +21,7 @@ public static class ProgressionPlanner
 		ladder = null;
 		upgradeGoals = null;
 		expeditions.Clear();
+		stuckPlans.Clear();
 	}
 
 	const int ExpeditionCommitmentTicks = 3 * 3600;
@@ -32,10 +33,11 @@ public static class ProgressionPlanner
 	public static PlanStep NextStep(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{
 		long began = System.Diagnostics.Stopwatch.GetTimestamp();
+		resolveCalls = 0;
 		var result = NextStepInner(bot, isSuppressed, out source);
 		double total = (System.Diagnostics.Stopwatch.GetTimestamp() - began) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 		if (total > SlowPlanMilliseconds)
-			BotDiagnostics.Log(bot, $"slow plan {total:0.0}ms toward {source?.Describe() ?? "nothing"}");
+			BotDiagnostics.Log(bot, $"slow plan {total:0.0}ms toward {source?.Describe() ?? "nothing"} ({resolveCalls} resolves, step {result})");
 		return result;
 	}
 
@@ -44,9 +46,10 @@ public static class ProgressionPlanner
 		ladder ??= ProgressionGoals.Build();
 		foreach (var goal in ladder)
 		{
+			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (!goal.IsUrgent(bot) || isSuppressed(goal))
 				continue;
-			var step = goal.Plan(bot);
+			var step = PlanUnlessStuck(bot, goal);
 			if (step is not BlockedStep and not IdleStep)
 			{
 				source = goal;
@@ -65,9 +68,10 @@ public static class ProgressionPlanner
 		}
 		foreach (var goal in ladder)
 		{
+			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
-			var step = goal.Plan(bot);
+			var step = PlanUnlessStuck(bot, goal);
 			if (step is not BlockedStep and not IdleStep)
 			{
 				if (goal.IsExpedition)
@@ -78,6 +82,31 @@ public static class ProgressionPlanner
 		}
 		source = null;
 		return PlanStep.Idle;
+	}
+
+	const int StuckRetryTicks = 240;
+
+	static readonly Dictionary<(int bot, ProgressionGoal goal), (uint until, PlanStep step)> stuckPlans = new();
+
+	static PlanStep PlanUnlessStuck(Bot bot, ProgressionGoal goal)
+	{
+		if (stuckPlans.TryGetValue((bot.Id, goal), out var stuck) && Main.GameUpdateCount < stuck.until)
+			return stuck.step;
+		var step = goal.Plan(bot);
+		if (step is BlockedStep or IdleStep)
+			stuckPlans[(bot.Id, goal)] = (Main.GameUpdateCount + StuckRetryTicks + (uint)(bot.Id * 37 % 120), step);
+		else
+			stuckPlans.Remove((bot.Id, goal));
+		return step;
+	}
+
+	public static void Unstick(Bot bot)
+	{
+		foreach (var key in stuckPlans.Keys)
+		{
+			if (key.bot == bot.Id)
+				stuckPlans.Remove(key);
+		}
 	}
 
 	const int UpgradeScanTicks = 600;
@@ -104,6 +133,7 @@ public static class ProgressionPlanner
 		for (int checkedGoals = 0; checkedGoals < UpgradeChecksPerStep; checkedGoals++)
 		{
 			var goal = upgradeGoals[(cursor + checkedGoals) % upgradeGoals.Count];
+			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
 			if (IsHandsOn(goal.Plan(bot)) is PlanStep step)
@@ -138,56 +168,110 @@ public static class ProgressionPlanner
 		return step;
 	}
 
-	public static PlanStep Obtain(Bot bot, int itemType, int amount) =>
-		Resolve(new Context(bot), itemType, amount, 0) ?? PlanStep.Idle;
+	public static PlanStep Obtain(Bot bot, int itemType, int amount)
+	{
+		var context = Context.Rent(bot);
+		return context.Release(Resolve(context, itemType, amount, 0) ?? PlanStep.Idle);
+	}
 
-	public static PlanStep ObtainAny(Bot bot, IEnumerable<int> options) => ObtainAny(new Context(bot), options, 0);
+	public static PlanStep ObtainAny(Bot bot, IEnumerable<int> options)
+	{
+		var context = Context.Rent(bot);
+		return context.Release(ObtainAny(context, options, 0));
+	}
 
 	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount)
 	{
 		PlanStep cheapest = null;
+		var context = Context.Rent(bot);
 		foreach (int option in strongestFirst)
 		{
-			var step = Resolve(new Context(bot), option, amount, 0);
+			var step = Resolve(context, option, amount, 0);
 			if (step == null)
-				return PlanStep.Idle;
+				return context.Release(PlanStep.Idle);
 			if (step is CraftStep or WithdrawStep or BuyStep)
-				return step;
+				return context.Release(step);
 			if (step is not BlockedStep && step is not GatherStep { Source: NpcSource { IsRare: true } })
 				cheapest = step;
 		}
-		return cheapest ?? PlanStep.Blocked;
+		return context.Release(cheapest ?? PlanStep.Blocked);
 	}
 
-	public static PlanStep PlanStation(Bot bot, IEnumerable<int> stationItems) => PlanStation(new Context(bot), stationItems, 0);
+	public static PlanStep PlanStation(Bot bot, IEnumerable<int> stationItems)
+	{
+		var context = Context.Rent(bot);
+		return context.Release(PlanStation(context, stationItems, 0));
+	}
 
 	static PlanStep ObtainAny(Context context, IEnumerable<int> options, int depth)
 	{
 		PlanStep grind = null;
-		foreach (int option in options.OrderByDescending(option => Readiness(context.Bot, option)))
+		var ranked = RankByReadiness(context, options);
+		try
 		{
-			var step = Resolve(context, option, 1, depth);
-			if (step == null)
-				return PlanStep.Idle;
-			if (step is GatherStep { Source: NpcSource { IsRare: true } })
-				grind ??= step;
-			else if (step is not BlockedStep)
-				return step;
+			foreach (var (option, _) in ranked)
+			{
+				var step = Resolve(context, option, 1, depth);
+				if (step == null)
+					return PlanStep.Idle;
+				if (step is GatherStep { Source: NpcSource { IsRare: true } })
+					grind ??= step;
+				else if (step is not BlockedStep)
+					return step;
+			}
+		}
+		finally
+		{
+			ranked.Clear();
+			rankPool.Push(ranked);
 		}
 		return grind ?? PlanStep.Blocked;
 	}
 
+	static readonly Stack<List<(int type, int readiness)>> rankPool = new();
+
+	static List<(int type, int readiness)> RankByReadiness(Context context, IEnumerable<int> options)
+	{
+		var ranked = rankPool.Count > 0 ? rankPool.Pop() : new List<(int, int)>();
+		foreach (int option in options)
+			ranked.Add((option, context.Readiness(option)));
+		if (ranked.Count > 1)
+			StableSort(ranked);
+		return ranked;
+	}
+
+	static void StableSort(List<(int type, int readiness)> ranked)
+	{
+		for (int index = 1; index < ranked.Count; index++)
+		{
+			var item = ranked[index];
+			int at = index - 1;
+			while (at >= 0 && ranked[at].readiness < item.readiness)
+			{
+				ranked[at + 1] = ranked[at];
+				at--;
+			}
+			ranked[at + 1] = item;
+		}
+	}
+
 	static PlanStep PlanStation(Context context, IEnumerable<int> stationItems, int depth)
 	{
-		var items = stationItems.ToList();
-		int held = items.FirstOrDefault(item => Inventory.Count(context.Bot.Avatar, item) > 0);
-		return held > 0 ? new PlaceStationStep(held) : ObtainAny(context, items, depth);
+		foreach (int item in stationItems)
+		{
+			if (context.Count(item) > 0)
+				return new PlaceStationStep(item);
+		}
+		return ObtainAny(context, stationItems, depth);
 	}
+
+	static int resolveCalls;
 
 	static PlanStep Resolve(Context context, int itemType, int amount, int depth)
 	{
+		resolveCalls++;
 		var avatar = context.Bot.Avatar;
-		int have = Inventory.Count(avatar, itemType) + Equipment.WornCount(avatar, itemType);
+		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
 			return null;
 		int stored = BaseStorage.Count(context.Bot.Faction, itemType);
@@ -198,7 +282,7 @@ public static class ProgressionPlanner
 		try
 		{
 			var source = ResourceSources.For(itemType);
-			if (source is TileSource { IsTree: false } tiles && tiles.TileTypes.All(tile => Navigation.PickRequirement.MinimumPick(tile, 0, Main.maxTilesY) > (context.Bot.Hands.BestPickaxe?.pick ?? 0)))
+			if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
 				return PlanStep.Blocked;
 			if (source != null)
 				return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
@@ -216,6 +300,17 @@ public static class ProgressionPlanner
 		}
 	}
 
+	static bool CanMineAny(Bot bot, TileSource tiles)
+	{
+		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
+		foreach (int tile in tiles.TileTypes)
+		{
+			if (Navigation.PickRequirement.MinimumPick(tile, 0, Main.maxTilesY) <= pick)
+				return true;
+		}
+		return false;
+	}
+
 	static PlanStep PlanRecipe(Context context, Recipe recipe, int depth)
 	{
 		if (!ConditionsAchievable(context.Bot, recipe))
@@ -231,21 +326,40 @@ public static class ProgressionPlanner
 		foreach (var required in recipe.requiredItem)
 		{
 			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
-			int have = Inventory.CountAny(avatar, accepted) + accepted.Sum(type => Equipment.WornCount(avatar, type));
+			int have = context.CountAny(accepted);
+			foreach (int type in accepted)
+				have += Equipment.WornCount(avatar, type);
 			if (have >= required.stack)
 				continue;
-			foreach (int candidate in accepted.OrderByDescending(type => Inventory.Count(avatar, type)))
+			return ResolveIngredient(context, accepted, required.stack, have, depth);
+		}
+		return new CraftStep(recipe);
+	}
+
+	static PlanStep ResolveIngredient(Context context, IEnumerable<int> accepted, int needed, int have, int depth)
+	{
+		var avatar = context.Bot.Avatar;
+		var ranked = rankPool.Count > 0 ? rankPool.Pop() : new List<(int, int)>();
+		try
+		{
+			foreach (int type in accepted)
+				ranked.Add((type, context.Count(type)));
+			StableSort(ranked);
+			foreach (var (candidate, held) in ranked)
 			{
 				if (context.Visiting.Contains(candidate))
 					continue;
-				int target = required.stack - have + Inventory.Count(avatar, candidate);
-				var step = Resolve(context, candidate, target, depth + 1);
+				var step = Resolve(context, candidate, needed - have + held, depth + 1);
 				if (step != null && step is not BlockedStep)
 					return step;
 			}
 			return PlanStep.Blocked;
 		}
-		return new CraftStep(recipe);
+		finally
+		{
+			ranked.Clear();
+			rankPool.Push(ranked);
+		}
 	}
 
 	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
@@ -262,27 +376,35 @@ public static class ProgressionPlanner
 		return ground is World.Landmark landmark && BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(landmark) == null ? landmark : null;
 	}
 
-	static bool ConditionsAchievable(Bot bot, Recipe recipe) => recipe.Conditions.All(condition =>
-		condition == Condition.NearWater && World.WaterFinder.NearestShore(bot.Faction.BaseTile) != null);
+	static bool ConditionsAchievable(Bot bot, Recipe recipe)
+	{
+		foreach (var condition in recipe.Conditions)
+		{
+			if (condition != Condition.NearWater || World.WaterFinder.NearestShore(bot.Faction.BaseTile) == null)
+				return false;
+		}
+		return true;
+	}
 
 	public static bool NeedsWater(Recipe recipe) => recipe.Conditions.Contains(Condition.NearWater);
 
-	static int Readiness(Bot bot, int itemType)
+	static int Readiness(Context context, int itemType)
 	{
+		var bot = context.Bot;
 		var recipe = RecipeIndex.For(itemType).FirstOrDefault();
 		if (recipe == null)
-			return Inventory.Count(bot.Avatar, itemType);
+			return context.Count(itemType);
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
 		int score = 0;
 		foreach (var required in recipe.requiredItem)
 		{
-			score += 4 * Math.Min(required.stack, Inventory.CountAny(bot.Avatar, RecipeIndex.AcceptedTypes(recipe, required)));
+			score += 4 * Math.Min(required.stack, context.CountAny(RecipeIndex.AcceptedTypes(recipe, required)));
 			var subRecipe = RecipeIndex.For(required.type).FirstOrDefault();
 			if (subRecipe == null)
 				continue;
 			foreach (var raw in subRecipe.requiredItem)
 			{
-				score += Math.Min(raw.stack * required.stack, Inventory.Count(bot.Avatar, raw.type));
+				score += Math.Min(raw.stack * required.stack, context.Count(raw.type));
 				if (ResourceSources.For(raw.type) is TileSource tiles && knowledge.KnowsAny(tiles.TileTypes))
 					score += 10;
 			}
@@ -292,8 +414,48 @@ public static class ProgressionPlanner
 
 	sealed class Context
 	{
-		public Context(Bot bot) => Bot = bot;
-		public Bot Bot { get; }
+		static Context idle;
+
+		public Bot Bot { get; private set; }
 		public HashSet<int> Visiting { get; } = new();
+		readonly Dictionary<int, int> held = new();
+		readonly Dictionary<int, int> readiness = new();
+
+		public static Context Rent(Bot bot)
+		{
+			var context = idle ?? new Context();
+			idle = null;
+			context.Bot = bot;
+			context.Visiting.Clear();
+			context.readiness.Clear();
+			context.held.Clear();
+			foreach (var item in Inventory.Items(bot.Avatar))
+				context.held[item.type] = context.held.GetValueOrDefault(item.type) + item.stack;
+			return context;
+		}
+
+		public int Count(int itemType) => held.GetValueOrDefault(itemType);
+
+		public int CountAny(IReadOnlyList<int> itemTypes)
+		{
+			int total = 0;
+			for (int index = 0; index < itemTypes.Count; index++)
+				total += Count(itemTypes[index]);
+			return total;
+		}
+
+		public int Readiness(int itemType)
+		{
+			if (!readiness.TryGetValue(itemType, out int score))
+				readiness[itemType] = score = ProgressionPlanner.Readiness(this, itemType);
+			return score;
+		}
+
+		public PlanStep Release(PlanStep step)
+		{
+			Bot = null;
+			idle = this;
+			return step;
+		}
 	}
 }

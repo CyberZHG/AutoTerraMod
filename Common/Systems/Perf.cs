@@ -66,6 +66,12 @@ public sealed class Perf : ModSystem
 		calls[(int)section]++;
 	}
 
+	public override void OnWorldLoad()
+	{
+		Probes.Enabled = Environment.GetEnvironmentVariable("AUTOTERRA_PROBES") == "1";
+		AllocationSampler.Start();
+	}
+
 	public override void PreUpdateEntities()
 	{
 		tickStartedAt = Stopwatch.GetTimestamp();
@@ -100,7 +106,13 @@ public sealed class Perf : ModSystem
 		float seconds = ticksSinceReport / 60f;
 		ticksSinceReport = 0;
 		if (ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging)
+		{
 			Mod.Logger.Info(BuildReport(seconds));
+			if (Probes.Enabled)
+				Mod.Logger.Info(Probes.Report(seconds, 25));
+			if (AllocationSampler.Report(seconds, 40) is string types)
+				Mod.Logger.Info(types);
+		}
 		Array.Clear(elapsed);
 		Array.Clear(calls);
 		Array.Clear(allocated);

@@ -261,6 +261,8 @@ public sealed class BotHands
 			return false;
 		Swing(item, CombinedHooks.TotalUseTime(item.useTime, Avatar, item), tile.ToWorldCoordinates());
 		Inventory.ConsumeOne(Avatar, item);
+		if (item.IsAir)
+			bot.Motor.RefreshGear();
 		bot.Watchdog.RecordProgress();
 		return true;
 	}
@@ -311,14 +313,14 @@ public sealed class BotHands
 		return placedTile.HasTile && placedTile.TileType == item.createTile;
 	}
 
-	public bool HasRope => FindPlaceable(tileType => Main.tileRope[tileType]) != null;
+	public bool HasRope => FindPlaceable(IsRopeTile) != null;
 
-	public bool PlaceRope(Point tile) => Place(FindPlaceable(tileType => Main.tileRope[tileType]), tile);
+	public bool PlaceRope(Point tile) => Place(FindPlaceable(IsRopeTile), tile);
 
 	public bool PlaceScaffold(Point tile)
 	{
-		var platform = FindPlaceable(tileType => TileID.Sets.Platforms[tileType]);
-		var block = Inventory.Items(Avatar).Where(IsExpendableBlock).OrderBy(item => item.type == ItemID.Wood ? 1 : 0).FirstOrDefault();
+		var platform = FindPlaceable(IsPlatformTile);
+		var block = ExpendableBlock();
 		if (!Place(platform, tile) && !Place(block, tile))
 			return false;
 		bot.Faction.Scaffolding.Add(tile);
@@ -335,12 +337,34 @@ public sealed class BotHands
 		return item == null ? "no material" : $"{item.Name} reach={CanReach(item, tile)} canPlace={CanPlaceAt(item, tile)} ready={Ready}";
 	}
 
-	Item BridgeMaterial() =>
-		FindPlaceable(tileType => TileID.Sets.Platforms[tileType])
-		?? Inventory.Items(Avatar).Where(IsExpendableBlock).OrderBy(item => item.type == ItemID.Wood ? 1 : 0).FirstOrDefault();
+	Item BridgeMaterial() => FindPlaceable(IsPlatformTile) ?? ExpendableBlock();
 
-	Item FindPlaceable(System.Func<int, bool> tileFilter) =>
-		Inventory.Items(Avatar).FirstOrDefault(item => item.createTile >= 0 && tileFilter(item.createTile));
+	Item ExpendableBlock()
+	{
+		Item wood = null;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (!IsExpendableBlock(item))
+				continue;
+			if (item.type != ItemID.Wood)
+				return item;
+			wood ??= item;
+		}
+		return wood;
+	}
+
+	static readonly System.Func<int, bool> IsPlatformTile = tileType => TileID.Sets.Platforms[tileType];
+	static readonly System.Func<int, bool> IsRopeTile = tileType => Main.tileRope[tileType];
+
+	Item FindPlaceable(System.Func<int, bool> tileFilter)
+	{
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (item.createTile >= 0 && tileFilter(item.createTile))
+				return item;
+		}
+		return null;
+	}
 
 	public static bool IsExpendableBlock(Item item) =>
 		item.createTile >= 0
@@ -350,7 +374,23 @@ public sealed class BotHands
 		&& !TileID.Sets.Ore[item.createTile]
 		&& item.createTile != TileID.Sand;
 
-	public Item BestWeapon() => Inventory.Items(Avatar).Where(IsUsableWeapon).MaxBy(PreferenceScore);
+	public Item BestWeapon()
+	{
+		Item best = null;
+		float bestScore = float.MinValue;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (!IsUsableWeapon(item))
+				continue;
+			float score = PreferenceScore(item);
+			if (best == null || score > bestScore)
+			{
+				best = item;
+				bestScore = score;
+			}
+		}
+		return best;
+	}
 
 	public static bool IsRangedWeapon(Item weapon) => weapon.useAmmo > 0 && weapon.shoot > ProjectileID.None;
 
@@ -373,12 +413,28 @@ public sealed class BotHands
 	public static bool IsSummonWeapon(Item item) =>
 		item.damage > 0 && item.shoot > ProjectileID.None && item.buffType > 0 && ContentSamples.ProjectilesByType.TryGetValue(item.shoot, out var minion) && minion.minion;
 
-	public Item BestSummonWeapon() => Inventory.Items(Avatar).Where(IsSummonWeapon).MaxBy(item => item.damage);
+	public Item BestSummonWeapon()
+	{
+		Item best = null;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (IsSummonWeapon(item) && (best == null || item.damage > best.damage))
+				best = item;
+		}
+		return best;
+	}
 
 	public bool Summon(Item weapon)
 	{
-		float used = Main.projectile.Where(projectile => projectile.active && projectile.minion && projectile.owner == Avatar.whoAmI).Sum(projectile => projectile.minionSlots);
-		if (!Ready || used + ContentSamples.ProjectilesByType[weapon.shoot].minionSlots > Avatar.maxMinions)
+		if (!Ready)
+			return false;
+		float used = 0f;
+		foreach (var projectile in World.EntityIndex.AvatarProjectiles)
+		{
+			if (projectile.active && projectile.minion && projectile.owner == Avatar.whoAmI)
+				used += projectile.minionSlots;
+		}
+		if (used + ContentSamples.ProjectilesByType[weapon.shoot].minionSlots > Avatar.maxMinions)
 			return false;
 		int manaCost = Avatar.GetManaCost(weapon);
 		if (Avatar.statMana < manaCost)
@@ -572,7 +628,12 @@ public sealed class BotHands
 	{
 		if (bot.Vitals.PotionSicknessTicks > 0)
 			return false;
-		var potion = Inventory.Items(Avatar).Where(item => item.potion && item.healLife > 0).MaxBy(item => item.healLife);
+		Item potion = null;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (item.potion && item.healLife > 0 && (potion == null || item.healLife > potion.healLife))
+				potion = item;
+		}
 		if (potion == null)
 			return false;
 		int healed = Math.Min(potion.healLife, Avatar.statLifeMax2 - Avatar.statLife);

@@ -62,7 +62,7 @@ public sealed class MacroRoute
 			return false;
 		bool goalMoved = Distance(goal, target) > Math.Max(GoalMovedTiles, Distance(feet, target) / 4);
 		bool barelyMoved = route.Nodes.Count <= LegTiles / 4;
-		bool reachedPartialEnd = legIndex == route.Nodes.Count - 1 && !route.ReachesGoal && Distance(feet, route.Nodes[legIndex].Feet) <= LegReachedTiles && (!barelyMoved || since > ReplanTicks);
+		bool reachedPartialEnd = legIndex >= 0 && legIndex == route.Nodes.Count - 1 && !route.ReachesGoal && Distance(feet, route.Nodes[legIndex].Feet) <= LegReachedTiles && (!barelyMoved || since > ReplanTicks);
 		return goalMoved || reachedPartialEnd || legIndex < 0 || since > ReplanTicks && OffRoute(feet);
 	}
 

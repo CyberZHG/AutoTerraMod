@@ -64,35 +64,74 @@ public sealed class FactionKnowledge
 
 	public IEnumerable<int> UnlootedChests => knownChests.Where(index => !lootedChests.Contains(index) && Main.chest[index] != null);
 
+	readonly Dictionary<int, int> knownCountByType = new();
+	readonly List<Point> vanished = new();
+
 	public void Remember(Point tile, int tileType)
 	{
-		if (resourceTiles.Count < Capacity || resourceTiles.ContainsKey(tile))
-			resourceTiles[tile] = tileType;
+		if (resourceTiles.TryGetValue(tile, out int previous))
+		{
+			if (previous == tileType)
+				return;
+			Uncount(previous);
+		}
+		else if (resourceTiles.Count >= Capacity)
+			return;
+		resourceTiles[tile] = tileType;
+		knownCountByType[tileType] = knownCountByType.GetValueOrDefault(tileType) + 1;
 	}
 
-	public bool KnowsAny(ISet<int> tileTypes) => resourceTiles.Values.Any(tileTypes.Contains);
+	void Uncount(int tileType)
+	{
+		if (knownCountByType.TryGetValue(tileType, out int count))
+			knownCountByType[tileType] = count - 1;
+	}
+
+	public bool KnowsAny(ISet<int> tileTypes)
+	{
+		foreach (int tileType in tileTypes)
+		{
+			if (knownCountByType.GetValueOrDefault(tileType) > 0)
+				return true;
+		}
+		return false;
+	}
 
 	public Point? NearestKnown(Point from, ISet<int> tileTypes, ISet<Point> excluded, int maxDistance)
 	{
+		if (!KnowsAny(tileTypes))
+			return null;
 		ForgetVanished();
-		long maxDistanceSq = (long)maxDistance * maxDistance;
-		return resourceTiles
-			.Where(entry => tileTypes.Contains(entry.Value) && !excluded.Contains(entry.Key))
-			.Select(entry => (tile: entry.Key, distanceSq: DistanceSq(from, entry.Key)))
-			.Where(candidate => candidate.distanceSq <= maxDistanceSq)
-			.OrderBy(candidate => candidate.distanceSq)
-			.Select(candidate => (Point?)candidate.tile)
-			.FirstOrDefault();
+		long nearestDistanceSq = (long)maxDistance * maxDistance;
+		Point? nearest = null;
+		foreach (var (tile, tileType) in resourceTiles)
+		{
+			if (!tileTypes.Contains(tileType) || excluded.Contains(tile))
+				continue;
+			long distanceSq = DistanceSq(from, tile);
+			if (distanceSq < nearestDistanceSq || distanceSq == nearestDistanceSq && nearest == null)
+			{
+				nearestDistanceSq = distanceSq;
+				nearest = tile;
+			}
+		}
+		return nearest;
 	}
 
 	void ForgetVanished()
 	{
-		var vanished = resourceTiles
-			.Where(entry => !Main.tile[entry.Key.X, entry.Key.Y].HasTile || Main.tile[entry.Key.X, entry.Key.Y].TileType != entry.Value)
-			.Select(entry => entry.Key)
-			.ToList();
+		foreach (var (tile, tileType) in resourceTiles)
+		{
+			var current = Main.tile[tile.X, tile.Y];
+			if (!current.HasTile || current.TileType != tileType)
+				vanished.Add(tile);
+		}
 		foreach (var tile in vanished)
+		{
+			Uncount(resourceTiles[tile]);
 			resourceTiles.Remove(tile);
+		}
+		vanished.Clear();
 	}
 
 	static long DistanceSq(Point a, Point b)

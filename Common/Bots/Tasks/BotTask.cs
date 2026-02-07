@@ -23,6 +23,10 @@ public abstract class BotTask
 
 	public abstract float Evaluate();
 
+	string probeLabel, evaluateLabel;
+	public string ProbeLabel => probeLabel ??= GetType().Name;
+	public string EvaluateLabel => evaluateLabel ??= "eval:" + GetType().Name;
+
 	public virtual void Start() => IsFinished = false;
 
 	public abstract void Tick();

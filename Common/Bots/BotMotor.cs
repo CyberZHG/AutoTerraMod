@@ -484,15 +484,28 @@ public sealed class BotMotor
 
 	int AffordableFall => PathFinder.MaxSafeFall + (int)(bot.Avatar.statLife * AffordableFallDamageShare / FallDamagePerTile);
 
+	const int GearRefreshTicks = 15;
+
+	NavigationAbilities gear;
+	uint gearCheckedAt;
+
+	public void RefreshGear() => gearCheckedAt = 0;
+
 	public NavigationAbilities Abilities()
 	{
-		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
-		bool hasBridgeMaterial = bot.Hands.HasBridgeMaterial;
-		bool hasRope = bot.Hands.HasRope;
-		int flyRise = FlightRise;
-		int maxFall = flyRise > 0 ? WingedSafeFall : AffordableFall;
-		int jumpRise = PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0);
-		return new NavigationAbilities(pickPower, pickPower > 0, hasBridgeMaterial, hasBridgeMaterial && (ScaffoldingAllowed || !hasRope), hasRope, maxFall, HasTempleKey, jumpRise, flyRise);
+		if (gearCheckedAt == 0 || Main.GameUpdateCount - gearCheckedAt >= GearRefreshTicks)
+		{
+			gearCheckedAt = Math.Max(1u, Main.GameUpdateCount);
+			int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
+			int flyRise = FlightRise;
+			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
+				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise);
+		}
+		return gear with
+		{
+			CanPillar = gear.CanBridge && (ScaffoldingAllowed || !gear.CanRope),
+			MaxFall = gear.FlyRise > 0 ? WingedSafeFall : AffordableFall
+		};
 	}
 
 	const int WingedSafeFall = 120;
@@ -506,25 +519,38 @@ public sealed class BotMotor
 	{
 		get
 		{
-			var wings = WornAccessories.FirstOrDefault(item => item.wingSlot > 0);
-			int wingTicks = wings == null ? 0 : ArmorIDs.Wing.Sets.Stats[wings.wingSlot].FlyTime;
-			return wingTicks + (bot.Avatar.rocketBoots > 0 ? RocketBootTicks : 0);
+			int ticks = bot.Avatar.rocketBoots > 0 ? RocketBootTicks : 0;
+			for (int slot = Equipment.FirstAccessorySlot; slot <= Equipment.LastAccessorySlot; slot++)
+			{
+				int wingSlot = bot.Avatar.armor[slot].wingSlot;
+				if (wingSlot > 0)
+					return ticks + ArmorIDs.Wing.Sets.Stats[wingSlot].FlyTime;
+			}
+			return ticks;
 		}
 	}
 
 	int FlightRise => FlightTicks <= 0 ? 0 : Math.Min(MaxFlightRise, (int)(FlightTicks * WingRiseSpeed * FlightRiseEfficiency / 16f));
 
-	static readonly int[] DoubleJumpAccessories =
+	static readonly System.Collections.Generic.HashSet<int> DoubleJumpAccessories = new()
 	{
 		ItemID.CloudinaBottle, ItemID.BlizzardinaBottle, ItemID.SandstorminaBottle, ItemID.FartinaJar, ItemID.TsunamiInABottle,
 		ItemID.CloudinaBalloon, ItemID.BlizzardinaBalloon, ItemID.SandstorminaBalloon, ItemID.FartInABalloon, ItemID.SharkronBalloon,
 		ItemID.BundleofBalloons, ItemID.BalloonHorseshoeFart, ItemID.BalloonHorseshoeSharkron, ItemID.HorseshoeBundle
 	};
 
-	bool HasExtraJump => WornAccessories.Any(item => DoubleJumpAccessories.Contains(item.type));
-
-	System.Collections.Generic.IEnumerable<Item> WornAccessories =>
-		bot.Avatar.armor.Skip(Equipment.FirstAccessorySlot).Take(Equipment.LastAccessorySlot - Equipment.FirstAccessorySlot + 1);
+	bool HasExtraJump
+	{
+		get
+		{
+			for (int slot = Equipment.FirstAccessorySlot; slot <= Equipment.LastAccessorySlot; slot++)
+			{
+				if (DoubleJumpAccessories.Contains(bot.Avatar.armor[slot].type))
+					return true;
+			}
+			return false;
+		}
+	}
 
 	void ApplyIntent(NPC npc, MotorIntent intent, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
 	{

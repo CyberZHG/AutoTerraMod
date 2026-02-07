@@ -16,6 +16,9 @@ public abstract class ProgressionGoal
 	public abstract bool IsMet(Bot bot);
 	public abstract PlanStep Plan(Bot bot);
 	public virtual bool IsExpedition => false;
+
+	string probeLabel;
+	public string ProbeLabel => probeLabel ??= "g:" + ProgressionGoals.Unwrap(this).GetType().Name;
 }
 
 public sealed class StationGoal : ProgressionGoal

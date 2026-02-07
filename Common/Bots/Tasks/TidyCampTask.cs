@@ -26,11 +26,24 @@ public sealed class TidyCampTask : BotTask
 		return 45f + Traits.Building * 15f;
 	}
 
+	const int ScanIntervalTicks = 120;
+
+	static readonly System.Collections.Generic.Dictionary<int, (uint at, bool any)> campScans = new();
+
 	Point? FindTombstone()
 	{
 		var settlement = Bot.Faction.Settlement;
 		if (settlement == null)
 			return null;
+		if (campScans.TryGetValue(Bot.FactionId, out var scan) && Main.GameUpdateCount - scan.at < ScanIntervalTicks && !scan.any)
+			return null;
+		var nearest = NearestTombstone(settlement);
+		campScans[Bot.FactionId] = (Main.GameUpdateCount, nearest != null);
+		return nearest;
+	}
+
+	Point? NearestTombstone(Building.Settlement settlement)
+	{
 		Point? nearest = null;
 		long nearestDistance = long.MaxValue;
 		var origin = Bot.CenterTile;

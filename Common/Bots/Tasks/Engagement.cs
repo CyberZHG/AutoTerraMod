@@ -41,9 +41,8 @@ public static class Engagement
 		NPC nearest = null;
 		float nearestDistance = radius;
 		var body = bot.Npc;
-		for (int i = 0; i < Main.maxNPCs; i++)
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
-			var npc = Main.npc[i];
 			if (!IsHostileTo(bot, npc) || bot.IsIgnoring(npc))
 				continue;
 			float distance = Vector2.Distance(body.Center, npc.Center);

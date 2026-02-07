@@ -31,7 +31,15 @@ public sealed class BotWorldSystem : ModSystem
 
 	public static bool IsRunning => initialized && Main.netMode != NetmodeID.MultiplayerClient;
 
-	public static Bot FindBot(int id) => id < 0 ? null : Bots.Find(bot => bot.Id == id);
+	public static Bot FindBot(int id)
+	{
+		foreach (var bot in Bots)
+		{
+			if (bot.Id == id)
+				return bot;
+		}
+		return null;
+	}
 
 	public static FactionKnowledge KnowledgeOf(Faction faction) =>
 		Relation == FactionRelation.Cooperate ? sharedKnowledge : faction.Knowledge;

@@ -510,8 +510,14 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static void KeepWorldRunningWithoutClients(On_Netplay.orig_UpdateConnectedClients orig)
 	{
-		if (Netplay.Clients.Any(client => client.IsConnected() || client.IsActive))
-			orig();
+		foreach (var client in Netplay.Clients)
+		{
+			if (client.IsConnected() || client.IsActive)
+			{
+				orig();
+				break;
+			}
+		}
 		Netplay.HasClients = true;
 	}
 

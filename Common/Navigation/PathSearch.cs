@@ -41,9 +41,26 @@ public sealed class PathSearch
 	readonly int maxExpanded;
 	readonly int searchRadius;
 
-	readonly PriorityQueue<Point, float> open = new();
-	readonly Dictionary<Point, (Point parent, MoveKind kind)> cameFrom = new();
-	readonly Dictionary<Point, float> costSoFar = new();
+	sealed class Frontier
+	{
+		public readonly PriorityQueue<Point, float> Open = new();
+		public readonly Dictionary<Point, (Point parent, MoveKind kind)> CameFrom = new();
+		public readonly Dictionary<Point, float> CostSoFar = new();
+
+		public void Clear()
+		{
+			Open.Clear();
+			CameFrom.Clear();
+			CostSoFar.Clear();
+		}
+	}
+
+	static readonly Stack<Frontier> frontierPool = new();
+
+	Frontier frontier = frontierPool.Count > 0 ? frontierPool.Pop() : new Frontier();
+	PriorityQueue<Point, float> open => frontier.Open;
+	Dictionary<Point, (Point parent, MoveKind kind)> cameFrom => frontier.CameFrom;
+	Dictionary<Point, float> costSoFar => frontier.CostSoFar;
 	readonly List<Edge> edges = new(32);
 	const int ScanMargin = 130;
 	const byte BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128;
@@ -86,10 +103,7 @@ public sealed class PathSearch
 		private set
 		{
 			result = value;
-			if (cells == null)
-				return;
-			System.Buffers.ArrayPool<byte>.Shared.Return(cells);
-			cells = null;
+			ReleaseBuffers();
 		}
 	}
 
@@ -97,9 +111,23 @@ public sealed class PathSearch
 	{
 		if (cells == null)
 			return;
-		System.Buffers.ArrayPool<byte>.Shared.Return(cells);
-		cells = null;
+		ReleaseBuffers();
 		result ??= PathResult.None;
+	}
+
+	const int MaxPooledFrontiers = 8;
+
+	void ReleaseBuffers()
+	{
+		if (cells != null)
+			System.Buffers.ArrayPool<byte>.Shared.Return(cells);
+		cells = null;
+		if (frontier == null)
+			return;
+		frontier.Clear();
+		if (frontierPool.Count < MaxPooledFrontiers)
+			frontierPool.Push(frontier);
+		frontier = null;
 	}
 
 	int Cell(int x, int y)

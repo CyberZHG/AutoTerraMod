@@ -139,11 +139,28 @@ public static class BossCatalog
 		_ => true
 	};
 
-	public static BossChallenge ChallengeOf(int npcType) => Challenges.FirstOrDefault(challenge => challenge.IsPart(npcType));
+	static readonly Dictionary<int, BossChallenge> challengeByType = new();
+
+	public static BossChallenge ChallengeOf(int npcType)
+	{
+		if (!challengeByType.TryGetValue(npcType, out var challenge))
+			challengeByType[npcType] = challenge = FindChallenge(npcType);
+		return challenge;
+	}
+
+	static BossChallenge FindChallenge(int npcType) => Challenges.FirstOrDefault(candidate => candidate.IsPart(npcType));
 
 	public static bool IsBossPart(NPC npc) => npc.boss || ChallengeOf(npc.type) != null;
 
-	public static bool IsBossAlive(BossChallenge challenge) => Main.npc.Any(npc => npc.active && challenge.IsPart(npc.type));
+	public static bool IsBossAlive(BossChallenge challenge)
+	{
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
+		{
+			if (npc.active && challenge.IsPart(npc.type))
+				return true;
+		}
+		return false;
+	}
 
 	public static NPC NearestActiveBoss(Vector2 from, float range) =>
 		NearestActiveBoss(from, range, false) ?? NearestActiveBoss(from, range, true);
@@ -152,7 +169,7 @@ public static class BossCatalog
 	{
 		NPC nearest = null;
 		float nearestDistance = range;
-		foreach (var npc in Main.npc)
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
 			if (!npc.active || !IsBossPart(npc) || (!includeInvulnerable && (npc.dontTakeDamage || npc.immortal)))
 				continue;

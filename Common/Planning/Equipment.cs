@@ -50,26 +50,46 @@ public static class Equipment
 	public static int SamplePower(int itemType, GearKind kind) =>
 		ContentSamples.ItemsByType.TryGetValue(itemType, out var sample) ? PowerOf(sample, kind) : 0;
 
-	public static int BestPower(Player avatar, GearKind kind) =>
-		Inventory.Items(avatar).Concat(avatar.armor.Take(3)).Select(item => PowerOf(item, kind)).DefaultIfEmpty(0).Max();
+	public static int BestPower(Player avatar, GearKind kind)
+	{
+		int best = 0;
+		foreach (var item in Inventory.Items(avatar))
+			best = System.Math.Max(best, PowerOf(item, kind));
+		for (int slot = 0; slot < 3; slot++)
+			best = System.Math.Max(best, PowerOf(avatar.armor[slot], kind));
+		return best;
+	}
 
 	public const int FirstAccessorySlot = 3;
 	public const int LastAccessorySlot = 9;
 
-	static readonly int[] RitualAccessories = { ItemID.ClothierVoodooDoll };
-
 	static int AccessoryScore(Item item) =>
-		item == null || item.IsAir || !item.accessory || item.vanity || RitualAccessories.Contains(item.type)
+		item == null || item.IsAir || !item.accessory || item.vanity || item.type == ItemID.ClothierVoodooDoll
 			? 0
 			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5 + (item.wingSlot > 0 ? WingPreference : 0);
 
 	const int WingPreference = 60;
 
-	static bool WearsOtherWings(Player avatar, int exceptSlot) =>
-		Enumerable.Range(FirstAccessorySlot, LastAccessorySlot - FirstAccessorySlot + 1).Any(slot => slot != exceptSlot && avatar.armor[slot].wingSlot > 0);
+	static bool WearsOtherWings(Player avatar, int exceptSlot)
+	{
+		for (int slot = FirstAccessorySlot; slot <= LastAccessorySlot; slot++)
+		{
+			if (slot != exceptSlot && avatar.armor[slot].wingSlot > 0)
+				return true;
+		}
+		return false;
+	}
 
-	public static int WornCount(Player avatar, int itemType) =>
-		avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Count(item => item.type == itemType);
+	public static int WornCount(Player avatar, int itemType)
+	{
+		int count = 0;
+		for (int slot = FirstAccessorySlot; slot <= LastAccessorySlot; slot++)
+		{
+			if (avatar.armor[slot].type == itemType)
+				count++;
+		}
+		return count;
+	}
 
 	public static void UnequipIngredients(Player avatar, Recipe recipe)
 	{
@@ -88,15 +108,17 @@ public static class Equipment
 	{
 		for (int armorSlot = FirstAccessorySlot; armorSlot <= LastAccessorySlot; armorSlot++)
 		{
-			if (!avatar.IsItemSlotUnlockedAndUsable(armorSlot) || RitualAccessories.Contains(avatar.armor[armorSlot].type))
+			if (!avatar.IsItemSlotUnlockedAndUsable(armorSlot) || avatar.armor[armorSlot].type == ItemID.ClothierVoodooDoll)
 				continue;
 			int equippedScore = AccessoryScore(avatar.armor[armorSlot]);
 			int bestSlot = -1;
 			for (int slot = 0; slot < Inventory.StorageSlots; slot++)
 			{
 				var candidate = avatar.inventory[slot];
+				if (!candidate.accessory || candidate.IsAir)
+					continue;
 				int score = reserved.Contains(candidate.type) || candidate.wingSlot > 0 && WearsOtherWings(avatar, armorSlot) ? 0 : AccessoryScore(candidate);
-				if (score > equippedScore && !avatar.armor.Skip(FirstAccessorySlot).Take(LastAccessorySlot - FirstAccessorySlot + 1).Any(worn => worn.type == candidate.type))
+				if (score > equippedScore && WornCount(avatar, candidate.type) == 0)
 				{
 					equippedScore = score;
 					bestSlot = slot;

@@ -1,6 +1,7 @@
 using System;
 using AutoTerraMod.Common.Bots.Tasks;
 using AutoTerraMod.Common.Planning;
+using AutoTerraMod.Common.Systems;
 using Terraria;
 using Terraria.ModLoader;
 
@@ -92,7 +93,8 @@ public sealed class BotBrain
 
 	public void Tick(NPC body)
 	{
-		bot.Vitals.Tick(body);
+		using (Probes.Measure("Vitals"))
+			bot.Vitals.Tick(body);
 		if (!bot.IsAlive)
 			return;
 		if (Override != null)
@@ -103,17 +105,28 @@ public sealed class BotBrain
 			AnimateAvatar(body);
 			return;
 		}
-		bot.Hands.Tick();
-		QuickHeal();
-		if (bot.Personality.Style == CombatStyle.Summon && bot.Hands.BestSummonWeapon() is Item staff)
-			bot.Hands.Summon(staff);
-		bot.Watchdog.Tick();
-		if (--reconsiderTimer <= 0 || current == null || current.IsFinished)
-			Reconsider();
-		current?.Tick();
-		bot.Motor.Tick(body);
-		bot.Hands.CollectNearbyItems();
-		AnimateAvatar(body);
+		using (Probes.Measure("Hands"))
+			bot.Hands.Tick();
+		using (Probes.Measure("QuickHeal"))
+			QuickHeal();
+		using (Probes.Measure("Summon"))
+		{
+			if (bot.Personality.Style == CombatStyle.Summon && bot.Hands.BestSummonWeapon() is Item staff)
+				bot.Hands.Summon(staff);
+		}
+		using (Probes.Measure("Watchdog"))
+			bot.Watchdog.Tick();
+		if ((--reconsiderTimer <= 0 || current == null || current.IsFinished) && !TryReconsider())
+			reconsiderTimer = 1;
+		if (current != null)
+			using (Probes.Measure(current.ProbeLabel))
+				current.Tick();
+		using (Probes.Measure("Motor"))
+			bot.Motor.Tick(body);
+		using (Probes.Measure("Collect"))
+			bot.Hands.CollectNearbyItems();
+		using (Probes.Measure("Animate"))
+			AnimateAvatar(body);
 	}
 
 	public void SuppressCurrentGoal()
@@ -135,37 +148,73 @@ public sealed class BotBrain
 
 	public void Reset()
 	{
+		ProgressionPlanner.Unstick(bot);
 		current?.Stop();
 		current = null;
 		Plan = PlanStep.Idle;
+	}
+
+	const double ReconsiderBudgetMilliseconds = 4.0;
+
+	static uint budgetTick;
+	static long spentThisTick;
+
+	bool TryReconsider()
+	{
+		if (budgetTick != Main.GameUpdateCount)
+		{
+			budgetTick = Main.GameUpdateCount;
+			spentThisTick = 0;
+		}
+		if (spentThisTick * 1000.0 / System.Diagnostics.Stopwatch.Frequency >= ReconsiderBudgetMilliseconds)
+			return false;
+		long began = System.Diagnostics.Stopwatch.GetTimestamp();
+		Reconsider();
+		spentThisTick += System.Diagnostics.Stopwatch.GetTimestamp() - began;
+		return true;
 	}
 
 	void Reconsider()
 	{
 		reconsiderTimer = ReconsiderInterval;
 		BreakFailureLoops();
-		Equipment.EquipBestArmor(bot.Avatar);
-		Equipment.EquipBestAccessories(bot.Avatar, PlannedItemTypes);
-		StatBoosters.ConsumeUsable(bot);
-		bot.Hands.DrinkObsidianSkinIfInHell();
-		TreePlanter.PlantIfUseful(bot);
+		using (Probes.Measure("Equip"))
+		{
+			Equipment.EquipBestArmor(bot.Avatar);
+			Equipment.EquipBestAccessories(bot.Avatar, PlannedItemTypes);
+		}
+		using (Probes.Measure("Upkeep"))
+		{
+			StatBoosters.ConsumeUsable(bot);
+			bot.Hands.DrinkObsidianSkinIfInHell();
+			TreePlanter.PlantIfUseful(bot);
+		}
 		if (++reconsiderCount % ObserveEveryReconsiders == 0)
 		{
 			using var _ = Systems.Perf.Measure(Systems.PerfSection.WorldScans);
+			using var probe = Probes.Measure("Observe");
 			World.WorldScan.Observe(bot.CenterTile, Systems.BotWorldSystem.KnowledgeOf(bot.Faction));
 		}
-		Junk.TrashExcessIfCrowded(bot);
-		Junk.SellOutgrownLoot(bot);
-		TorchPlacer.LightUpIfDark(bot);
+		using (Probes.Measure("Junk"))
+		{
+			Junk.TrashExcessIfCrowded(bot);
+			Junk.SellOutgrownLoot(bot);
+		}
+		using (Probes.Measure("Torch"))
+			TorchPlacer.LightUpIfDark(bot);
 		using (Systems.Perf.Measure(Systems.PerfSection.Planner))
+		using (Probes.Measure("Planner"))
 			Plan = ProgressionPlanner.NextStep(bot, IsSuppressed, out currentGoal);
-		PlannedItemTypes = Kit.ComputePlannedItemTypes(bot);
+		using (Probes.Measure("PlannedItems"))
+			PlannedItemTypes = Kit.ComputePlannedItemTypes(bot);
 
 		BotTask best = null;
 		float bestScore = 0f;
 		foreach (var task in tasks)
 		{
-			float score = task.Evaluate();
+			float score;
+			using (Probes.Measure(task.EvaluateLabel))
+				score = task.Evaluate();
 			if (task == current && !task.IsFinished)
 				score *= CurrentTaskBias;
 			if (score > bestScore)

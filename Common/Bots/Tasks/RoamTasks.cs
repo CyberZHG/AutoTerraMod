@@ -38,9 +38,8 @@ public sealed class HuntTask : BotTask
 	{
 		NPC nearest = null;
 		float nearestDistance = SearchRadius;
-		for (int i = 0; i < Main.maxNPCs; i++)
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
-			var npc = Main.npc[i];
 			if (!npc.active || !source.NpcTypes.Contains(npc.type) || Bot.IsIgnoring(npc))
 				continue;
 			float distance = Vector2.Distance(npc.Center, Bot.Center);

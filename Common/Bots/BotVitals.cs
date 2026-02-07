@@ -105,7 +105,7 @@ public sealed class BotVitals
 		if (!Avatar.inferno)
 			return;
 		bool strike = (Main.GameUpdateCount + bot.Id) % InfernoPeriodTicks == 0;
-		foreach (var npc in Main.npc)
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
 			if (!npc.active || npc.friendly || npc.damage <= 0 || npc.dontTakeDamage || npc.buffImmune[BuffID.OnFire3] || Vector2.Distance(Avatar.Center, npc.Center) > InfernoRadius)
 				continue;
@@ -165,7 +165,7 @@ public sealed class BotVitals
 		System.Array.Clear(Avatar.ownedProjectileCounts);
 		Avatar.slotsMinions = 0f;
 		Avatar.numMinions = 0;
-		foreach (var projectile in Main.projectile)
+		foreach (var projectile in World.EntityIndex.AvatarProjectiles)
 		{
 			if (projectile.active && projectile.owner == Avatar.whoAmI)
 				Avatar.ownedProjectileCounts[projectile.type]++;
@@ -204,9 +204,8 @@ public sealed class BotVitals
 	void TakeContactDamage(NPC body)
 	{
 		var hitbox = body.Hitbox;
-		for (int i = 0; i < Main.maxNPCs; i++)
+		foreach (var attacker in World.EntityIndex.ActiveNpcs)
 		{
-			var attacker = Main.npc[i];
 			if (!attacker.active || attacker.friendly || attacker.damage <= 0 || attacker.ModNPC is BotNPC)
 				continue;
 			if (!hitbox.Intersects(attacker.Hitbox))
@@ -240,9 +239,8 @@ public sealed class BotVitals
 	void TakeProjectileDamage(NPC body)
 	{
 		var hitbox = body.Hitbox;
-		for (int i = 0; i < Main.maxProjectiles; i++)
+		foreach (var projectile in World.EntityIndex.DamagingProjectiles)
 		{
-			var projectile = Main.projectile[i];
 			if (projectile.active && projectile.friendly && projectile.damage > 0 && Bosses.BossCredit.ShooterFaction(projectile) is int faction
 				&& Tasks.Engagement.AtWar(faction, bot.FactionId) && projectile.Colliding(projectile.Hitbox, hitbox))
 			{

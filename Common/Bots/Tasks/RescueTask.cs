@@ -35,7 +35,7 @@ public sealed class RescueTask : BotTask
 	public static void NoticeCaptives(Bot bot)
 	{
 		var seen = sightings.TryGetValue(bot.FactionId, out var known) ? known : sightings[bot.FactionId] = new HashSet<int>();
-		foreach (var npc in Main.npc)
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
 			if (npc.active && RescuedForms.ContainsKey(npc.type) && Vector2.Distance(npc.Center, bot.Center) < SightRadius)
 				seen.Add(npc.whoAmI);
