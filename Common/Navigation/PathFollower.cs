@@ -56,6 +56,7 @@ public sealed class PathFollower
 
 	public void Invalidate()
 	{
+		pending?.Cancel();
 		pending = null;
 		path = PathResult.None;
 		index = 0;

@@ -23,14 +23,20 @@ public readonly struct PerfScope : IDisposable
 {
 	readonly PerfSection section;
 	readonly long startedAt;
+	readonly long allocatedAt;
 
 	public PerfScope(PerfSection section)
 	{
 		this.section = section;
 		startedAt = Stopwatch.GetTimestamp();
+		allocatedAt = GC.GetAllocatedBytesForCurrentThread();
 	}
 
-	public void Dispose() => Perf.Add(section, Stopwatch.GetTimestamp() - startedAt);
+	public void Dispose()
+	{
+		Perf.Add(section, Stopwatch.GetTimestamp() - startedAt);
+		Perf.AddAllocated(section, GC.GetAllocatedBytesForCurrentThread() - allocatedAt);
+	}
 }
 
 public sealed class Perf : ModSystem
@@ -39,12 +45,15 @@ public sealed class Perf : ModSystem
 
 	static readonly long[] elapsed = new long[Enum.GetValues<PerfSection>().Length];
 	static readonly int[] calls = new int[elapsed.Length];
+	static readonly long[] allocated = new long[elapsed.Length];
 	static readonly long[] thisTick = new long[elapsed.Length];
 	static readonly long[] worstTick = new long[elapsed.Length];
 	static int pathNodes;
 	static int ticksSinceReport;
 	static long tickStartedAt;
 	static long worstUpdate;
+	static int tickGcStart;
+	static int worstTickGcs;
 	static int slowTicks;
 	const double SlowTickMilliseconds = 8.0;
 
@@ -57,7 +66,11 @@ public sealed class Perf : ModSystem
 		calls[(int)section]++;
 	}
 
-	public override void PreUpdateEntities() => tickStartedAt = Stopwatch.GetTimestamp();
+	public override void PreUpdateEntities()
+	{
+		tickStartedAt = Stopwatch.GetTimestamp();
+		tickGcStart = GC.CollectionCount(1);
+	}
 
 	static double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
 
@@ -69,12 +82,15 @@ public sealed class Perf : ModSystem
 		if (update > worstUpdate)
 		{
 			worstUpdate = update;
+			worstTickGcs = GC.CollectionCount(1) - tickGcStart;
 			Array.Copy(thisTick, worstTick, thisTick.Length);
 		}
 		Array.Clear(thisTick);
 	}
 
 	public static void CountPathNodes(int nodes) => pathNodes += nodes;
+
+	public static void AddAllocated(PerfSection section, long bytes) => allocated[(int)section] += bytes;
 
 	public override void PostUpdateEverything()
 	{
@@ -87,6 +103,7 @@ public sealed class Perf : ModSystem
 			Mod.Logger.Info(BuildReport(seconds));
 		Array.Clear(elapsed);
 		Array.Clear(calls);
+		Array.Clear(allocated);
 		pathNodes = 0;
 		worstUpdate = 0;
 		slowTicks = 0;
@@ -98,11 +115,11 @@ public sealed class Perf : ModSystem
 		foreach (var section in Enum.GetValues<PerfSection>())
 		{
 			double milliseconds = elapsed[(int)section] * 1000.0 / Stopwatch.Frequency;
-			report.Append($" {section}={milliseconds / seconds:0.00}ms/s ({calls[(int)section] / seconds:0}/s)");
+			report.Append($" {section}={milliseconds / seconds:0.00}ms/s ({calls[(int)section] / seconds:0}/s, {allocated[(int)section] / seconds / 1024:0}KB/s)");
 		}
 		report.Append($" pathNodes={pathNodes / seconds:0}/s; worst tick {Milliseconds(worstUpdate):0.0}ms [");
 		report.Append(string.Join(" ", Enum.GetValues<PerfSection>().Where(section => worstTick[(int)section] > 0).Select(section => $"{section}={Milliseconds(worstTick[(int)section]):0.0}")));
-		report.Append($"], ticks over {SlowTickMilliseconds:0}ms: {slowTicks}");
+		report.Append($"] gc1+={worstTickGcs}, ticks over {SlowTickMilliseconds:0}ms: {slowTicks}");
 		return report.ToString();
 	}
 }

@@ -36,7 +36,14 @@ public sealed class BotWorldSystem : ModSystem
 	public static FactionKnowledge KnowledgeOf(Faction faction) =>
 		Relation == FactionRelation.Cooperate ? sharedKnowledge : faction.Knowledge;
 
-	public override void OnWorldLoad() => Clear();
+	public override void OnWorldLoad()
+	{
+		Clear();
+		using var _ = Perf.Measure(PerfSection.Planner);
+		ResourceSources.Warm();
+		Planning.Shops.Warm();
+		ProgressionPlanner.Warm();
+	}
 
 	public override void OnWorldUnload()
 	{

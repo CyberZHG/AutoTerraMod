@@ -57,6 +57,12 @@ public static class ResourceSources
 	static Dictionary<int, TileSource> tileSources;
 	static Dictionary<int, NpcSource> npcSources;
 
+	public static void Warm()
+	{
+		tileSources ??= BuildTileSources();
+		npcSources ??= BuildNpcSources();
+	}
+
 	public static void Reset()
 	{
 		soulSources.Clear();

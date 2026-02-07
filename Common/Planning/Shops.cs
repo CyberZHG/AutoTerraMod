@@ -17,6 +17,12 @@ public static class Shops
 
 	static HashSet<int> shopkeepers;
 
+	public static void Warm()
+	{
+		Sellers();
+		shopkeepers ??= NPCShopDatabase.AllShops.OfType<NPCShop>().Select(shop => shop.NpcType).ToHashSet();
+	}
+
 	const float SellingReach = 16f * 12f;
 	const int SellValueDivisor = 5;
 

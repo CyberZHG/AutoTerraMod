@@ -70,6 +70,7 @@ public sealed class EscapeTask : BotTask
 		}
 		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
 		exitPlannedAt = 0;
+		exitSearch?.Cancel();
 		exitSearch = null;
 		followingExit = false;
 		legReached = false;
@@ -159,6 +160,8 @@ public sealed class EscapeTask : BotTask
 
 	public override void Stop()
 	{
+		exitSearch?.Cancel();
+		exitSearch = null;
 		Bot.Motor.ClimbingStraightUp = false;
 		base.Stop();
 	}

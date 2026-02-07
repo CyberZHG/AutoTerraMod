@@ -45,10 +45,13 @@ public sealed class PathSearch
 	readonly Dictionary<Point, (Point parent, MoveKind kind)> cameFrom = new();
 	readonly Dictionary<Point, float> costSoFar = new();
 	readonly List<Edge> edges = new(32);
-	readonly Dictionary<Point, bool> hazardCache = new();
-	readonly Dictionary<Point, bool> diggableCache = new();
-	readonly Dictionary<Point, bool> bodyClearCache = new();
-	readonly Dictionary<Point, bool> supportedCache = new();
+	const int ScanMargin = 130;
+	const byte BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128;
+
+	byte[] cells;
+	readonly int originX;
+	readonly int originY;
+	readonly int span;
 
 	Point best;
 	float bestHeuristic;
@@ -63,13 +66,61 @@ public sealed class PathSearch
 		this.forbiddenSteps = forbiddenSteps == null ? null : new HashSet<(Point, Point)>(forbiddenSteps);
 		this.maxExpanded = maxExpanded;
 		this.searchRadius = searchRadius;
+		int reach = searchRadius + ScanMargin;
+		span = reach * 2 + 1;
+		originX = start.X - reach;
+		originY = start.Y - reach;
+		cells = System.Buffers.ArrayPool<byte>.Shared.Rent(span * span);
+		Array.Clear(cells, 0, span * span);
 		costSoFar[start] = 0f;
 		open.Enqueue(start, HeuristicWeight * heuristic(start));
 		best = start;
 		bestHeuristic = heuristic(start);
 	}
 
-	public PathResult Result { get; private set; }
+	PathResult result;
+
+	public PathResult Result
+	{
+		get => result;
+		private set
+		{
+			result = value;
+			if (cells == null)
+				return;
+			System.Buffers.ArrayPool<byte>.Shared.Return(cells);
+			cells = null;
+		}
+	}
+
+	public void Cancel()
+	{
+		if (cells == null)
+			return;
+		System.Buffers.ArrayPool<byte>.Shared.Return(cells);
+		cells = null;
+		result ??= PathResult.None;
+	}
+
+	int Cell(int x, int y)
+	{
+		int cx = x - originX;
+		int cy = y - originY;
+		return (uint)cx < (uint)span && (uint)cy < (uint)span ? cx + cy * span : -1;
+	}
+
+	bool Flag(int x, int y, byte known, byte bit, out int index)
+	{
+		index = Cell(x, y);
+		return index >= 0 && (cells[index] & known) != 0;
+	}
+
+	bool Remember(int index, byte known, byte bit, bool value)
+	{
+		if (index >= 0)
+			cells[index] |= (byte)(known | (value ? bit : 0));
+		return value;
+	}
 	public bool IsDone => Result != null;
 	public Point Start => start;
 
@@ -362,18 +413,16 @@ public sealed class PathSearch
 
 	bool BodyClear(int x, int feetY)
 	{
-		var key = new Point(x, feetY);
-		if (!bodyClearCache.TryGetValue(key, out bool clear))
-			bodyClearCache[key] = clear = RowClear(x, feetY) && RowClear(x, feetY - 1) && RowClear(x, feetY - 2) && !Hazardous(x, feetY) && !Hazardous(x + 1, feetY);
-		return clear;
+		if (Flag(x, feetY, BodyKnown, BodyClearBit, out int index))
+			return (cells[index] & BodyClearBit) != 0;
+		return Remember(index, BodyKnown, BodyClearBit, RowClear(x, feetY) && RowClear(x, feetY - 1) && RowClear(x, feetY - 2) && !Hazardous(x, feetY) && !Hazardous(x + 1, feetY));
 	}
 
 	bool Supported(int x, int feetY)
 	{
-		var key = new Point(x, feetY);
-		if (!supportedCache.TryGetValue(key, out bool supported))
-			supportedCache[key] = supported = PathFinder.IsSupportedNow(x, feetY);
-		return supported;
+		if (Flag(x, feetY, SupportKnown, SupportBit, out int index))
+			return (cells[index] & SupportBit) != 0;
+		return Remember(index, SupportKnown, SupportBit, PathFinder.IsSupportedNow(x, feetY));
 	}
 
 	static bool IsPlatformBelow(int x, int feetY) =>
@@ -385,17 +434,16 @@ public sealed class PathSearch
 
 	bool IsHazardousStand(Point feet)
 	{
-		if (!hazardCache.TryGetValue(feet, out bool hazardous))
-			hazardCache[feet] = hazardous = PathFinder.NearHurtfulTile(feet.X, feet.Y) || PathFinder.OnPressurePlate(feet.X, feet.Y);
-		return hazardous;
+		if (Flag(feet.X, feet.Y, HazardKnown, HazardBit, out int index))
+			return (cells[index] & HazardBit) != 0;
+		return Remember(index, HazardKnown, HazardBit, PathFinder.NearHurtfulTile(feet.X, feet.Y) || PathFinder.OnPressurePlate(feet.X, feet.Y));
 	}
 
 	bool Diggable(int x, int y)
 	{
-		var cell = new Point(x, y);
-		if (!diggableCache.TryGetValue(cell, out bool diggable))
-			diggableCache[cell] = diggable = ComputeDiggable(x, y);
-		return diggable;
+		if (Flag(x, y, DigKnown, DigBit, out int index))
+			return (cells[index] & DigBit) != 0;
+		return Remember(index, DigKnown, DigBit, ComputeDiggable(x, y));
 	}
 
 	bool ComputeDiggable(int x, int y)

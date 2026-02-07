@@ -14,6 +14,8 @@ public static class ProgressionPlanner
 
 	static ProgressionGoal[] ladder;
 
+	public static void Warm() => ladder ??= ProgressionGoals.Build();
+
 	public static void Reset()
 	{
 		ladder = null;

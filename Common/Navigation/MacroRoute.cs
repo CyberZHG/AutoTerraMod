@@ -29,6 +29,7 @@ public sealed class MacroRoute
 		route = PathResult.None;
 		legIndex = -1;
 		plannedAt = 0;
+		pending?.Cancel();
 		pending = null;
 	}
 
