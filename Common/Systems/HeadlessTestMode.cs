@@ -9,8 +9,11 @@ namespace AutoTerraMod.Common.Systems;
 
 public sealed class HeadlessTestMode : ModSystem
 {
-	public static bool Enabled => Main.dedServ && Environment.GetEnvironmentVariable("AUTOTERRA_HEADLESS") == "1";
-	public static string Scenario => Enabled ? Environment.GetEnvironmentVariable("AUTOTERRA_SCENARIO") : null;
+	static readonly bool headlessRequested = Environment.GetEnvironmentVariable("AUTOTERRA_HEADLESS") == "1";
+	static readonly string requestedScenario = Environment.GetEnvironmentVariable("AUTOTERRA_SCENARIO");
+
+	public static bool Enabled => Main.dedServ && headlessRequested;
+	public static string Scenario => Enabled ? requestedScenario : null;
 	public static Config.FactionRelation? RelationOverride =>
 		Enabled && Enum.TryParse<Config.FactionRelation>(Environment.GetEnvironmentVariable("AUTOTERRA_RELATION"), out var relation) ? relation : null;
 

@@ -428,13 +428,23 @@ public static class ProgressionPlanner
 			context.Bot = bot;
 			context.Visiting.Clear();
 			context.readiness.Clear();
-			context.held.Clear();
-			foreach (var item in Inventory.Items(bot.Avatar))
-				context.held[item.type] = context.held.GetValueOrDefault(item.type) + item.stack;
+			context.counted = false;
 			return context;
 		}
 
-		public int Count(int itemType) => held.GetValueOrDefault(itemType);
+		bool counted;
+
+		public int Count(int itemType)
+		{
+			if (!counted)
+			{
+				counted = true;
+				held.Clear();
+				foreach (var item in Inventory.Items(Bot.Avatar))
+					held[item.type] = held.GetValueOrDefault(item.type) + item.stack;
+			}
+			return held.GetValueOrDefault(itemType);
+		}
 
 		public int CountAny(IReadOnlyList<int> itemTypes)
 		{

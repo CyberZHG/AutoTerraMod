@@ -280,6 +280,9 @@ public sealed class PathSearch
 		if (abilities.FlyRise > abilities.JumpRise && supported)
 			AddFlyEdges(x, y);
 
+		if (abilities.HookReach > abilities.JumpRise && supported)
+			AddHookEdges(x, y);
+
 		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1, abilities.MaxFall) is Point belowPlatform)
 			edges.Add(new Edge(belowPlatform, MoveKind.Drop, 1f + (belowPlatform.Y - y) * 0.3f));
 
@@ -322,6 +325,27 @@ public sealed class PathSearch
 			bool exit = (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
 			if (exit)
 				edges.Add(new Edge(new Point(x, top), MoveKind.Fly, FlyCost + rise * FlyCostPerTile));
+		}
+	}
+
+	const int HookColumnSpan = 6;
+	const float HookCost = 5f;
+	const float HookCostPerTile = 0.4f;
+
+	void AddHookEdges(int x, int y)
+	{
+		var from = new Point(x, y);
+		for (int column = x - HookColumnSpan; column <= x + HookColumnSpan; column++)
+		{
+			for (int row = y - abilities.JumpRise - 1; row >= y - abilities.HookReach; row--)
+			{
+				if (!BodyClear(column, row) || !Supported(column, row))
+					continue;
+				var ledge = new Point(column, row);
+				if (PathFinder.HookHold(from, ledge, abilities.HookReach) != null)
+					edges.Add(new Edge(ledge, MoveKind.Hook, HookCost + (y - row) * HookCostPerTile));
+				break;
+			}
 		}
 	}
 
@@ -464,7 +488,7 @@ public sealed class PathSearch
 	{
 		if (Flag(feet.X, feet.Y, HazardKnown, HazardBit, out int index))
 			return (cells[index] & HazardBit) != 0;
-		return Remember(index, HazardKnown, HazardBit, PathFinder.NearHurtfulTile(feet.X, feet.Y) || PathFinder.OnPressurePlate(feet.X, feet.Y));
+		return Remember(index, HazardKnown, HazardBit, PathFinder.NearHurtfulTile(feet.X, feet.Y) || PathFinder.OnPressurePlate(feet.X, feet.Y) || DangerSpots.IsMarked(feet.X, feet.Y));
 	}
 
 	bool Diggable(int x, int y)

@@ -30,7 +30,7 @@ public sealed class EntityIndex : ModSystem
 			var projectile = Main.projectile[i];
 			if (!projectile.active)
 				continue;
-			if (projectile.owner >= BotWorldSystem.FirstAvatarSlot)
+			if (projectile.owner >= BotWorldSystem.FirstAvatarSlot && projectile.owner < Main.maxPlayers - 1)
 				avatarProjectiles.Add(projectile);
 			if (projectile.damage > 0 && (projectile.hostile || projectile.friendly))
 				damagingProjectiles.Add(projectile);

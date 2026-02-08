@@ -148,6 +148,8 @@ public sealed class BotMotor
 		WantsToDropThroughPlatforms = false;
 
 		bot.Grapple.Tick(npc, destination);
+		if (bot.Grapple.ConsumeClimbRelease())
+			jumpHold = JumpHoldTicks;
 		if (bot.Grapple.IsAttached)
 		{
 			TrackProgress(npc);
@@ -178,6 +180,7 @@ public sealed class BotMotor
 			jumpRequested = false;
 		}
 		RefuelWings(npc);
+		ArrestFall(npc, ref wantsJump);
 		if (flightTicks > 0)
 			wantsJump = true;
 		if (npc.wet && bot.Vitals.BreathFraction < SurfaceForAirBelow)
@@ -499,7 +502,7 @@ public sealed class BotMotor
 			int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 			int flyRise = FlightRise;
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
-				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise);
+				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles);
 		}
 		return gear with
 		{
@@ -565,6 +568,8 @@ public sealed class BotMotor
 			RequestFlight(FlightIntentTicks);
 			wantsJump = true;
 		}
+		if (intent.HookAt is Vector2 hold && !bot.Grapple.IsAttached)
+			bot.Grapple.LatchForClimb(npc, hold);
 		if (intent.Brake)
 			npc.velocity.X = 0f;
 		else if (intent.Creep)
@@ -901,6 +906,25 @@ public sealed class BotMotor
 
 	bool extraJumpReady;
 	bool sprinting;
+
+	const int ArrestMarginTiles = 4;
+	const float ArrestFallSpeed = 4f;
+
+	void ArrestFall(NPC npc, ref bool wantsJump)
+	{
+		if (npc.velocity.Y < ArrestFallSpeed || npc.wet || CanFly || bot.Grapple.IsAttached)
+			return;
+		if (bot.Vitals.FallenTiles(npc) < bot.Vitals.SafeFall - ArrestMarginTiles)
+			return;
+		if (extraJumpReady)
+		{
+			wantsJump = true;
+			jumpHold = 0;
+			BotDiagnostics.Log(bot, "double-jumped to break a fall");
+			return;
+		}
+		bot.Grapple.TryArrestFall(npc);
+	}
 
 	void RefuelWings(NPC npc)
 	{

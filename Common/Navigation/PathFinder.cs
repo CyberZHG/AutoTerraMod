@@ -19,7 +19,8 @@ public enum MoveKind
 	Pillar,
 	Swim,
 	RopeDown,
-	Fly
+	Fly,
+	Hook
 }
 
 public readonly record struct PathNode(Point Feet, MoveKind Arrival);
@@ -29,7 +30,7 @@ public sealed record PathResult(List<PathNode> Nodes, bool ReachesGoal)
 	public static readonly PathResult None = new(new List<PathNode>(), false);
 }
 
-public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false, int JumpRise = PathFinder.BaseJumpRise, int FlyRise = 0);
+public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false, int JumpRise = PathFinder.BaseJumpRise, int FlyRise = 0, int HookReach = 0);
 
 public static class PathFinder
 {
@@ -133,6 +134,40 @@ public static class PathFinder
 		if (IsRope(x, y))
 			return x;
 		return IsRope(x + 1, y) ? x + 1 : -1;
+	}
+
+	public static Vector2 BodyCenterAt(Point feet) => new((feet.X + 1) * 16f, (feet.Y + 1) * 16f - 21f);
+
+	public static Vector2? HookHold(Point from, Point ledge, int reach)
+	{
+		int side = from.X < ledge.X ? -1 : from.X > ledge.X + 1 ? 1 : 0;
+		var origin = BodyCenterAt(from);
+		int supportRow = ledge.Y + 1;
+		for (int pick = 0; pick < 2; pick++)
+		{
+			int tileX = side > 0 ? ledge.X + 1 - pick : ledge.X + pick;
+			if (!TileQuery.CanStandOn(tileX, supportRow))
+				continue;
+			int hang = side != 0 ? side : tileX == ledge.X ? -1 : 1;
+			if (!HangRoom(tileX + hang, supportRow, hang))
+				continue;
+			var hold = new Vector2(tileX * 16f + (hang > 0 ? 16f : 0f), supportRow * 16f + 8f);
+			if (Vector2.Distance(origin, hold) > reach * 16f)
+				continue;
+			if (Collision.CanHitLine(origin, 1, 1, hold + new Vector2(hang * 4f, 0f), 1, 1))
+				return hold;
+		}
+		return null;
+	}
+
+	static bool HangRoom(int column, int supportRow, int hang)
+	{
+		for (int row = supportRow - 3; row <= supportRow + 1; row++)
+		{
+			if (TileQuery.IsSolid(column, row) || TileQuery.IsSolid(column + hang, row))
+				return false;
+		}
+		return true;
 	}
 
 	public static IEnumerable<Point> CellsToClear(Point from, Point to)

@@ -20,6 +20,7 @@ public struct MotorIntent
 	public bool Brake;
 	public bool Creep;
 	public bool Fly;
+	public Vector2? HookAt;
 }
 
 public sealed class PathFollower
@@ -80,7 +81,7 @@ public sealed class PathFollower
 		if (index >= path.Nodes.Count)
 			return default;
 		stepTicks++;
-		lastIntent = Execute(body, feet, grounded, path.Nodes[index]);
+		lastIntent = Execute(body, feet, grounded, path.Nodes[index], abilities);
 		if (!grounded && index > 0 && path.Nodes[index - 1].Arrival == MoveKind.Fly)
 			lastIntent.Fly = true;
 		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall))
@@ -172,9 +173,26 @@ public sealed class PathFollower
 
 	static bool IsAt(Point feet, Point node) => feet.X == node.X && Math.Abs(feet.Y - node.Y) <= 1;
 
-	MotorIntent Execute(NPC body, Point feet, bool grounded, PathNode node)
+	const int HookJumpHoldTicks = 15;
+
+	MotorIntent Execute(NPC body, Point feet, bool grounded, PathNode node, NavigationAbilities abilities)
 	{
 		var intent = new MotorIntent();
+		if (node.Arrival == MoveKind.Hook)
+		{
+			intent.MoveDirection = Math.Sign(FootingCenterX(node.Feet) - body.Center.X);
+			if (grounded && PathFinder.HookHold(feet, node.Feet, abilities.HookReach) is Vector2 hold)
+			{
+				intent.HookAt = hold;
+				intent.MoveDirection = 0;
+			}
+			else if (!grounded)
+			{
+				intent.Jump = body.velocity.Y < 0f;
+				intent.JumpHoldTicks = HookJumpHoldTicks;
+			}
+			return intent;
+		}
 		foreach (var cell in PathFinder.CellsToClear(feet, node.Feet))
 		{
 			if (PathFinder.IsClosedDoor(cell.X, cell.Y))
@@ -265,7 +283,7 @@ public sealed class PathFollower
 
 	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall)
 	{
-		if (intent.Jump || intent.Fly || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly || body.wet)
+		if (intent.Jump || intent.Fly || intent.HookAt != null || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly or MoveKind.Hook || body.wet)
 			return false;
 		int heading = intent.MoveDirection != 0 ? intent.MoveDirection : Math.Sign(body.velocity.X);
 		if (heading == 0)

@@ -516,7 +516,39 @@ public sealed class NavigationBench : ModSystem
 			"#S.........###########",
 			"######################"
 		}),
+		new("HookCliff", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#..............G.....#",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#...........##########",
+			"#S..........##########",
+			"######################"
+		}),
+		new("CloudFall", FallShaft(42)),
+		new("HookFall", FallShaft(70)),
 	};
+
+	static string[] FallShaft(int depth)
+	{
+		var rows = new List<string> { "##########", "#........#", "#........#", "####S.####" };
+		for (int row = 0; row < depth; row++)
+			rows.Add("####..####");
+		rows.Add("#.....G..#");
+		rows.Add("##########");
+		return rows.ToArray();
+	}
 
 	BenchCase[] cases;
 
@@ -695,7 +727,7 @@ public sealed class NavigationBench : ModSystem
 		}
 		ClearClutter(runner);
 		EquipBenchGear(runner, bench.Name);
-		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud");
+		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud") || bench.Name.StartsWith("Hook");
 		if (!toolless)
 			TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
 		if (bench.Name.StartsWith("NoRope") || toolless)
@@ -708,6 +740,8 @@ public sealed class NavigationBench : ModSystem
 			StripTools(runner);
 		if (bench.InWorld)
 			TopUp(runner, ItemID.TempleKey, 1);
+		if (bench.Name.StartsWith("Hook"))
+			TopUp(runner, ItemID.GrapplingHook, 1);
 		var body = runner.Npc;
 		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
 		body.velocity = Vector2.Zero;

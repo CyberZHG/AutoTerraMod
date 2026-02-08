@@ -25,6 +25,33 @@ public sealed class BotGrapple
 
 	public bool HasHook => FindHook() != null;
 
+	public int HookReachTiles => FindHook() is Item hook ? (int)(RangeOf(hook.shoot) / 16f) - 1 : 0;
+
+	const int ClimbPullTicks = 60;
+
+	bool climbing;
+	bool climbReleased;
+
+	public bool LatchForClimb(NPC body, Vector2 hold)
+	{
+		if (FindHook() == null)
+			return false;
+		Anchor = hold;
+		climbing = true;
+		hangTicks = 0;
+		body.noGravity = true;
+		SoundEngine.PlaySound(SoundID.Item1, body.Center);
+		BotDiagnostics.Log(bot, $"hooked {hold.ToTileCoordinates()} to climb");
+		return true;
+	}
+
+	public bool ConsumeClimbRelease()
+	{
+		bool released = climbReleased;
+		climbReleased = false;
+		return released;
+	}
+
 	public bool TryLatch(NPC body, Vector2 target)
 	{
 		var hook = FindHook();
@@ -49,6 +76,15 @@ public sealed class BotGrapple
 		float distance = toAnchor.Length();
 		IsHanging = distance <= HangDistance;
 		body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * PullSpeed;
+		if (climbing)
+		{
+			if (IsHanging || ++hangTicks > ClimbPullTicks)
+			{
+				Release(body, jump: true);
+				climbReleased = true;
+			}
+			return;
+		}
 		if (IsHanging && ++hangTicks > MaxHangTicks)
 			Release(body, jump: false);
 		else if (destination is Vector2 target && ShouldLetGo(anchor, target))
@@ -59,17 +95,71 @@ public sealed class BotGrapple
 	{
 		Anchor = null;
 		IsHanging = false;
+		climbing = false;
 		body.noGravity = false;
 		if (jump)
 			body.velocity.Y = -5f;
 	}
 
+	public bool TryArrestFall(NPC body)
+	{
+		var hook = FindHook();
+		if (hook == null)
+			return false;
+		var anchor = FindHold(body, RangeOf(hook.shoot));
+		if (anchor == null)
+			return false;
+		Anchor = anchor;
+		hangTicks = 0;
+		body.noGravity = true;
+		SoundEngine.PlaySound(SoundID.Item1, body.Center);
+		BotDiagnostics.Log(bot, $"hooked {anchor.Value.ToTileCoordinates()} to break a fall");
+		return true;
+	}
+
+	const float BelowPenalty = 400f;
+
+	static Vector2? FindHold(NPC body, float range)
+	{
+		var origin = body.Center;
+		int reach = (int)(range / 16f);
+		var originTile = origin.ToTileCoordinates();
+		Vector2? best = null;
+		float bestScore = float.MaxValue;
+		for (int x = originTile.X - reach; x <= originTile.X + reach; x++)
+		{
+			for (int y = originTile.Y - reach; y <= originTile.Y + 2; y++)
+			{
+				if (!TileQuery.IsSolid(x, y) && !TileQuery.IsPlatform(x, y))
+					continue;
+				var point = new Vector2(x * 16 + 8, y * 16 + 8);
+				float distance = Vector2.Distance(origin, point);
+				if (distance > range || !Collision.CanHitLine(origin, 1, 1, point + Vector2.Normalize(origin - point) * 10f, 1, 1))
+					continue;
+				float score = distance + (y > originTile.Y ? BelowPenalty : 0f);
+				if (score < bestScore)
+				{
+					bestScore = score;
+					best = point;
+				}
+			}
+		}
+		return best;
+	}
+
 	static bool ShouldLetGo(Vector2 anchor, Vector2 target) =>
 		target.Y > anchor.Y + 48f || target.Y < anchor.Y - 24f || System.Math.Abs(target.X - anchor.X) > 16f * 6f;
 
-	Item FindHook() => Inventory.Items(bot.Avatar)
-		.Where(item => item.shoot > ProjectileID.None && item.shoot < Main.projHook.Length && Main.projHook[item.shoot])
-		.MaxBy(item => RangeOf(item.shoot));
+	Item FindHook()
+	{
+		Item best = null;
+		foreach (var item in Inventory.Items(bot.Avatar))
+		{
+			if (item.shoot > ProjectileID.None && item.shoot < Main.projHook.Length && Main.projHook[item.shoot] && (best == null || RangeOf(item.shoot) > RangeOf(best.shoot)))
+				best = item;
+		}
+		return best;
+	}
 
 	static Vector2? FindAnchor(NPC body, Vector2 target, float range)
 	{

@@ -76,6 +76,7 @@ public sealed class BotWorldSystem : ModSystem
 		ProgressionPlanner.Reset();
 		Bosses.BossCredit.Reset();
 		World.WaterFinder.Reset();
+		Navigation.DangerSpots.Reset();
 	}
 
 	public override void SaveWorldData(TagCompound tag)
@@ -109,11 +110,12 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		if (!IsRunning)
 			return;
-		foreach (var bot in Bots.Where(bot => !bot.IsAlive))
+		foreach (var bot in Bots)
 		{
-			if (--bot.RespawnTicks <= 0)
+			if (!bot.IsAlive && --bot.RespawnTicks <= 0)
 				Spawn(bot, RespawnFeet(bot));
 		}
+		Navigation.DangerSpots.Prune();
 	}
 
 	static void Initialize()

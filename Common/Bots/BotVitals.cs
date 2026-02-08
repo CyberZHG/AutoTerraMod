@@ -36,6 +36,11 @@ public sealed class BotVitals
 	int fallStartTileY;
 	public uint HurtByTileAt { get; private set; }
 	const int DeepFallTiles = 30;
+	Point fallStartFeet;
+
+	public int SafeFall => SafeFallTiles + Avatar.extraFall;
+
+	public int FallenTiles(NPC body) => body.velocity.Y > 0f ? (int)(body.position.Y / 16f) - fallStartTileY : 0;
 	int suffocateDelay;
 	bool statsFailureLogged;
 	bool biomeFailureLogged;
@@ -267,7 +272,7 @@ public sealed class BotVitals
 	void TakeFallDamage(NPC body)
 	{
 		int tileY = (int)(body.position.Y / 16f);
-		if (body.velocity.Y < 0f || body.wet || Avatar.noFallDmg)
+		if (body.velocity.Y < 0f || body.wet || Avatar.noFallDmg || bot.Grapple.IsAttached)
 		{
 			fallStartTileY = tileY;
 			return;
@@ -275,14 +280,21 @@ public sealed class BotVitals
 		if (body.velocity.Y != 0f)
 		{
 			if (tileY - fallStartTileY == DeepFallTiles)
-				BotDiagnostics.Log(bot, $"falling deep from row {fallStartTileY} while {bot.Brain.Current?.NameKey}; motor: {bot.Motor.Describe()}{World.TerrainDump.Around(body.Center.ToTileCoordinates() - new Point(0, DeepFallTiles / 2), 16, 14)}");
+			{
+				BotDiagnostics.Log(bot, $"falling deep from {fallStartFeet} while {bot.Brain.Current?.NameKey}; motor: {bot.Motor.Describe()}{World.TerrainDump.Around(body.Center.ToTileCoordinates() - new Point(0, DeepFallTiles / 2), 16, 14)}");
+				Navigation.DangerSpots.Mark(fallStartFeet);
+			}
 			return;
 		}
 		int fallen = tileY - fallStartTileY;
 		fallStartTileY = tileY;
-		int safeTiles = SafeFallTiles + Avatar.extraFall;
-		if (fallen > safeTiles && !bot.Motor.CanFly)
-			Hurt((fallen - safeTiles) * FallDamagePerTile, 0, ignoreImmunity: true, source: $"fall of {fallen} tiles");
+		var landedFrom = fallStartFeet;
+		fallStartFeet = Navigation.PathFinder.FeetOf(body);
+		if (fallen > SafeFall && !bot.Motor.CanFly)
+		{
+			Hurt((fallen - SafeFall) * FallDamagePerTile, 0, ignoreImmunity: true, source: $"fall of {fallen} tiles");
+			Navigation.DangerSpots.Mark(landedFrom);
+		}
 	}
 
 	bool WalksOnFire => Avatar.fireWalk || Avatar.buffImmune[BuffID.Burning] || Avatar.HasBuff(BuffID.ObsidianSkin);
