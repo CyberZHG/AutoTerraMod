@@ -4,6 +4,7 @@ using System.Linq;
 using AutoTerraMod.Common.Bots;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Systems;
+using Terraria;
 using Terraria.ID;
 
 namespace AutoTerraMod.Common.Planning;
@@ -99,13 +100,13 @@ public sealed class AmmoGoal : ProgressionGoal
 	const int Minimum = 100;
 	const int RestockTo = 300;
 
-	static readonly int[] Arrows =
+	internal static readonly int[] Arrows =
 	{
 		ItemID.ChlorophyteArrow, ItemID.IchorArrow, ItemID.CursedArrow, ItemID.HolyArrow, ItemID.HellfireArrow,
 		ItemID.JestersArrow, ItemID.UnholyArrow, ItemID.FrostburnArrow, ItemID.FlamingArrow, ItemID.WoodenArrow
 	};
 
-	static readonly int[] Bullets =
+	internal static readonly int[] Bullets =
 	{
 		ItemID.ChlorophyteBullet, ItemID.CrystalBullet, ItemID.IchorBullet, ItemID.CursedBullet, ItemID.PartyBullet,
 		ItemID.MeteorShot, ItemID.SilverBullet, ItemID.TungstenBullet, ItemID.MusketBall
@@ -113,27 +114,41 @@ public sealed class AmmoGoal : ProgressionGoal
 
 	public override string Describe() => "Ammo";
 
-	static int AmmoClass(Bot bot) => Inventory.Items(bot.Avatar)
-		.Where(item => item.damage > 0 && (item.useAmmo == AmmoID.Arrow || item.useAmmo == AmmoID.Bullet) && item.shoot > ProjectileID.None)
-		.OrderByDescending(item => item.damage)
-		.Select(item => item.useAmmo)
-		.FirstOrDefault();
+	internal static int AmmoClass(Bot bot)
+	{
+		Item best = null;
+		foreach (var item in Inventory.Items(bot.Avatar))
+		{
+			if (item.damage > 0 && (item.useAmmo == AmmoID.Arrow || item.useAmmo == AmmoID.Bullet) && item.shoot > ProjectileID.None && (best == null || item.damage > best.damage))
+				best = item;
+		}
+		return best?.useAmmo ?? 0;
+	}
 
 	static int[] OptionsFor(int ammoClass) => ammoClass == AmmoID.Bullet ? Bullets : Arrows;
 
 	public override bool AppliesTo(Bot bot) => AmmoClass(bot) != 0;
 
-	const int Critical = 30;
+	internal const int Critical = 30;
+	internal const int Keep = RestockTo;
 
 	public override bool IsMet(Bot bot) => Supply(bot) >= Minimum;
 
 	public override bool IsUrgent(Bot bot) => AppliesTo(bot) && Supply(bot) < Critical;
 
-	static int Supply(Bot bot)
+	internal static int Supply(Bot bot)
 	{
 		int ammoClass = AmmoClass(bot);
-		var ammo = Inventory.Items(bot.Avatar).Where(item => item.ammo == ammoClass).ToList();
-		return ammo.Any(item => !item.consumable) ? int.MaxValue : ammo.Sum(item => item.stack);
+		int supply = 0;
+		foreach (var item in Inventory.Items(bot.Avatar))
+		{
+			if (item.ammo != ammoClass)
+				continue;
+			if (!item.consumable)
+				return int.MaxValue;
+			supply += item.stack;
+		}
+		return supply;
 	}
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, OptionsFor(AmmoClass(bot)), RestockTo);
@@ -467,8 +482,245 @@ public sealed class SmashAltarsGoal : ProgressionGoal
 	}
 }
 
+public sealed class StockpileGoal : ProgressionGoal
+{
+	readonly string name;
+	readonly int floor;
+	readonly int target;
+	readonly System.Func<Bot, IReadOnlyList<int>> options;
+
+	public StockpileGoal(string name, int floor, int target, System.Func<Bot, IReadOnlyList<int>> options)
+	{
+		this.name = name;
+		this.floor = floor;
+		this.target = target;
+		this.options = options;
+	}
+
+	public override string Describe() => $"Stockpile({name})";
+
+	public override bool AppliesTo(Bot bot) =>
+		bot.Faction.Settlement != null && HouseInspector.IsComplete(bot.Faction, bot.Faction.Settlement.Storage)
+		&& IsQuartermaster(bot) && options(bot).Count > 0;
+
+	public override bool IsMet(Bot bot) => Stored(bot, options(bot)) >= floor;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var types = options(bot);
+		int want = target - Stored(bot, types);
+		int spareType = 0, spare = 0, spareKeep = 0;
+		foreach (int type in types)
+		{
+			int keep = KeepFor(bot, type);
+			int extra = Inventory.Count(bot.Avatar, type) - keep;
+			if (extra > spare)
+				(spareType, spare, spareKeep) = (type, extra, keep);
+		}
+		var deliver = spare > 0 && BaseStorage.HasRoom(bot.Faction) ? new DeliverStep(spareType, bot.Id, spareKeep) : null;
+		if (deliver != null && spare >= want)
+			return deliver;
+		var step = ProgressionPlanner.ObtainAnyAmount(bot, types, KeepFor(bot, types[0]) + want, fresh: true);
+		return step is BlockedStep or IdleStep && deliver != null ? deliver : step;
+	}
+
+	static int Stored(Bot bot, IReadOnlyList<int> types)
+	{
+		int stored = 0;
+		foreach (int type in types)
+			stored += BaseStorage.Count(bot.Faction, type);
+		return stored;
+	}
+
+	static int KeepFor(Bot bot, int type)
+	{
+		if (type == ItemID.Torch)
+			return Kit.TorchReserve;
+		var sample = ContentSamples.ItemsByType[type];
+		return sample.ammo > 0 && sample.ammo == AmmoGoal.AmmoClass(bot) ? AmmoGoal.Keep : 0;
+	}
+
+	public static bool IsQuartermaster(Bot bot)
+	{
+		Bot chosen = null;
+		foreach (var member in BotWorldSystem.Bots)
+		{
+			if (member.FactionId == bot.FactionId && member.IsAlive && (chosen == null || member.Personality.Cooperation > chosen.Personality.Cooperation))
+				chosen = member;
+		}
+		return chosen == bot;
+	}
+
+	public static IReadOnlyList<int> FactionAmmo(Bot bot, int ammoClass)
+	{
+		foreach (var member in BotWorldSystem.Bots)
+		{
+			if (member.FactionId == bot.FactionId && AmmoGoal.AmmoClass(member) == ammoClass)
+				return ammoClass == AmmoID.Bullet ? AmmoGoal.Bullets : AmmoGoal.Arrows;
+		}
+		return System.Array.Empty<int>();
+	}
+}
+
+public sealed class ShareSuppliesGoal : ProgressionGoal
+{
+	const float MinimumCooperation = 0.4f;
+	const int MinimumGift = 50;
+	const float MaxTripDistance = 16f * 200f;
+
+	public override string Describe() => "ShareAmmo";
+
+	public override bool AppliesTo(Bot bot) => bot.Personality.Cooperation >= MinimumCooperation;
+
+	public override bool IsUrgent(Bot bot) => AppliesTo(bot) && Need(bot, out _, out _, out _) != null;
+
+	public override bool IsMet(Bot bot) => Need(bot, out _, out _, out _) == null;
+
+	public override PlanStep Plan(Bot bot) =>
+		Need(bot, out int itemType, out int keep, out var teammate) != null ? new DeliverStep(itemType, teammate.Id, keep, HandOver: true) : PlanStep.Idle;
+
+	static Bot Need(Bot bot, out int itemType, out int keep, out Bot teammate)
+	{
+		itemType = 0;
+		keep = 0;
+		teammate = null;
+		foreach (var member in BotWorldSystem.Bots)
+		{
+			if (member == bot || member.FactionId != bot.FactionId || !member.IsAlive)
+				continue;
+			int ammoClass = AmmoGoal.AmmoClass(member);
+			if (ammoClass == 0 || AmmoGoal.Supply(member) >= AmmoGoal.Critical)
+				continue;
+			if (Microsoft.Xna.Framework.Vector2.Distance(member.Center, bot.Center) > MaxTripDistance)
+				continue;
+			int ownKeep = AmmoGoal.AmmoClass(bot) == ammoClass ? AmmoGoal.Keep : 0;
+			foreach (var item in Inventory.Items(bot.Avatar))
+			{
+				if (item.ammo != ammoClass || !item.consumable || Inventory.Count(bot.Avatar, item.type) - ownKeep < MinimumGift)
+					continue;
+				itemType = item.type;
+				keep = ownKeep;
+				teammate = member;
+				return member;
+			}
+		}
+		return null;
+	}
+}
+
+public sealed class ShoppingGoal : ProgressionGoal
+{
+	const long CoinReserve = 5000;
+	const int PotionStock = 10;
+	const int PotionRestockBelow = 4;
+	const float UpgradeRatio = 1.2f;
+	const int ChoiceCacheTicks = 600;
+
+	readonly Dictionary<int, (uint at, BuyStep choice)> choices = new();
+
+	public override string Describe() => "Shopping";
+
+	public override bool AppliesTo(Bot bot) => Coins(bot) > CoinReserve;
+
+	public override bool IsMet(Bot bot) => Choice(bot) == null;
+
+	public override PlanStep Plan(Bot bot) => (PlanStep)Choice(bot) ?? PlanStep.Idle;
+
+	static long Coins(Bot bot) => Terraria.Utils.CoinsCount(out _, bot.Avatar.inventory);
+
+	BuyStep Choice(Bot bot)
+	{
+		if (choices.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < ChoiceCacheTicks
+			&& (cached.choice == null || Gain(bot, ContentSamples.ItemsByType[cached.choice.ItemType], out _) > 0f))
+			return cached.choice;
+		var choice = Best(bot);
+		choices[bot.Id] = (Terraria.Main.GameUpdateCount, choice);
+		if (choice != null && choice != cached.choice)
+			BotDiagnostics.Log(bot, $"wants to buy {Terraria.Lang.GetItemNameValue(choice.ItemType)} x{choice.Amount}");
+		return choice;
+	}
+
+	static BuyStep Best(Bot bot)
+	{
+		long budget = Coins(bot) - CoinReserve;
+		if (budget <= 0)
+			return null;
+		BuyStep best = null;
+		float bestGain = 0f;
+		foreach (var (itemType, sellerType, price) in Shops.CurrentOffers(bot))
+		{
+			if (!ContentSamples.ItemsByType.TryGetValue(itemType, out var sample))
+				continue;
+			float gain = Gain(bot, sample, out int amount);
+			if (gain <= bestGain || (long)price * amount > budget)
+				continue;
+			best = new BuyStep(itemType, amount, sellerType);
+			bestGain = gain;
+		}
+		return best;
+	}
+
+	static float Gain(Bot bot, Item sample, out int amount)
+	{
+		amount = 1;
+		if (sample.potion && sample.healLife > 0)
+		{
+			int held = 0;
+			foreach (var item in Inventory.Items(bot.Avatar))
+			{
+				if (item.potion && item.healLife > 0)
+					held += item.stack;
+			}
+			amount = PotionStock - held;
+			return held < PotionRestockBelow ? 2f : 0f;
+		}
+		if (sample.accessory && !sample.vanity)
+		{
+			if (Inventory.Owns(bot.Avatar, sample.type))
+				return 0f;
+			int weakest = int.MaxValue;
+			for (int slot = Equipment.FirstAccessorySlot; slot <= Equipment.LastAccessorySlot; slot++)
+			{
+				if (bot.Avatar.IsItemSlotUnlockedAndUsable(slot))
+					weakest = System.Math.Min(weakest, Equipment.AccessoryScore(bot.Avatar.armor[slot]));
+			}
+			int score = Equipment.AccessoryScore(sample);
+			return weakest == int.MaxValue || score <= weakest ? 0f : (score - weakest) / 20f;
+		}
+		var kind = KindFor(bot, sample);
+		if (kind is not GearKind gearKind)
+			return 0f;
+		int power = Equipment.PowerOf(sample, gearKind);
+		int current = Equipment.BestPower(bot.Avatar, gearKind);
+		return power > current * UpgradeRatio && power > current + 2 ? (power - current) / (float)System.Math.Max(1, current) : 0f;
+	}
+
+	static GearKind? KindFor(Bot bot, Item sample)
+	{
+		if (sample.pick > 0)
+			return GearKind.Pickaxe;
+		if (sample.damage <= 0 || sample.axe > 0 || sample.hammer > 0)
+			return null;
+		if (BotHands.IsRangedWeapon(sample))
+			return bot.Personality.Style == CombatStyle.Ranged && (sample.useAmmo == AmmoID.Arrow || sample.useAmmo == AmmoID.Bullet) ? GearKind.RangedWeapon : null;
+		var style = BotHands.StyleOf(sample);
+		if (style != bot.Personality.Style)
+			return null;
+		return style switch
+		{
+			CombatStyle.Melee => GearKind.MeleeWeapon,
+			CombatStyle.Magic => GearKind.MagicWeapon,
+			CombatStyle.Summon => GearKind.SummonWeapon,
+			_ => null
+		};
+	}
+}
+
 public static class ProgressionGoals
 {
+	static readonly int[] Wood = { ItemID.Wood };
+	static readonly int[] Torches = { ItemID.Torch };
+
 	public static ProgressionGoal[] Build()
 	{
 		var goals = new List<ProgressionGoal>
@@ -484,6 +736,8 @@ public static class ProgressionGoals
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new AmmoGoal(),
+			new ShareSuppliesGoal(),
+			new ShoppingGoal(),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),
@@ -496,6 +750,10 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
+		goals.Add(new StockpileGoal("Wood", 150, 300, bot => Wood));
+		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
+		goals.Add(new StockpileGoal("Arrows", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Arrow)));
+		goals.Add(new StockpileGoal("Bullets", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Bullet)));
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		AddOreTier(goals,

@@ -150,7 +150,7 @@ public static class ResourceSources
 	{
 		bool common = rates.Values.Any(rate => rate >= MinimumHuntDropRate);
 		var hunted = rates.Where(entry => !common || entry.Value >= MinimumHuntDropRate).Select(entry => entry.Key).ToHashSet();
-		var ground = hunted.Select(GroundOf).Where(landmark => landmark != null).GroupBy(landmark => landmark).OrderByDescending(group => group.Count()).Select(group => group.Key).FirstOrDefault();
+		var ground = hunted.Select(GroundOf).GroupBy(landmark => landmark).OrderByDescending(group => group.Count()).ThenBy(group => group.Key.HasValue).Select(group => group.Key).FirstOrDefault();
 		return new NpcSource(hunted, ground) { IsRare = !common };
 	}
 

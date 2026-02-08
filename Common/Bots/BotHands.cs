@@ -296,7 +296,7 @@ public sealed class BotHands
 			WorldGen.KillTile(tile.X, tile.Y);
 	}
 
-	static bool TryPlaceTile(Item item, Point tile)
+	internal static bool TryPlaceTile(Item item, Point tile)
 	{
 		if (TileObjectData.GetTileData(item.createTile, item.placeStyle) != null)
 		{

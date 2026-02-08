@@ -9,7 +9,7 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class Kit
 {
-	const int TorchReserve = 30;
+	public const int TorchReserve = 30;
 	const int RopeReserve = 60;
 	const int PlatformReserve = 20;
 
@@ -26,6 +26,7 @@ public static class Kit
 		var plannedTypes = bot.Brain.PlannedItemTypes;
 		int ammoType = Inventory.Items(avatar).Where(BotHands.IsRangedWeapon).Select(weapon => weapon.useAmmo).FirstOrDefault();
 		var keptByReserve = new Dictionary<int, int>();
+		int ammoKept = 0;
 		var toStore = new List<Item>();
 		foreach (var item in Inventory.Items(avatar).ToList())
 		{
@@ -34,7 +35,7 @@ public static class Kit
 				|| (item.potion && item.healLife > 0)
 				|| Junk.IsBossSummon(item)
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
-				|| (ammoType > 0 && item.ammo == ammoType)
+				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
@@ -44,6 +45,16 @@ public static class Kit
 				toStore.Add(item);
 		}
 		return toStore;
+	}
+
+	const int AmmoReserve = 400;
+
+	static bool WithinAmmoReserve(Item item, ref int kept)
+	{
+		if (kept >= AmmoReserve)
+			return false;
+		kept += item.stack;
+		return true;
 	}
 
 	static bool WithinReserve(Item item, Dictionary<int, int> keptByReserve)

@@ -14,7 +14,7 @@ public sealed class AmmoScenario : ModSystem
 
 	static readonly int[] Shopkeepers = { NPCID.ArmsDealer, NPCID.Merchant };
 
-	static bool Active => HeadlessTestMode.Scenario == "ammo";
+	static bool Active => HeadlessTestMode.Scenario is "ammo" or "stockpile";
 
 	public static void Prepare()
 	{
@@ -38,11 +38,92 @@ public sealed class AmmoScenario : ModSystem
 			HeadlessTestMode.Give(bot, ItemID.Bone, 99);
 			HeadlessTestMode.Give(bot, ItemID.WoodenSword, 1);
 		}
+		if (HeadlessTestMode.Scenario == "stockpile")
+		{
+			foreach (var faction in BotWorldSystem.Factions)
+				BuildInstantly(faction);
+			foreach (var bot in BotWorldSystem.Bots)
+			{
+				HeadlessTestMode.Give(bot, ItemID.Chest, 2);
+				HeadlessTestMode.Give(bot, ItemID.Torch, 60);
+				HeadlessTestMode.Give(bot, ItemID.WorkBench, 1);
+				HeadlessTestMode.Give(bot, ItemID.Furnace, 1);
+				HeadlessTestMode.Give(bot, ItemID.IronAnvil, 1);
+				HeadlessTestMode.Give(bot, ItemID.Rope, 100);
+			}
+		}
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info("ammo scenario prepared: flintlock + 20 musket balls + 10 gold each; Arms Dealer and Merchant at every base");
+	}
+
+	const int InstantPasses = 6;
+
+	static void BuildInstantly(Factions.Faction faction)
+	{
+		var settlement = faction.Settlement;
+		if (settlement == null)
+			return;
+		var design = Building.HouseInspector.MaterialsFor(faction);
+		foreach (var structure in new[] { settlement.Hall, settlement.Storage })
+		{
+			for (int pass = 0; pass < InstantPasses; pass++)
+			{
+				var pending = structure.PendingOperations(design).ToList();
+				if (pending.Count == 0)
+					break;
+				foreach (var operation in pending)
+					Apply(structure, operation, design);
+			}
+		}
+		Building.HouseInspector.Invalidate(faction);
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"stockpile scenario: built hall and storage for {faction.Name}; storage complete={Building.HouseInspector.IsComplete(faction, settlement.Storage)}");
+	}
+
+	static void Apply(Building.HouseBlueprint structure, Building.BuildOperation operation, Building.HouseDesign design)
+	{
+		var (x, y) = (operation.Tile.X, operation.Tile.Y);
+		var action = Building.HouseMaterials.ReplacementFor(operation.Action);
+		if (action is Building.BuildAction.ChopTree or Building.BuildAction.ClearTile or Building.BuildAction.RemoveScaffold || operation.Action is Building.BuildAction.RenovateBlock)
+			WorldGen.KillTile(x, y, noItem: true);
+		if (operation.Action is Building.BuildAction.RenovateWall)
+			WorldGen.KillWall(x, y);
+		int itemType = Building.HouseMaterials.DefaultItem(action, design);
+		if (itemType == ItemID.None)
+			return;
+		var sample = ContentSamples.ItemsByType[itemType];
+		if (sample.createWall > 0)
+			WorldGen.PlaceWall(x, y, sample.createWall, mute: true);
+		else if (action is Building.BuildAction.PlaceTable or Building.BuildAction.PlaceChair or Building.BuildAction.PlaceBed)
+			structure.FurnitureSpots(operation.Tile).Any(spot => BotHands.TryPlaceTile(sample, spot));
+		else if (sample.createTile >= 0)
+		{
+			if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType != sample.createTile)
+				WorldGen.KillTile(x, y, noItem: true);
+			BotHands.TryPlaceTile(sample, operation.Tile);
+		}
+		WorldGen.SquareTileFrame(x, y);
+	}
+
+	const int ShortageTick = 3 * 3600;
+
+	static void StageShortage()
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			var members = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).ToList();
+			if (members.Count < 2)
+				continue;
+			var needy = members[0];
+			Inventory.Consume(needy.Avatar, new int[] { ItemID.MusketBall }, Inventory.Count(needy.Avatar, ItemID.MusketBall));
+			var giver = members.MaxBy(bot => bot.Personality.Cooperation == needy.Personality.Cooperation ? -1f : bot.Personality.Cooperation);
+			HeadlessTestMode.Give(giver, ItemID.MusketBall, 500);
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"stockpile scenario: {needy.Name} ran dry, {giver.Name} (cooperation {giver.Personality.Cooperation:0.00}) carries 500 extra");
+		}
 	}
 
 	public override void PostUpdateWorld()
 	{
+		if (HeadlessTestMode.Scenario == "stockpile" && Main.GameUpdateCount == ShortageTick)
+			StageShortage();
 		if (!Active || Main.GameUpdateCount % ReportIntervalTicks != 0)
 			return;
 		foreach (var bot in BotWorldSystem.Bots)

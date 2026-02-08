@@ -118,7 +118,7 @@ public sealed class BotBrain
 			bot.Watchdog.Tick();
 		if ((--reconsiderTimer <= 0 || current == null || current.IsFinished) && !TryReconsider())
 			reconsiderTimer = 1;
-		if (current != null)
+		if (current is { IsFinished: false })
 			using (Probes.Measure(current.ProbeLabel))
 				current.Tick();
 		using (Probes.Measure("Motor"))

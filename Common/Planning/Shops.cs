@@ -13,6 +13,8 @@ public static class Shops
 	{
 		sellers = null;
 		shopkeepers = null;
+		offers.Clear();
+		offersAt = 0;
 	}
 
 	static HashSet<int> shopkeepers;
@@ -100,4 +102,32 @@ public static class Shops
 	}
 
 	public static bool IsSold(int itemType) => Sellers().ContainsKey(itemType);
+
+	const int OfferRefreshTicks = 600;
+
+	static readonly List<(int itemType, int sellerType, int price)> offers = new();
+	static uint offersAt;
+
+	public static IReadOnlyList<(int itemType, int sellerType, int price)> CurrentOffers(Bots.Bot shopper)
+	{
+		if (offersAt != 0 && Main.GameUpdateCount - offersAt < OfferRefreshTicks)
+			return offers;
+		offersAt = System.Math.Max(1u, Main.GameUpdateCount);
+		offers.Clear();
+		foreach (var shop in NPCShopDatabase.AllShops.OfType<NPCShop>())
+		{
+			int index = NPC.FindFirstNPC(shop.NpcType);
+			if (index < 0)
+				continue;
+			var seller = Main.npc[index];
+			using var scope = new ShopperScope(shopper.Avatar, seller);
+			double adjustment = shopper.Avatar.currentShoppingSettings.PriceAdjustment;
+			foreach (var entry in shop.Entries)
+			{
+				if (entry.Item.type > 0 && entry.ConditionsMet())
+					offers.Add((entry.Item.type, shop.NpcType, (int)System.Math.Round((entry.Item.shopCustomPrice ?? entry.Item.value) * adjustment)));
+			}
+		}
+		return offers;
+	}
 }

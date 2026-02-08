@@ -3,7 +3,7 @@ Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spe
 - Melee, ranged, magic and summoner bots (minions follow their owner and attack its target).
 - Fight every boss from King Slime to Moon Lord: readiness checks, summon rituals (orbs, hellbridge, altar, truffle worm...), credit per faction.
 - Chase end-game gear: Ankh Shield, Terraspark Boots, Cell Phone and style picks (Zenith, Vortex Beater, Last Prism...), farming rare drops and souls where they live; climb sky ladders to hunt wyverns for wings.
-- Guns and bows use ammo: bots keep a supply (craft, withdraw or buy from the Arms Dealer/Merchant) and switch weapons when out; they earn coins by selling junk and outgrown loot and drop half their money on death.
+- Guns and bows use ammo: bots keep a supply (craft, withdraw or buy from the Arms Dealer/Merchant) and switch weapons when out; they earn coins by selling junk and outgrown loot, spend spare money on healing potions and better gear, and drop half their money on death; a quartermaster keeps wood, torches and ammo stocked at base, and teammates hand ammo to whoever runs dry.
 - Rescue town NPCs, house them and buy stations and pylons from their shops; anglers fish and turn in Angler quests; monster hunters hang banners, collectors dress mannequins, naturalists cage critters.
 - Smarter travel: fly with wings, double-jump, sprint with boots, hook up cliffs; break long falls with a double jump or hook and steer around spots where anyone fell; dig out of deep caves without a recall item, route through the Lihzahrd temple maze, hop between pylons.
 - Modes: Race, Cooperate, War (factions fight but never wreck or rob each other's bases).
@@ -14,7 +14,7 @@ Single-player only.
 - 近战、射手、法师、召唤师四种职业（召唤物跟随主人并攻击其目标）。
 - 挑战从史莱姆王到月亮领主的所有 Boss：评估战力，完成召唤仪式（暗影珠、地狱桥、祭坛、松露虫……），按阵营结算击杀。
 - 追求终局装备：十字章护盾、泰拉闪耀靴、手机及各职业武器饰品（天顶剑、星旋机枪、最后的棱镜……），去对应环境刷稀有掉落和魂；搭天梯打飞龙做翅膀。
-- 枪和弓消耗弹药：角色会囤积弹药（合成、从仓库取或向军火商/商人购买），没弹药时换武器；把杂物和淘汰装备卖给 NPC 赚钱，死亡时掉落一半钱币。
+- 枪和弓消耗弹药：角色会囤积弹药（合成、从仓库取或向军火商/商人购买），没弹药时换武器；把杂物和淘汰装备卖给 NPC 赚钱，有余钱时买治疗药水和更好的装备，死亡时掉落一半钱币；由一名“后勤”角色在基地囤积木材、火把和弹药，队友弹药耗尽时会有人把弹药送过去。
 - 解救城镇 NPC，为他们盖房，并从商店购买制作站和传送晶塔；爱钓鱼的角色会钓鱼并提交渔夫任务，怪物猎人挂旗帜，收藏家给人体模型穿套装，博物学家抓小动物放进笼子。
 - 更聪明的移动：会用翅膀飞行、二段跳、疾跑鞋加速、用钩爪攀上悬崖；长距离坠落时用二段跳或钩爪缓冲，并绕开有人摔伤过的地方；没有回城道具也能从深洞脱困，穿过丛林神庙迷宫，在传送晶塔之间传送。
 - 模式：竞速、合作、敌对（阵营间可互相攻击，但不会破坏或偷取对方基地）。

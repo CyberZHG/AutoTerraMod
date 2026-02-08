@@ -63,7 +63,7 @@ public static class Equipment
 	public const int FirstAccessorySlot = 3;
 	public const int LastAccessorySlot = 9;
 
-	static int AccessoryScore(Item item) =>
+	public static int AccessoryScore(Item item) =>
 		item == null || item.IsAir || !item.accessory || item.vanity || item.type == ItemID.ClothierVoodooDoll
 			? 0
 			: 1 + item.defense * 10 + System.Math.Max(0, item.rare) * 5 + (item.wingSlot > 0 ? WingPreference : 0);

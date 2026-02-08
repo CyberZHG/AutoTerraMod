@@ -180,10 +180,11 @@ public static class ProgressionPlanner
 		return context.Release(ObtainAny(context, options, 0));
 	}
 
-	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount)
+	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount, bool fresh = false)
 	{
 		PlanStep cheapest = null;
 		var context = Context.Rent(bot);
+		context.Fresh = fresh;
 		foreach (int option in strongestFirst)
 		{
 			var step = Resolve(context, option, amount, 0);
@@ -274,7 +275,7 @@ public static class ProgressionPlanner
 		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
 			return null;
-		int stored = BaseStorage.Count(context.Bot.Faction, itemType);
+		int stored = context.Fresh && depth == 0 ? 0 : BaseStorage.Count(context.Bot.Faction, itemType);
 		if (stored > 0)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
 		if (depth > MaxDepth || !context.Visiting.Add(itemType))
@@ -417,6 +418,7 @@ public static class ProgressionPlanner
 		static Context idle;
 
 		public Bot Bot { get; private set; }
+		public bool Fresh { get; set; }
 		public HashSet<int> Visiting { get; } = new();
 		readonly Dictionary<int, int> held = new();
 		readonly Dictionary<int, int> readiness = new();
@@ -426,6 +428,7 @@ public static class ProgressionPlanner
 			var context = idle ?? new Context();
 			idle = null;
 			context.Bot = bot;
+			context.Fresh = false;
 			context.Visiting.Clear();
 			context.readiness.Clear();
 			context.counted = false;

@@ -25,7 +25,7 @@ public sealed record BuildHouseStep(BuildOperation Operation) : PlanStep;
 
 public sealed record WithdrawStep(int ItemType, int Amount) : PlanStep;
 
-public sealed record DeliverStep(int ItemType, int RecipientId) : PlanStep;
+public sealed record DeliverStep(int ItemType, int RecipientId, int Keep = 0, bool HandOver = false) : PlanStep;
 
 public sealed record SummonBossStep(Bosses.BossChallenge Challenge, Bosses.BossTrigger Trigger, Microsoft.Xna.Framework.Vector2 Place, Microsoft.Xna.Framework.Point? Shrine) : PlanStep;
 

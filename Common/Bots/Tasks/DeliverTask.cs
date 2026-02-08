@@ -25,25 +25,25 @@ public sealed class DeliverTask : BotTask
 		if (Bot.Brain.Plan is not DeliverStep deliver)
 			return 0f;
 		step = deliver;
-		Detail = $"{Lang.GetItemNameValue(deliver.ItemType)} x{Inventory.Count(Avatar, deliver.ItemType)}";
+		Detail = $"{Lang.GetItemNameValue(deliver.ItemType)} x{Inventory.Count(Avatar, deliver.ItemType) - deliver.Keep}";
 		return 60f;
 	}
 
 	public override void Tick()
 	{
-		if (step == null || Inventory.Count(Avatar, step.ItemType) == 0)
+		if (step == null || Inventory.Count(Avatar, step.ItemType) <= step.Keep)
 		{
 			IsFinished = true;
 			return;
 		}
-		var chest = BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center);
+		var chest = step.HandOver ? null : BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center);
 		if (chest != null)
 		{
 			DeliverToChest(chest);
 			return;
 		}
 		var builder = BotWorldSystem.FindBot(step.RecipientId);
-		if (builder?.Npc is not NPC recipient)
+		if (builder == Bot || builder?.Npc is not NPC recipient)
 		{
 			IsFinished = true;
 			return;
@@ -74,32 +74,59 @@ public sealed class DeliverTask : BotTask
 				IsFinished = true;
 			return;
 		}
+		int stored = 0;
+		int keep = step.Keep;
 		foreach (var item in Inventory.Items(Avatar).Where(item => item.type == step.ItemType).ToList())
 		{
-			var leftover = BaseStorage.Deposit(chest, item.Clone());
-			item.stack = leftover.IsAir ? 0 : leftover.stack;
-			if (item.stack <= 0)
-				item.TurnToAir();
+			var portion = SparePortion(item, ref keep);
+			if (portion == null)
+				continue;
+			var leftover = BaseStorage.Deposit(chest, portion);
+			int moved = portion.stack - (leftover.IsAir ? 0 : leftover.stack);
+			stored += moved;
+			Take(item, moved);
 		}
 		SoundEngine.PlaySound(SoundID.MenuClose, tile.ToWorldCoordinates());
 		Bot.Watchdog.RecordProgress();
-		BotDiagnostics.Log(Bot, $"stored {Lang.GetItemNameValue(step.ItemType)} for construction");
+		BotDiagnostics.Log(Bot, $"stored {Lang.GetItemNameValue(step.ItemType)} x{stored} at base");
 		IsFinished = true;
+	}
+
+	static Item SparePortion(Item item, ref int keep)
+	{
+		int spare = item.stack - keep;
+		keep = System.Math.Max(0, keep - item.stack);
+		if (spare <= 0)
+			return null;
+		var portion = item.Clone();
+		portion.stack = spare;
+		return portion;
+	}
+
+	static void Take(Item item, int amount)
+	{
+		item.stack -= amount;
+		if (item.stack <= 0)
+			item.TurnToAir();
 	}
 
 	void DropFor(Bot builder, Vector2 where)
 	{
 		int delivered = 0;
+		int keep = step.Keep;
 		foreach (var item in Inventory.Items(Avatar).Where(item => item.type == step.ItemType).ToList())
 		{
-			int index = Item.NewItem(new EntitySource_Misc("AutoTerraMod:Delivery"), where, item.Clone());
+			var portion = SparePortion(item, ref keep);
+			if (portion == null)
+				continue;
+			int index = Item.NewItem(new EntitySource_Misc("AutoTerraMod:Delivery"), where, portion);
 			if (index < Main.maxItems)
 			{
 				Main.item[index].noGrabDelay = 0;
 				ItemReservations.Reserve(index, builder);
 			}
-			delivered += item.stack;
-			item.TurnToAir();
+			delivered += portion.stack;
+			Take(item, portion.stack);
 		}
 		Bot.Watchdog.RecordProgress();
 		BotDiagnostics.Log(Bot, $"handed {Lang.GetItemNameValue(step.ItemType)} x{delivered} to {builder.Name}");

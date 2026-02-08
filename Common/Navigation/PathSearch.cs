@@ -427,10 +427,29 @@ public sealed class PathSearch
 		{
 			if (!BodyClear(x, y + fall))
 				return null;
-			if (Supported(x, y + fall) || PathFinder.RopeColumn(x, y + fall) >= 0 || PathFinder.InWater(x, y + fall))
+			if (PathFinder.RopeColumn(x, y + fall) >= 0 || PathFinder.InWater(x, y + fall))
 				return new Point(x, y + fall);
+			if (Supported(x, y + fall))
+				return fall >= PrecariousDropTiles && OnLipOverChasm(x, y + fall) ? null : new Point(x, y + fall);
 		}
 		return null;
+	}
+
+	const int PrecariousDropTiles = 4;
+
+	static bool OnLipOverChasm(int x, int feetY)
+	{
+		bool left = TileQuery.CanStandOn(x, feetY + 1);
+		if (left == TileQuery.CanStandOn(x + 1, feetY + 1))
+			return false;
+		int open = left ? x + 1 : x;
+		for (int depth = 2; depth <= PathFinder.MaxSafeFall; depth++)
+		{
+			var tile = Main.tile[open, feetY + depth];
+			if (TileQuery.CanStandOn(open, feetY + depth) || tile.LiquidAmount > 0)
+				return false;
+		}
+		return true;
 	}
 
 	Point? FallAfterDigging(Point dug)
