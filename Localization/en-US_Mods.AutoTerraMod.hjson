@@ -4,17 +4,17 @@ Configs: {
 
 		FactionCount: {
 			Label: Faction count
-			Tooltip: Number of AI factions created when a world is first entered (1-4).
+			Tooltip: Number of AI factions used when a new world starts (1-4). Afterwards each world keeps its own settings; change them in game with /autoterra.
 		}
 
 		BotsPerFaction: {
 			Label: Bots per faction
-			Tooltip: Number of AI bots in each faction (1-6).
+			Tooltip: Number of AI bots per faction used when a new world starts (1-6). Afterwards each world keeps its own settings; change them in game with /autoterra.
 		}
 
 		Relation: {
 			Label: Faction relation
-			Tooltip: Race keeps knowledge separate; Cooperate shares discovered resources between factions; War lets factions fight each other but never wreck or rob each other's bases.
+			Tooltip: Used when a new world starts. Race keeps knowledge separate; Cooperate shares discovered resources between factions; War lets factions fight each other but never wreck or rob each other's bases. Change it later with /autoterra relation.
 		}
 
 		ShowInfoPanel: {
@@ -51,6 +51,13 @@ Configs: {
 
 		Tooltip: ""
 	}
+}
+
+Commands: {
+	Description: Shows or changes this world's faction settings (counts can only grow)
+	NotStarted: Factions have not started in this world yet.
+	Usage: Usage: {0}
+	Current: This world: {0} factions, {1} bots each, relation: {2}
 }
 
 Keybinds: {

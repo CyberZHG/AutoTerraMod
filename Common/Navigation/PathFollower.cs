@@ -242,10 +242,15 @@ public sealed class PathFollower
 				break;
 			case MoveKind.Pillar:
 				intent.MoveDirection = 0;
+				if (grounded && !TileQuery.FreeForPlacing(node.Feet.X, feet.Y) && !TileQuery.FreeForPlacing(node.Feet.X + 1, feet.Y))
+				{
+					intent.ScaffoldTile = ScaffoldSpot(node.Feet.X, feet.Y, body.Center.X >= PathFinder.CenterXOf(node.Feet.X));
+					break;
+				}
 				intent.Jump = grounded || body.velocity.Y < 0f;
 				intent.JumpHoldTicks = HoldTicksForRise(2);
 				if (!grounded && !PathFinder.IsSupportedNow(feet.X, feet.Y) && PathFinder.IsSupportedNow(feet.X, feet.Y + 1))
-					intent.ScaffoldTile = new Point(node.Feet.X + (body.Center.X >= PathFinder.CenterXOf(node.Feet.X) ? 1 : 0), feet.Y + 1);
+					intent.ScaffoldTile = ScaffoldSpot(node.Feet.X, feet.Y + 1, body.Center.X >= PathFinder.CenterXOf(node.Feet.X));
 				break;
 			case MoveKind.Bridge:
 				if (MissingBridgeTile(feet, node.Feet) is Point gap)
@@ -256,6 +261,17 @@ public sealed class PathFollower
 				break;
 		}
 		return intent;
+	}
+
+	static Point ScaffoldSpot(int x, int y, bool preferRight)
+	{
+		int first = preferRight ? x + 1 : x;
+		int second = preferRight ? x : x + 1;
+		bool firstFree = TileQuery.FreeForPlacing(first, y);
+		bool secondFree = TileQuery.FreeForPlacing(second, y);
+		if (!firstFree && !secondFree && TileQuery.IsChoppableTree(Main.tile[second, y].TileType) && !TileQuery.IsChoppableTree(Main.tile[first, y].TileType))
+			return new Point(second, y);
+		return new Point(firstFree || !secondFree ? first : second, y);
 	}
 
 	const float FootingShift = 8f;

@@ -8,7 +8,7 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class BotDiagnostics
 {
-	static bool Enabled => ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging;
+	public static bool Enabled => Systems.HeadlessTestMode.Enabled || ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging;
 
 	public static void Log(Bot bot, string message)
 	{

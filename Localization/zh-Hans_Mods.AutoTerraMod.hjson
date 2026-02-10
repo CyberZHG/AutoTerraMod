@@ -4,17 +4,17 @@ Configs: {
 
 		FactionCount: {
 			Label: 阵营数量
-			Tooltip: 首次进入世界时创建的 AI 阵营数（1-4）。
+			Tooltip: 新世界第一次开始时使用的 AI 阵营数（1-4）。之后每个世界保存自己的设置，可在游戏内用 /autoterra 修改。
 		}
 
 		BotsPerFaction: {
 			Label: 每阵营人数
-			Tooltip: 每个阵营的 AI 角色数（1-6）。
+			Tooltip: 新世界第一次开始时每个阵营的 AI 角色数（1-6）。之后每个世界保存自己的设置，可在游戏内用 /autoterra 修改。
 		}
 
 		Relation: {
 			Label: 阵营关系
-			Tooltip: 竞速：各阵营情报独立；合作：共享已发现的资源位置；敌对：阵营之间可以互相攻击，但不会破坏或偷取其他阵营的基地。
+			Tooltip: 新世界第一次开始时使用。竞速：各阵营情报独立；合作：共享已发现的资源位置；敌对：阵营之间可以互相攻击，但不会破坏或偷取其他阵营的基地。之后可用 /autoterra relation 修改。
 		}
 
 		ShowInfoPanel: {
@@ -51,6 +51,13 @@ Configs: {
 
 		// Tooltip: ""
 	}
+}
+
+Commands: {
+	Description: 查看或修改当前世界的阵营设置（数量和人数只能增加）
+	NotStarted: 当前世界还没有开始阵营。
+	Usage: 用法：{0}
+	Current: 当前世界：{0} 个阵营，每阵营 {1} 人，关系：{2}
 }
 
 Keybinds: {

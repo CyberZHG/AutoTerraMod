@@ -39,8 +39,23 @@ public sealed class BotHands
 	public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 	public bool Ready => cooldown <= 0;
 	public Item BestPickaxe => Avatar.GetBestPickaxe();
-	public Item BestAxe => Inventory.Items(Avatar).Where(item => item.axe > 0).MaxBy(item => item.axe);
-	public Item BestHammer => Inventory.Items(Avatar).Where(item => item.hammer > 0).MaxBy(item => item.hammer);
+	public Item BestAxe => BestTool(Avatar, AxePower);
+	public Item BestHammer => BestTool(Avatar, HammerPower);
+	public bool HasAxe => BestAxe != null;
+
+	static readonly System.Func<Item, int> AxePower = item => item.axe;
+	static readonly System.Func<Item, int> HammerPower = item => item.hammer;
+
+	static Item BestTool(Player avatar, System.Func<Item, int> power)
+	{
+		Item best = null;
+		foreach (var item in Inventory.Items(avatar))
+		{
+			if (power(item) > 0 && (best == null || power(item) > power(best)))
+				best = item;
+		}
+		return best;
+	}
 
 	public void Tick()
 	{

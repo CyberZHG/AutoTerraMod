@@ -105,7 +105,7 @@ public sealed class Perf : ModSystem
 			return;
 		float seconds = ticksSinceReport / 60f;
 		ticksSinceReport = 0;
-		if (ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging)
+		if (Bots.BotDiagnostics.Enabled)
 		{
 			Mod.Logger.Info(BuildReport(seconds));
 			if (Probes.Enabled)

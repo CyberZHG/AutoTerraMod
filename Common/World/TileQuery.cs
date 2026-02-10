@@ -37,6 +37,12 @@ public static class TileQuery
 		return false;
 	}
 
+	public static bool FreeForPlacing(int x, int y)
+	{
+		var tile = Main.tile[x, y];
+		return !tile.HasTile || Main.tileCut[tile.TileType];
+	}
+
 	public static bool CanStandOn(int x, int y) => IsSolid(x, y) || IsPlatform(x, y);
 
 	public static bool HasTile(Point tile) => WorldGen.InWorld(tile.X, tile.Y, 2) && Main.tile[tile.X, tile.Y].HasTile;

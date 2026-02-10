@@ -25,6 +25,7 @@ public sealed class BotWorldSystem : ModSystem
 	public static readonly List<Faction> Factions = new();
 	public static readonly List<Bot> Bots = new();
 	public static FactionRelation Relation { get; private set; }
+	public static WorldFactionSettings Settings { get; private set; }
 	static FactionKnowledge sharedKnowledge = new();
 	static bool initialized;
 	static int nextBotId;
@@ -65,6 +66,7 @@ public sealed class BotWorldSystem : ModSystem
 		Bots.Clear();
 		sharedKnowledge = new FactionKnowledge();
 		Relation = FactionRelation.Race;
+		Settings = null;
 		initialized = false;
 		nextBotId = 0;
 		Stations.Reset();
@@ -81,6 +83,8 @@ public sealed class BotWorldSystem : ModSystem
 
 	public override void SaveWorldData(TagCompound tag)
 	{
+		if (Settings != null)
+			tag["settings"] = Settings.Save();
 		if (Factions.Count == 0)
 			return;
 		tag["relation"] = (int)Relation;
@@ -98,6 +102,27 @@ public sealed class BotWorldSystem : ModSystem
 		Bots.AddRange(tag.GetList<TagCompound>("bots").Select(Bot.Load));
 		if (tag.ContainsKey("sharedKnowledge"))
 			sharedKnowledge.Load(tag.GetCompound("sharedKnowledge"));
+		Settings = tag.ContainsKey("settings") ? WorldFactionSettings.Load(tag.GetCompound("settings"))
+			: Factions.Count > 0 ? new WorldFactionSettings(Factions.Count, Factions.Max(MembersOf), Relation)
+			: null;
+	}
+
+	static int MembersOf(Faction faction) => Bots.Count(bot => bot.FactionId == faction.Id);
+
+	public static void ChangeSettings(WorldFactionSettings settings)
+	{
+		Settings = settings;
+		Relation = HeadlessTestMode.RelationOverride ?? settings.Relation;
+		if (!initialized)
+			return;
+		int firstNew = Bots.Count;
+		GrowToConfig();
+		DesignMissingHouses();
+		for (int i = firstNew; i < Bots.Count; i++)
+		{
+			AssignAvatarSlot(i);
+			Spawn(Bots[i], Bots[i].Faction.BaseFeet);
+		}
 	}
 
 	public override void PreUpdateWorld()
@@ -138,15 +163,15 @@ public sealed class BotWorldSystem : ModSystem
 
 	static void GrowToConfig()
 	{
-		var config = ModContent.GetInstance<AutoTerraConfig>();
-		Relation = HeadlessTestMode.RelationOverride ?? config.Relation;
+		Settings ??= WorldFactionSettings.FromConfig(ModContent.GetInstance<AutoTerraConfig>());
+		Relation = HeadlessTestMode.RelationOverride ?? Settings.Relation;
 		bool firstSetup = Factions.Count == 0;
-		for (int index = Factions.Count; index < config.FactionCount; index++)
+		for (int index = Factions.Count; index < Settings.FactionCount; index++)
 		{
-			var baseTile = firstSetup ? FindBaseTile(index, config.FactionCount) : FindBaseTileAwayFromOthers();
+			var baseTile = firstSetup ? FindBaseTile(index, Settings.FactionCount) : FindBaseTileAwayFromOthers();
 			Factions.Add(new Faction { Id = index, BaseTile = baseTile });
 		}
-		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? config.BotsPerFaction;
+		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? Settings.BotsPerFaction;
 		foreach (var faction in Factions)
 		{
 			int members = Bots.Count(bot => bot.FactionId == faction.Id);
@@ -169,11 +194,11 @@ public sealed class BotWorldSystem : ModSystem
 				int x = Main.spawnTileX + direction * step * BaseSpacingTiles;
 				if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 					continue;
-				if (Factions.All(faction => System.Math.Abs(faction.BaseTile.X - x) >= MinimumBaseSeparation))
-					return FindBaseTileNear(x);
+				if (Factions.All(faction => System.Math.Abs(faction.BaseTile.X - x) >= MinimumBaseSeparation) && FindBaseTileNear(x) is Point site)
+					return site;
 			}
 		}
-		return FindBaseTileNear(Main.spawnTileX);
+		return FindBaseTileNear(Main.spawnTileX) ?? SurfaceSite(Main.spawnTileX);
 	}
 
 	static void DesignMissingHouses()
@@ -192,11 +217,44 @@ public sealed class BotWorldSystem : ModSystem
 
 	static Point FindBaseTile(int index, int count)
 	{
-		float offset = (index - (count - 1) / 2f) * BaseSpacingTiles;
-		return FindBaseTileNear(Main.spawnTileX + (int)offset);
+		int targetX = Main.spawnTileX + (int)((index - (count - 1) / 2f) * BaseSpacingTiles);
+		int awayFromSpawn = targetX >= Main.spawnTileX ? 1 : -1;
+		for (int shift = 0; shift <= MaxEvilDetour; shift += BaseSearchRadius)
+		{
+			if (FindBaseTileNear(targetX + awayFromSpawn * shift) is Point site)
+				return site;
+		}
+		return SurfaceSite(targetX);
 	}
 
-	static Point FindBaseTileNear(int targetX)
+	const int MaxEvilDetour = 600;
+	const int EvilClearance = 40;
+	const int EvilDepth = 30;
+
+	static Point SurfaceSite(int x)
+	{
+		x = Utils.Clamp(x, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+		return new Point(x, TileQuery.SurfaceY(x) - 1);
+	}
+
+	static bool NearEvil(int centerX)
+	{
+		for (int x = centerX - EvilClearance; x <= centerX + EvilClearance; x += 2)
+		{
+			if (!WorldGen.InWorld(x, 10, 10))
+				continue;
+			int surface = TileQuery.SurfaceY(x);
+			for (int y = surface - 5; y <= surface + EvilDepth; y += 2)
+			{
+				var tile = Main.tile[x, y];
+				if (tile.HasTile && (TileID.Sets.Corrupt[tile.TileType] || TileID.Sets.Crimson[tile.TileType]))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	static Point? FindBaseTileNear(int targetX)
 	{
 		int preferredX = Utils.Clamp(targetX, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
 		int bestX = preferredX;
@@ -205,14 +263,17 @@ public sealed class BotWorldSystem : ModSystem
 		{
 			if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 				continue;
-			float score = SiteRoughness(x) + System.Math.Abs(x - preferredX) * 0.05f;
+			float roughness = SiteRoughness(x);
+			if (roughness == float.MaxValue || NearEvil(x))
+				continue;
+			float score = roughness + System.Math.Abs(x - preferredX) * 0.05f;
 			if (score < bestScore)
 			{
 				bestScore = score;
 				bestX = x;
 			}
 		}
-		return new Point(bestX, TileQuery.SurfaceY(bestX) - 1);
+		return bestScore == float.MaxValue ? null : new Point(bestX, TileQuery.SurfaceY(bestX) - 1);
 	}
 
 	static float SiteRoughness(int centerX)
@@ -240,12 +301,15 @@ public sealed class BotWorldSystem : ModSystem
 	static void AssignAvatarSlots()
 	{
 		for (int i = 0; i < Bots.Count; i++)
-		{
-			var avatar = Bots[i].Avatar;
-			avatar.whoAmI = FirstAvatarSlot + i;
-			avatar.active = false;
-			Main.player[avatar.whoAmI] = avatar;
-		}
+			AssignAvatarSlot(i);
+	}
+
+	static void AssignAvatarSlot(int index)
+	{
+		var avatar = Bots[index].Avatar;
+		avatar.whoAmI = FirstAvatarSlot + index;
+		avatar.active = false;
+		Main.player[avatar.whoAmI] = avatar;
 	}
 
 	static void ReleaseAvatarSlots()

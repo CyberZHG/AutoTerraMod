@@ -538,7 +538,35 @@ public sealed class NavigationBench : ModSystem
 		}),
 		new("CloudFall", FallShaft(42)),
 		new("HookFall", FallShaft(70)),
+		new("ClimbTreeLid", LidShaft(5, "#....T.......#", "#gggggggggggg#", "#dddddddddddd#", "#####..#######", "#####S.#######")),
+		new("ClimbChestLid", LidShaft(7, "#....c.......#", "#gggggggggggg#", "#dddddddddddd#", "####.....#####", "####S....#####")),
+		new("ClimbLeafLid", LidShaft(5, "#............#", "#llllllllllll#", "#llllllllllll#", "#####..#######", "#####S.#######")),
+		new("NoRopeTreeWall", TreeWall()),
 	};
+
+	static string[] LidShaft(int goalColumn, string surface, string grass, string soil, string shaft, string bottom)
+	{
+		var rows = new List<string> { new('#', surface.Length) };
+		for (int row = 0; row < 22; row++)
+			rows.Add("#" + new string('.', surface.Length - 2) + "#");
+		rows[^1] = rows[^1][..goalColumn] + "G" + rows[^1][(goalColumn + 1)..];
+		rows.AddRange(new[] { surface, grass, soil, shaft, shaft, bottom, new string('#', surface.Length) });
+		return rows.ToArray();
+	}
+
+	static string[] TreeWall()
+	{
+		var rows = new List<string> { "################" };
+		for (int row = 0; row < 14; row++)
+			rows.Add("#..............#");
+		rows.Add("#...........G..#");
+		for (int row = 0; row < 8; row++)
+			rows.Add("#.........WWWWW#");
+		rows.Add("#S.......TWWWWW#");
+		rows.Add("#gggggggggggggg#");
+		rows.Add("################");
+		return rows.ToArray();
+	}
 
 	static string[] FallShaft(int depth)
 	{
@@ -552,7 +580,13 @@ public sealed class NavigationBench : ModSystem
 
 	BenchCase[] cases;
 
-	BenchCase[] Cases => cases ??= (System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_ONLY_CAPTURES") == "1" ? CapturedCases() : BuiltInCases.Concat(CapturedCases())).ToArray();
+	BenchCase[] Cases => cases ??= (System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_ONLY_CAPTURES") == "1" ? CapturedCases() : BuiltInCases.Concat(CapturedCases())).Where(Selected).ToArray();
+
+	static bool Selected(BenchCase bench)
+	{
+		string filter = System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_FILTER");
+		return string.IsNullOrEmpty(filter) || filter.Split(',').Any(name => bench.Name.StartsWith(name));
+	}
 
 	static IEnumerable<BenchCase> CapturedCases()
 	{
@@ -725,11 +759,28 @@ public sealed class NavigationBench : ModSystem
 			for (int column = 0; column < bench.Map[row].Length; column++)
 				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
 		}
+		foreach (bool walls in new[] { false, true })
+		{
+			for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
+			{
+				for (int column = 0; column < bench.Map[row].Length; column++)
+				{
+					if (bench.Map[row][column] == 'W' == walls)
+						PlaceLate(left + column, ArenaTop + row, bench.Map[row][column]);
+				}
+			}
+		}
 		ClearClutter(runner);
 		EquipBenchGear(runner, bench.Name);
 		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud") || bench.Name.StartsWith("Hook");
 		if (!toolless)
+		{
+			if (runner.Hands.BestPickaxe == null)
+				TopUp(runner, ItemID.CopperPickaxe, 1);
+			if (runner.Hands.BestAxe == null)
+				TopUp(runner, ItemID.CopperAxe, 1);
 			TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
+		}
 		if (bench.Name.StartsWith("NoRope") || toolless)
 			Inventory.Consume(runner.Avatar, new int[] { ItemID.Rope }, Inventory.Count(runner.Avatar, ItemID.Rope));
 		else
@@ -749,7 +800,7 @@ public sealed class NavigationBench : ModSystem
 		runner.Avatar.statLife = runner.Avatar.statLifeMax2;
 		runner.Motor.Stop();
 		goal = target.ToWorldCoordinates();
-		runner.Brain.Override = new BenchMoveTask(runner, goal);
+		runner.Brain.Override = new BenchMoveTask(runner, goal, bench.Name.StartsWith("Climb"));
 		caseStartedAt = Main.GameUpdateCount;
 	}
 
@@ -810,6 +861,13 @@ public sealed class NavigationBench : ModSystem
 			case 's':
 				WorldGen.PlaceTile(x, y, TileID.Stone, true, true);
 				break;
+			case 'g':
+				WorldGen.PlaceTile(x, y, TileID.Dirt, true, true);
+				tile.TileType = TileID.Grass;
+				break;
+			case 'l':
+				WorldGen.PlaceTile(x, y, TileID.LeafBlock, true, true);
+				break;
 			case '=':
 				WorldGen.PlaceTile(x, y, TileID.Platforms, true, true);
 				break;
@@ -827,17 +885,49 @@ public sealed class NavigationBench : ModSystem
 		}
 	}
 
+	static void PlaceLate(int x, int y, char glyph)
+	{
+		switch (glyph)
+		{
+			case 'T':
+				if (!WorldGen.GrowTree(x, y + 1))
+					BotDiagnostics.LogWorld($"nav bench: tree did not grow at {x},{y}");
+				break;
+			case 'c':
+				int chest = WorldGen.PlaceChest(x, y);
+				if (chest >= 0)
+					Main.chest[chest].item[0] = new Item(ItemID.DirtBlock, 10);
+				else
+					BotDiagnostics.LogWorld($"nav bench: chest not placed at {x},{y}");
+				break;
+			case 'W':
+				WorldGen.PlaceTile(x, y, TileID.LihzahrdBrick, true, true);
+				WorldGen.SquareTileFrame(x, y, true);
+				break;
+		}
+	}
+
 	sealed class BenchMoveTask : BotTask
 	{
 		readonly Vector2 target;
 
-		public BenchMoveTask(Bot bot, Vector2 target) : base(bot) => this.target = target;
+		readonly bool climbsStraightUp;
+
+		public BenchMoveTask(Bot bot, Vector2 target, bool climbsStraightUp) : base(bot)
+		{
+			this.target = target;
+			this.climbsStraightUp = climbsStraightUp;
+		}
 
 		public override string NameKey => "Explore";
 
 		public override float Evaluate() => 0f;
 
-		public override void Tick() => Bot.Motor.MoveTo(target, 8f);
+		public override void Tick()
+		{
+			Bot.Motor.MoveTo(target, 8f);
+			Bot.Motor.ClimbingStraightUp = climbsStraightUp;
+		}
 	}
 
 	sealed class HoldStillTask : BotTask

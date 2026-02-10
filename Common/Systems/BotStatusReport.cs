@@ -19,7 +19,7 @@ public sealed class BotStatusReport : ModSystem
 		if (!BotWorldSystem.IsRunning || ++ticksSinceReport < ReportIntervalTicks)
 			return;
 		ticksSinceReport = 0;
-		if (!ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging)
+		if (!Bots.BotDiagnostics.Enabled)
 			return;
 		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}):");
 		foreach (var faction in BotWorldSystem.Factions)

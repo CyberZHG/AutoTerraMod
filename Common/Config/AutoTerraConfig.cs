@@ -33,6 +33,6 @@ public sealed class AutoTerraConfig : ModConfig
 	[DefaultValue(true)]
 	public bool ShowInfoPanel;
 
-	[DefaultValue(true)]
+	[DefaultValue(false)]
 	public bool DiagnosticLogging;
 }

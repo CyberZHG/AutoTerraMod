@@ -30,7 +30,7 @@ public sealed record PathResult(List<PathNode> Nodes, bool ReachesGoal)
 	public static readonly PathResult None = new(new List<PathNode>(), false);
 }
 
-public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false, int JumpRise = PathFinder.BaseJumpRise, int FlyRise = 0, int HookReach = 0);
+public readonly record struct NavigationAbilities(int PickPower, bool CanDig, bool CanBridge, bool CanPillar, bool CanRope = false, int MaxFall = PathFinder.MaxSafeFall, bool CanUnlock = false, int JumpRise = PathFinder.BaseJumpRise, int FlyRise = 0, int HookReach = 0, bool CanChop = false);
 
 public static class PathFinder
 {
@@ -185,6 +185,20 @@ public static class PathFinder
 		}
 	}
 
+	public static Point? RemovableBlockerOnTop(int x, int y, bool canChop)
+	{
+		if (!WorldGen.InWorld(x, y - 1, 2) || WorldGen.CanKillTile(x, y))
+			return null;
+		var above = Main.tile[x, y - 1];
+		if (!above.HasTile || above.TileType == Main.tile[x, y].TileType || Building.HouseInspector.IsProtected(x, y - 1))
+			return null;
+		int type = above.TileType;
+		if (Main.tileAxe[type])
+			return canChop ? new Point(x, y - 1) : null;
+		bool container = TileID.Sets.BasicChest[type] || TileID.Sets.BasicDresser[type] || type == TileID.Hellforge;
+		return container && WorldGen.CanKillTile(x, y - 1) ? new Point(x, y - 1) : null;
+	}
+
 	public static bool IsClosedDoor(int x, int y) => Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.ClosedDoor;
 
 	public static bool IsSupportedNow(int x, int feetY) => TileQuery.CanStandOn(x, feetY + 1) || TileQuery.CanStandOn(x + 1, feetY + 1);
@@ -228,7 +242,7 @@ public static class PathFinder
 	static bool IsHurtful(int tileType) =>
 		TileID.Sets.TouchDamageImmediate[tileType] > 0 || TileID.Sets.TouchDamageHot[tileType] || TileID.Sets.TouchDamageBleeding[tileType];
 
-	static bool IsRope(int x, int y) => WorldGen.InWorld(x, y, 5) && Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType];
+	public static bool IsRope(int x, int y) => WorldGen.InWorld(x, y, 5) && Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType];
 
 	public static bool UnderFallingBlock(int x, int y)
 	{

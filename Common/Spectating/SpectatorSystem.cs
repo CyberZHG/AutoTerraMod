@@ -122,8 +122,6 @@ public sealed class SpectatorPlayer : ModPlayer
 			SpectatorSystem.TogglePlayingInPerson();
 		if (!SpectatorSystem.IsSpectating)
 			return;
-		if (SpectatorSystem.NextBotKey.JustPressed || SpectatorSystem.PreviousBotKey.JustPressed || SpectatorSystem.FreeCameraKey.JustPressed)
-			Mod.Logger.Info($"Spectator key pressed: next={SpectatorSystem.NextBotKey.JustPressed} previous={SpectatorSystem.PreviousBotKey.JustPressed} free={SpectatorSystem.FreeCameraKey.JustPressed}");
 		if (SpectatorSystem.NextBotKey.JustPressed)
 			SpectatorSystem.Cycle(1);
 		if (SpectatorSystem.PreviousBotKey.JustPressed)
@@ -149,10 +147,22 @@ public sealed class SpectatorPlayer : ModPlayer
 		}
 		Player.ghost = true;
 		ghostedBySpectator = true;
+		ToggleInventoryLikeVanilla();
 		var followed = SpectatorSystem.Followed;
 		if (followed == null)
 			return;
 		Player.Center = followed.Center;
 		Player.velocity = Vector2.Zero;
+	}
+
+	void ToggleInventoryLikeVanilla()
+	{
+		if (!Main.hasFocus || Main.drawingPlayerChat || Main.editSign || Main.editChest || Main.blockInput)
+			return;
+		if (!PlayerInput.Triggers.Current.Inventory)
+			return;
+		if (Player.releaseInventory)
+			Player.ToggleInv();
+		Player.releaseInventory = false;
 	}
 }

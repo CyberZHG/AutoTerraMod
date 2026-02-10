@@ -248,7 +248,7 @@ public sealed class BotMotor
 		wantsJump = grounded && delta.Y < -16f;
 	}
 
-	static Point? TunnelTile(int left, int right, int top, int bottom, int pickPower)
+	Point? TunnelTile(int left, int right, int top, int bottom, int pickPower)
 	{
 		for (int y = top; y <= bottom; y++)
 		{
@@ -287,7 +287,10 @@ public sealed class BotMotor
 		var feet = PathFinder.FeetOf(npc);
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		if (BestClimbColumn(feet, pickPower) is not int column)
+		{
+			TileToDig = DiggableWallBeside(feet.X, feet.Y, pickPower);
 			return;
+		}
 		bool grounded = npc.velocity.Y == 0f;
 		float offset = PathFinder.CenterXOf(column) - npc.Center.X;
 		if (grounded && Math.Abs(offset) > ClimbCenteringTolerance)
@@ -298,6 +301,11 @@ public sealed class BotMotor
 		if (FirstSolidAbove(column, feet.Y) is Point ceiling)
 		{
 			TileToDig = ceiling;
+			return;
+		}
+		if (FirstOccupiedAbove(column, feet.Y) is Point trunk)
+		{
+			bot.Hands.Chop(trunk);
 			return;
 		}
 		if (!bot.Hands.HasBridgeMaterial)
@@ -317,12 +325,17 @@ public sealed class BotMotor
 	{
 		int? best = null;
 		int bestCost = int.MaxValue;
-		for (int column = feet.X - 1; column <= feet.X + 1; column++)
+		for (int column = feet.X - ClimbColumnReach; column <= feet.X + ClimbColumnReach; column++)
 		{
 			int cost = Math.Abs(column - feet.X);
-			if (cost > 0 && !PathFinder.IsSupportedNow(column, feet.Y))
+			if (cost > 0 && (!PathFinder.IsSupportedNow(column, feet.Y) || !WalkableBetween(feet, column)))
 				continue;
 			bool blocked = false;
+			if (FirstOccupiedAbove(column, feet.Y) is Point occupied)
+			{
+				blocked = !Abilities().CanChop || !TileQuery.IsChoppableTree(TileQuery.TypeAt(occupied));
+				cost += 3;
+			}
 			for (int x = column; x <= column + 1 && !blocked; x++)
 			{
 				blocked = SandAbove(x, feet.Y);
@@ -342,6 +355,23 @@ public sealed class BotMotor
 			}
 		}
 		return best;
+	}
+
+	const int ClimbColumnReach = 3;
+
+	static bool WalkableBetween(Point feet, int column)
+	{
+		int left = Math.Min(feet.X, column);
+		int right = Math.Max(feet.X, column) + 1;
+		for (int x = left; x <= right; x++)
+		{
+			for (int y = feet.Y - 2; y <= feet.Y; y++)
+			{
+				if (TileQuery.IsSolid(x, y))
+					return false;
+			}
+		}
+		return true;
 	}
 
 	const int SandLookUpTiles = 10;
@@ -370,7 +400,17 @@ public sealed class BotMotor
 		return null;
 	}
 
-	static Point? DiggableWallBeside(int column, int feetY, int pickPower)
+	static Point? FirstOccupiedAbove(int column, int feetY)
+	{
+		for (int y = feetY; y >= feetY - 4; y--)
+		{
+			if (!TileQuery.IsSolid(column, y) && !TileQuery.FreeForPlacing(column, y))
+				return new Point(column, y);
+		}
+		return null;
+	}
+
+	Point? DiggableWallBeside(int column, int feetY, int pickPower)
 	{
 		foreach (int x in new[] { column - 1, column + 2 })
 		{
@@ -383,11 +423,17 @@ public sealed class BotMotor
 		return null;
 	}
 
-	static bool CanBreak(int x, int y, int pickPower) =>
+	bool CanBreak(int x, int y, int pickPower) =>
 		CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower;
 
 	void PlaceFoothold(Point tile)
 	{
+		if (!TileQuery.FreeForPlacing(tile.X, tile.Y))
+		{
+			if (TileQuery.IsChoppableTree(TileQuery.TypeAt(tile)))
+				bot.Hands.Chop(tile);
+			return;
+		}
 		bool insideSettlement = bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true;
 		if (insideSettlement)
 			bot.Hands.PlaceScaffold(tile);
@@ -417,8 +463,17 @@ public sealed class BotMotor
 			WorldGen.OpenDoor(tile.X, tile.Y, direction);
 			return;
 		}
-		if (CanDigThrough(tile))
+		if (!CanDigThrough(tile))
+			return;
+		if (PathFinder.RemovableBlockerOnTop(tile.X, tile.Y, Abilities().CanChop) is not Point blocker)
+		{
 			bot.Hands.Dig(tile);
+			return;
+		}
+		bool chop = Main.tileAxe[TileQuery.TypeAt(blocker)];
+		var result = chop ? bot.Hands.Chop(blocker) : bot.Hands.Dig(blocker);
+		if (result == ToolResult.OutOfReach && bot.Npc?.velocity.Y == 0f)
+			jumpRequested = true;
 	}
 
 	PylonHop? pylonHop;
@@ -502,7 +557,7 @@ public sealed class BotMotor
 			int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 			int flyRise = FlightRise;
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
-				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles);
+				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe);
 		}
 		return gear with
 		{
@@ -702,10 +757,13 @@ public sealed class BotMotor
 		TileToDig = obstacle;
 	}
 
-	static bool CanDigThrough(Point tile)
+	bool CanDigThrough(Point tile)
 	{
 		int tileType = TileQuery.TypeAt(tile);
-		return tileType < 0 || tileType == TileID.ClosedDoor || (!Main.tileFrameImportant[tileType] && !HouseInspector.IsProtected(tile.X, tile.Y));
+		if (tileType < 0 || tileType == TileID.ClosedDoor)
+			return true;
+		return !Main.tileFrameImportant[tileType] && !HouseInspector.IsProtected(tile.X, tile.Y)
+			&& (WorldGen.CanKillTile(tile.X, tile.Y) || PathFinder.RemovableBlockerOnTop(tile.X, tile.Y, Abilities().CanChop) != null);
 	}
 
 	static int DropDepth(int x, int feetY)

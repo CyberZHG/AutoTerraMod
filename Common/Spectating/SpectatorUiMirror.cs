@@ -8,6 +8,8 @@ public sealed class SpectatorUiMirror : ModSystem
 {
 	public override void Load() => On_Main.DrawInterface += DrawInterfaceAsFollowedBot;
 
+	static readonly Snapshot snapshot = new();
+
 	static void DrawInterfaceAsFollowedBot(On_Main.orig_DrawInterface orig, Main self, GameTime gameTime)
 	{
 		var bot = SpectatorSystem.Followed;
@@ -18,14 +20,77 @@ public sealed class SpectatorUiMirror : ModSystem
 		}
 		var spectator = Main.LocalPlayer;
 		var original = PlayerView.Capture(spectator);
+		var mouseItem = Main.mouseItem;
+		var trashItem = spectator.trashItem;
+		bool mouseWasEmpty = mouseItem.IsAir;
+		bool trashWasEmpty = trashItem.IsAir;
+		int loadout = spectator.CurrentLoadoutIndex;
 		try
 		{
-			PlayerView.Capture(bot.Avatar).AsReadOnlyCopy().ApplyTo(spectator);
+			snapshot.SyncFrom(bot.Avatar).ApplyTo(spectator);
 			orig(self, gameTime);
+			if (spectator.CurrentLoadoutIndex != loadout)
+				spectator.TrySwitchingLoadout(loadout);
 		}
 		finally
 		{
 			original.ApplyTo(spectator);
+			Main.mouseItem = mouseItem;
+			spectator.trashItem = trashItem;
+			if (mouseWasEmpty)
+				mouseItem.TurnToAir();
+			if (trashWasEmpty)
+				trashItem.TurnToAir();
+		}
+	}
+
+	sealed class Snapshot
+	{
+		Item[] inventory, armor, dye, miscEquips, miscDyes;
+		int[] buffType, buffTime;
+
+		public PlayerView SyncFrom(Player bot)
+		{
+			Sync(ref inventory, bot.inventory);
+			Sync(ref armor, bot.armor);
+			Sync(ref dye, bot.dye);
+			Sync(ref miscEquips, bot.miscEquips);
+			Sync(ref miscDyes, bot.miscDyes);
+			Sync(ref buffType, bot.buffType);
+			Sync(ref buffTime, bot.buffTime);
+			return PlayerView.Capture(bot) with
+			{
+				Inventory = inventory,
+				Armor = armor,
+				Dye = dye,
+				MiscEquips = miscEquips,
+				MiscDyes = miscDyes,
+				BuffType = buffType,
+				BuffTime = buffTime,
+				Ghost = false,
+				Dead = false
+			};
+		}
+
+		static void Sync(ref Item[] copy, Item[] source)
+		{
+			if (copy == null || copy.Length != source.Length)
+				copy = new Item[source.Length];
+			for (int i = 0; i < source.Length; i++)
+			{
+				var real = source[i];
+				var shown = copy[i];
+				if (shown != null && shown.type == real.type && shown.stack == real.stack && shown.prefix == real.prefix && shown.favorited == real.favorited)
+					continue;
+				copy[i] = real.IsAir ? new Item() : real.Clone();
+			}
+		}
+
+		static void Sync(ref int[] copy, int[] source)
+		{
+			if (copy == null || copy.Length != source.Length)
+				copy = new int[source.Length];
+			System.Array.Copy(source, copy, source.Length);
 		}
 	}
 
@@ -42,19 +107,6 @@ public sealed class SpectatorUiMirror : ModSystem
 			player.statLife, player.statLifeMax, player.statLifeMax2, player.statMana, player.statManaMax, player.statManaMax2,
 			player.breath, player.breathMax, player.selectedItem, player.statDefense,
 			player.ConsumedLifeCrystals, player.ConsumedLifeFruit, player.ConsumedManaCrystals, player.ghost, player.dead);
-
-		public PlayerView AsReadOnlyCopy() => this with
-		{
-			Inventory = (Item[])Inventory.Clone(),
-			Armor = (Item[])Armor.Clone(),
-			Dye = (Item[])Dye.Clone(),
-			MiscEquips = (Item[])MiscEquips.Clone(),
-			MiscDyes = (Item[])MiscDyes.Clone(),
-			BuffType = (int[])BuffType.Clone(),
-			BuffTime = (int[])BuffTime.Clone(),
-			Ghost = false,
-			Dead = false
-		};
 
 		public void ApplyTo(Player player)
 		{

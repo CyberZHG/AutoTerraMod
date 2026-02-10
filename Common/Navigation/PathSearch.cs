@@ -303,7 +303,7 @@ public sealed class PathSearch
 
 	void AddPillarEdges(int x, int y)
 	{
-		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise); rise++)
+		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise) && (Placeable(x, y - rise + 1) || Placeable(x + 1, y - rise + 1)); rise++)
 		{
 			int top = y - rise;
 			bool exit = rise == 1 || (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
@@ -351,7 +351,9 @@ public sealed class PathSearch
 
 	void AddRopeClimbEdges(int x, int y)
 	{
-		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise); rise++)
+		if (!RopeFits(x, y) || !RopeFits(x, y - 1) || !RopeFits(x, y - 2))
+			return;
+		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise) && RopeFits(x, y - rise - 2); rise++)
 		{
 			if (rise <= MaxJumpRise)
 				continue;
@@ -361,6 +363,11 @@ public sealed class PathSearch
 				edges.Add(new Edge(new Point(x, top), MoveKind.Climb, RopeClimbBaseCost + rise * RopeClimbCostPerTile));
 		}
 	}
+
+	bool Placeable(int x, int y) =>
+		TileQuery.FreeForPlacing(x, y) || abilities.CanChop && TileQuery.IsChoppableTree(Main.tile[x, y].TileType);
+
+	static bool RopeFits(int x, int y) => PathFinder.IsRope(x, y) || TileQuery.FreeForPlacing(x, y);
 
 	void AddJumpEdges(int x, int y)
 	{
@@ -524,6 +531,6 @@ public sealed class PathSearch
 			&& !HouseInspector.IsProtected(x, y)
 			&& !TileQuery.SupportsShrine(x, y)
 			&& PickRequirement.MinimumPick(tileType, x, y) <= abilities.PickPower
-			&& WorldGen.CanKillTile(x, y);
+			&& (WorldGen.CanKillTile(x, y) || PathFinder.RemovableBlockerOnTop(x, y, abilities.CanChop) != null);
 	}
 }
