@@ -261,10 +261,13 @@ public sealed class PathSearch
 			}
 		}
 
+		bool swimming = PathFinder.InWater(x, y);
 		if (supported)
-			AddJumpEdges(x, y);
+			AddJumpEdges(x, y, abilities.JumpRise);
+		else if (swimming && !PathFinder.InWater(x, y - 1))
+			AddJumpEdges(x, y, Math.Min(abilities.JumpRise, WaterJumpRise));
 
-		if (PathFinder.InWater(x, y))
+		if (swimming)
 		{
 			foreach (var offset in SwimOffsets)
 			{
@@ -274,7 +277,7 @@ public sealed class PathSearch
 			}
 		}
 
-		if (abilities.CanPillar && supported)
+		if (abilities.CanPillar && supported && !swimming)
 			AddPillarEdges(x, y);
 
 		if (abilities.FlyRise > abilities.JumpRise && supported)
@@ -369,10 +372,12 @@ public sealed class PathSearch
 
 	static bool RopeFits(int x, int y) => PathFinder.IsRope(x, y) || TileQuery.FreeForPlacing(x, y);
 
-	void AddJumpEdges(int x, int y)
+	const int WaterJumpRise = 3;
+
+	void AddJumpEdges(int x, int y, int maxRise)
 	{
 		int headroom = 0;
-		while (headroom < abilities.JumpRise && RowClear(x, y - 3 - headroom))
+		while (headroom < maxRise && RowClear(x, y - 3 - headroom))
 			headroom++;
 		for (int dx = -MaxJumpReach; dx <= MaxJumpReach; dx++)
 		{

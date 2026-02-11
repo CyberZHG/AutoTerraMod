@@ -80,7 +80,13 @@ public static class PathFinder
 		return search.Step(Math.Min(tickDeadline, Stopwatch.GetTimestamp() + Ticks(SliceMilliseconds)));
 	}
 
-	public static Point FeetOf(Entity body) => new((int)Math.Round(body.Center.X / 16f) - 1, (int)((body.position.Y + body.height - 1) / 16f));
+	public static Point FeetOf(Entity body)
+	{
+		int x = (int)Math.Round(body.Center.X / 16f) - 1;
+		int y = (int)((body.position.Y + body.height - 1) / 16f);
+		bool sunkIntoFloor = TileQuery.IsSolid(x, y) || TileQuery.IsSolid(x + 1, y);
+		return sunkIntoFloor && !TileQuery.IsSolid(x, y - 1) && !TileQuery.IsSolid(x + 1, y - 1) ? new Point(x, y - 1) : new Point(x, y);
+	}
 
 	public static float CenterXOf(int nodeX) => (nodeX + 1) * 16f;
 
