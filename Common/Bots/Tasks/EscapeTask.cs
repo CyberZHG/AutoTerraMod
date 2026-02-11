@@ -33,6 +33,7 @@ public sealed class EscapeTask : BotTask
 	uint exitPlannedAt;
 	bool followingExit;
 	bool legReached;
+	bool legIsSurfaceExit;
 	int highestY;
 	uint climbedAt;
 
@@ -74,6 +75,7 @@ public sealed class EscapeTask : BotTask
 		exitSearch = null;
 		followingExit = false;
 		legReached = false;
+		legIsSurfaceExit = false;
 		highestY = here.Y;
 		climbedAt = startedAt;
 		destination = headingForSurface
@@ -101,7 +103,7 @@ public sealed class EscapeTask : BotTask
 			PlanExitLeg();
 		Bot.Motor.MoveTo(destination, 32f);
 		var here = Bot.CenterTile;
-		bool reachedSurface = headingForSurface && here.Y <= TileQuery.SurfaceY(here.X) + SurfaceMarginTiles;
+		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + SurfaceMarginTiles || legIsSurfaceExit && Bot.Motor.HasArrived);
 		if (here.Y < highestY)
 		{
 			highestY = here.Y;
@@ -142,11 +144,22 @@ public sealed class EscapeTask : BotTask
 			return;
 		var route = exitSearch.Result;
 		exitSearch = null;
+		if (route.Nodes.Count == 0 && route.ReachesGoal)
+		{
+			Finish();
+			return;
+		}
 		if (route.Nodes.Count == 0 || route.Nodes[^1].Feet.Y >= feet.Y)
 			return;
 		var leg = route.Nodes.Last(node => Math.Max(Math.Abs(node.Feet.X - feet.X), Math.Abs(node.Feet.Y - feet.Y)) <= ExitLegTiles).Feet;
+		bool surfaceExit = route.ReachesGoal && leg == route.Nodes[^1].Feet;
 		if (Math.Max(Math.Abs(leg.X - feet.X), Math.Abs(leg.Y - feet.Y)) <= TrivialLegTiles)
+		{
+			if (surfaceExit)
+				Finish();
 			return;
+		}
+		legIsSurfaceExit = surfaceExit;
 		destination = new Vector2(leg.X * 16f + 8f, leg.Y * 16f - 13f);
 		if (!followingExit)
 			BotDiagnostics.Log(Bot, $"escaping toward exit {route.Nodes[^1].Feet} (reaches surface={route.ReachesGoal}) via {leg}");

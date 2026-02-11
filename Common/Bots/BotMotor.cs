@@ -194,7 +194,8 @@ public sealed class BotMotor
 		if (flightTicks > 0)
 			flightTicks--;
 		HoldRopeOverDrop(npc, wantsJump);
-		Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
+		if (!WantsToDropThroughPlatforms)
+			Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
 		npc.spriteDirection = npc.direction;
 		TrackProgress(npc);
 

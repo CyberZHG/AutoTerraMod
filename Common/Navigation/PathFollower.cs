@@ -77,7 +77,7 @@ public sealed class PathFollower
 			InstallPending(feet);
 		if (path.Nodes.Count == 0)
 			return default;
-		SkipReachedNodes(feet, grounded);
+		SkipReachedNodes(feet, grounded, body.Center.X);
 		if (index >= path.Nodes.Count)
 			return default;
 		stepTicks++;
@@ -151,17 +151,17 @@ public sealed class PathFollower
 		stepOrigin = origin;
 		HasNoRoute = path.Nodes.Count == 0;
 		if (feet != origin)
-			SkipReachedNodes(feet, true);
+			SkipReachedNodes(feet, true, float.NaN);
 	}
 
-	void SkipReachedNodes(Point feet, bool grounded)
+	void SkipReachedNodes(Point feet, bool grounded, float centerX)
 	{
 		int window = Math.Min(path.Nodes.Count, index + SkipAheadWindow);
 		for (int candidate = window - 1; candidate >= index; candidate--)
 		{
 			var node = path.Nodes[candidate];
 			bool settled = grounded || node.Arrival == MoveKind.Climb;
-			if (IsAt(feet, node.Feet) && settled)
+			if (IsAt(feet, node, centerX) && settled)
 			{
 				index = candidate + 1;
 				stepOrigin = feet;
@@ -171,7 +171,13 @@ public sealed class PathFollower
 		}
 	}
 
-	static bool IsAt(Point feet, Point node) => feet.X == node.X && Math.Abs(feet.Y - node.Y) <= 1;
+	static bool IsAt(Point feet, PathNode node, float centerX)
+	{
+		bool column = feet.X == node.Feet.X || Math.Abs(node.Feet.X - feet.X) == 1 && Math.Abs(AimX(node) - centerX) <= CenteringTolerance;
+		return column && (feet.Y == node.Feet.Y || feet.Y == node.Feet.Y + 1);
+	}
+
+	static float AimX(PathNode node) => node.Arrival == MoveKind.Drop ? PathFinder.CenterXOf(node.Feet.X) : FootingCenterX(node.Feet);
 
 	const int HookJumpHoldTicks = 15;
 
@@ -198,7 +204,7 @@ public sealed class PathFollower
 			if (PathFinder.IsClosedDoor(cell.X, cell.Y))
 				intent.DigTile = cell;
 		}
-		float offset = FootingCenterX(node.Feet) - body.Center.X;
+		float offset = AimX(node) - body.Center.X;
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
 		bool hangingOnRope = !grounded && (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0);
@@ -208,13 +214,16 @@ public sealed class PathFollower
 			intent.JumpHoldTicks = HoldTicksForRise(rise + 1);
 			return intent;
 		}
-		if (grounded && node.Feet.Y > feet.Y && node.Feet.X == feet.X)
+		bool overNode = intent.MoveDirection == 0 && Math.Abs(node.Feet.X - feet.X) <= 1;
+		if (grounded && node.Feet.Y > feet.Y && overNode)
 			intent.DropThroughPlatforms = true;
 		switch (node.Arrival)
 		{
 			case MoveKind.Jump:
 				intent.Jump = grounded || body.velocity.Y < 0f || rise > PathFinder.BaseJumpRise;
 				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, PathFinder.BaseJumpRise));
+				if (rise > 0 && intent.MoveDirection != 0 && OverhangBeside(body, intent.MoveDirection))
+					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Fly:
 				intent.Fly = true;
@@ -223,7 +232,7 @@ public sealed class PathFollower
 					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Drop:
-				intent.DropThroughPlatforms = grounded && node.Feet.X == feet.X;
+				intent.DropThroughPlatforms = grounded && overNode;
 				break;
 			case MoveKind.Dig:
 				intent.DigTile ??= FirstSolidToDig(feet, node.Feet);
@@ -237,7 +246,7 @@ public sealed class PathFollower
 				intent.ClimbColumn = node.Feet.X;
 				break;
 			case MoveKind.Swim:
-				intent.Jump = node.Feet.Y < feet.Y || body.velocity.Y > 1f;
+				intent.Jump = node.Feet.Y < feet.Y || body.velocity.Y > 1f && feet.Y >= node.Feet.Y;
 				intent.JumpHoldTicks = HoldTicksForRise(2);
 				break;
 			case MoveKind.Pillar:
@@ -272,6 +281,22 @@ public sealed class PathFollower
 		if (!firstFree && !secondFree && TileQuery.IsChoppableTree(Main.tile[second, y].TileType) && !TileQuery.IsChoppableTree(Main.tile[first, y].TileType))
 			return new Point(second, y);
 		return new Point(firstFree || !secondFree ? first : second, y);
+	}
+
+	static bool OverhangBeside(NPC body, int direction)
+	{
+		int column = (int)((direction > 0 ? body.position.X + body.width + 1f : body.position.X - 1f) / 16f);
+		int top = (int)(body.position.Y / 16f);
+		int bottom = (int)((body.position.Y + body.height - 1f) / 16f);
+		bool solidAbove = false;
+		for (int y = top; y <= bottom; y++)
+		{
+			bool solid = TileQuery.IsSolid(column, y);
+			if (solidAbove && !solid)
+				return true;
+			solidAbove |= solid;
+		}
+		return false;
 	}
 
 	const float FootingShift = 8f;
@@ -309,6 +334,8 @@ public sealed class PathFollower
 		if (depth <= maxFall)
 			return false;
 		bool insideNodeFootprint = aheadX >= node.Feet.X && aheadX <= node.Feet.X + 1;
+		if (insideNodeFootprint && node.Arrival == MoveKind.Drop)
+			return false;
 		bool steppingOntoNode = node.Feet.Y == feet.Y && PathFinder.IsSupportedNow(node.Feet.X, node.Feet.Y);
 		return !insideNodeFootprint || !steppingOntoNode;
 	}
