@@ -121,6 +121,9 @@ public sealed class BotBrain
 		if (current is { IsFinished: false })
 			using (Probes.Measure(current.ProbeLabel))
 				current.Tick();
+		if (current is not FightTask)
+			using (Probes.Measure("Reflex"))
+				Engagement.Reflex(bot);
 		using (Probes.Measure("Motor"))
 			bot.Motor.Tick(body);
 		using (Probes.Measure("Collect"))
@@ -188,6 +191,7 @@ public sealed class BotBrain
 			StatBoosters.ConsumeUsable(bot);
 			bot.Hands.DrinkObsidianSkinIfInHell();
 			TreePlanter.PlantIfUseful(bot);
+			Inventory.TidySpecialSlots(bot.Avatar);
 		}
 		if (++reconsiderCount % ObserveEveryReconsiders == 0)
 		{

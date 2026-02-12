@@ -207,7 +207,19 @@ public sealed class PathFollower
 		float offset = AimX(node) - body.Center.X;
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
-		bool hangingOnRope = !grounded && (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0);
+		bool hangingOnRope = (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0) && !PathFinder.IsSupportedNow(feet.X, feet.Y);
+		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1)
+		{
+			float standingBottom = (node.Feet.Y + 1) * 16f;
+			float bottom = body.position.Y + body.height;
+			if (bottom > standingBottom || bottom < standingBottom - RopeStepTolerance)
+			{
+				intent.ClimbDirection = bottom > standingBottom ? -1 : 1;
+				intent.ClimbColumn = -1;
+				intent.MoveDirection = 0;
+			}
+			return intent;
+		}
 		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Jump && rise >= 0)
 		{
 			intent.Jump = true;
@@ -298,6 +310,8 @@ public sealed class PathFollower
 		}
 		return false;
 	}
+
+	const float RopeStepTolerance = 6f;
 
 	const float FootingShift = 8f;
 

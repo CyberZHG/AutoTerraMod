@@ -182,6 +182,8 @@ UI: {
 	FreeCameraOn: 自由镜头：开
 	FreeCameraOff: 自由镜头：关
 	BotDied: "{1}的{0}阵亡了。"
+	RecalledHome: "{0}使用{1}回到了基地。"
+	PylonHop: "{0}通过传送晶塔传送了。"
 	FreeCamera: 自由镜头
 	Controls: "{0}/{1} 切换角色   {2} 自由镜头   {3} 背包   {4} 观战/亲自玩"
 	Watching: "{0}  [{1}]  {2} / {3}"

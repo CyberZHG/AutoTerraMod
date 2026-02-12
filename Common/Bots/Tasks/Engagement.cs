@@ -56,6 +56,23 @@ public static class Engagement
 		return nearest;
 	}
 
+	const float ReflexFireRange = 16f * 12f;
+	const float ReflexMeleeSlack = 32f;
+
+	public static void Reflex(Bot bot)
+	{
+		if (!bot.Hands.Ready || bot.Npc == null || bot.Hands.BestWeapon() is not Item weapon)
+			return;
+		bool ranged = BotHands.IsProjectileWeapon(weapon);
+		var target = NearestHostile(bot, ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack, ranged);
+		if (target == null)
+			return;
+		if (ranged)
+			bot.Hands.Fire(target, weapon);
+		else
+			bot.Hands.Strike(target, weapon);
+	}
+
 	public static NPC ThreatToTeammates(Bot bot, float teammateRadius, float threatRadius)
 	{
 		foreach (var mate in BotWorldSystem.Bots)

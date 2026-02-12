@@ -130,7 +130,7 @@ public sealed class AmmoScenario : ModSystem
 		{
 			int bullets = Inventory.Items(bot.Avatar).Where(item => item.ammo == AmmoID.Bullet).Sum(item => item.stack);
 			long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
-			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"ammo report {bot.Faction.Name}/{bot.Name}: bullets={bullets} coins={coins} weapon={bot.Hands.BestWeapon()?.Name} plan={bot.Brain.Plan}");
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"ammo report {bot.Faction.Name}/{bot.Name}: bullets={bullets} coins={coins} weapon={bot.Hands.BestWeapon()?.Name} plan={bot.Brain.Plan} special=[{string.Join(",", bot.Avatar.inventory.Skip(Inventory.MainSlotCount).Take(8).Select(item => item.IsAir ? "-" : $"{item.Name}x{item.stack}"))}] strayCoinsOrAmmo={bot.Avatar.inventory.Take(Inventory.MainSlotCount).Count(item => item.IsACoin || item.ammo > 0 && !item.notAmmo)}");
 		}
 	}
 }

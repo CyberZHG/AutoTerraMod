@@ -65,6 +65,7 @@ public static class PylonTravel
 		body.velocity = Vector2.Zero;
 		bot.Vitals.Teleported(body);
 		BotDiagnostics.Log(bot, $"teleported by pylon from {hop.From.PositionInTiles} to {hop.To.PositionInTiles}");
+		Spectating.SpectatorSystem.AnnounceJump(bot, "PylonHop", bot.Name);
 		return true;
 	}
 }

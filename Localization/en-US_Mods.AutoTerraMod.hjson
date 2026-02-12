@@ -182,6 +182,8 @@ UI: {
 	FreeCameraOn: Free camera on
 	FreeCameraOff: Free camera off
 	BotDied: "{0} of {1} has died."
+	RecalledHome: "{0} used {1} to return home."
+	PylonHop: "{0} teleported through a pylon."
 	FreeCamera: Free camera
 	Controls: "{0}/{1} switch bot   {2} free camera   {3} inventory   {4} spectate/play"
 	Watching: "{0}  [{1}]  {2} / {3}"

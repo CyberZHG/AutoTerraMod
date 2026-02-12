@@ -70,9 +70,24 @@ public static class Inventory
 		return used;
 	}
 
+	const int FirstCoinSlot = 50;
+	const int FirstAmmoSlot = 54;
+	const int SpecialSlotCount = 4;
+
+	static bool IsAmmo(Item item) => item.ammo > 0 && !item.notAmmo;
+
 	public static bool HasRoomFor(Player avatar, Item incoming)
 	{
-		for (int slot = 0; slot < MainSlots; slot++)
+		if (incoming.IsACoin)
+			return true;
+		if (IsAmmo(incoming) && HasRoomIn(avatar, incoming, FirstAmmoSlot, SpecialSlotCount))
+			return true;
+		return HasRoomIn(avatar, incoming, 0, MainSlots);
+	}
+
+	static bool HasRoomIn(Player avatar, Item incoming, int first, int count)
+	{
+		for (int slot = first; slot < first + count; slot++)
 		{
 			var item = avatar.inventory[slot];
 			if (item.IsAir || CanMerge(item, incoming))
@@ -83,7 +98,23 @@ public static class Inventory
 
 	public static Item Add(Player avatar, Item incoming)
 	{
-		for (int slot = 0; slot < MainSlots && incoming.stack > 0; slot++)
+		if (incoming.IsACoin)
+		{
+			StoreCoins(avatar, Utils.CoinsCount(out _, new[] { incoming }));
+			incoming.TurnToAir();
+			return incoming;
+		}
+		if (IsAmmo(incoming))
+			AddInto(avatar, incoming, FirstAmmoSlot, SpecialSlotCount);
+		AddInto(avatar, incoming, 0, MainSlots);
+		if (incoming.stack <= 0)
+			incoming.TurnToAir();
+		return incoming;
+	}
+
+	static void AddInto(Player avatar, Item incoming, int first, int count)
+	{
+		for (int slot = first; slot < first + count && incoming.stack > 0; slot++)
 		{
 			var held = avatar.inventory[slot];
 			if (!CanMerge(held, incoming))
@@ -92,29 +123,59 @@ public static class Inventory
 			held.stack += moved;
 			incoming.stack -= moved;
 		}
-		for (int slot = 0; slot < MainSlots && incoming.stack > 0; slot++)
+		for (int slot = first; slot < first + count && incoming.stack > 0; slot++)
 		{
 			if (!avatar.inventory[slot].IsAir)
 				continue;
 			avatar.inventory[slot] = incoming.Clone();
 			incoming.TurnToAir();
 		}
-		if (incoming.stack <= 0)
-			incoming.TurnToAir();
-		return incoming;
+	}
+
+	static void StoreCoins(Player avatar, long extra)
+	{
+		long total = Utils.CoinsCount(out _, avatar.inventory) + extra;
+		for (int slot = 0; slot < StorageSlots; slot++)
+		{
+			if (avatar.inventory[slot].IsACoin)
+				avatar.inventory[slot].TurnToAir();
+		}
+		int[] split = Utils.CoinsSplit(total);
+		for (int index = 0; index < CoinTypes.Length; index++)
+		{
+			if (split[index] <= 0)
+				continue;
+			int slot = FirstCoinSlot + index;
+			var coins = new Item(CoinTypes[index], split[index]);
+			if (avatar.inventory[slot].IsAir)
+				avatar.inventory[slot] = coins;
+			else
+				AddInto(avatar, coins, 0, MainSlots);
+		}
+	}
+
+	public static void TidySpecialSlots(Player avatar)
+	{
+		bool strayCoins = false;
+		for (int slot = 0; slot < MainSlots; slot++)
+		{
+			var item = avatar.inventory[slot];
+			if (item.IsACoin)
+				strayCoins = true;
+			else if (IsAmmo(item))
+			{
+				AddInto(avatar, item, FirstAmmoSlot, SpecialSlotCount);
+				if (item.stack <= 0)
+					item.TurnToAir();
+			}
+		}
+		if (strayCoins)
+			StoreCoins(avatar, 0);
 	}
 
 	static readonly int[] CoinTypes = { ItemID.CopperCoin, ItemID.SilverCoin, ItemID.GoldCoin, ItemID.PlatinumCoin };
 
-	public static void AddCoins(Player avatar, long copper)
-	{
-		int[] split = Utils.CoinsSplit(copper);
-		for (int tier = 0; tier < CoinTypes.Length; tier++)
-		{
-			if (split[tier] > 0)
-				Add(avatar, new Item(CoinTypes[tier], split[tier]));
-		}
-	}
+	public static void AddCoins(Player avatar, long copper) => StoreCoins(avatar, copper);
 
 	public static bool Consume(Player avatar, IEnumerable<int> acceptedTypes, int amount)
 	{

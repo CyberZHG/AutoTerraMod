@@ -78,6 +78,12 @@ public sealed class SpectatorSystem : ModSystem
 		Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.NowFollowing", followed.Name, followed.Faction.Name), followed.Faction.Color);
 	}
 
+	public static void AnnounceJump(Bot bot, string key, params object[] args)
+	{
+		if (Followed == bot)
+			Main.NewText(Language.GetTextValue($"Mods.AutoTerraMod.UI.{key}", args), bot.Faction.Color);
+	}
+
 	public static void TogglePlayingInPerson()
 	{
 		PlayingInPerson = !PlayingInPerson;

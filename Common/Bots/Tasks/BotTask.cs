@@ -52,6 +52,7 @@ public abstract class BotTask
 		Bot.Vitals.Teleported(body);
 		Bot.Motor.Stop();
 		BotDiagnostics.Log(Bot, $"used {recall.Name} to return home");
+		Spectating.SpectatorSystem.AnnounceJump(Bot, "RecalledHome", Bot.Name, recall.Name);
 		return true;
 	}
 
