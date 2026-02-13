@@ -376,6 +376,8 @@ public sealed class PathSearch
 
 	void AddJumpEdges(int x, int y, int maxRise)
 	{
+		if (!RowClear(x, y - 1) || !RowClear(x, y - 2))
+			return;
 		int headroom = 0;
 		while (headroom < maxRise && RowClear(x, y - 3 - headroom))
 			headroom++;

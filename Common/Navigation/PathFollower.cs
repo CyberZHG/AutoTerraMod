@@ -174,7 +174,8 @@ public sealed class PathFollower
 	static bool IsAt(Point feet, PathNode node, float centerX)
 	{
 		bool column = feet.X == node.Feet.X || Math.Abs(node.Feet.X - feet.X) == 1 && Math.Abs(AimX(node) - centerX) <= CenteringTolerance;
-		return column && (feet.Y == node.Feet.Y || feet.Y == node.Feet.Y + 1);
+		bool onPlatformInNode = feet.Y == node.Feet.Y - 1 && (TileQuery.IsPlatform(node.Feet.X, node.Feet.Y) || TileQuery.IsPlatform(node.Feet.X + 1, node.Feet.Y));
+		return column && (feet.Y == node.Feet.Y || onPlatformInNode);
 	}
 
 	static float AimX(PathNode node) => node.Arrival == MoveKind.Drop ? PathFinder.CenterXOf(node.Feet.X) : FootingCenterX(node.Feet);
@@ -344,6 +345,10 @@ public sealed class PathFollower
 		if (heading == 0)
 			return false;
 		int aheadX = heading > 0 ? feet.X + 2 : feet.X - 1;
+		float aimEdge = AimX(node) + heading * body.width / 2f;
+		bool staysOutOfAhead = heading > 0 ? (int)((aimEdge - 1f) / 16f) < aheadX : (int)(aimEdge / 16f) > aheadX;
+		if (intent.MoveDirection == heading && staysOutOfAhead)
+			return false;
 		int depth = DropBelow(aheadX, feet.Y);
 		if (depth <= maxFall)
 			return false;
