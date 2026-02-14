@@ -117,7 +117,7 @@ public static class Engagement
 			FightWall(bot, target);
 			return;
 		}
-		if (bot.Motor.IsStuck)
+		if (bot.Motor.IsStalled)
 		{
 			bot.Motor.Stop();
 			if (!Bosses.BossCatalog.IsBossPart(target) && !CanShootFromHere(bot, target))

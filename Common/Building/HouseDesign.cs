@@ -32,6 +32,33 @@ public sealed record HouseDesign(int Width, int InteriorHeight, RoofStyle Roof, 
 		_ => ItemID.WoodWall
 	};
 
+	static readonly int[] RusticBlocks = { ItemID.Wood, ItemID.StoneBlock };
+
+	static readonly int[] RusticWalls = { ItemID.WoodWall, ItemID.StoneWall };
+
+	public int[] BlockItems => Taste == BuildingTaste.Rustic ? RusticBlocks : new[] { BlockItem };
+	public int[] WallItems => Taste == BuildingTaste.Rustic ? RusticWalls : new[] { WallItem };
+
+	public bool AcceptsWall(int wallType)
+	{
+		foreach (int item in WallItems)
+		{
+			if (ContentSamples.ItemsByType[item].createWall == wallType)
+				return true;
+		}
+		return false;
+	}
+
+	public bool AcceptsBlockTile(int tileType)
+	{
+		foreach (int item in BlockItems)
+		{
+			if (ContentSamples.ItemsByType[item].createTile == tileType)
+				return true;
+		}
+		return false;
+	}
+
 	public int BlockTile => ContentSamples.ItemsByType[BlockItem].createTile;
 	public int WallType => ContentSamples.ItemsByType[WallItem].createWall;
 	public HouseDesign AsRustic() => this with { Taste = BuildingTaste.Rustic };

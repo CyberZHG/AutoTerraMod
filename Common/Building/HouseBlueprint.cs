@@ -156,7 +156,7 @@ public sealed class HouseBlueprint
 
 	bool NeedsNewBlock(Point tile, HouseDesign materials)
 	{
-		if (!TileQuery.IsSolid(tile) || Main.tile[tile.X, tile.Y].TileType == materials.BlockTile)
+		if (!TileQuery.IsSolid(tile) || materials.AcceptsBlockTile(Main.tile[tile.X, tile.Y].TileType))
 			return false;
 		var above = Main.tile[tile.X, tile.Y - 1];
 		return !(above.HasTile && Main.tileFrameImportant[above.TileType]);
@@ -165,7 +165,7 @@ public sealed class HouseBlueprint
 	static bool NeedsNewWall(Point tile, HouseDesign materials)
 	{
 		int wall = Main.tile[tile.X, tile.Y].WallType;
-		return wall != WallID.None && wall != materials.WallType && Main.wallHouse[wall];
+		return wall != WallID.None && !materials.AcceptsWall(wall) && Main.wallHouse[wall];
 	}
 
 	void AddShell(int x, int y)

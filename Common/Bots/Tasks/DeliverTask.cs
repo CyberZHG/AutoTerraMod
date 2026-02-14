@@ -51,7 +51,7 @@ public sealed class DeliverTask : BotTask
 		if (Vector2.Distance(Bot.Center, recipient.Center) > HandOverDistance)
 		{
 			Bot.Motor.MoveTo(recipient.Center, HandOverDistance * 0.5f);
-			if (Bot.Motor.IsStuck)
+			if (Bot.Motor.IsStalled)
 				IsFinished = true;
 			return;
 		}

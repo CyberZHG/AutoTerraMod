@@ -213,6 +213,8 @@ public sealed class StructureGoal : ProgressionGoal
 {
 	readonly System.Func<Settlement, IEnumerable<HouseBlueprint>> select;
 
+	const int MaterialBatch = 60;
+
 	public StructureGoal(System.Func<Settlement, IEnumerable<HouseBlueprint>> select) => this.select = select;
 
 	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot);
@@ -236,13 +238,13 @@ public sealed class StructureGoal : ProgressionGoal
 		var placement = HouseMaterials.ReplacementFor(operation.Action);
 		if (!HouseMaterials.IsNeeded(placement))
 			return new BuildHouseStep(operation);
-		var bill = ConstructionBill.For(structure, materials);
-		if (ConstructionBill.FirstShortfall(bot, bill, materials) is BillLine shortfall)
-			return ProgressionPlanner.Obtain(bot, shortfall.ItemType, shortfall.Amount);
-		if (HouseMaterials.Find(bot.Avatar, placement, materials) != null)
-			return new BuildHouseStep(operation);
-		var line = bill.First(entry => entry.Placement == placement);
-		return ProgressionPlanner.Obtain(bot, line.ItemType, line.Amount);
+		var line = ConstructionBill.For(structure, materials, bot).First(entry => entry.Placement == placement);
+		int batch = Math.Min(line.Amount, MaterialBatch);
+		if (HouseMaterials.Find(bot.Avatar, placement, materials) == null)
+			return ProgressionPlanner.Obtain(bot, line.ItemType, batch);
+		if (HouseMaterials.CountAvailable(bot.Avatar, placement, materials) < batch && ProgressionPlanner.Obtain(bot, line.ItemType, batch) is CraftStep craft)
+			return craft;
+		return new BuildHouseStep(operation);
 	}
 }
 
@@ -260,11 +262,32 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	{
 		if (Need(bot, out var builder) is not BillLine need)
 			return PlanStep.Idle;
+		bool canHandOver = Inventory.UsedSlots(builder.Avatar) < Inventory.MainSlotCount;
+		if (GiftOnHand(bot, need) is int gift && canHandOver)
+			return new DeliverStep(gift, builder.Id, HandOver: true);
 		int batch = System.Math.Min(need.Amount, BatchSize);
 		if (Inventory.Count(bot.Avatar, need.ItemType) < batch)
 			return ProgressionPlanner.Obtain(bot, need.ItemType, batch);
-		bool canHandOver = BaseStorage.HasRoom(bot.Faction) || Inventory.UsedSlots(builder.Avatar) < Inventory.MainSlotCount;
-		return canHandOver ? new DeliverStep(need.ItemType, builder.Id) : PlanStep.Idle;
+		return canHandOver || BaseStorage.HasRoom(bot.Faction) ? new DeliverStep(need.ItemType, builder.Id, HandOver: canHandOver) : PlanStep.Idle;
+	}
+
+	const int MinimumGift = 20;
+
+	static int? GiftOnHand(Bot bot, BillLine need)
+	{
+		var materials = HouseInspector.MaterialsFor(bot.Faction);
+		var candidates = need.Placement switch
+		{
+			BuildAction.PlaceBlock => materials.BlockItems,
+			BuildAction.PlaceWall => materials.WallItems,
+			_ => new[] { need.ItemType }
+		};
+		foreach (int type in candidates)
+		{
+			if (Inventory.Count(bot.Avatar, type) >= MinimumGift)
+				return type;
+		}
+		return null;
 	}
 
 	static BillLine? Need(Bot bot, out Bot builder)
@@ -279,7 +302,7 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 		if (structure == null)
 			return null;
 		var materials = HouseInspector.MaterialsFor(bot.Faction);
-		return ConstructionBill.FirstShortfall(builder, ConstructionBill.For(structure, materials), materials);
+		return ConstructionBill.FirstShortfall(builder, ConstructionBill.For(structure, materials, builder), materials);
 	}
 }
 
@@ -728,8 +751,9 @@ public static class ProgressionGoals
 			new ClaimBoostersGoal(),
 			new ManaCrystalGoal(),
 			new StationGoal(TileID.WorkBenches, ItemID.WorkBench),
-			new ReserveGoal(ItemID.Torch, 10, 30),
+			new ReserveGoal(ItemID.Torch, 3, 10),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
+			new ReserveGoal(ItemID.Torch, 10, 30),
 			new SupportConstructionGoal(),
 			new BossGoal(),
 			new HellevatorGoal(),

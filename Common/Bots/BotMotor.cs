@@ -47,6 +47,7 @@ public sealed class BotMotor
 	public BotMotor(Bot bot) => this.bot = bot;
 
 	public bool HasArrived { get; private set; }
+	public bool IsStalled => stalledChecks >= StalledChecksBeforeStuck;
 	public bool IsStuck
 	{
 		get

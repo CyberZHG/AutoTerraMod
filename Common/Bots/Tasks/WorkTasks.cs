@@ -17,6 +17,7 @@ public sealed class CraftTask : BotTask
 	const float BaseArrivalRadius = 16f * 2f;
 	const float StationArrivalRadius = 16f * 3f;
 	const float RecallTripDistance = 16f * 120f;
+	const int RecallAfterWorkTicks = 600;
 
 	int craftTimer;
 
@@ -120,7 +121,7 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && TryRecallHome())
+		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && TryRecallHome())
 			return;
 		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? feet.ToWorldCoordinates() : station.ToWorldCoordinates();
 		Bot.Motor.MoveTo(standAt, StationArrivalRadius);

@@ -36,6 +36,7 @@ public sealed class BotHands
 	Player Avatar => bot.Avatar;
 
 	public bool IsWorking => Main.GameUpdateCount - lastWorkTick < WorkingWindowTicks;
+	public uint TicksSinceWork => Main.GameUpdateCount - lastWorkTick;
 	public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 	public bool Ready => cooldown <= 0;
 	public Item BestPickaxe => Avatar.GetBestPickaxe();
@@ -93,8 +94,7 @@ public sealed class BotHands
 		Swing(pickaxe, (int)Math.Max(1f, CombinedHooks.TotalUseTime(pickaxe.useTime, Avatar, pickaxe) * Avatar.pickSpeed), tile.ToWorldCoordinates());
 		using (Systems.AvatarPresence.Enter())
 			Avatar.PickTile(tile.X, tile.Y, pickaxe.pick);
-		if (!Main.tile[tile.X, tile.Y].HasTile)
-			bot.Watchdog.RecordProgress();
+		bot.Watchdog.RecordProgress();
 		return ToolResult.Working;
 	}
 

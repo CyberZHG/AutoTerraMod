@@ -175,7 +175,8 @@ public sealed class PathFollower
 	{
 		bool column = feet.X == node.Feet.X || Math.Abs(node.Feet.X - feet.X) == 1 && Math.Abs(AimX(node) - centerX) <= CenteringTolerance;
 		bool onPlatformInNode = node.Arrival == MoveKind.Jump && feet.Y == node.Feet.Y - 1 && (TileQuery.IsPlatform(node.Feet.X, node.Feet.Y) || TileQuery.IsPlatform(node.Feet.X + 1, node.Feet.Y));
-		return column && (feet.Y == node.Feet.Y || onPlatformInNode);
+		bool sunkBelow = feet.Y == node.Feet.Y + 1 && node.Arrival is MoveKind.Walk or MoveKind.Drop or MoveKind.Swim;
+		return column && (feet.Y == node.Feet.Y || onPlatformInNode || sunkBelow);
 	}
 
 	static float AimX(PathNode node) => node.Arrival == MoveKind.Drop ? PathFinder.CenterXOf(node.Feet.X) : FootingCenterX(node.Feet);

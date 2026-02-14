@@ -57,7 +57,7 @@ public sealed class NaturalistTask : BotTask
 		if (ramble is Vector2 meadow)
 		{
 			Bot.Motor.MoveTo(meadow, 32f);
-			if (Bot.Motor.HasArrived || Bot.Motor.IsStuck)
+			if (Bot.Motor.HasArrived || Bot.Motor.IsStalled)
 				IsFinished = true;
 			return;
 		}
@@ -69,7 +69,7 @@ public sealed class NaturalistTask : BotTask
 		if (Vector2.Distance(Bot.Center, critter.Center) > NetReach)
 		{
 			Bot.Motor.MoveTo(critter.Center, NetReach * 0.5f);
-			if (Bot.Motor.IsStuck)
+			if (Bot.Motor.IsStalled)
 				IsFinished = true;
 			return;
 		}

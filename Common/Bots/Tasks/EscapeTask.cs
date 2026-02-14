@@ -50,11 +50,6 @@ public sealed class EscapeTask : BotTask
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
 		climbStartedAt = 0;
-		if (!Bot.Brain.OnExpedition && TryRecallHome())
-		{
-			Finish();
-			return;
-		}
 		var here = Bot.CenterTile;
 		int x = Utils.Clamp(here.X + Bot.Watchdog.EscapeDirection * SurfaceStepTiles, 50, Main.maxTilesX - 50);
 		int surfaceY = TileQuery.SurfaceY(x);
@@ -88,6 +83,11 @@ public sealed class EscapeTask : BotTask
 	public override void Tick()
 	{
 		Bot.Motor.ScaffoldingAllowed = true;
+		if (climbStartedAt == 0 && ShouldClimbStraightUp() && !Bot.Brain.OnExpedition && TryRecallHome())
+		{
+			Finish();
+			return;
+		}
 		if (climbStartedAt == 0 && ShouldClimbStraightUp())
 		{
 			climbStartedAt = Main.GameUpdateCount;

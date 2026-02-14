@@ -117,7 +117,7 @@ public sealed class HuntTask : BotTask
 		bool underground = Bot.CenterTile.Y > Main.worldSurface + UndergroundMargin;
 		float y = underground || skyHunt ? Bot.Center.Y : TileQuery.SurfaceY(x) * 16f - 24f;
 		Bot.Motor.MoveTo(new Vector2(x * 16f, y), 32f);
-		if (Bot.Motor.HasArrived || Bot.Motor.IsStuck)
+		if (Bot.Motor.HasArrived || Bot.Motor.IsStalled)
 		{
 			wanderDirection = -wanderDirection;
 			IsFinished = true;

@@ -168,8 +168,8 @@ public static class HouseMaterials
 
 	public static Item Find(Player avatar, BuildAction action, HouseDesign design) => action switch
 	{
-		BuildAction.PlaceBlock => Inventory.Items(avatar).FirstOrDefault(item => item.type == design.BlockItem),
-		BuildAction.PlaceWall => Inventory.Items(avatar).FirstOrDefault(item => item.type == design.WallItem),
+		BuildAction.PlaceBlock => MostOf(avatar, design.BlockItems),
+		BuildAction.PlaceWall => MostOf(avatar, design.WallItems),
 		BuildAction.PlaceDoor => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsDoor),
 		BuildAction.PlaceTorch => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsTorch),
 		BuildAction.PlaceTable => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsTable),
@@ -192,8 +192,8 @@ public static class HouseMaterials
 
 	public static int CountAvailable(Player avatar, BuildAction placement, HouseDesign design) => placement switch
 	{
-		BuildAction.PlaceBlock => Inventory.Count(avatar, design.BlockItem),
-		BuildAction.PlaceWall => Inventory.Count(avatar, design.WallItem),
+		BuildAction.PlaceBlock => Inventory.CountAny(avatar, design.BlockItems),
+		BuildAction.PlaceWall => Inventory.CountAny(avatar, design.WallItems),
 		_ => Inventory.Items(avatar).Where(item => Matches(item, placement)).Sum(item => item.stack)
 	};
 
@@ -209,6 +209,43 @@ public static class HouseMaterials
 			_ => System.Array.Empty<int>()
 		};
 		return item.createTile >= 0 && tiles.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile];
+	}
+
+	static Item MostOf(Player avatar, int[] itemTypes)
+	{
+		Item best = null;
+		foreach (int type in itemTypes)
+		{
+			int count = Inventory.Count(avatar, type);
+			if (count > 0 && (best == null || count > Inventory.Count(avatar, best.type)))
+				best = Inventory.Items(avatar).FirstOrDefault(item => item.type == type);
+		}
+		return best;
+	}
+
+	public static int WallToObtain(Bots.Bot bot, HouseDesign design)
+	{
+		if (design.WallItems.Length == 1)
+			return design.WallItem;
+		int wood = Inventory.Count(bot.Avatar, ItemID.Wood) + BaseStorage.Count(bot.Faction, ItemID.Wood);
+		int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock) + BaseStorage.Count(bot.Faction, ItemID.StoneBlock);
+		return stone > wood ? ItemID.StoneWall : ItemID.WoodWall;
+	}
+
+	public static int BlockToObtain(Bots.Bot bot, HouseDesign design)
+	{
+		int best = design.BlockItem;
+		int bestCount = -1;
+		foreach (int type in design.BlockItems)
+		{
+			int count = Inventory.Count(bot.Avatar, type) + BaseStorage.Count(bot.Faction, type);
+			if (count > bestCount)
+			{
+				best = type;
+				bestCount = count;
+			}
+		}
+		return best;
 	}
 
 	static Item FindPlacing(Player avatar, int[] tileTypes) =>
