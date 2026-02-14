@@ -174,7 +174,7 @@ public sealed class PathFollower
 	static bool IsAt(Point feet, PathNode node, float centerX)
 	{
 		bool column = feet.X == node.Feet.X || Math.Abs(node.Feet.X - feet.X) == 1 && Math.Abs(AimX(node) - centerX) <= CenteringTolerance;
-		bool onPlatformInNode = feet.Y == node.Feet.Y - 1 && (TileQuery.IsPlatform(node.Feet.X, node.Feet.Y) || TileQuery.IsPlatform(node.Feet.X + 1, node.Feet.Y));
+		bool onPlatformInNode = node.Arrival == MoveKind.Jump && feet.Y == node.Feet.Y - 1 && (TileQuery.IsPlatform(node.Feet.X, node.Feet.Y) || TileQuery.IsPlatform(node.Feet.X + 1, node.Feet.Y));
 		return column && (feet.Y == node.Feet.Y || onPlatformInNode);
 	}
 
@@ -232,6 +232,10 @@ public sealed class PathFollower
 			intent.DropThroughPlatforms = true;
 		switch (node.Arrival)
 		{
+			case MoveKind.Walk when grounded && body.position.Y + body.height - (node.Feet.Y + 1) * 16f > StepUpPixels:
+				intent.Jump = true;
+				intent.JumpHoldTicks = HoldTicksForRise(2);
+				break;
 			case MoveKind.Jump:
 				intent.Jump = grounded || body.velocity.Y < 0f || rise > PathFinder.BaseJumpRise;
 				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, PathFinder.BaseJumpRise));
@@ -313,6 +317,7 @@ public sealed class PathFollower
 	}
 
 	const float RopeStepTolerance = 6f;
+	const float StepUpPixels = 16f;
 
 	const float FootingShift = 8f;
 
