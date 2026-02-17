@@ -17,6 +17,7 @@ public sealed class FactionKnowledge
 	readonly Dictionary<Landmark, Point> landmarks = new();
 	readonly Dictionary<Landmark, (int minX, int maxX)> landmarkSpans = new();
 
+	public int ResourceCount => resourceTiles.Count;
 	public int ScoutDirection { get; set; } = 1;
 	public int FruitlessShrineSearches { get; set; }
 

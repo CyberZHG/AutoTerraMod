@@ -26,7 +26,7 @@ public sealed class BotStatusReport : ModSystem
 		{
 			var settlement = faction.Settlement;
 			int built = settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
-			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count}{DescribeConstruction(faction)}{DescribeBossReadiness(faction) + DescribeBridge(faction)}");
+			report.Append($"\n  [{faction.Name}] base={faction.BaseTile} buildings={built}/{settlement?.Structures.Count ?? 0} chests={Building.BaseStorage.ChestIndices(faction).Count} known={BotWorldSystem.KnowledgeOf(faction).ResourceCount}{DescribeConstruction(faction)}{DescribeBossReadiness(faction) + DescribeBridge(faction)}");
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}

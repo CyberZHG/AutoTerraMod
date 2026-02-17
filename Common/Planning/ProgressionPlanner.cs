@@ -66,8 +66,26 @@ public static class ProgressionPlanner
 			source = upgrade;
 			return ready;
 		}
+		var focus = FocusTrack(bot);
+		if (WalkLadder(bot, isSuppressed, focus, out source) is PlanStep focused)
+			return focused;
+		if (WalkLadder(bot, isSuppressed, null, out source) is PlanStep any)
+			return any;
+		source = null;
+		return PlanStep.Idle;
+	}
+
+	const uint TrackTurnTicks = 7200;
+	static readonly GearTrack[] Tracks = { GearTrack.Tools, GearTrack.Armor, GearTrack.Weapons, GearTrack.Accessories };
+
+	static GearTrack FocusTrack(Bot bot) => Tracks[(int)((Main.GameUpdateCount / TrackTurnTicks + (uint)bot.Id) % (uint)Tracks.Length)];
+
+	static PlanStep WalkLadder(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, GearTrack? focus, out ProgressionGoal source)
+	{
 		foreach (var goal in ladder)
 		{
+			if (focus is GearTrack track && goal.Track != GearTrack.None && goal.Track != track)
+				continue;
 			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
@@ -81,7 +99,7 @@ public static class ProgressionPlanner
 			}
 		}
 		source = null;
-		return PlanStep.Idle;
+		return null;
 	}
 
 	const int StuckRetryTicks = 240;

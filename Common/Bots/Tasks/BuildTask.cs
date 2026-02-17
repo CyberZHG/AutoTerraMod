@@ -11,7 +11,10 @@ public sealed class BuildTask : BotTask
 	const int FailuresBeforeSkipping = 12;
 	const float ApproachRadius = 16f * 2f;
 
+	const uint OperationTimeoutTicks = 1200;
+
 	BuildOperation? lastOperation;
+	uint operationStartedAt;
 	HouseBlueprint structure;
 	int failures;
 
@@ -40,6 +43,14 @@ public sealed class BuildTask : BotTask
 		{
 			lastOperation = operation;
 			failures = 0;
+			operationStartedAt = Main.GameUpdateCount;
+		}
+		if (Main.GameUpdateCount - operationStartedAt > OperationTimeoutTicks)
+		{
+			HouseInspector.Skip(Bot, operation);
+			Bot.Motor.Stop();
+			lastOperation = null;
+			return;
 		}
 		Bot.Motor.ScaffoldingAllowed = true;
 		var tool = ToolFor(operation);
@@ -92,10 +103,11 @@ public sealed class BuildTask : BotTask
 	{
 		var blueprint = structure;
 		var here = Bot.CenterTile;
-		if (operation.Tile.Y < blueprint.Ceiling && blueprint.IsInterior(here.X, here.Y))
+		if (operation.Tile.Y < blueprint.Ceiling)
 		{
-			int doorSide = operation.Tile.X <= (blueprint.Left + blueprint.Right) / 2 ? blueprint.Left - 2 : blueprint.Right + 2;
-			return new Vector2(doorSide * 16f + 8f, (blueprint.Floor - 1) * 16f - 8f);
+			int towardMiddle = operation.Tile.X <= (blueprint.Left + blueprint.Right) / 2 ? 2 : -2;
+			int x = System.Math.Clamp(operation.Tile.X + towardMiddle, blueprint.Left, blueprint.Right - 1);
+			return Navigation.PathFinder.BodyCenterAt(new Point(x, blueprint.Ceiling - 1));
 		}
 		if (BodyOverlaps(operation))
 		{

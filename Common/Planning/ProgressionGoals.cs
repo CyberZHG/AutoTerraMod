@@ -9,8 +9,18 @@ using Terraria.ID;
 
 namespace AutoTerraMod.Common.Planning;
 
+public enum GearTrack
+{
+	None,
+	Tools,
+	Armor,
+	Weapons,
+	Accessories
+}
+
 public abstract class ProgressionGoal
 {
+	public virtual GearTrack Track => GearTrack.None;
 	public virtual bool AppliesTo(Bot bot) => true;
 	public virtual bool IsUrgent(Bot bot) => false;
 	public virtual string Describe() => GetType().Name;
@@ -45,6 +55,13 @@ public sealed class GearGoal : ProgressionGoal
 
 	public GearKind Kind => kind;
 	public override string Describe() => $"Gear({kind})";
+
+	public override GearTrack Track => kind switch
+	{
+		GearKind.Pickaxe or GearKind.Hook => GearTrack.Tools,
+		GearKind.Head or GearKind.Body or GearKind.Legs => GearTrack.Armor,
+		_ => GearTrack.Weapons
+	};
 
 	public GearGoal(GearKind kind, params int[] options)
 	{
@@ -156,12 +173,14 @@ public sealed class AmmoGoal : ProgressionGoal
 
 public sealed class RopeGoal : ProgressionGoal
 {
-	const int Minimum = 20;
-	const int RestockTo = 60;
+	const int Minimum = 10;
+	const int RestockTo = 30;
 
 	public override bool IsMet(Bot bot) => RopeCount(bot.Avatar) >= Minimum;
 
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, ItemID.WebRope, RestockTo);
+	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope };
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RestockTo);
 
 	static int RopeCount(Terraria.Player avatar) =>
 		Inventory.Items(avatar).Where(item => item.createTile >= 0 && Terraria.Main.tileRope[item.createTile]).Sum(item => item.stack);
@@ -387,6 +406,7 @@ public sealed class StyleGoal : ProgressionGoal
 		this.styles = styles.ToHashSet();
 	}
 
+	public override GearTrack Track => inner.Track;
 	public override bool AppliesTo(Bot bot) => (styles.Contains(bot.Personality.Style) || styles.Contains(EffectiveStyle(bot.Personality.Style))) && inner.AppliesTo(bot);
 	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
@@ -404,6 +424,8 @@ public sealed class OwnGoal : ProgressionGoal
 	readonly int[] options;
 
 	public OwnGoal(params int[] options) => this.options = options;
+
+	public override GearTrack Track => options.All(option => ContentSamples.ItemsByType[option].accessory) ? GearTrack.Accessories : GearTrack.None;
 
 	public override string Describe() => $"Own({Terraria.Lang.GetItemNameValue(options[0])})";
 
@@ -474,6 +496,7 @@ public sealed class GatedGoal : ProgressionGoal
 	}
 
 	public ProgressionGoal Inner => inner;
+	public override GearTrack Track => inner.Track;
 	public override bool AppliesTo(Bot bot) => open() && inner.AppliesTo(bot);
 	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
@@ -753,7 +776,7 @@ public static class ProgressionGoals
 			new StationGoal(TileID.WorkBenches, ItemID.WorkBench),
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
-			new ReserveGoal(ItemID.Torch, 10, 30),
+			new ReserveGoal(ItemID.Torch, 5, 15),
 			new SupportConstructionGoal(),
 			new BossGoal(),
 			new HellevatorGoal(),
@@ -941,8 +964,6 @@ public static class ProgressionGoals
 	static void AddOreTier(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor)
 	{
 		goals.Add(new GearGoal(GearKind.Pickaxe, pickaxes));
-		if (!goals.OfType<GearGoal>().Any(goal => goal.Kind == GearKind.Hook))
-			goals.Add(new GearGoal(GearKind.Hook, Hooks));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, swords), CombatStyle.Melee));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, staffs), CombatStyle.Magic));
@@ -960,5 +981,10 @@ public static class ProgressionGoals
 			goals.Add(new GearGoal(GearKind.Head, armor.Select(set => set.head).ToArray()));
 		}
 		goals.Add(new GearGoal(GearKind.Legs, armor.Select(set => set.legs).ToArray()));
+		bool hookPlanned = goals.OfType<GearGoal>().Any(goal => goal.Kind == GearKind.Hook);
+		if (!hookPlanned && goals.OfType<GearGoal>().Count(goal => goal.Kind == GearKind.Legs) >= HookAfterArmorTiers)
+			goals.Add(new GearGoal(GearKind.Hook, Hooks));
 	}
+
+	const int HookAfterArmorTiers = 2;
 }
