@@ -47,6 +47,7 @@ public sealed class BotBrain
 			new FleeTask(bot),
 			new FightTask(bot),
 			new PickupTask(bot),
+			new OpportunisticMineTask(bot),
 			new CraftTask(bot),
 			new BuildTask(bot),
 			new GatherTask(bot),

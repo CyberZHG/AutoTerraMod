@@ -81,7 +81,7 @@ public static class HouseInspector
 	{
 		Skipped(bot.Faction).Add(operation.Tile);
 		ForgetPlannedOperations(bot.Faction);
-		BotDiagnostics.Log(bot, $"skipping {operation.Action} at {operation.Tile} (structure {operation.Structure})");
+		BotDiagnostics.Log(bot, $"skipping {operation.Action} at {operation.Tile} (structure {operation.Structure}) from {bot.CenterTile}; motor: {bot.Motor.Describe()}{World.TerrainDump.Around(operation.Tile, 12, 7)}");
 	}
 
 	const int OperationCacheTicks = 20;

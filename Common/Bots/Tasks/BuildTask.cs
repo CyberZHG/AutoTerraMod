@@ -12,6 +12,7 @@ public sealed class BuildTask : BotTask
 	const float ApproachRadius = 16f * 2f;
 
 	const uint OperationTimeoutTicks = 1200;
+	const float NearOperationDistance = 16f * 10f;
 
 	BuildOperation? lastOperation;
 	uint operationStartedAt;
@@ -45,7 +46,10 @@ public sealed class BuildTask : BotTask
 			failures = 0;
 			operationStartedAt = Main.GameUpdateCount;
 		}
-		if (Main.GameUpdateCount - operationStartedAt > OperationTimeoutTicks)
+		bool near = Vector2.Distance(Bot.Center, operation.Tile.ToWorldCoordinates()) < NearOperationDistance;
+		if (!near)
+			operationStartedAt = Main.GameUpdateCount;
+		else if (Main.GameUpdateCount - operationStartedAt > OperationTimeoutTicks)
 		{
 			HouseInspector.Skip(Bot, operation);
 			Bot.Motor.Stop();
@@ -103,6 +107,8 @@ public sealed class BuildTask : BotTask
 	{
 		var blueprint = structure;
 		var here = Bot.CenterTile;
+		if (operation.Tile.Y < blueprint.Ceiling && FootholdNear(operation.Tile) is Point foothold)
+			return Navigation.PathFinder.BodyCenterAt(foothold);
 		if (operation.Tile.Y < blueprint.Ceiling)
 		{
 			int towardMiddle = operation.Tile.X <= (blueprint.Left + blueprint.Right) / 2 ? 2 : -2;
@@ -116,6 +122,44 @@ public sealed class BuildTask : BotTask
 		}
 		return operation.Tile.ToWorldCoordinates();
 	}
+
+	const int FootholdReachX = 3;
+	const int FootholdBelowMin = 1;
+	const int FootholdBelowMax = 4;
+
+	static Point? FootholdNear(Point tile)
+	{
+		Point? best = null;
+		int bestScore = int.MaxValue;
+		for (int dy = FootholdBelowMin; dy <= FootholdBelowMax; dy++)
+		{
+			for (int dx = -FootholdReachX; dx <= FootholdReachX; dx++)
+			{
+				var feet = new Point(tile.X + dx, tile.Y + dy);
+				if (!Standable(feet) || Overlaps(feet, tile))
+					continue;
+				int score = System.Math.Abs(dx) + dy;
+				if (score < bestScore)
+				{
+					best = feet;
+					bestScore = score;
+				}
+			}
+		}
+		return best;
+	}
+
+	static bool Standable(Point feet)
+	{
+		for (int y = feet.Y - 2; y <= feet.Y; y++)
+		{
+			if (TileQuery.IsSolid(feet.X, y) || TileQuery.IsSolid(feet.X + 1, y))
+				return false;
+		}
+		return Navigation.PathFinder.IsSupportedNow(feet.X, feet.Y);
+	}
+
+	static bool Overlaps(Point feet, Point tile) => tile.X >= feet.X && tile.X <= feet.X + 1 && tile.Y >= feet.Y - 2 && tile.Y <= feet.Y;
 
 	bool Execute(BuildOperation operation, Item tool)
 	{

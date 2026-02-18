@@ -210,7 +210,8 @@ public sealed class PathFollower
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
 		bool hangingOnRope = (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0) && !PathFinder.IsSupportedNow(feet.X, feet.Y);
-		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1)
+		bool ropeReachesNode = PathFinder.RopeColumn(feet.X, node.Feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, node.Feet.Y - 1) >= 0;
+		if (hangingOnRope && (node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1 || node.Arrival is MoveKind.Walk or MoveKind.Drop or MoveKind.Jump && ropeReachesNode))
 		{
 			float standingBottom = (node.Feet.Y + 1) * 16f;
 			float bottom = body.position.Y + body.height;
