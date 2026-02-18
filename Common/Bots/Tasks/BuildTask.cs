@@ -190,6 +190,10 @@ public sealed class BuildTask : BotTask
 						return true;
 				}
 				return false;
+			case BuildAction.PlaceBlock when Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsSolid(tile) && !Main.tileCut[Main.tile[tile.X, tile.Y].TileType]:
+				if (TileQuery.IsPlatform(tile.X, tile.Y) || !Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType])
+					return Bot.Hands.Dig(tile) == ToolResult.Working;
+				return false;
 			default:
 				return Bot.Hands.Place(tool, tile);
 		}
