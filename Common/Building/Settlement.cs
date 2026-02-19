@@ -46,7 +46,9 @@ public sealed class Settlement
 			for (int story = 1; story < GuestStories; story++)
 			{
 				var roof = story == GuestStories - 1 ? design.Roof : RoofStyle.Flat;
+				below.AddHatchAbove();
 				below = Add(StructurePurpose.GuestRoom, below.Left, RoomWidth, below.Ceiling, RoomInteriorHeight, roof);
+				below.AddHatchBelow();
 				GuestRooms.Add(below);
 			}
 		}

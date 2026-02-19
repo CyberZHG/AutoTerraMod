@@ -213,6 +213,7 @@ BuildActions: {
 	RenovateWall: renovate background walls
 	PlaceBed: bed
 	PlaceChair: chair
+	PlacePlatform: platform hatch
 }
 
 Roofs: {

@@ -109,10 +109,17 @@ public static class HouseInspector
 	static BuildOperation? ComputeNextOperation(Faction faction, HouseBlueprint structure)
 	{
 		var excluded = Skipped(faction);
-		var construction = structure.PendingOperations(MaterialsFor(faction))
-			.Where(operation => !excluded.Contains(operation.Tile) && !faction.Scaffolding.Contains(operation.Tile));
-		var cleanup = ScaffoldToRemove(faction).Select(tile => new BuildOperation(BuildAction.RemoveScaffold, tile, structure.Index));
-		return construction.Concat(cleanup).Cast<BuildOperation?>().FirstOrDefault();
+		var pending = structure.PendingOperations(MaterialsFor(faction)).Where(operation => !faction.Scaffolding.Contains(operation.Tile)).ToList();
+		foreach (var operation in pending)
+		{
+			if (!excluded.Contains(operation.Tile))
+				return operation;
+		}
+		if (pending.Count > 0)
+			return null;
+		foreach (var tile in ScaffoldToRemove(faction))
+			return new BuildOperation(BuildAction.RemoveScaffold, tile, structure.Index);
+		return null;
 	}
 
 	static IEnumerable<Point> ScaffoldToRemove(Faction faction)
@@ -170,6 +177,7 @@ public static class HouseMaterials
 	{
 		BuildAction.PlaceBlock => MostOf(avatar, design.BlockItems),
 		BuildAction.PlaceWall => MostOf(avatar, design.WallItems),
+		BuildAction.PlacePlatform => Inventory.Items(avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]),
 		BuildAction.PlaceDoor => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsDoor),
 		BuildAction.PlaceTorch => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsTorch),
 		BuildAction.PlaceTable => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsTable),
@@ -182,6 +190,7 @@ public static class HouseMaterials
 	{
 		BuildAction.PlaceBlock => design.BlockItem,
 		BuildAction.PlaceWall => design.WallItem,
+		BuildAction.PlacePlatform => ItemID.WoodPlatform,
 		BuildAction.PlaceDoor => ItemID.WoodenDoor,
 		BuildAction.PlaceTorch => ItemID.Torch,
 		BuildAction.PlaceTable => ItemID.WoodenTable,
@@ -194,6 +203,7 @@ public static class HouseMaterials
 	{
 		BuildAction.PlaceBlock => Inventory.CountAny(avatar, design.BlockItems),
 		BuildAction.PlaceWall => Inventory.CountAny(avatar, design.WallItems),
+		BuildAction.PlacePlatform => Inventory.Items(avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack),
 		_ => Inventory.Items(avatar).Where(item => Matches(item, placement)).Sum(item => item.stack)
 	};
 
@@ -229,7 +239,7 @@ public static class HouseMaterials
 			return design.WallItem;
 		int wood = Inventory.Count(bot.Avatar, ItemID.Wood) + BaseStorage.Count(bot.Faction, ItemID.Wood);
 		int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock) + BaseStorage.Count(bot.Faction, ItemID.StoneBlock);
-		return stone > wood ? ItemID.StoneWall : ItemID.WoodWall;
+		return stone >= wood ? ItemID.StoneWall : ItemID.WoodWall;
 	}
 
 	public static int BlockToObtain(Bots.Bot bot, HouseDesign design)

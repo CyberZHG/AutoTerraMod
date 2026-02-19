@@ -13,6 +13,7 @@ public sealed class BuildTask : BotTask
 
 	const uint OperationTimeoutTicks = 1200;
 	const float NearOperationDistance = 16f * 10f;
+	const float StepAsideRadius = 6f;
 
 	BuildOperation? lastOperation;
 	uint operationStartedAt;
@@ -63,7 +64,19 @@ public sealed class BuildTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (!Bot.Hands.CanReach(tool, operation.Tile) || BodyOverlaps(operation))
+		if (BodyOverlaps(operation) && Bot.Npc is NPC body)
+		{
+			var feet = Navigation.PathFinder.FeetOf(body);
+			int side = body.Center.X >= operation.Tile.X * 16f + 8f ? operation.Tile.X + 1 : operation.Tile.X - 2;
+			Bot.Motor.MoveTo(Navigation.PathFinder.BodyCenterAt(new Point(side, feet.Y)), StepAsideRadius);
+			if (Bot.Motor.IsStuck)
+			{
+				HouseInspector.Skip(Bot, operation);
+				Bot.Motor.Stop();
+			}
+			return;
+		}
+		if (!Bot.Hands.CanReach(tool, operation.Tile))
 		{
 			Bot.Motor.MoveTo(StandingSpotFor(operation), ApproachRadius);
 			if (Bot.Motor.IsStuck)

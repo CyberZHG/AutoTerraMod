@@ -20,7 +20,8 @@ public enum BuildAction
 	PlaceBed,
 	RemoveScaffold,
 	RenovateBlock,
-	RenovateWall
+	RenovateWall,
+	PlacePlatform
 }
 
 public enum StructurePurpose
@@ -40,8 +41,11 @@ public sealed class HouseBlueprint
 	const int ShedRoofRun = 3;
 	const int ChestWidth = 2;
 
+	const int StepHeight = 3;
+
 	readonly List<Point> shellInBuildOrder = new();
 	readonly HashSet<Point> shell = new();
+	readonly List<Point> platforms = new();
 	readonly int center;
 
 	public HouseBlueprint(int index, StructurePurpose purpose, int left, int width, int floor, int interiorHeight, RoofStyle roof)
@@ -75,6 +79,22 @@ public sealed class HouseBlueprint
 	public bool IsInterior(int x, int y) => x > Left && x < Right && y > Ceiling && y < Floor;
 	public bool IsDoorway(int x, int y) => (x == Left || x == Right) && y >= Floor - DoorHeight && y < Floor;
 	public bool IsShell(int x, int y) => shell.Contains(new Point(x, y));
+	bool IsPlatformSpot(Point tile) => platforms.Contains(tile);
+
+	public void AddHatchAbove()
+	{
+		foreach (int x in new[] { center, center + 1 })
+		{
+			platforms.Add(new Point(x, Ceiling));
+			platforms.Add(new Point(x, Floor - StepHeight));
+		}
+	}
+
+	public void AddHatchBelow()
+	{
+		foreach (int x in new[] { center, center + 1 })
+			platforms.Add(new Point(x, Floor));
+	}
 	public bool IsOutOfReachFromFloor(Point tile) => tile.Y < Floor - 7;
 
 	public IEnumerable<Point> ChestSlots()
@@ -94,8 +114,12 @@ public sealed class HouseBlueprint
 		}
 		foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None))
 			yield return Operation(BuildAction.PlaceWall, tile);
-		foreach (var tile in shellInBuildOrder.Where(tile => !TileQuery.IsSolid(tile)))
+		foreach (var tile in platforms.Where(tile => TileQuery.IsSolid(tile)))
+			yield return Operation(BuildAction.ClearTile, tile);
+		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile)))
 			yield return Operation(BuildAction.PlaceBlock, tile);
+		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile)))
+			yield return Operation(BuildAction.PlacePlatform, tile);
 		foreach (int x in new[] { Left, Right })
 		{
 			if (!HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
@@ -112,7 +136,7 @@ public sealed class HouseBlueprint
 			if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsChair))
 				yield return Operation(BuildAction.PlaceChair, new Point(center + 1, Floor - 1));
 		}
-		foreach (var tile in shellInBuildOrder.Where(tile => NeedsNewBlock(tile, materials)))
+		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && NeedsNewBlock(tile, materials)))
 			yield return Operation(BuildAction.RenovateBlock, tile);
 		foreach (var tile in InteriorTiles().Where(tile => NeedsNewWall(tile, materials)))
 			yield return Operation(BuildAction.RenovateWall, tile);
@@ -249,6 +273,8 @@ public sealed class HouseBlueprint
 					yield return TreeBaseBelow(x, y);
 					continue;
 				}
+				if (IsPlatformSpot(new Point(x, y)))
+					continue;
 				if (IsShell(x, y) && !TileQuery.IsSolid(x, y) && !TileID.Sets.RoomNeeds.CountsAsDoor.Contains(tile.TileType))
 				{
 					yield return new Point(x, y);

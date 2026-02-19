@@ -245,12 +245,20 @@ public sealed class StructureGoal : ProgressionGoal
 
 	public override PlanStep Plan(Bot bot)
 	{
-		var structure = NextUnfinished(bot);
-		if (structure == null)
-			return PlanStep.Idle;
-		if (HouseInspector.NextOperation(bot.Faction, structure) is not BuildOperation operation)
+		HouseBlueprint structure = null;
+		BuildOperation operation = default;
+		foreach (var candidate in select(bot.Faction.Settlement))
 		{
-			HouseInspector.ReportUnfinishable(bot, structure);
+			if (HouseInspector.IsFinished(bot.Faction, candidate) || HouseInspector.NextOperation(bot.Faction, candidate) is not BuildOperation next)
+				continue;
+			structure = candidate;
+			operation = next;
+			break;
+		}
+		if (structure == null)
+		{
+			if (NextUnfinished(bot) is HouseBlueprint stalled && HouseInspector.IsComplete(bot.Faction, stalled) == false && HouseInspector.NextOperation(bot.Faction, stalled) == null)
+				HouseInspector.ReportUnfinishable(bot, stalled);
 			return PlanStep.Idle;
 		}
 		var materials = HouseInspector.MaterialsFor(bot.Faction);

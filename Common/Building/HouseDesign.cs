@@ -32,7 +32,7 @@ public sealed record HouseDesign(int Width, int InteriorHeight, RoofStyle Roof, 
 		_ => ItemID.WoodWall
 	};
 
-	static readonly int[] RusticBlocks = { ItemID.Wood, ItemID.StoneBlock };
+	static readonly int[] RusticBlocks = { ItemID.StoneBlock, ItemID.Wood };
 
 	static readonly int[] RusticWalls = { ItemID.WoodWall, ItemID.StoneWall };
 

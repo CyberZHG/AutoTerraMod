@@ -19,7 +19,8 @@ public static class ConstructionBill
 		BuildAction.PlaceTable,
 		BuildAction.PlaceChair,
 		BuildAction.PlaceBed,
-		BuildAction.PlaceBlock
+		BuildAction.PlaceBlock,
+		BuildAction.PlacePlatform
 	};
 
 	public static List<BillLine> For(HouseBlueprint structure, HouseDesign materials, Bot builder = null)

@@ -213,6 +213,7 @@ BuildActions: {
 	RenovateWall: 翻新背景墙
 	PlaceBed: 床
 	PlaceChair: 椅子
+	PlacePlatform: 平台通道
 }
 
 Roofs: {
