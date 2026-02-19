@@ -38,7 +38,6 @@ public readonly record struct BuildOperation(BuildAction Action, Point Tile, int
 public sealed class HouseBlueprint
 {
 	const int DoorHeight = 3;
-	const int ShedRoofRun = 3;
 	const int ChestWidth = 2;
 
 	const int StepHeight = 3;
@@ -61,7 +60,6 @@ public sealed class HouseBlueprint
 		AddFloor();
 		AddSideWalls();
 		AddCeiling();
-		AddRoof();
 		Top = shell.Min(tile => tile.Y);
 	}
 
@@ -90,6 +88,15 @@ public sealed class HouseBlueprint
 		}
 	}
 
+	readonly HashSet<int> platformDoorways = new();
+
+	public void AddPlatformDoorway(int x)
+	{
+		platformDoorways.Add(x);
+		for (int y = Floor - DoorHeight; y < Floor; y++)
+			platforms.Add(new Point(x, y));
+	}
+
 	public void AddHatchBelow()
 	{
 		foreach (int x in new[] { center, center + 1 })
@@ -114,7 +121,7 @@ public sealed class HouseBlueprint
 		}
 		foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None))
 			yield return Operation(BuildAction.PlaceWall, tile);
-		foreach (var tile in platforms.Where(tile => TileQuery.IsSolid(tile)))
+		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y)))
 			yield return Operation(BuildAction.ClearTile, tile);
 		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile)))
 			yield return Operation(BuildAction.PlaceBlock, tile);
@@ -122,7 +129,7 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		foreach (int x in new[] { Left, Right })
 		{
-			if (!HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
+			if (!platformDoorways.Contains(x) && !HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
 				yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
 		}
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))
@@ -229,33 +236,6 @@ public sealed class HouseBlueprint
 		{
 			AddShell(Left + offset, Ceiling);
 			AddShell(Right - offset, Ceiling);
-		}
-	}
-
-	void AddRoof()
-	{
-		switch (Roof)
-		{
-			case RoofStyle.Gable:
-				for (int rise = 1; Right - rise - (Left + rise) >= 0; rise++)
-				{
-					AddShell(Left + rise, Ceiling - rise);
-					AddShell(Right - rise, Ceiling - rise);
-					if (Right - rise - (Left + rise) <= 1)
-					{
-						for (int x = Left + rise; x <= Right - rise; x++)
-							AddShell(x, Ceiling - rise);
-					}
-				}
-				break;
-			case RoofStyle.Shed:
-				for (int x = Left; x <= Right; x++)
-				{
-					int rise = (Right - x) / ShedRoofRun;
-					for (int y = Ceiling - 1; y >= Ceiling - rise; y--)
-						AddShell(x, y);
-				}
-				break;
 		}
 	}
 
