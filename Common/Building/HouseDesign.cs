@@ -32,9 +32,38 @@ public sealed record HouseDesign(int Width, int InteriorHeight, RoofStyle Roof, 
 		_ => ItemID.WoodWall
 	};
 
-	static readonly int[] RusticBlocks = { ItemID.StoneBlock, ItemID.Wood };
+	static readonly int[] RusticBlocks =
+	{
+		ItemID.StoneBlock, ItemID.Wood, ItemID.BorealWood, ItemID.PalmWood, ItemID.RichMahogany, ItemID.Ebonwood, ItemID.Shadewood,
+		ItemID.GraniteBlock, ItemID.MarbleBlock, ItemID.GrayBrick, ItemID.RedBrick
+	};
 
-	static readonly int[] RusticWalls = { ItemID.WoodWall, ItemID.StoneWall };
+	public static readonly int[] RusticWalls =
+	{
+		ItemID.StoneWall, ItemID.WoodWall, ItemID.BorealWoodWall, ItemID.PalmWoodWall, ItemID.RichMahoganyWall, ItemID.EbonwoodWall, ItemID.ShadewoodWall,
+		ItemID.GraniteWall, ItemID.MarbleWall, ItemID.GrayBrickWall, ItemID.RedBrickWall
+	};
+
+	public static readonly int[] RusticWallSources =
+	{
+		ItemID.StoneBlock, ItemID.Wood, ItemID.BorealWood, ItemID.PalmWood, ItemID.RichMahogany, ItemID.Ebonwood, ItemID.Shadewood,
+		ItemID.GraniteBlock, ItemID.MarbleBlock, ItemID.GrayBrick, ItemID.RedBrick
+	};
+
+	public static readonly int[] Doors =
+	{
+		ItemID.WoodenDoor, ItemID.BorealWoodDoor, ItemID.PalmWoodDoor, ItemID.RichMahoganyDoor, ItemID.EbonwoodDoor, ItemID.ShadewoodDoor, ItemID.CactusDoor
+	};
+
+	public static readonly int[] Tables =
+	{
+		ItemID.WoodenTable, ItemID.BorealWoodTable, ItemID.PalmWoodTable, ItemID.RichMahoganyTable, ItemID.EbonwoodTable, ItemID.ShadewoodTable
+	};
+
+	public static readonly int[] Chairs =
+	{
+		ItemID.WoodenChair, ItemID.BorealWoodChair, ItemID.PalmWoodChair, ItemID.RichMahoganyChair, ItemID.EbonwoodChair, ItemID.ShadewoodChair
+	};
 
 	public int[] BlockItems => Taste == BuildingTaste.Rustic ? RusticBlocks : new[] { BlockItem };
 	public int[] WallItems => Taste == BuildingTaste.Rustic ? RusticWalls : new[] { WallItem };

@@ -268,7 +268,9 @@ public sealed class StructureGoal : ProgressionGoal
 		var line = ConstructionBill.For(structure, materials, bot).First(entry => entry.Placement == placement);
 		int batch = Math.Min(line.Amount, MaterialBatch);
 		if (HouseMaterials.Find(bot.Avatar, placement, materials) == null)
-			return ProgressionPlanner.Obtain(bot, line.ItemType, batch);
+			return placement is BuildAction.PlaceDoor or BuildAction.PlaceTable or BuildAction.PlaceChair
+				? ProgressionPlanner.ObtainAny(bot, HouseMaterials.Options(placement, materials))
+				: ProgressionPlanner.Obtain(bot, line.ItemType, batch);
 		if (HouseMaterials.CountAvailable(bot.Avatar, placement, materials) < batch && ProgressionPlanner.Obtain(bot, line.ItemType, batch) is CraftStep craft)
 			return craft;
 		return new BuildHouseStep(operation);
@@ -303,15 +305,10 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	static int? GiftOnHand(Bot bot, BillLine need)
 	{
 		var materials = HouseInspector.MaterialsFor(bot.Faction);
-		var candidates = need.Placement switch
+		int minimum = need.Placement is BuildAction.PlaceBlock or BuildAction.PlaceWall ? MinimumGift : 1;
+		foreach (int type in HouseMaterials.Options(need.Placement, materials))
 		{
-			BuildAction.PlaceBlock => materials.BlockItems,
-			BuildAction.PlaceWall => materials.WallItems,
-			_ => new[] { need.ItemType }
-		};
-		foreach (int type in candidates)
-		{
-			if (Inventory.Count(bot.Avatar, type) >= MinimumGift)
+			if (Inventory.Count(bot.Avatar, type) >= minimum)
 				return type;
 		}
 		return null;

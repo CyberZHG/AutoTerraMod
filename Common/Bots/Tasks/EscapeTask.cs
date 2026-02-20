@@ -34,6 +34,8 @@ public sealed class EscapeTask : BotTask
 	bool followingExit;
 	bool legReached;
 	bool legIsSurfaceExit;
+	int surfaceMargin;
+	const int PitSurfaceMargin = -2;
 	int highestY;
 	uint climbedAt;
 
@@ -64,6 +66,7 @@ public sealed class EscapeTask : BotTask
 			destination = Bot.Center + new Vector2(Bot.Watchdog.EscapeDirection * OpenGroundTrip * 16f, 0f);
 			return;
 		}
+		surfaceMargin = SurfaceMarginTiles;
 		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
 		exitPlannedAt = 0;
 		exitSearch?.Cancel();
@@ -99,11 +102,18 @@ public sealed class EscapeTask : BotTask
 			Finish();
 			return;
 		}
+		if (!headingForSurface && !Bot.Brain.OnExpedition && Bot.Motor.HasNoRoute)
+		{
+			headingForSurface = true;
+			surfaceMargin = PitSurfaceMargin;
+			startedAt = Main.GameUpdateCount;
+			destination = Bot.Center;
+		}
 		if (headingForSurface && climbStartedAt == 0)
 			PlanExitLeg();
 		Bot.Motor.MoveTo(destination, 32f);
 		var here = Bot.CenterTile;
-		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + SurfaceMarginTiles || legIsSurfaceExit && Bot.Motor.HasArrived);
+		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + surfaceMargin || legIsSurfaceExit && Bot.Motor.HasArrived);
 		if (here.Y < highestY)
 		{
 			highestY = here.Y;
@@ -135,7 +145,7 @@ public sealed class EscapeTask : BotTask
 			float BelowSurface(Point node)
 			{
 				if (!surface.TryGetValue(node.X, out int y))
-					surface[node.X] = y = TileQuery.SurfaceY(node.X) + SurfaceMarginTiles;
+					surface[node.X] = y = TileQuery.SurfaceY(node.X) + surfaceMargin + 1;
 				return Math.Max(0, node.Y - y);
 			}
 			exitSearch = PathFinder.BeginExit(feet, Bot.Motor.Abilities(), BelowSurface, ExitSearchMultiplier);

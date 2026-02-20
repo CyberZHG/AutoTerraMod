@@ -22,7 +22,7 @@ public sealed class TidyCampTask : BotTask
 		tombstone = FindTombstone();
 		if (tombstone == null || Bot.Hands.BestPickaxe == null)
 			return 0f;
-		Detail = Lang.GetMapObjectName(TileID.Tombstones) ?? "";
+		Detail = "";
 		return 45f + Traits.Building * 15f;
 	}
 
@@ -51,7 +51,7 @@ public sealed class TidyCampTask : BotTask
 		{
 			for (int y = settlement.Top - CampRowsAbove; y <= settlement.Floor + CampRowsBelow; y++)
 			{
-				if (!WorldGen.InWorld(x, y, 5) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.Tombstones)
+				if (!WorldGen.InWorld(x, y, 5) || !IsClutter(x, y))
 					continue;
 				long distance = WorldScan.DistanceSq(origin, new Point(x, y));
 				if (distance < nearestDistance)
@@ -64,9 +64,19 @@ public sealed class TidyCampTask : BotTask
 		return nearest;
 	}
 
+	static bool IsClutter(int x, int y)
+	{
+		var tile = Main.tile[x, y];
+		if (!tile.HasTile)
+			return false;
+		if (tile.TileType == TileID.Tombstones)
+			return true;
+		return Main.tileRope[tile.TileType] && Main.tile[x - 1, y].HasTile && Main.tileRope[Main.tile[x - 1, y].TileType];
+	}
+
 	public override void Tick()
 	{
-		if (tombstone is not Point tile || TileQuery.TypeAt(tile) != TileID.Tombstones)
+		if (tombstone is not Point tile || !IsClutter(tile.X, tile.Y))
 		{
 			IsFinished = true;
 			return;

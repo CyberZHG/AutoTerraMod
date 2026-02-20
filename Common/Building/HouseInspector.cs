@@ -237,10 +237,30 @@ public static class HouseMaterials
 	{
 		if (design.WallItems.Length == 1)
 			return design.WallItem;
-		int wood = Inventory.Count(bot.Avatar, ItemID.Wood) + BaseStorage.Count(bot.Faction, ItemID.Wood);
-		int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock) + BaseStorage.Count(bot.Faction, ItemID.StoneBlock);
-		return stone >= wood ? ItemID.StoneWall : ItemID.WoodWall;
+		int best = 0;
+		int bestCount = -1;
+		for (int index = 0; index < HouseDesign.RusticWalls.Length; index++)
+		{
+			int source = HouseDesign.RusticWallSources[index];
+			int count = Inventory.Count(bot.Avatar, source) + BaseStorage.Count(bot.Faction, source);
+			if (count > bestCount)
+			{
+				best = index;
+				bestCount = count;
+			}
+		}
+		return HouseDesign.RusticWalls[best];
 	}
+
+	public static int[] Options(BuildAction placement, HouseDesign design) => placement switch
+	{
+		BuildAction.PlaceBlock => design.BlockItems,
+		BuildAction.PlaceWall => design.WallItems,
+		BuildAction.PlaceDoor => HouseDesign.Doors,
+		BuildAction.PlaceTable => HouseDesign.Tables,
+		BuildAction.PlaceChair => HouseDesign.Chairs,
+		_ => new[] { DefaultItem(placement, design) }
+	};
 
 	public static int BlockToObtain(Bots.Bot bot, HouseDesign design)
 	{

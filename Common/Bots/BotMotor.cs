@@ -48,6 +48,7 @@ public sealed class BotMotor
 
 	public bool HasArrived { get; private set; }
 	public bool IsStalled => stalledChecks >= StalledChecksBeforeStuck;
+	public bool HasNoRoute => follower.HasNoRoute;
 	public bool IsStuck
 	{
 		get
@@ -639,6 +640,8 @@ public sealed class BotMotor
 		WantsToDropThroughPlatforms = intent.DropThroughPlatforms;
 		if (intent.ClimbDirection != 0)
 		{
+			if (intent.ClimbColumn >= 0)
+				intent.ClimbColumn = ExistingRopeColumn(npc, intent.ClimbColumn);
 			climbingRopeAt = Main.GameUpdateCount;
 			if (intent.ClimbColumn >= 0)
 				npc.position.X = PathFinder.CenterXOf(intent.ClimbColumn) - npc.width / 2f;
@@ -657,6 +660,26 @@ public sealed class BotMotor
 				WantsToDropThroughPlatforms = true;
 			npc.velocity = new Vector2(0f, intent.ClimbDirection * RopeClimbSpeed);
 		}
+	}
+
+	static int ExistingRopeColumn(NPC npc, int column)
+	{
+		var body = BodyTiles.Of(npc);
+		if (RopeInColumn(column, body) || RopeInColumn(column + 1, body))
+			return column;
+		if (RopeInColumn(column - 1, body))
+			return column - 1;
+		return RopeInColumn(column + 2, body) ? column + 1 : column;
+	}
+
+	static bool RopeInColumn(int x, BodyTiles body)
+	{
+		for (int y = body.Top - 1; y <= body.Bottom + 1; y++)
+		{
+			if (IsRope(x, y))
+				return true;
+		}
+		return false;
 	}
 
 	bool PrepareRopeBelow(NPC npc, int column)
@@ -678,7 +701,7 @@ public sealed class BotMotor
 		var body = BodyTiles.Of(npc);
 		for (int y = body.Bottom; y >= body.Top - 1; y--)
 		{
-			if (!IsRope(column, y))
+			if (!IsRope(column, y) && !IsRope(column + 1, y))
 				return bot.Hands.HasRope && !Main.tile[column, y].HasTile ? new Point(column, y) : null;
 		}
 		return null;
