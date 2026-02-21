@@ -34,6 +34,8 @@ public sealed class EscapeTask : BotTask
 	bool followingExit;
 	bool legReached;
 	bool legIsSurfaceExit;
+	uint routedAt;
+	const uint NoRouteGraceTicks = 300;
 	int surfaceMargin;
 	const int PitSurfaceMargin = -2;
 	int highestY;
@@ -52,6 +54,7 @@ public sealed class EscapeTask : BotTask
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
 		climbStartedAt = 0;
+		routedAt = Main.GameUpdateCount;
 		var here = Bot.CenterTile;
 		int x = Utils.Clamp(here.X + Bot.Watchdog.EscapeDirection * SurfaceStepTiles, 50, Main.maxTilesX - 50);
 		int surfaceY = TileQuery.SurfaceY(x);
@@ -114,11 +117,14 @@ public sealed class EscapeTask : BotTask
 		Bot.Motor.MoveTo(destination, 32f);
 		var here = Bot.CenterTile;
 		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + surfaceMargin || legIsSurfaceExit && Bot.Motor.HasArrived);
-		if (here.Y < highestY)
+		bool standing = Bot.Npc is NPC body && body.velocity.Y == 0f;
+		if (standing && here.Y < highestY)
 		{
 			highestY = here.Y;
 			climbedAt = Main.GameUpdateCount;
 		}
+		if (!Bot.Motor.HasNoRoute)
+			routedAt = Main.GameUpdateCount;
 		uint sinceProgress = Main.GameUpdateCount - (followingExit ? climbedAt : startedAt);
 		if (reachedSurface || sinceProgress > MaxEscapeTicks || !followingExit && Bot.Motor.HasArrived)
 			Finish();
@@ -178,8 +184,8 @@ public sealed class EscapeTask : BotTask
 
 	bool ShouldClimbStraightUp() =>
 		headingForSurface
-		&& Main.GameUpdateCount - (followingExit ? climbedAt : startedAt) > NavigationGraceTicks
-		&& Vector2.Distance(Bot.Center, start) < StillTrappedTiles * 16f;
+		&& (Main.GameUpdateCount - (followingExit ? climbedAt : startedAt) > NavigationGraceTicks && Vector2.Distance(Bot.Center, start) < StillTrappedTiles * 16f
+			|| Main.GameUpdateCount - routedAt > NoRouteGraceTicks);
 
 	public override void Stop()
 	{

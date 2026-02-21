@@ -10,6 +10,7 @@ namespace AutoTerraMod.Common.Bots;
 public sealed class BotGrapple
 {
 	const float DefaultRange = 300f;
+	const float CappedAnchorPenalty = 16f * 12f;
 	const float PullSpeed = 11f;
 	const float HangDistance = 20f;
 	const int MaxHangTicks = 600;
@@ -180,7 +181,8 @@ public sealed class BotGrapple
 					continue;
 				if (!Collision.CanHitLine(origin, 1, 1, point, 1, 1))
 					continue;
-				float score = Vector2.Distance(point, target);
+				bool capped = TileQuery.IsSolid(x, y - 1) && TileQuery.IsSolid(x, y - 2);
+				float score = Vector2.Distance(point, target) + (capped && target.Y < point.Y ? CappedAnchorPenalty : 0f);
 				if (score < bestScore)
 				{
 					bestScore = score;

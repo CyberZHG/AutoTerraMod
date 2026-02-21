@@ -266,6 +266,13 @@ public sealed class BotBrain
 		try
 		{
 			bot.Avatar.PlayerFrame();
+			if (bot.Avatar.wings > 0)
+			{
+				if (body.velocity.Y != 0f)
+					bot.Avatar.WingFrame(bot.Motor.IsFlying);
+				else
+					bot.Avatar.wingFrame = 0;
+			}
 		}
 		catch (Exception exception)
 		{

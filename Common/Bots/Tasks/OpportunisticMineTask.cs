@@ -13,7 +13,6 @@ public sealed class OpportunisticMineTask : BotTask
 {
 	const int ScanRadius = 8;
 	const int ScanIntervalTicks = 30;
-	const int GemsForHook = 15;
 	const float Priority = 85f;
 
 	static readonly Dictionary<int, int> OreTiers = new()
@@ -52,7 +51,7 @@ public sealed class OpportunisticMineTask : BotTask
 	{
 		if (target is Point known && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
 			return Priority;
-		if (Main.GameUpdateCount - scannedAt < ScanIntervalTicks)
+		if (Main.GameUpdateCount - scannedAt < ScanIntervalTicks || Main.GameUpdateCount < pausedUntil)
 			return 0f;
 		if (Main.GameUpdateCount - unreachableSince > ForgetUnreachableTicks)
 		{
@@ -60,6 +59,7 @@ public sealed class OpportunisticMineTask : BotTask
 			unreachableSince = Main.GameUpdateCount;
 		}
 		scannedAt = Main.GameUpdateCount;
+		wantsMore.Clear();
 		target = Scan();
 		if (target is not Point found)
 			return 0f;
@@ -101,9 +101,9 @@ public sealed class OpportunisticMineTask : BotTask
 		if (!tile.HasTile || unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y))
 			return false;
 		int type = tile.TileType;
-		bool valuable = OreTiers.TryGetValue(type, out int tier) ? tier > pickTier
-			: GemDrops.TryGetValue(type, out int gem) && NeedsGemsForHook(gem);
-		return valuable && PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
+		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
+			return false;
+		return WantsMore(type) && PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
 	}
 
 	static int PickTier(int power)
@@ -117,7 +117,19 @@ public sealed class OpportunisticMineTask : BotTask
 		return tier;
 	}
 
-	bool NeedsGemsForHook(int gem) => Equipment.BestPower(Avatar, GearKind.Hook) <= 0 && Inventory.Count(Avatar, gem) < GemsForHook;
+	const int EnoughOfOneKind = 100;
+
+	readonly Dictionary<int, bool> wantsMore = new();
+
+	bool WantsMore(int tileType)
+	{
+		if (wantsMore.TryGetValue(tileType, out bool cached))
+			return cached;
+		int drop = GemDrops.TryGetValue(tileType, out int gem) ? gem : Terraria.ModLoader.TileLoader.GetItemDropFromTypeAndStyle(tileType);
+		bool wanted = drop > 0 && Inventory.Count(Avatar, drop) < EnoughOfOneKind && Inventory.HasRoomFor(Avatar, new Item(drop));
+		wantsMore[tileType] = wanted;
+		return wanted;
+	}
 
 	public override void Tick()
 	{
@@ -141,8 +153,23 @@ public sealed class OpportunisticMineTask : BotTask
 			GiveUp(tile);
 	}
 
+	const int GiveUpsBeforePause = 3;
+	const uint GiveUpWindowTicks = 600;
+	const uint PauseTicks = 1800;
+
+	uint pausedUntil;
+	uint firstGiveUpAt;
+	int recentGiveUps;
+
 	void GiveUp(Point tile)
 	{
+		if (Main.GameUpdateCount - firstGiveUpAt > GiveUpWindowTicks)
+		{
+			firstGiveUpAt = Main.GameUpdateCount;
+			recentGiveUps = 0;
+		}
+		if (++recentGiveUps >= GiveUpsBeforePause)
+			pausedUntil = Main.GameUpdateCount + PauseTicks;
 		unreachable.Add(tile);
 		target = null;
 		Bot.Motor.Stop();

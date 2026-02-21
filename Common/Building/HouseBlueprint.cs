@@ -254,7 +254,7 @@ public sealed class HouseBlueprint
 				bool inLivingSpace = IsInterior(x, y) || IsDoorway(x, y);
 				if (!inLivingSpace || TileID.Sets.RoomNeeds.CountsAsDoor.Contains(tile.TileType))
 					continue;
-				if (TileQuery.IsSolid(x, y) || Main.tileCut[tile.TileType])
+				if (TileQuery.IsSolid(x, y) || Main.tileCut[tile.TileType] || Main.tileRope[tile.TileType] || TileID.Sets.TreeSapling[tile.TileType])
 					yield return new Point(x, y);
 			}
 		}

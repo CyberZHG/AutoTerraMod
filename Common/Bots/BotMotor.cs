@@ -49,6 +49,7 @@ public sealed class BotMotor
 	public bool HasArrived { get; private set; }
 	public bool IsStalled => stalledChecks >= StalledChecksBeforeStuck;
 	public bool HasNoRoute => follower.HasNoRoute;
+	public bool IsFlying => flightTicks > 0;
 	public bool IsStuck
 	{
 		get
