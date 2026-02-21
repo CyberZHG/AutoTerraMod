@@ -628,6 +628,11 @@ public sealed class BotMotor
 		}
 		if (intent.HookAt is Vector2 hold && !bot.Grapple.IsAttached)
 			bot.Grapple.LatchForClimb(npc, hold);
+		if (intent.HoldRope)
+		{
+			npc.velocity.Y = 0f;
+			npc.GravityMultiplier = MultipliableFloat.One * 0f;
+		}
 		if (intent.Brake)
 			npc.velocity.X = 0f;
 		else if (intent.Creep)

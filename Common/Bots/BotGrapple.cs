@@ -24,6 +24,7 @@ public sealed class BotGrapple
 	public bool IsHanging { get; private set; }
 
 	public bool HasHook => FindHook() != null;
+	public int HookProjectile => FindHook()?.shoot ?? ProjectileID.None;
 
 	public int HookReachTiles => FindHook() is Item hook ? (int)(RangeOf(hook.shoot) / 16f) - 1 : 0;
 

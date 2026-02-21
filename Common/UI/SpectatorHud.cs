@@ -29,12 +29,43 @@ public sealed class SpectatorHud : ModSystem
 		if (ModContent.GetInstance<Config.AutoTerraConfig>().ShowInfoPanel)
 			layers.Insert(index, panelLayer);
 		layers.Insert(index, labelLayer);
+		layers.Insert(index, hookLayer);
 	}
 
 	static readonly System.Predicate<GameInterfaceLayer> IsMouseText = layer => layer.Name == "Vanilla: Mouse Text";
 
 	static readonly GameInterfaceLayer inventoryLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Inventory", BotInventoryPanel.Draw, InterfaceScaleType.UI);
 	static readonly GameInterfaceLayer panelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI);
+	static readonly GameInterfaceLayer hookLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Hooks", DrawHooks, InterfaceScaleType.Game);
+
+	static bool DrawHooks()
+	{
+		foreach (var bot in BotWorldSystem.Bots)
+		{
+			if (bot.Npc is not NPC body || bot.Grapple.Anchor is not Vector2 anchor)
+				continue;
+			int type = bot.Grapple.HookProjectile;
+			if (type <= 0)
+				continue;
+			Main.instance.LoadProjectile(type);
+			var delta = anchor - body.Center;
+			float length = delta.Length();
+			if (length < 1f)
+				continue;
+			var direction = delta / length;
+			float rotation = delta.ToRotation() + MathHelper.PiOver2;
+			var chain = Terraria.GameContent.TextureAssets.Chain.Value;
+			for (float distance = 0f; distance < length; distance += chain.Height)
+			{
+				var link = body.Center + direction * distance;
+				Main.spriteBatch.Draw(chain, link - Main.screenPosition, null, Lighting.GetColor(link.ToTileCoordinates()), rotation, new Vector2(chain.Width / 2f, chain.Height / 2f), 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+			}
+			var head = Terraria.GameContent.TextureAssets.Projectile[type].Value;
+			Main.spriteBatch.Draw(head, anchor - Main.screenPosition, null, Lighting.GetColor(anchor.ToTileCoordinates()), rotation, head.Size() / 2f, 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+		}
+		return true;
+	}
+
 	static readonly GameInterfaceLayer labelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Labels", DrawLabels, InterfaceScaleType.Game);
 
 	static string Text(string key, params object[] args) => Language.GetTextValue($"Mods.AutoTerraMod.{key}", args);

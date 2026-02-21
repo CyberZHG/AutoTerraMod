@@ -52,17 +52,6 @@ public sealed class Settlement
 				GuestRooms.Add(below);
 			}
 		}
-		foreach (var a in structures)
-		{
-			foreach (var b in structures)
-			{
-				if (a.Floor == b.Floor && a.Right == b.Left)
-				{
-					a.AddPlatformDoorway(a.Right);
-					b.AddPlatformDoorway(b.Left);
-				}
-			}
-		}
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);
 		Top = structures.Min(structure => structure.Top);

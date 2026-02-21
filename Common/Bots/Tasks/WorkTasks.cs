@@ -16,6 +16,7 @@ public sealed class CraftTask : BotTask
 	const int CraftDelayTicks = 20;
 	const float BaseArrivalRadius = 16f * 2f;
 	const float StationArrivalRadius = 16f * 3f;
+	const float StationStandRadius = 12f;
 	const float RecallTripDistance = 16f * 120f;
 	const int RecallAfterWorkTicks = 600;
 
@@ -123,8 +124,8 @@ public sealed class CraftTask : BotTask
 		}
 		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && TryRecallHome())
 			return;
-		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? feet.ToWorldCoordinates() : station.ToWorldCoordinates();
-		Bot.Motor.MoveTo(standAt, StationArrivalRadius);
+		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? Navigation.PathFinder.BodyCenterAt(feet) : station.ToWorldCoordinates();
+		Bot.Motor.MoveTo(standAt, StationStandRadius);
 		if (Bot.Motor.IsStuck)
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}; motor: {Bot.Motor.Describe()}{World.TerrainDump.Around(Bot.CenterTile, 30, 12)}");

@@ -19,6 +19,7 @@ public struct MotorIntent
 	public Point? ScaffoldTile;
 	public bool Brake;
 	public bool Creep;
+	public bool HoldRope;
 	public bool Fly;
 	public Vector2? HookAt;
 }
@@ -221,6 +222,8 @@ public sealed class PathFollower
 				intent.ClimbColumn = -1;
 				intent.MoveDirection = 0;
 			}
+			else
+				intent.HoldRope = true;
 			return intent;
 		}
 		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Jump && rise >= 0)

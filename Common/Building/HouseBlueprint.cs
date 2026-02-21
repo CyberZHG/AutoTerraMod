@@ -88,15 +88,6 @@ public sealed class HouseBlueprint
 		}
 	}
 
-	readonly HashSet<int> platformDoorways = new();
-
-	public void AddPlatformDoorway(int x)
-	{
-		platformDoorways.Add(x);
-		for (int y = Floor - DoorHeight; y < Floor; y++)
-			platforms.Add(new Point(x, y));
-	}
-
 	public void AddHatchBelow()
 	{
 		foreach (int x in new[] { center, center + 1 })
@@ -129,7 +120,7 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		foreach (int x in new[] { Left, Right })
 		{
-			if (!platformDoorways.Contains(x) && !HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
+			if (!HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
 				yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
 		}
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))
