@@ -1042,7 +1042,7 @@ public sealed class BotMotor
 		}
 		stalledChecks++;
 		needsWholeRoute |= stalledChecks >= StalledChecksBeforeWholeRoute;
-		if (stalledChecks == StalledChecksBeforeHook && target.Y < npc.Center.Y - HookWorthyRise && !bot.Grapple.IsAttached && bot.Grapple.TryLatch(npc, target))
+		if (stalledChecks == StalledChecksBeforeHook && target.Y < npc.Center.Y - HookWorthyRise && !bot.Grapple.IsAttached && !OnRope(npc) && bot.Grapple.TryLatch(npc, target))
 			BotDiagnostics.Log(bot, $"stuck below {target.ToTileCoordinates()}, hooking up");
 	}
 

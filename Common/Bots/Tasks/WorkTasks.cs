@@ -363,9 +363,19 @@ public sealed class PickupTask : BotTask
 		Detail = item.Name;
 		if (item.type == ItemID.FallenStar)
 			return 58f;
+		if (IsMinedTreasure(item) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
+			return FreshDropPriority;
 		bool planned = Bot.Brain.Plan is GatherStep gather && gather.ItemType == item.type;
 		return planned ? 60f : 40f;
 	}
+
+	const float FreshDropRadius = 16f * 8f;
+	const float FreshDropPriority = 86f;
+
+	static readonly HashSet<int> Gems = new() { ItemID.Amethyst, ItemID.Topaz, ItemID.Sapphire, ItemID.Emerald, ItemID.Ruby, ItemID.Diamond, ItemID.Amber };
+
+	static bool IsMinedTreasure(Item item) =>
+		Gems.Contains(item.type) || item.createTile >= 0 && TileID.Sets.Ore[item.createTile];
 
 	int NearestWantedItem()
 	{

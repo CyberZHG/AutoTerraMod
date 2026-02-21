@@ -63,6 +63,8 @@ public sealed class BotGrapple
 		if (anchor == null)
 			return false;
 		Anchor = anchor;
+		lastAnchor = anchor;
+		lastAnchorAt = Main.GameUpdateCount;
 		hangTicks = 0;
 		body.noGravity = true;
 		SoundEngine.PlaySound(SoundID.Item1, body.Center);
@@ -163,7 +165,14 @@ public sealed class BotGrapple
 		return best;
 	}
 
-	static Vector2? FindAnchor(NPC body, Vector2 target, float range)
+	const float MinimumUpwardGain = 16f * 4f;
+	const float RepeatAnchorDistance = 16f * 2f;
+	const uint RepeatAnchorTicks = 600;
+
+	Vector2? lastAnchor;
+	uint lastAnchorAt;
+
+	Vector2? FindAnchor(NPC body, Vector2 target, float range)
 	{
 		var origin = body.Center;
 		int reach = (int)(range / 16f);
@@ -180,6 +189,10 @@ public sealed class BotGrapple
 				if (Vector2.Distance(origin, point) > range || TileQuery.IsSolid(x, y + 1))
 					continue;
 				if (!Collision.CanHitLine(origin, 1, 1, point, 1, 1))
+					continue;
+				if (target.Y < origin.Y && point.Y > origin.Y - MinimumUpwardGain)
+					continue;
+				if (lastAnchor is Vector2 previous && Vector2.Distance(previous, point) < RepeatAnchorDistance && Main.GameUpdateCount - lastAnchorAt < RepeatAnchorTicks)
 					continue;
 				bool capped = TileQuery.IsSolid(x, y - 1) && TileQuery.IsSolid(x, y - 2);
 				float score = Vector2.Distance(point, target) + (capped && target.Y < point.Y ? CappedAnchorPenalty : 0f);
