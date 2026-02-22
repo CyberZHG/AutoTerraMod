@@ -18,7 +18,7 @@ public static class TorchPlacer
 	public static void LightUpIfDark(Bot bot)
 	{
 		var center = bot.CenterTile;
-		if (center.Y < Main.worldSurface || HasLightNearby(center))
+		if (!NeedsLight(bot, center) || HasLightNearby(center))
 			return;
 		var torch = Inventory.Items(bot.Avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Torch[item.createTile]);
 		if (torch == null)
@@ -32,6 +32,17 @@ public static class TorchPlacer
 				return;
 			}
 		}
+	}
+
+	const int BelowGroundTiles = 3;
+	const int BaseLightMargin = 40;
+
+	static bool NeedsLight(Bot bot, Point center)
+	{
+		if (center.Y >= Main.worldSurface || center.Y > World.TileQuery.SurfaceY(center.X) + BelowGroundTiles)
+			return true;
+		var settlement = bot.Faction.Settlement;
+		return !Main.dayTime && settlement != null && center.X >= settlement.Left - BaseLightMargin && center.X <= settlement.Right + BaseLightMargin;
 	}
 
 	static bool HasLightNearby(Point center)

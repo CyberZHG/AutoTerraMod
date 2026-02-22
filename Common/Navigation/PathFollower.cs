@@ -219,7 +219,7 @@ public sealed class PathFollower
 			if (bottom > standingBottom || bottom < standingBottom - RopeStepTolerance)
 			{
 				intent.ClimbDirection = bottom > standingBottom ? -1 : 1;
-				intent.ClimbColumn = -1;
+				intent.ClimbColumn = feet.X;
 				intent.MoveDirection = 0;
 			}
 			else

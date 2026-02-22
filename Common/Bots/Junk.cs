@@ -17,7 +17,9 @@ public static class Junk
 	static readonly Dictionary<int, int> Reserves = new()
 	{
 		[ItemID.DirtBlock] = 60,
-		[ItemID.StoneBlock] = 150,
+		[ItemID.StoneBlock] = 999,
+		[ItemID.GraniteBlock] = 250,
+		[ItemID.MarbleBlock] = 250,
 		[ItemID.SandBlock] = 100,
 		[ItemID.ClayBlock] = 100,
 		[ItemID.Acorn] = 20
@@ -25,10 +27,20 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
-		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item))
+		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item) || FitsExistingStack(bot.Avatar, item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
 		return Inventory.Count(bot.Avatar, item.type) >= reserve;
+	}
+
+	static bool FitsExistingStack(Player avatar, Item item)
+	{
+		foreach (var held in Inventory.Items(avatar))
+		{
+			if (held.type == item.type && held.stack < held.maxStack)
+				return true;
+		}
+		return false;
 	}
 
 	static bool IsOverflowing(Bot bot) =>
