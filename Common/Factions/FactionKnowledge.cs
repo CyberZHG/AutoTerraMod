@@ -65,6 +65,14 @@ public sealed class FactionKnowledge
 
 	public IEnumerable<int> UnlootedChests => knownChests.Where(index => !lootedChests.Contains(index) && Main.chest[index] != null);
 
+	readonly HashSet<int> abandonedChests = new();
+
+	public void AbandonChest(int chestIndex) => abandonedChests.Add(chestIndex);
+
+	public IEnumerable<int> CollectableChests => knownChests.Where(index =>
+		Main.chest[index] is Chest chest && !abandonedChests.Contains(index)
+		&& (!lootedChests.Contains(index) || chest.item.All(item => item == null || item.IsAir)));
+
 	readonly Dictionary<int, int> knownCountByType = new();
 	readonly List<Point> vanished = new();
 

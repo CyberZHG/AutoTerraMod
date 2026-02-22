@@ -53,6 +53,8 @@ public sealed class TidyCampTask : BotTask
 			{
 				if (!WorldGen.InWorld(x, y, 5) || !IsClutter(x, y))
 					continue;
+				if (Main.tileRope[Main.tile[x, y].TileType] && (y > settlement.Floor || BotNear(new Point(x, y))))
+					continue;
 				long distance = WorldScan.DistanceSq(origin, new Point(x, y));
 				if (distance < nearestDistance)
 				{
@@ -62,6 +64,19 @@ public sealed class TidyCampTask : BotTask
 			}
 		}
 		return nearest;
+	}
+
+	const float RopeInUseDistance = 16f * 4f;
+
+	static bool BotNear(Point tile)
+	{
+		var center = tile.ToWorldCoordinates();
+		foreach (var bot in Systems.BotWorldSystem.Bots)
+		{
+			if (bot.IsAlive && Vector2.Distance(bot.Center, center) < RopeInUseDistance)
+				return true;
+		}
+		return false;
 	}
 
 	static bool IsClutter(int x, int y)

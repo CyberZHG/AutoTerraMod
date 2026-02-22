@@ -27,7 +27,7 @@ public sealed class BotMotor
 	const int SprintLookahead = 6;
 	const float RopeLeapSpeed = 5f;
 	const float JumpReachPixels = 16f * 5f;
-	const float SurfaceForAirBelow = 0.6f;
+	const float SurfaceForAirBelow = 0.35f;
 
 	const int HazardEscapeSearch = 4;
 

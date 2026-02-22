@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Content.NPCs;
@@ -88,6 +89,25 @@ public static class Engagement
 		return null;
 	}
 
+	const uint FutileChaseTicks = 360;
+	const float ChaseProgress = 16f;
+
+	static readonly Dictionary<int, (int target, uint since, float best)> chases = new();
+
+	static bool ChaseIsFutile(Bot bot, NPC target, Item weapon)
+	{
+		float distance = Vector2.Distance(bot.Center, target.Center);
+		bool canHit = weapon != null && (BotHands.IsProjectileWeapon(weapon)
+			? Collision.CanHitLine(bot.Npc.position, bot.Npc.width, bot.Npc.height, target.position, target.width, target.height)
+			: bot.Hands.InMeleeReach(target, weapon));
+		if (canHit || !chases.TryGetValue(bot.Id, out var chase) || chase.target != target.whoAmI || distance < chase.best - ChaseProgress)
+		{
+			chases[bot.Id] = (target.whoAmI, Main.GameUpdateCount, canHit ? float.MaxValue : distance);
+			return false;
+		}
+		return Main.GameUpdateCount - chase.since > FutileChaseTicks;
+	}
+
 	const int WormAiStyle = 6;
 	const float WormChaseHeight = 16f * 6f;
 	const float WormSearchRadius = 16f * 60f;
@@ -131,6 +151,12 @@ public static class Engagement
 			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
+		if (!Bosses.BossCatalog.IsBossPart(target) && ChaseIsFutile(bot, target, weapon))
+		{
+			bot.IgnoreTarget(target);
+			bot.Motor.Stop();
+			return;
+		}
 		if (weapon == null)
 		{
 			bot.Motor.MoveTo(approach, 24f);

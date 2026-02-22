@@ -29,7 +29,7 @@ public static class HouseInspector
 
 	public static HouseDesign MaterialsFor(Faction faction)
 	{
-		bool tasteAffordable = Planning.Stations.BaseHas(faction, TileID.Furnaces) && IsComplete(faction, faction.Settlement.Hall);
+		bool tasteAffordable = Planning.Stations.BaseHas(faction, TileID.Furnaces) && faction.Settlement.Structures.All(structure => IsComplete(faction, structure));
 		return tasteAffordable ? faction.HouseDesign : faction.HouseDesign.AsRustic();
 	}
 

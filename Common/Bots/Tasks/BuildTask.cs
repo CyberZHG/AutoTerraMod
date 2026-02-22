@@ -120,7 +120,8 @@ public sealed class BuildTask : BotTask
 	{
 		var blueprint = structure;
 		var here = Bot.CenterTile;
-		if (operation.Tile.Y < blueprint.Ceiling && FootholdNear(operation.Tile) is Point foothold)
+		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock;
+		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile) is Point foothold)
 			return Navigation.PathFinder.BodyCenterAt(foothold);
 		if (operation.Tile.Y < blueprint.Ceiling)
 		{
@@ -137,7 +138,7 @@ public sealed class BuildTask : BotTask
 	}
 
 	const int FootholdReachX = 3;
-	const int FootholdBelowMin = 1;
+	const int FootholdBelowMin = -2;
 	const int FootholdBelowMax = 4;
 
 	static Point? FootholdNear(Point tile)
@@ -151,7 +152,7 @@ public sealed class BuildTask : BotTask
 				var feet = new Point(tile.X + dx, tile.Y + dy);
 				if (!Standable(feet) || Overlaps(feet, tile))
 					continue;
-				int score = System.Math.Abs(dx) + dy;
+				int score = System.Math.Abs(dx) + System.Math.Abs(dy);
 				if (score < bestScore)
 				{
 					best = feet;

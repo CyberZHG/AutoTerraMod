@@ -69,7 +69,15 @@ public sealed class LootTask : BotTask
 			SoundEngine.PlaySound(SoundID.MenuClose, chestTile.ToWorldCoordinates());
 			emptied = true;
 		}
-		if (!ShouldCarryHome(chest) || Bot.Hands.Dig(chestTile) is not ToolResult.Working)
+		if (!ShouldCarryHome(chest))
+		{
+			IsFinished = true;
+			return;
+		}
+		var result = Bot.Hands.Dig(chestTile);
+		if (result is ToolResult.Unbreakable or ToolResult.NoTool)
+			BotWorldSystem.KnowledgeOf(Bot.Faction).AbandonChest(chestIndex);
+		if (result is not ToolResult.Working)
 			IsFinished = true;
 	}
 
@@ -98,7 +106,7 @@ public sealed class LootTask : BotTask
 	void Abandon(string reason)
 	{
 		BotDiagnostics.Log(Bot, $"gave up chest {chestIndex}: {reason}");
-		BotWorldSystem.KnowledgeOf(Bot.Faction).MarkLooted(chestIndex);
+		BotWorldSystem.KnowledgeOf(Bot.Faction).AbandonChest(chestIndex);
 		IsFinished = true;
 	}
 
@@ -131,7 +139,7 @@ public sealed class LootTask : BotTask
 		return false;
 	}
 
-	int NearestLootable(FactionKnowledge knowledge) => knowledge.UnlootedChests
+	int NearestLootable(FactionKnowledge knowledge) => knowledge.CollectableChests
 		.Where(index => IsLootable(Main.chest[index]))
 		.Select(index => (index, distance: Vector2.Distance(Bot.Center, new Point(Main.chest[index].x, Main.chest[index].y).ToWorldCoordinates())))
 		.Where(candidate => candidate.distance < MaxTravel)
