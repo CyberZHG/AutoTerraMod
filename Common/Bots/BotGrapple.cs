@@ -27,7 +27,39 @@ public sealed class BotGrapple
 	public bool HasHook => FindHook() != null;
 	public int HookProjectile => FindHook()?.shoot ?? ProjectileID.None;
 
-	public int HookReachTiles => FindHook() is Item hook ? (int)(RangeOf(hook.shoot) / 16f) - 1 : 0;
+	public int HookReachTiles => !Suppressed && FindHook() is Item hook ? (int)(RangeOf(hook.shoot) / 16f) - 1 : 0;
+
+	const int LatchesBeforeSuppress = 3;
+	const uint LatchWindowTicks = 600;
+	const uint SuppressTicks = 1800;
+
+	uint suppressedUntil;
+	uint windowStart;
+	int windowLatches;
+	float windowStartY;
+
+	public bool Suppressed => Main.GameUpdateCount < suppressedUntil;
+
+	public void ForgetSuppression()
+	{
+		suppressedUntil = 0;
+		windowLatches = 0;
+	}
+
+	void NoteLatch(NPC body)
+	{
+		if (Main.GameUpdateCount - windowStart > LatchWindowTicks)
+		{
+			windowStart = Main.GameUpdateCount;
+			windowLatches = 0;
+			windowStartY = body.Center.Y;
+		}
+		if (++windowLatches >= LatchesBeforeSuppress && body.Center.Y > windowStartY - 16f)
+		{
+			suppressedUntil = Main.GameUpdateCount + SuppressTicks;
+			BotDiagnostics.Log(bot, "hooking keeps getting nowhere, leaving the hook alone for a while");
+		}
+	}
 
 	const int ClimbPullTicks = 60;
 
@@ -36,8 +68,9 @@ public sealed class BotGrapple
 
 	public bool LatchForClimb(NPC body, Vector2 hold)
 	{
-		if (FindHook() == null)
+		if (Suppressed || FindHook() == null)
 			return false;
+		NoteLatch(body);
 		Anchor = hold;
 		climbing = true;
 		hangTicks = 0;
@@ -57,11 +90,12 @@ public sealed class BotGrapple
 	public bool TryLatch(NPC body, Vector2 target)
 	{
 		var hook = FindHook();
-		if (hook == null)
+		if (Suppressed || hook == null)
 			return false;
 		var anchor = FindAnchor(body, target, RangeOf(hook.shoot));
 		if (anchor == null)
 			return false;
+		NoteLatch(body);
 		Anchor = anchor;
 		lastAnchor = anchor;
 		lastAnchorAt = Main.GameUpdateCount;

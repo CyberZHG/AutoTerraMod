@@ -937,6 +937,7 @@ public sealed class NavigationBench : ModSystem
 		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
 		body.velocity = Vector2.Zero;
 		runner.Vitals.Teleported(body);
+		runner.Grapple.ForgetSuppression();
 		runner.Avatar.statLife = runner.Avatar.statLifeMax2;
 		runner.Motor.Stop();
 		goal = target.ToWorldCoordinates();

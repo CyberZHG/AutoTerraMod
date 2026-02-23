@@ -37,14 +37,36 @@ public static class Kit
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
+				|| Tasks.CraftTask.IsPortableStation(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
 				|| (Tasks.CollectorTask.CollectsArmor(bot) && !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
 				|| WithinReserve(item, keptByReserve);
-			if (!keep)
+			if (!keep || IsSurplusTreasure(bot, item))
 				toStore.Add(item);
 		}
 		return toStore;
+	}
+
+	public static bool IsSurplusTreasure(Bot bot, Item item)
+	{
+		if (bot.Brain.PlannedItemTypes.Contains(item.type))
+			return false;
+		if (Tasks.OpportunisticMineTask.GemDrops.ContainsValue(item.type))
+			return Equipment.BestPower(bot.Avatar, GearKind.Hook) > 0;
+		if (item.createTile < 0 || !Tasks.OpportunisticMineTask.OreTiers.TryGetValue(item.createTile, out int tier))
+			return false;
+		return tier < Tasks.OpportunisticMineTask.PickTier(bot.Hands.BestPickaxe?.pick ?? 0);
+	}
+
+	public static bool CarriesSurplusTreasure(Bot bot)
+	{
+		foreach (var item in Inventory.Items(bot.Avatar))
+		{
+			if (IsSurplusTreasure(bot, item))
+				return true;
+		}
+		return false;
 	}
 
 	const int AmmoReserve = 400;

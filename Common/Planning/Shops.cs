@@ -64,6 +64,8 @@ public static class Shops
 			if (index < 0)
 				continue;
 			var seller = Main.npc[index];
+			if (!TradesWith(bot, seller))
+				continue;
 			using (new ShopperScope(bot.Avatar, seller))
 			{
 				if (!entry.ConditionsMet())
@@ -102,6 +104,21 @@ public static class Shops
 	}
 
 	public static bool IsSold(int itemType) => Sellers().ContainsKey(itemType);
+
+	public static bool TradesWith(Bots.Bot bot, NPC seller)
+	{
+		if (Systems.BotWorldSystem.Relation != Config.FactionRelation.War)
+			return true;
+		var home = seller.homeless ? seller.Center : new Microsoft.Xna.Framework.Vector2(seller.homeTileX * 16f, seller.homeTileY * 16f);
+		var nearest = Systems.BotWorldSystem.Factions.MinBy(faction => Microsoft.Xna.Framework.Vector2.DistanceSquared(faction.BaseFeet, home));
+		return nearest == null || nearest.Id == bot.FactionId;
+	}
+
+	public static bool TradesWith(Bots.Bot bot, int sellerType)
+	{
+		int index = NPC.FindFirstNPC(sellerType);
+		return index >= 0 && TradesWith(bot, Main.npc[index]);
+	}
 
 	const int OfferRefreshTicks = 600;
 

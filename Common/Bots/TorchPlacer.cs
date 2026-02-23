@@ -18,10 +18,11 @@ public static class TorchPlacer
 	public static void LightUpIfDark(Bot bot)
 	{
 		var center = bot.CenterTile;
-		if (!NeedsLight(bot, center) || HasLightNearby(center))
+		int keep = TorchesToKeep(bot, center);
+		if (keep < 0 || HasLightNearby(center))
 			return;
 		var torch = Inventory.Items(bot.Avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Torch[item.createTile]);
-		if (torch == null)
+		if (torch == null || Inventory.Count(bot.Avatar, torch.type) <= keep)
 			return;
 		foreach (var offset in CandidateOffsets)
 		{
@@ -36,13 +37,18 @@ public static class TorchPlacer
 
 	const int BelowGroundTiles = 3;
 	const int BaseLightMargin = 40;
+	const int CaveTorchesKept = 3;
+	const int AmbientTorchesKept = 10;
 
-	static bool NeedsLight(Bot bot, Point center)
+	static int TorchesToKeep(Bot bot, Point center)
 	{
-		if (center.Y >= Main.worldSurface || center.Y > World.TileQuery.SurfaceY(center.X) + BelowGroundTiles)
-			return true;
+		if (center.Y >= Main.worldSurface)
+			return CaveTorchesKept;
+		if (center.Y > World.TileQuery.SurfaceY(center.X) + BelowGroundTiles)
+			return AmbientTorchesKept;
 		var settlement = bot.Faction.Settlement;
-		return !Main.dayTime && settlement != null && center.X >= settlement.Left - BaseLightMargin && center.X <= settlement.Right + BaseLightMargin;
+		bool nearBaseAtNight = !Main.dayTime && settlement != null && center.X >= settlement.Left - BaseLightMargin && center.X <= settlement.Right + BaseLightMargin;
+		return nearBaseAtNight ? AmbientTorchesKept : -1;
 	}
 
 	static bool HasLightNearby(Point center)

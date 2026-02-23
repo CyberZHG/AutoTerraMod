@@ -235,7 +235,7 @@ public sealed class BotBrain
 			return;
 		current?.Stop();
 		current = best;
-		current?.Start();
+		current?.Begin();
 		currentStartedAt = Main.GameUpdateCount;
 		committedUntil = Main.GameUpdateCount + MinimumCommitmentTicks;
 		string signature = $"{current?.NameKey}|{current?.Detail}|{Plan}";
@@ -248,7 +248,7 @@ public sealed class BotBrain
 	{
 		if (current is not { IsFinished: true } || current is Tasks.FightTask or Tasks.FleeTask)
 			return;
-		if (Main.GameUpdateCount - currentStartedAt > QuickFailureTicks)
+		if (current.Accomplished || Main.GameUpdateCount - currentStartedAt > QuickFailureTicks)
 		{
 			quickFailures = 0;
 			return;

@@ -19,6 +19,7 @@ public abstract class BotTask
 	public abstract string NameKey { get; }
 	public string Detail { get; protected set; } = "";
 	public bool IsFinished { get; protected set; }
+	public bool Accomplished { get; protected set; }
 	public virtual bool IsUrgent => false;
 
 	public abstract float Evaluate();
@@ -28,6 +29,12 @@ public abstract class BotTask
 	public string EvaluateLabel => evaluateLabel ??= "eval:" + GetType().Name;
 
 	public virtual void Start() => IsFinished = false;
+
+	public void Begin()
+	{
+		Accomplished = false;
+		Start();
+	}
 
 	public abstract void Tick();
 

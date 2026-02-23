@@ -59,6 +59,7 @@ public sealed class StoreTask : ChestVisitTask
 	const int FullishSlots = 40;
 	const int OpportunisticSlots = 30;
 	const float NearBase = 16f * 12f;
+	const float SurplusTreasurePriority = 45f;
 
 	public StoreTask(Bot bot) : base(bot) { }
 
@@ -75,9 +76,11 @@ public sealed class StoreTask : ChestVisitTask
 			return 55f;
 		}
 		Detail = "";
+		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
+		if (atBase && Kit.CarriesSurplusTreasure(Bot))
+			return SurplusTreasurePriority;
 		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any())
 			return 0f;
-		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
 		if (used >= FullishSlots)
 			return 60f + (used - FullishSlots) * 3f;
 		return atBase ? 40f : 0f;

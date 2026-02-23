@@ -15,7 +15,7 @@ public sealed class OpportunisticMineTask : BotTask
 	const int ScanIntervalTicks = 30;
 	const float Priority = 85f;
 
-	static readonly Dictionary<int, int> OreTiers = new()
+	public static readonly Dictionary<int, int> OreTiers = new()
 	{
 		[TileID.Copper] = 1, [TileID.Tin] = 1,
 		[TileID.Iron] = 2, [TileID.Lead] = 2,
@@ -29,7 +29,7 @@ public sealed class OpportunisticMineTask : BotTask
 		[TileID.Chlorophyte] = 10
 	};
 
-	static readonly Dictionary<int, int> GemDrops = new()
+	public static readonly Dictionary<int, int> GemDrops = new()
 	{
 		[TileID.Amethyst] = ItemID.Amethyst, [TileID.Topaz] = ItemID.Topaz, [TileID.Sapphire] = ItemID.Sapphire,
 		[TileID.Emerald] = ItemID.Emerald, [TileID.Ruby] = ItemID.Ruby, [TileID.Diamond] = ItemID.Diamond
@@ -106,7 +106,7 @@ public sealed class OpportunisticMineTask : BotTask
 		return WantsMore(type) && PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
 	}
 
-	static int PickTier(int power)
+	public static int PickTier(int power)
 	{
 		int tier = 0;
 		foreach (var (threshold, level) in PickTiers)

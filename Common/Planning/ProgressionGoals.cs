@@ -101,14 +101,18 @@ public sealed class ReserveGoal : ProgressionGoal
 	readonly int minimum;
 	readonly int restockTo;
 
-	public ReserveGoal(int itemType, int minimum, int restockTo)
+	readonly int onlyWhenHolding;
+
+	public ReserveGoal(int itemType, int minimum, int restockTo, int onlyWhenHolding = ItemID.None)
 	{
 		this.itemType = itemType;
 		this.minimum = minimum;
 		this.restockTo = restockTo;
+		this.onlyWhenHolding = onlyWhenHolding;
 	}
 
-	public override bool IsMet(Bot bot) => Inventory.Count(bot.Avatar, itemType) >= minimum;
+	public override bool IsMet(Bot bot) => Inventory.Count(bot.Avatar, itemType) >= minimum
+		|| (onlyWhenHolding != ItemID.None && Inventory.Count(bot.Avatar, onlyWhenHolding) == 0 && !ProgressionPlanner.CanAffordEasily(bot, itemType, restockTo));
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, itemType, restockTo);
 }
 
@@ -236,7 +240,7 @@ public sealed class StructureGoal : ProgressionGoal
 
 	public StructureGoal(System.Func<Settlement, IEnumerable<HouseBlueprint>> select) => this.select = select;
 
-	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot);
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot) && !ProgressionGoals.OnGearBreak(bot);
 
 	public override bool IsMet(Bot bot) => NextUnfinished(bot) == null;
 
@@ -283,7 +287,7 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	const int BatchSize = 40;
 
 	public override bool AppliesTo(Bot bot) =>
-		bot.Faction.Settlement != null && bot.Personality.Cooperation >= MinimumCooperation && !HouseInspector.IsDesignatedBuilder(bot);
+		bot.Faction.Settlement != null && bot.Personality.Cooperation >= MinimumCooperation && !HouseInspector.IsDesignatedBuilder(bot) && !ProgressionGoals.OnGearBreak(bot);
 
 	public override bool IsMet(Bot bot) => Need(bot, out _) == null;
 
@@ -703,7 +707,7 @@ public sealed class ShoppingGoal : ProgressionGoal
 			if (!ContentSamples.ItemsByType.TryGetValue(itemType, out var sample))
 				continue;
 			float gain = Gain(bot, sample, out int amount);
-			if (gain <= bestGain || (long)price * amount > budget)
+			if (gain <= bestGain || (long)price * amount > budget || !Shops.TradesWith(bot, sellerType))
 				continue;
 			best = new BuyStep(itemType, amount, sellerType);
 			bestGain = gain;
@@ -769,6 +773,11 @@ public sealed class ShoppingGoal : ProgressionGoal
 
 public static class ProgressionGoals
 {
+	const uint GearBreakTicks = 7200;
+	const uint GearBreakEvery = 3;
+
+	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0;
+
 	static readonly int[] Wood = { ItemID.Wood };
 	static readonly int[] Torches = { ItemID.Torch };
 
@@ -781,7 +790,7 @@ public static class ProgressionGoals
 			new StationGoal(TileID.WorkBenches, ItemID.WorkBench),
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
-			new ReserveGoal(ItemID.Torch, 5, 15),
+			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
 			new BossGoal(),
 			new HellevatorGoal(),

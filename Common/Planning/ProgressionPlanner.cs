@@ -300,6 +300,8 @@ public static class ProgressionPlanner
 			return PlanStep.Blocked;
 		try
 		{
+			if (CanAffordEasily(context.Bot, itemType, amount - have))
+				return PlanPurchase(context.Bot, itemType, amount - have);
 			var source = ResourceSources.For(itemType);
 			if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
 				return PlanStep.Blocked;
@@ -379,6 +381,16 @@ public static class ProgressionPlanner
 			ranked.Clear();
 			rankPool.Push(ranked);
 		}
+	}
+
+	const int EasyPurchaseShare = 4;
+
+	public static bool CanAffordEasily(Bot bot, int itemType, int amount)
+	{
+		if (amount <= 0 || !Shops.IsSold(itemType))
+			return false;
+		long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
+		return coins > 0 && Shops.Offer(bot, itemType) is var (_, price) && (long)price * amount * EasyPurchaseShare <= coins;
 	}
 
 	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)

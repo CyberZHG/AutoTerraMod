@@ -72,6 +72,8 @@ public sealed class CraftTask : BotTask
 		int missingStation = recipe.requiredTile.FirstOrDefault(tile => !Avatar.adjTile[tile], -1);
 		if (missingStation >= 0)
 		{
+			if (FarFromStation(missingStation) && SetUpPortableStation(missingStation, PortableDepth))
+				return;
 			WalkToStation(missingStation);
 			return;
 		}
@@ -91,9 +93,110 @@ public sealed class CraftTask : BotTask
 		if (++craftTimer < CraftDelayTicks)
 			return;
 		if (Crafting.TryCraft(Avatar, recipe))
+		{
 			Bot.Watchdog.RecordProgress();
+			Accomplished = true;
+		}
 		BotDiagnostics.Log(Bot, $"crafted {recipe.createItem.Name}");
+		PackUpPortableStations();
 		IsFinished = true;
+	}
+
+	const float PortableStationDistance = 16f * 40f;
+	const int PortableDepth = 3;
+
+	static readonly HashSet<int> PortableStationTiles = new()
+	{
+		TileID.WorkBenches, TileID.Furnaces, TileID.Anvils, TileID.Hellforge, TileID.MythrilAnvil, TileID.AdamantiteForge
+	};
+
+	public static bool IsPortableStation(Item item) => item.createTile >= 0 && PortableStationTiles.Contains(item.createTile);
+
+	readonly List<Point> placedStations = new();
+
+	bool FarFromStation(int stationTile)
+	{
+		if (!PortableStationTiles.Contains(stationTile))
+			return false;
+		var station = Stations.LocateAnywhere(Bot.Faction, stationTile, Bot.CenterTile);
+		return station is not Point found || Vector2.Distance(Bot.Center, found.ToWorldCoordinates()) > PortableStationDistance;
+	}
+
+	bool SetUpPortableStation(int stationTile, int depth)
+	{
+		var carried = Inventory.Items(Avatar).FirstOrDefault(item => item.createTile == stationTile);
+		if (carried != null)
+			return PlaceNearby(carried, stationTile);
+		if (depth <= 0)
+			return false;
+		foreach (int itemType in Stations.ItemsPlacing(stationTile))
+		{
+			foreach (var recipe in RecipeIndex.For(itemType))
+			{
+				if (!Crafting.HasIngredients(Avatar, recipe))
+					continue;
+				int missing = recipe.requiredTile.FirstOrDefault(tile => !Avatar.adjTile[tile], -1);
+				if (missing < 0)
+				{
+					Crafting.TryCraft(Avatar, recipe);
+					BotDiagnostics.Log(Bot, $"crafted a portable {recipe.createItem.Name}");
+					return true;
+				}
+				if (PortableStationTiles.Contains(missing) && SetUpPortableStation(missing, depth - 1))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	bool PlaceNearby(Item station, int stationTile)
+	{
+		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
+		string name = station.Name;
+		foreach (int dx in new[] { 2, -3, 3, -4, 1, -2 })
+		{
+			for (int dy = 0; dy >= -1; dy--)
+			{
+				var spot = new Point(feet.X + dx, feet.Y + dy);
+				if (!Bot.Hands.CanReach(station, spot) || !Bot.Hands.Place(station, spot))
+					continue;
+				if (FindPlaced(spot, stationTile) is Point placed)
+					placedStations.Add(placed);
+				Avatar.AdjTiles();
+				BotDiagnostics.Log(Bot, $"set up a portable {name} at {spot}");
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static Point? FindPlaced(Point near, int tileType)
+	{
+		for (int x = near.X - 2; x <= near.X + 2; x++)
+		{
+			for (int y = near.Y - 2; y <= near.Y + 1; y++)
+			{
+				if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == tileType)
+					return new Point(x, y);
+			}
+		}
+		return null;
+	}
+
+	void PackUpPortableStations()
+	{
+		foreach (var tile in placedStations)
+		{
+			if (Main.tile[tile.X, tile.Y].HasTile && PortableStationTiles.Contains(Main.tile[tile.X, tile.Y].TileType))
+				WorldGen.KillTile(tile.X, tile.Y);
+		}
+		placedStations.Clear();
+	}
+
+	public override void Stop()
+	{
+		PackUpPortableStations();
+		base.Stop();
 	}
 
 	void WalkToWater()
@@ -159,11 +262,13 @@ public sealed class CraftTask : BotTask
 			return;
 		}
 		Bot.Motor.Stop();
+		string name = item.Name;
 		if (!Bot.Hands.Ready || !Bot.Hands.Place(item, target))
 			return;
 		Stations.Invalidate(Bot.Faction);
 		BaseStorage.Reset();
-		BotDiagnostics.Log(Bot, $"placed {item.Name} at {target}");
+		BotDiagnostics.Log(Bot, $"placed {name} at {target}");
+		Accomplished = true;
 		IsFinished = true;
 	}
 }
