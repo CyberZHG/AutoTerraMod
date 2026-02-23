@@ -294,8 +294,15 @@ public static class ProgressionPlanner
 		if (have >= amount)
 			return null;
 		int stored = context.Fresh && depth == 0 ? 0 : BaseStorage.Count(context.Bot.Faction, itemType);
-		if (stored > 0)
+		bool awayFromBase = !Shops.WithinShoppingTrip(context.Bot, context.Bot.Faction.BaseCenter);
+		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
+		var local = ResolveWithoutStorage(context, itemType, amount, have, depth);
+		return stored > 0 && local is BlockedStep ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
+	}
+
+	static PlanStep ResolveWithoutStorage(Context context, int itemType, int amount, int have, int depth)
+	{
 		if (depth > MaxDepth || !context.Visiting.Add(itemType))
 			return PlanStep.Blocked;
 		try
