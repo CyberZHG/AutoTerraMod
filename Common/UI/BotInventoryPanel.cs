@@ -12,6 +12,11 @@ public static class BotInventoryPanel
 	const int Columns = 10;
 	const int Rows = 5;
 	const int EquipSlots = 10;
+
+	static readonly int[] MiscContexts =
+	{
+		ItemSlot.Context.EquipPet, ItemSlot.Context.EquipLight, ItemSlot.Context.EquipMinecart, ItemSlot.Context.EquipMount, ItemSlot.Context.EquipGrapple
+	};
 	const float SlotScale = 0.85f;
 	const float SlotSpacing = 4f;
 
@@ -42,6 +47,9 @@ public static class BotInventoryPanel
 			var position = equipOrigin + new Vector2(slot / Rows * step, slot % Rows * step);
 			DrawSlot(avatar.armor, slot, context, position, slotSize);
 		}
+		var miscOrigin = equipOrigin + new Vector2(EquipSlots / Rows * step + 12f, 0f);
+		for (int slot = 0; slot < MiscContexts.Length; slot++)
+			DrawSlot(avatar.miscEquips, slot, MiscContexts[slot], miscOrigin + new Vector2(0f, slot * step), slotSize);
 		Main.inventoryScale = oldScale;
 		return true;
 	}
