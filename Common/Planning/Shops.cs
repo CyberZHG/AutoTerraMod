@@ -105,6 +105,11 @@ public static class Shops
 
 	public static bool IsSold(int itemType) => Sellers().ContainsKey(itemType);
 
+	const float ShoppingTripReach = 16f * 60f;
+
+	public static bool WithinShoppingTrip(Bots.Bot bot, Microsoft.Xna.Framework.Vector2 place) =>
+		Microsoft.Xna.Framework.Vector2.Distance(bot.Center, place) < ShoppingTripReach;
+
 	public static bool TradesWith(Bots.Bot bot, NPC seller)
 	{
 		if (Systems.BotWorldSystem.Relation != Config.FactionRelation.War)

@@ -675,7 +675,7 @@ public sealed class ShoppingGoal : ProgressionGoal
 
 	public override string Describe() => "Shopping";
 
-	public override bool AppliesTo(Bot bot) => Coins(bot) > CoinReserve;
+	public override bool AppliesTo(Bot bot) => Coins(bot) > CoinReserve && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter);
 
 	public override bool IsMet(Bot bot) => Choice(bot) == null;
 

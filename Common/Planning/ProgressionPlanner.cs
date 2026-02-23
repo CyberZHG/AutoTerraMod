@@ -390,7 +390,7 @@ public static class ProgressionPlanner
 		if (amount <= 0 || !Shops.IsSold(itemType))
 			return false;
 		long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
-		return coins > 0 && Shops.Offer(bot, itemType) is var (_, price) && (long)price * amount * EasyPurchaseShare <= coins;
+		return coins > 0 && Shops.Offer(bot, itemType) is var (seller, price) && Shops.WithinShoppingTrip(bot, seller.Center) && (long)price * amount * EasyPurchaseShare <= coins;
 	}
 
 	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)

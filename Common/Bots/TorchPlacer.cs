@@ -12,7 +12,7 @@ public static class TorchPlacer
 
 	static readonly Point[] CandidateOffsets =
 	{
-		new(0, -1), new(0, 0), new(-1, -1), new(1, -1), new(-1, 0), new(1, 0), new(0, -2)
+		new(0, 1), new(-1, 1), new(1, 1), new(0, -1), new(0, 0), new(-1, -1), new(1, -1), new(-1, 0), new(1, 0), new(0, -2)
 	};
 
 	public static void LightUpIfDark(Bot bot)
@@ -37,7 +37,7 @@ public static class TorchPlacer
 
 	const int BelowGroundTiles = 3;
 	const int BaseLightMargin = 40;
-	const int CaveTorchesKept = 3;
+	const int CaveTorchesKept = 0;
 	const int AmbientTorchesKept = 10;
 
 	static int TorchesToKeep(Bot bot, Point center)
