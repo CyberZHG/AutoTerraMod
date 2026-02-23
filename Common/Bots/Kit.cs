@@ -48,6 +48,38 @@ public static class Kit
 		return toStore;
 	}
 
+	const int HotbarSlots = 10;
+
+	public static void ArrangeHotbar(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		var bag = Inventory.Items(avatar);
+		var wanted = new List<Item>
+		{
+			bot.Hands.BestPickaxe,
+			bot.Hands.BestWeapon(),
+			bot.Hands.BestAxe,
+			bot.Hands.BestHammer,
+			bag.FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Torch[item.createTile]),
+			bag.FirstOrDefault(item => item.buffType > 0 && Main.lightPet[item.buffType]),
+			bag.FirstOrDefault(item => item.buffType > 0 && Main.vanityPet[item.buffType]),
+			bag.Where(item => item.potion && item.healLife > 0).MaxBy(item => item.healLife),
+			bag.FirstOrDefault(item => item.type is ItemID.Rope or ItemID.WebRope)
+		};
+		int hotbar = 0;
+		foreach (var item in wanted.Where(item => item != null && !item.IsAir).Distinct())
+		{
+			if (hotbar >= HotbarSlots)
+				break;
+			int slot = Inventory.FindSlot(avatar, item);
+			if (slot < 0 || slot >= Inventory.MainSlotCount)
+				continue;
+			if (slot != hotbar)
+				Utils.Swap(ref avatar.inventory[slot], ref avatar.inventory[hotbar]);
+			hotbar++;
+		}
+	}
+
 	public static bool IsSurplusTreasure(Bot bot, Item item)
 	{
 		if (bot.Brain.PlannedItemTypes.Contains(item.type))
