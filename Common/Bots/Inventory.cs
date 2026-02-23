@@ -54,6 +54,11 @@ public static class Inventory
 			if (item.type == type)
 				return true;
 		}
+		foreach (var item in avatar.miscEquips)
+		{
+			if (item.type == type)
+				return true;
+		}
 		return false;
 	}
 

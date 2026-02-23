@@ -57,6 +57,8 @@ public static class Equipment
 			best = System.Math.Max(best, PowerOf(item, kind));
 		for (int slot = 0; slot < 3; slot++)
 			best = System.Math.Max(best, PowerOf(avatar.armor[slot], kind));
+		if (kind == GearKind.Hook)
+			best = System.Math.Max(best, PowerOf(avatar.miscEquips[HookSlot], kind));
 		return best;
 	}
 
@@ -88,6 +90,11 @@ public static class Equipment
 			if (avatar.armor[slot].type == itemType)
 				count++;
 		}
+		foreach (var item in avatar.miscEquips)
+		{
+			if (item.type == itemType)
+				count++;
+		}
 		return count;
 	}
 
@@ -100,6 +107,11 @@ public static class Equipment
 			{
 				if (accepted.Contains(avatar.armor[slot].type) && Inventory.Add(avatar, avatar.armor[slot].Clone()).IsAir)
 					avatar.armor[slot].TurnToAir();
+			}
+			for (int slot = 0; slot < avatar.miscEquips.Length && Inventory.CountAny(avatar, accepted) < required.stack; slot++)
+			{
+				if (accepted.Contains(avatar.miscEquips[slot].type) && Inventory.Add(avatar, avatar.miscEquips[slot].Clone()).IsAir)
+					avatar.miscEquips[slot].TurnToAir();
 			}
 		}
 	}
@@ -126,6 +138,39 @@ public static class Equipment
 			}
 			if (bestSlot >= 0)
 				Utils.Swap(ref avatar.inventory[bestSlot], ref avatar.armor[armorSlot]);
+		}
+	}
+
+	public const int HookSlot = 4;
+	const int PetSlot = 0, LightPetSlot = 1, CartSlot = 2, MountSlot = 3;
+
+	static int MiscSlotFor(Item item)
+	{
+		if (item.IsAir)
+			return -1;
+		if (PowerOf(item, GearKind.Hook) > 0)
+			return HookSlot;
+		if (item.buffType > 0 && Main.vanityPet[item.buffType])
+			return PetSlot;
+		if (item.buffType > 0 && Main.lightPet[item.buffType])
+			return LightPetSlot;
+		if (item.mountType >= 0)
+			return MountID.Sets.Cart[item.mountType] ? CartSlot : MountSlot;
+		return -1;
+	}
+
+	public static void EquipMiscGear(Player avatar, ICollection<int> reserved)
+	{
+		for (int slot = 0; slot < Inventory.StorageSlots; slot++)
+		{
+			var candidate = avatar.inventory[slot];
+			int miscSlot = MiscSlotFor(candidate);
+			if (miscSlot < 0 || reserved.Contains(candidate.type))
+				continue;
+			var worn = avatar.miscEquips[miscSlot];
+			bool better = worn.IsAir || (miscSlot == HookSlot && PowerOf(candidate, GearKind.Hook) > PowerOf(worn, GearKind.Hook));
+			if (better)
+				Utils.Swap(ref avatar.inventory[slot], ref avatar.miscEquips[miscSlot]);
 		}
 	}
 

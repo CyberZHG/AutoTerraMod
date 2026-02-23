@@ -1,4 +1,5 @@
 using System.Linq;
+using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -190,7 +191,8 @@ public sealed class BotGrapple
 
 	Item FindHook()
 	{
-		Item best = null;
+		var worn = bot.Avatar.miscEquips[Equipment.HookSlot];
+		Item best = Equipment.PowerOf(worn, GearKind.Hook) > 0 ? worn : null;
 		foreach (var item in Inventory.Items(bot.Avatar))
 		{
 			if (item.shoot > ProjectileID.None && item.shoot < Main.projHook.Length && Main.projHook[item.shoot] && (best == null || RangeOf(item.shoot) > RangeOf(best.shoot)))
