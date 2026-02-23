@@ -7,8 +7,8 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class TorchPlacer
 {
-	const int SearchHalfWidth = 9;
-	const int SearchHalfHeight = 6;
+	const int SearchHalfWidth = 18;
+	const int SearchHalfHeight = 12;
 
 	static readonly Point[] CandidateOffsets =
 	{
