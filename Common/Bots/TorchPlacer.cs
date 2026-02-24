@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -51,6 +52,13 @@ public static class TorchPlacer
 		return nearBaseAtNight ? AmbientTorchesKept : -1;
 	}
 
+	static readonly HashSet<int> LightFixtures = new()
+	{
+		TileID.Campfire, TileID.Candles, TileID.Chandeliers, TileID.HangingLanterns, TileID.Lamps, TileID.Candelabras, TileID.PlatinumCandle, TileID.PlatinumCandelabra
+	};
+
+	static bool IsLightSource(int tileType) => TileID.Sets.Torch[tileType] || LightFixtures.Contains(tileType);
+
 	static bool HasLightNearby(Point center)
 	{
 		for (int x = center.X - SearchHalfWidth; x <= center.X + SearchHalfWidth; x++)
@@ -60,7 +68,7 @@ public static class TorchPlacer
 				if (!WorldGen.InWorld(x, y, 2))
 					continue;
 				var tile = Main.tile[x, y];
-				if (tile.HasTile && Main.tileLighted[tile.TileType])
+				if (tile.HasTile && IsLightSource(tile.TileType))
 					return true;
 			}
 		}
