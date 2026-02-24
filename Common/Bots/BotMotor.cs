@@ -67,6 +67,32 @@ public sealed class BotMotor
 	bool stuckReported;
 	public bool WantsToDropThroughPlatforms { get; private set; }
 	public Point? TileToDig { get; private set; }
+
+	Point? CeilingToBreakForAir(NPC npc)
+	{
+		int y = (int)(npc.position.Y - 1f) / 16;
+		int left = (int)npc.position.X / 16;
+		int right = (int)(npc.position.X + npc.width - 1f) / 16;
+		for (int x = left; x <= right; x++)
+		{
+			var tile = Main.tile[x, y];
+			if (!tile.HasTile || !Main.tileSolid[tile.TileType] || Main.tileSolidTop[tile.TileType] || InAnySettlement(x, y))
+				continue;
+			if (CanDigThrough(new Point(x, y)))
+				return new Point(x, y);
+		}
+		return null;
+	}
+
+	static bool InAnySettlement(int x, int y)
+	{
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Settlement is { } settlement && settlement.Contains(x, y))
+				return true;
+		}
+		return false;
+	}
 	public Point? ScaffoldTile { get; private set; }
 	public Point? RopeTile { get; private set; }
 	public Point? BridgeTile { get; private set; }
@@ -190,6 +216,8 @@ public sealed class BotMotor
 		{
 			wantsJump = true;
 			jumpHoldTicks = JumpHoldTicks;
+			if (TileToDig == null && CeilingToBreakForAir(npc) is Point ceiling)
+				TileToDig = ceiling;
 		}
 
 		Run(npc, moveDirection);
