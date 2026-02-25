@@ -50,6 +50,12 @@ public sealed class BotNPC : ModNPC
 			bot.Brain.Tick(NPC);
 	}
 
+	public override void PostAI()
+	{
+		if (Bot is { IsAlive: true } bot && bot.Brain.Override == null)
+			bot.Motor.ApplyTerrainHazards(NPC);
+	}
+
 	public override bool CheckActive() => false;
 
 	public override bool NeedSaving() => false;

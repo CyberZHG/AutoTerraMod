@@ -542,6 +542,7 @@ public sealed class BotHands
 			return true;
 		}
 		var hit = target.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
+		BannerCredit.RecordHit(target, bot);
 		Bosses.BossCredit.RecordDamage(target, bot.FactionId, target.StrikeNPC(hit));
 		bot.Watchdog.RecordProgress();
 		return true;

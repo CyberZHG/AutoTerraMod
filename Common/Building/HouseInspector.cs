@@ -56,8 +56,14 @@ public static class HouseInspector
 			return true;
 		if (!WorldGen.RoomNeeds(NPCID.Guide))
 			return false;
-		return structure.Purpose != StructurePurpose.Bedroom || structure.FindTileInside(TileID.Beds) != null;
+		return true;
 	}
+
+	public static bool HasSpareBed(Faction faction) =>
+		BaseStorage.Count(faction, ItemID.Bed) > 0
+		|| BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && IsDesignatedBuilder(bot) && Inventory.Count(bot.Avatar, ItemID.Bed) > 0);
+
+	public static bool MissesBed(HouseBlueprint structure) => structure.Purpose == StructurePurpose.Bedroom && structure.FindTileInside(TileID.Beds) == null;
 
 	public static void Invalidate(Faction faction)
 	{
@@ -109,7 +115,10 @@ public static class HouseInspector
 	static BuildOperation? ComputeNextOperation(Faction faction, HouseBlueprint structure)
 	{
 		var excluded = Skipped(faction);
-		var pending = structure.PendingOperations(MaterialsFor(faction)).Where(operation => !faction.Scaffolding.Contains(operation.Tile)).ToList();
+		bool bedReady = HasSpareBed(faction);
+		var pending = structure.PendingOperations(MaterialsFor(faction))
+			.Where(operation => !faction.Scaffolding.Contains(operation.Tile) && (operation.Action != BuildAction.PlaceBed || bedReady))
+			.ToList();
 		foreach (var operation in pending)
 		{
 			if (!excluded.Contains(operation.Tile))

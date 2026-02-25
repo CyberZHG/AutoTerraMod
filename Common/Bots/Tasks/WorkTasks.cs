@@ -107,10 +107,12 @@ public sealed class CraftTask : BotTask
 
 	static readonly HashSet<int> PortableStationTiles = new()
 	{
-		TileID.WorkBenches, TileID.Furnaces, TileID.Anvils, TileID.Hellforge, TileID.MythrilAnvil, TileID.AdamantiteForge
+		TileID.WorkBenches, TileID.Furnaces, TileID.Anvils, TileID.Hellforge, TileID.MythrilAnvil, TileID.AdamantiteForge, TileID.Sawmill, TileID.Loom
 	};
 
 	public static bool IsPortableStation(Item item) => item.createTile >= 0 && PortableStationTiles.Contains(item.createTile);
+
+	public static bool IsPortableStationTile(int tileType) => PortableStationTiles.Contains(tileType);
 
 	readonly List<Point> placedStations = new();
 
@@ -193,6 +195,12 @@ public sealed class CraftTask : BotTask
 		placedStations.Clear();
 	}
 
+	bool RecallLandsAtBase()
+	{
+		var landing = BotWorldSystem.RespawnFeet(Bot).ToTileCoordinates();
+		return Bot.Faction.Settlement?.Contains(landing.X, landing.Y - 1) != false;
+	}
+
 	public override void Stop()
 	{
 		PackUpPortableStations();
@@ -225,7 +233,7 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && TryRecallHome())
+		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && RecallLandsAtBase() && TryRecallHome())
 			return;
 		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? Navigation.PathFinder.BodyCenterAt(feet) : station.ToWorldCoordinates();
 		Bot.Motor.MoveTo(standAt, StationStandRadius);

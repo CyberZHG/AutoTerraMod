@@ -68,6 +68,24 @@ public sealed class BotMotor
 	public bool WantsToDropThroughPlatforms { get; private set; }
 	public Point? TileToDig { get; private set; }
 
+	int stickyBreak;
+
+	public void ApplyTerrainHazards(NPC body)
+	{
+		Collision.SwitchTiles(bot.Avatar, body.position, body.width, body.height, body.oldPosition, 1);
+		var sticky = Collision.StickyTiles(body.position, body.velocity, body.width, body.height);
+		if (sticky.X == -1f || sticky.Y == -1f)
+			return;
+		int x = (int)sticky.X, y = (int)sticky.Y;
+		if (Main.tile[x, y].TileType == TileID.Cobweb && body.velocity != Vector2.Zero && ++stickyBreak > Main.rand.Next(20, 100))
+		{
+			stickyBreak = 0;
+			WorldGen.KillTile(x, y);
+		}
+		body.velocity.X = MathHelper.Clamp(body.velocity.X, -1f, 1f) * (Math.Abs(body.velocity.X) > 0.75f ? 0.85f : 0.6f);
+		body.velocity.Y = MathHelper.Clamp(body.velocity.Y, -5f, 1f) * (body.velocity.Y < 0f ? 0.96f : 0.3f);
+	}
+
 	Point? CeilingToBreakForAir(NPC npc)
 	{
 		int y = (int)(npc.position.Y - 1f) / 16;

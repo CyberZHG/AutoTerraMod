@@ -44,6 +44,7 @@ public sealed class BotBrain
 			new TravelTask(bot),
 			new BuildBridgeTask(bot),
 			new DigShaftTask(bot),
+			new OutpostTask(bot),
 			new FleeTask(bot),
 			new FightTask(bot),
 			new PickupTask(bot),

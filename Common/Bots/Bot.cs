@@ -64,6 +64,7 @@ public sealed class Bot
 	public int NpcIndex { get; set; } = -1;
 	public int RespawnTicks { get; set; }
 	public Vector2? SavedFeetPosition { get; set; }
+	public Point? OutpostBed { get; set; }
 
 	public Faction Faction => BotWorldSystem.Factions[FactionId];
 	public bool IsAlive => Npc != null;
@@ -139,6 +140,11 @@ public sealed class Bot
 		var npc = Npc;
 		if (npc != null)
 			tag["feet"] = npc.Bottom;
+		if (OutpostBed is Point bed)
+		{
+			tag["outpostX"] = bed.X;
+			tag["outpostY"] = bed.Y;
+		}
 		return tag;
 	}
 
@@ -152,6 +158,8 @@ public sealed class Bot
 			AvatarStorage.Load(tag.GetCompound("avatar")));
 		if (tag.ContainsKey("feet"))
 			bot.SavedFeetPosition = tag.Get<Vector2>("feet");
+		if (tag.ContainsKey("outpostX"))
+			bot.OutpostBed = new Point(tag.GetInt("outpostX"), tag.GetInt("outpostY"));
 		return bot;
 	}
 }

@@ -493,6 +493,56 @@ public sealed class AspirationGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
 }
 
+public sealed class FurnishBedroomsGoal : ProgressionGoal
+{
+	public override string Describe() => "FurnishBedrooms";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot);
+
+	public override bool IsMet(Bot bot) =>
+		HouseInspector.HasSpareBed(bot.Faction) || !bot.Faction.Settlement.Bedrooms.Any(HouseInspector.MissesBed);
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, ItemID.Bed, 1);
+}
+
+public sealed class OutpostKitGoal : ProgressionGoal
+{
+	public override string Describe() => "OutpostKit";
+
+	public override bool AppliesTo(Bot bot) => !Outpost.IsDeep(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar);
+
+	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar);
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		if (Inventory.Count(avatar, ItemID.Bed) == 0)
+			return ProgressionPlanner.Obtain(bot, ItemID.Bed, 1);
+		if (Outpost.Count(avatar, Outpost.IsDoor) == 0)
+			return ProgressionPlanner.ObtainAny(bot, HouseDesign.Doors);
+		int walls = Outpost.Count(avatar, Outpost.IsHouseWall);
+		return ProgressionPlanner.Obtain(bot, ItemID.StoneWall, Inventory.Count(avatar, ItemID.StoneWall) + Outpost.WallsNeeded - walls);
+	}
+}
+
+public sealed class OutpostGoal : ProgressionGoal
+{
+	public override string Describe() => "Outpost";
+
+	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar) && Outpost.WantsNew(bot);
+
+	public override bool IsMet(Bot bot) => false;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		int blocks = Outpost.Count(avatar, Outpost.IsBlock);
+		if (blocks < Outpost.BlocksNeeded)
+			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - blocks);
+		return new BuildOutpostStep();
+	}
+}
+
 public sealed class GatedGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
@@ -792,6 +842,7 @@ public static class ProgressionGoals
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
+			new OutpostGoal(),
 			new BossGoal(),
 			new HellevatorGoal(),
 			new HellbridgeGoal(),
@@ -809,6 +860,7 @@ public static class ProgressionGoals
 		};
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
+		goals.Add(new OutpostKitGoal());
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
 		goals.Add(new StockpileGoal("Wood", 150, 300, bot => Wood));
@@ -817,6 +869,7 @@ public static class ProgressionGoals
 		goals.Add(new StockpileGoal("Bullets", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Bullet)));
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
+		goals.Add(new FurnishBedroomsGoal());
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },
 			swords: new int[] { ItemID.IronBroadsword, ItemID.LeadBroadsword },

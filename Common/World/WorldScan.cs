@@ -38,6 +38,7 @@ public static class WorldScan
 
 	public static void Observe(Point origin, FactionKnowledge knowledge)
 	{
+		knowledge.MarkExplored(origin);
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
 			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType))

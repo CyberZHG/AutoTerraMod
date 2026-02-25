@@ -1,4 +1,5 @@
 using AutoTerraMod.Common.Planning;
+using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -160,13 +161,43 @@ public sealed class ExploreTask : BotTask
 	public override void Start()
 	{
 		base.Start();
+		bool delveUnderground = Traits.Exploring > 0.7f && Main.rand.NextFloat() < 0.4f;
+		int depth = delveUnderground ? Bot.CenterTile.Y + Main.rand.Next(40, 120) : -1;
+		int x = NearestUnexploredColumn(depth) ?? RandomTripColumn();
+		int y = delveUnderground ? depth : TileQuery.SurfaceY(x) - 2;
+		destination = new Vector2(x * 16f, y * 16f);
+		Detail = delveUnderground ? "↓" : x > Bot.CenterTile.X ? "→" : "←";
+	}
+
+	const int MaxFrontierCells = 15;
+
+	int? NearestUnexploredColumn(int depth)
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		int cellX = Bot.CenterTile.X / Factions.FactionKnowledge.ExploreCell;
+		int lastCell = (Main.maxTilesX - 50) / Factions.FactionKnowledge.ExploreCell;
+		int firstSide = Main.rand.NextBool() ? 1 : -1;
+		for (int offset = 1; offset <= MaxFrontierCells; offset++)
+		{
+			foreach (int side in new[] { firstSide, -firstSide })
+			{
+				int candidate = cellX + side * offset;
+				if (candidate < 1 || candidate > lastCell)
+					continue;
+				int x = candidate * Factions.FactionKnowledge.ExploreCell + Factions.FactionKnowledge.ExploreCell / 2;
+				int y = depth >= 0 ? depth : TileQuery.SurfaceY(x);
+				if (!knowledge.IsExplored(candidate, y / Factions.FactionKnowledge.ExploreCell))
+					return x;
+			}
+		}
+		return null;
+	}
+
+	int RandomTripColumn()
+	{
 		int direction = Main.rand.NextBool() ? 1 : -1;
 		int trip = (int)(Main.rand.Next(MinimumTrip, MaximumTrip) * (0.5f + Traits.Exploring));
-		int x = Utils.Clamp(Bot.CenterTile.X + direction * trip, 50, Main.maxTilesX - 50);
-		bool delveUnderground = Traits.Exploring > 0.7f && Main.rand.NextFloat() < 0.4f;
-		int y = delveUnderground ? Bot.CenterTile.Y + Main.rand.Next(40, 120) : TileQuery.SurfaceY(x) - 2;
-		destination = new Vector2(x * 16f, y * 16f);
-		Detail = delveUnderground ? "↓" : direction > 0 ? "→" : "←";
+		return Utils.Clamp(Bot.CenterTile.X + direction * trip, 50, Main.maxTilesX - 50);
 	}
 
 	public override void Tick()

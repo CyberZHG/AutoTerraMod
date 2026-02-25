@@ -17,6 +17,16 @@ public sealed class FactionKnowledge
 	readonly Dictionary<Landmark, Point> landmarks = new();
 	readonly Dictionary<Landmark, (int minX, int maxX)> landmarkSpans = new();
 
+	public const int ExploreCell = 40;
+
+	readonly HashSet<int> exploredCells = new();
+
+	static int CellKey(int cellX, int cellY) => cellY * 10000 + cellX;
+
+	public void MarkExplored(Point tile) => exploredCells.Add(CellKey(tile.X / ExploreCell, tile.Y / ExploreCell));
+
+	public bool IsExplored(int cellX, int cellY) => exploredCells.Contains(CellKey(cellX, cellY));
+
 	public int ResourceCount => resourceTiles.Count;
 	public int ScoutDirection { get; set; } = 1;
 	public int FruitlessShrineSearches { get; set; }
@@ -42,11 +52,14 @@ public sealed class FactionKnowledge
 			["y"] = entry.Value.Y,
 			["minX"] = landmarkSpans[entry.Key].minX,
 			["maxX"] = landmarkSpans[entry.Key].maxX
-		}).ToList()
+		}).ToList(),
+		["explored"] = exploredCells.ToArray()
 	};
 
 	public void Load(TagCompound tag)
 	{
+		if (tag.ContainsKey("explored"))
+			exploredCells.UnionWith(tag.GetIntArray("explored"));
 		foreach (var entry in tag.GetList<TagCompound>("landmarks"))
 		{
 			var kind = (Landmark)entry.GetInt("kind");

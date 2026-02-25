@@ -349,6 +349,8 @@ public static class ProgressionPlanner
 			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
 			var stationItems = Stations.ItemsPlacing(tile);
+			if (Bots.Tasks.CraftTask.IsPortableStationTile(tile) && stationItems.Any(item => context.Count(item) > 0))
+				continue;
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
 		foreach (var required in recipe.requiredItem)
