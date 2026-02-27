@@ -182,7 +182,7 @@ public sealed class RopeGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => RopeCount(bot.Avatar) >= Minimum;
 
-	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope };
+	static readonly int[] Ropes = { ItemID.Rope };
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RestockTo);
 
