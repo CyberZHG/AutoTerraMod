@@ -40,6 +40,7 @@ public sealed class EscapeTask : BotTask
 	const int PitSurfaceMargin = -2;
 	int highestY;
 	uint climbedAt;
+	bool startedForAir;
 
 	public EscapeTask(Bot bot) : base(bot) { }
 
@@ -53,6 +54,7 @@ public sealed class EscapeTask : BotTask
 		base.Start();
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
+		startedForAir = Bot.Npc is NPC swimmer && (swimmer.wet || Bot.Vitals.BreathFraction < 1f);
 		climbStartedAt = 0;
 		routedAt = Main.GameUpdateCount;
 		var here = Bot.CenterTile;
@@ -118,6 +120,12 @@ public sealed class EscapeTask : BotTask
 		var here = Bot.CenterTile;
 		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + surfaceMargin || legIsSurfaceExit && Bot.Motor.HasArrived);
 		bool standing = Bot.Npc is NPC body && body.velocity.Y == 0f;
+		if (startedForAir && standing && !Bot.Npc.wet && Bot.Vitals.BreathFraction >= 1f)
+		{
+			BotDiagnostics.Log(Bot, $"out of the water at {here}, ending the escape");
+			Finish();
+			return;
+		}
 		if (standing && here.Y < highestY)
 		{
 			highestY = here.Y;

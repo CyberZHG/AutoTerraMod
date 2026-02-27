@@ -19,7 +19,8 @@ public sealed class TidyCampTask : BotTask
 
 	public override float Evaluate()
 	{
-		tombstone = FindTombstone();
+		if (tombstone is not Point held || !IsClutter(held.X, held.Y))
+			tombstone = FindTombstone();
 		if (tombstone == null || Bot.Hands.BestPickaxe == null)
 			return 0f;
 		Detail = "";
@@ -27,8 +28,10 @@ public sealed class TidyCampTask : BotTask
 	}
 
 	const int ScanIntervalTicks = 120;
+	const uint RopeScanIntervalTicks = 18000;
 
 	static readonly System.Collections.Generic.Dictionary<int, (uint at, bool any)> campScans = new();
+	static readonly System.Collections.Generic.Dictionary<int, uint> ropeScans = new();
 
 	Point? FindTombstone()
 	{
@@ -37,12 +40,15 @@ public sealed class TidyCampTask : BotTask
 			return null;
 		if (campScans.TryGetValue(Bot.FactionId, out var scan) && Main.GameUpdateCount - scan.at < ScanIntervalTicks && !scan.any)
 			return null;
-		var nearest = NearestTombstone(settlement);
+		bool ropes = !ropeScans.TryGetValue(Bot.FactionId, out uint ropeScan) || Main.GameUpdateCount - ropeScan >= RopeScanIntervalTicks;
+		if (ropes)
+			ropeScans[Bot.FactionId] = Main.GameUpdateCount;
+		var nearest = NearestTombstone(settlement, ropes);
 		campScans[Bot.FactionId] = (Main.GameUpdateCount, nearest != null);
 		return nearest;
 	}
 
-	Point? NearestTombstone(Building.Settlement settlement)
+	Point? NearestTombstone(Building.Settlement settlement, bool ropes)
 	{
 		Point? nearest = null;
 		long nearestDistance = long.MaxValue;
@@ -53,7 +59,7 @@ public sealed class TidyCampTask : BotTask
 			{
 				if (!WorldGen.InWorld(x, y, 5) || !IsClutter(x, y))
 					continue;
-				if (Main.tileRope[Main.tile[x, y].TileType] && (y > settlement.Floor || BotNear(new Point(x, y))))
+				if (Main.tileRope[Main.tile[x, y].TileType] && (!ropes || y > settlement.Floor || BotNear(new Point(x, y))))
 					continue;
 				long distance = WorldScan.DistanceSq(origin, new Point(x, y));
 				if (distance < nearestDistance)
@@ -91,11 +97,14 @@ public sealed class TidyCampTask : BotTask
 
 	public override void Tick()
 	{
-		if (tombstone is not Point tile || !IsClutter(tile.X, tile.Y))
+		if (tombstone is Point cleared && !IsClutter(cleared.X, cleared.Y))
+			tombstone = RestOfColumn(cleared);
+		if (tombstone is not Point tile)
 		{
 			IsFinished = true;
 			return;
 		}
+		Bot.Motor.RopesForbidden = true;
 		var pickaxe = Bot.Hands.BestPickaxe;
 		if (!Bot.Hands.CanReach(pickaxe, tile))
 		{
@@ -107,5 +116,16 @@ public sealed class TidyCampTask : BotTask
 		Bot.Motor.Stop();
 		if (Bot.Hands.Dig(tile) is ToolResult.Unbreakable or ToolResult.NoTool)
 			IsFinished = true;
+	}
+
+	static Point? RestOfColumn(Point cleared)
+	{
+		foreach (int dy in new[] { -1, 1 })
+		{
+			var next = new Point(cleared.X, cleared.Y + dy);
+			if (Main.tileRope[Main.tile[next.X, next.Y].TileType] && IsClutter(next.X, next.Y))
+				return next;
+		}
+		return null;
 	}
 }

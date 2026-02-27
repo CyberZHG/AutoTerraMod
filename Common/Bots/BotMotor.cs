@@ -86,18 +86,29 @@ public sealed class BotMotor
 		body.velocity.Y = MathHelper.Clamp(body.velocity.Y, -5f, 1f) * (body.velocity.Y < 0f ? 0.96f : 0.3f);
 	}
 
+	const int CeilingSearchRows = 3;
+
 	Point? CeilingToBreakForAir(NPC npc)
 	{
-		int y = (int)(npc.position.Y - 1f) / 16;
+		int head = (int)(npc.position.Y - 1f) / 16;
 		int left = (int)npc.position.X / 16;
 		int right = (int)(npc.position.X + npc.width - 1f) / 16;
-		for (int x = left; x <= right; x++)
+		for (int y = head; y > head - CeilingSearchRows; y--)
 		{
-			var tile = Main.tile[x, y];
-			if (!tile.HasTile || !Main.tileSolid[tile.TileType] || Main.tileSolidTop[tile.TileType] || InAnySettlement(x, y))
-				continue;
-			if (CanDigThrough(new Point(x, y)))
-				return new Point(x, y);
+			bool open = false;
+			for (int x = left; x <= right; x++)
+			{
+				var tile = Main.tile[x, y];
+				if (!TileQuery.IsSolid(x, y))
+				{
+					open |= tile.LiquidAmount < byte.MaxValue;
+					continue;
+				}
+				if (!InAnySettlement(x, y) && CanDigThrough(new Point(x, y)))
+					return new Point(x, y);
+			}
+			if (open)
+				return null;
 		}
 		return null;
 	}
@@ -117,6 +128,8 @@ public sealed class BotMotor
 	public bool HasRoute => destination != null && follower.HasPath;
 	public Vector2? Destination => destination;
 	public bool ScaffoldingAllowed { get; set; }
+	public bool RopesForbidden { get; set; }
+	bool MayPlaceRope => bot.Hands.HasRope && !RopesForbidden;
 	public bool ClimbingStraightUp { get; set; }
 	public bool Tunneling { get; private set; }
 
@@ -201,6 +214,7 @@ public sealed class BotMotor
 		{
 			TrackProgress(npc);
 			ScaffoldingAllowed = false;
+			RopesForbidden = false;
 			return;
 		}
 
@@ -234,7 +248,7 @@ public sealed class BotMotor
 		{
 			wantsJump = true;
 			jumpHoldTicks = JumpHoldTicks;
-			if (TileToDig == null && CeilingToBreakForAir(npc) is Point ceiling)
+			if (CeilingToBreakForAir(npc) is Point ceiling)
 				TileToDig = ceiling;
 		}
 
@@ -257,6 +271,7 @@ public sealed class BotMotor
 		else if (ScaffoldTile is Point scaffold)
 			PlaceFoothold(scaffold);
 		ScaffoldingAllowed = false;
+		RopesForbidden = false;
 	}
 
 	void TunnelStep(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump)
@@ -609,9 +624,11 @@ public sealed class BotMotor
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
 				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe);
 		}
+		bool canRope = gear.CanRope && !RopesForbidden;
 		return gear with
 		{
-			CanPillar = gear.CanBridge && (ScaffoldingAllowed || !gear.CanRope),
+			CanRope = canRope,
+			CanPillar = gear.CanBridge && (ScaffoldingAllowed || !canRope),
 			MaxFall = gear.FlyRise > 0 ? WingedSafeFall : AffordableFall
 		};
 	}
@@ -738,7 +755,7 @@ public sealed class BotMotor
 	{
 		var body = BodyTiles.Of(npc);
 		int y = body.Bottom + 1;
-		if (Main.tile[column, y].HasTile || !bot.Hands.HasRope)
+		if (Main.tile[column, y].HasTile || !MayPlaceRope)
 			return true;
 		bool anchored = IsRope(column, y - 1) || Main.tile[column, y - 1].HasTile;
 		if (anchored)
@@ -754,7 +771,7 @@ public sealed class BotMotor
 		for (int y = body.Bottom; y >= body.Top - 1; y--)
 		{
 			if (!IsRope(column, y) && !IsRope(column + 1, y))
-				return bot.Hands.HasRope && !Main.tile[column, y].HasTile ? new Point(column, y) : null;
+				return MayPlaceRope && !Main.tile[column, y].HasTile ? new Point(column, y) : null;
 		}
 		return null;
 	}
@@ -894,18 +911,18 @@ public sealed class BotMotor
 			onRope |= IsRope(centerX, y);
 		if (onRope)
 		{
-			bool ropeEndsHere = !IsRope(centerX, body.Top - 1) && !bot.Hands.HasRope;
+			bool ropeEndsHere = !IsRope(centerX, body.Top - 1) && !MayPlaceRope;
 			if (ropeEndsHere)
 			{
 				npc.velocity.Y = -RopeLeapSpeed;
 				return false;
 			}
 			npc.velocity = new Vector2(0f, -RopeClimbSpeed);
-			if (!Main.tile[centerX, body.Top - 1].HasTile)
+			if (MayPlaceRope && !Main.tile[centerX, body.Top - 1].HasTile)
 				RopeTile = new Point(centerX, body.Top - 1);
 			return true;
 		}
-		if (!grounded || !bot.Hands.HasRope || Main.tile[centerX, body.Bottom].HasTile)
+		if (!grounded || !MayPlaceRope || Main.tile[centerX, body.Bottom].HasTile)
 			return false;
 		RopeTile = new Point(centerX, body.Bottom);
 		return true;
