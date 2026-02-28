@@ -10,8 +10,6 @@ public sealed class TidyCampTask : BotTask
 	const int CampMargin = 40;
 	const int CampRowsAbove = 25;
 	const int CampRowsBelow = 15;
-	const int RoadLength = 24;
-	const int RoadHeadroom = 4;
 
 	Point? tombstone;
 	const uint FailedTileRetryTicks = 3600;
@@ -74,7 +72,9 @@ public sealed class TidyCampTask : BotTask
 		{
 			for (int y = settlement.Top - CampRowsAbove; y <= settlement.Floor + CampRowsBelow; y++)
 			{
-				if (!WorldGen.InWorld(x, y, 5) || !IsClutter(x, y) || RecentlyFailed(new Point(x, y)))
+				if (!WorldGen.InWorld(x, y, 5) || RecentlyFailed(new Point(x, y)))
+					continue;
+				if (!IsClutter(x, y) && !IsCampObstacle(settlement, x, y))
 					continue;
 				if (Main.tileRope[Main.tile[x, y].TileType] && (!ropes || y > settlement.Floor || BotNear(new Point(x, y))))
 					continue;
@@ -93,40 +93,49 @@ public sealed class TidyCampTask : BotTask
 	{
 		Point? nearest = null;
 		long nearestDistance = long.MaxValue;
-		bool canPave = PavingBlock() != null;
-		for (int x = settlement.Left - RoadLength; x <= settlement.Right + RoadLength; x++)
+		if (PavingBlock() == null)
+			return null;
+		int y = settlement.Floor;
+		for (int x = settlement.Left - CampMargin; x <= settlement.Right + CampMargin; x++)
 		{
-			for (int y = settlement.Floor - RoadHeadroom; y <= settlement.Floor; y++)
+			if (!IsRoadGap(settlement, x, y) || RecentlyFailed(new Point(x, y)))
+				continue;
+			long distance = WorldScan.DistanceSq(Bot.CenterTile, new Point(x, y));
+			if (distance < nearestDistance)
 			{
-				if (!IsRoadObstacle(settlement, x, y) && !(canPave && IsRoadGap(settlement, x, y)) || RecentlyFailed(new Point(x, y)))
-					continue;
-				long distance = WorldScan.DistanceSq(Bot.CenterTile, new Point(x, y));
-				if (distance < nearestDistance)
-				{
-					nearest = new Point(x, y);
-					nearestDistance = distance;
-				}
+				nearest = new Point(x, y);
+				nearestDistance = distance;
 			}
 		}
 		return nearest;
 	}
 
-	static bool OnRoad(Building.Settlement settlement, int x) => x >= settlement.Left - RoadLength && x <= settlement.Right + RoadLength;
+	static bool InCamp(Building.Settlement settlement, int x) => x >= settlement.Left - CampMargin && x <= settlement.Right + CampMargin;
 
-	static bool IsRoadObstacle(Building.Settlement settlement, int x, int y)
+	static bool IsCampObstacle(Building.Settlement settlement, int x, int y)
 	{
-		if (!OnRoad(settlement, x) || y >= settlement.Floor || y < settlement.Floor - RoadHeadroom || !WorldGen.InWorld(x, y, 10) || !TileQuery.IsSolid(x, y))
+		if (!InCamp(settlement, x) || y >= settlement.Floor || y < settlement.Top - CampRowsAbove || !WorldGen.InWorld(x, y, 10) || !TileQuery.IsSolid(x, y))
 			return false;
 		int type = Main.tile[x, y].TileType;
-		return !Main.tileFrameImportant[type] && !Building.HouseInspector.IsProtected(x, y) && WorldGen.CanKillTile(x, y);
+		return !Main.tileFrameImportant[type] && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y) && WorldGen.CanKillTile(x, y);
+	}
+
+	static bool InAnotherCamp(Building.Settlement own, int x, int y)
+	{
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Settlement is { } other && other != own && other.Contains(x, y))
+				return true;
+		}
+		return false;
 	}
 
 	static bool IsRoadGap(Building.Settlement settlement, int x, int y)
 	{
-		if (!OnRoad(settlement, x) || y != settlement.Floor || !WorldGen.InWorld(x, y, 10))
+		if (!InCamp(settlement, x) || y != settlement.Floor || !WorldGen.InWorld(x, y, 10))
 			return false;
 		var tile = Main.tile[x, y];
-		return !tile.HasTile && tile.LiquidAmount == 0 && !Building.HouseInspector.IsProtected(x, y);
+		return !tile.HasTile && tile.LiquidAmount == 0 && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y);
 	}
 
 	Item PavingBlock()
@@ -147,7 +156,7 @@ public sealed class TidyCampTask : BotTask
 		if (IsClutter(tile.X, tile.Y))
 			return true;
 		var settlement = Bot.Faction.Settlement;
-		return settlement != null && (IsRoadObstacle(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
+		return settlement != null && (IsCampObstacle(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
 	}
 
 	const float RopeInUseDistance = 16f * 4f;
