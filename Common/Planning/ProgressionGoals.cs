@@ -870,6 +870,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },
 			swords: new int[] { ItemID.IronBroadsword, ItemID.LeadBroadsword },

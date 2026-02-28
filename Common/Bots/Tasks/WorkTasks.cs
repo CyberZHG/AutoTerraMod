@@ -114,7 +114,7 @@ public sealed class CraftTask : BotTask
 
 	public static bool IsPortableStationTile(int tileType) => PortableStationTiles.Contains(tileType);
 
-	readonly List<Point> placedStations = new();
+	readonly List<(Point tile, int itemType)> placedStations = new();
 
 	bool FarFromStation(int stationTile)
 	{
@@ -155,6 +155,7 @@ public sealed class CraftTask : BotTask
 	{
 		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
 		string name = station.Name;
+		int itemType = station.type;
 		foreach (int dx in new[] { 2, -3, 3, -4, 1, -2 })
 		{
 			for (int dy = 0; dy >= -1; dy--)
@@ -163,7 +164,7 @@ public sealed class CraftTask : BotTask
 				if (!Bot.Hands.CanReach(station, spot) || !Bot.Hands.Place(station, spot))
 					continue;
 				if (FindPlaced(spot, stationTile) is Point placed)
-					placedStations.Add(placed);
+					placedStations.Add((placed, itemType));
 				Avatar.AdjTiles();
 				BotDiagnostics.Log(Bot, $"set up a portable {name} at {spot}");
 				return true;
@@ -187,12 +188,30 @@ public sealed class CraftTask : BotTask
 
 	void PackUpPortableStations()
 	{
-		foreach (var tile in placedStations)
+		foreach (var (tile, itemType) in placedStations)
 		{
-			if (Main.tile[tile.X, tile.Y].HasTile && PortableStationTiles.Contains(Main.tile[tile.X, tile.Y].TileType))
-				WorldGen.KillTile(tile.X, tile.Y);
+			if (!Main.tile[tile.X, tile.Y].HasTile || !PortableStationTiles.Contains(Main.tile[tile.X, tile.Y].TileType))
+				continue;
+			WorldGen.KillTile(tile.X, tile.Y);
+			PickUpDropped(tile, itemType);
 		}
 		placedStations.Clear();
+	}
+
+	const float DroppedStationRange = 16f * 4f;
+
+	void PickUpDropped(Point tile, int itemType)
+	{
+		var origin = tile.ToWorldCoordinates();
+		foreach (var item in Main.ActiveItems)
+		{
+			if (item.type != itemType || Vector2.Distance(item.Center, origin) > DroppedStationRange)
+				continue;
+			Inventory.Add(Avatar, item);
+			if (item.IsAir)
+				item.active = false;
+			return;
+		}
 	}
 
 	bool RecallLandsAtBase()

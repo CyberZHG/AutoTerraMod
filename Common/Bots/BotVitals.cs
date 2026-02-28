@@ -177,12 +177,52 @@ public sealed class BotVitals
 		}
 	}
 
+	const int PetSlotCount = 2;
+	const int PetBuffTicks = 18000;
+	const int PetCheckTicks = 60;
+
+	void KeepPets()
+	{
+		for (int slot = 0; slot < Avatar.buffType.Length; slot++)
+		{
+			int buff = Avatar.buffType[slot];
+			if (buff > 0 && (Main.vanityPet[buff] || Main.lightPet[buff]) && !WearsPetFor(buff))
+				Avatar.DelBuff(slot--);
+		}
+		if ((Main.GameUpdateCount + bot.Id) % PetCheckTicks != 0)
+			return;
+		for (int slot = 0; slot < PetSlotCount; slot++)
+		{
+			var pet = Avatar.miscEquips[slot];
+			if (pet.IsAir || pet.buffType <= 0 || pet.shoot <= ProjectileID.None)
+				continue;
+			if (!Avatar.HasBuff(pet.buffType))
+				Avatar.AddBuff(pet.buffType, PetBuffTicks);
+			if (Avatar.ownedProjectileCounts[pet.shoot] > 0)
+				continue;
+			using (Systems.AvatarPresence.Enter())
+				Projectile.NewProjectile(new EntitySource_ItemUse(Avatar, pet), Avatar.Center, Vector2.Zero, pet.shoot, 0, 0f, Avatar.whoAmI);
+			BotDiagnostics.Log(bot, $"called out the pet from {pet.Name}");
+		}
+	}
+
+	bool WearsPetFor(int buff)
+	{
+		for (int slot = 0; slot < PetSlotCount; slot++)
+		{
+			if (Avatar.miscEquips[slot].buffType == buff)
+				return true;
+		}
+		return false;
+	}
+
 	void RefreshVanillaStats()
 	{
 		try
 		{
 			Avatar.ResetEffects();
 			RecountOwnedProjectiles();
+			KeepPets();
 			Avatar.UpdateBuffs(Avatar.whoAmI);
 			Avatar.UpdateEquips(Avatar.whoAmI);
 			Avatar.UpdateArmorSets(Avatar.whoAmI);

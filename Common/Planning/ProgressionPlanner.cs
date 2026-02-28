@@ -344,12 +344,16 @@ public static class ProgressionPlanner
 		if (!ConditionsAchievable(context.Bot, recipe))
 			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
+		bool deep = Outpost.IsDeep(context.Bot);
 		foreach (int tile in recipe.requiredTile)
 		{
-			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
-				continue;
 			var stationItems = Stations.ItemsPlacing(tile);
-			if (Bots.Tasks.CraftTask.IsPortableStationTile(tile) && stationItems.Any(item => context.Count(item) > 0))
+			bool portable = Bots.Tasks.CraftTask.IsPortableStationTile(tile);
+			if (portable && stationItems.Any(item => context.Count(item) > 0))
+				continue;
+			if (deep && !StationNearby(context.Bot, tile))
+				return portable && stationItems.Count > 0 ? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
+			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
@@ -365,6 +369,12 @@ public static class ProgressionPlanner
 		}
 		return new CraftStep(recipe);
 	}
+
+	const float DeepStationReach = 16f * 60f;
+
+	static bool StationNearby(Bot bot, int tile) =>
+		Stations.LocateAnywhere(bot.Faction, tile, bot.CenterTile) is Microsoft.Xna.Framework.Point station
+		&& Microsoft.Xna.Framework.Vector2.Distance(bot.Center, station.ToWorldCoordinates()) <= DeepStationReach;
 
 	static PlanStep ResolveIngredient(Context context, IEnumerable<int> accepted, int needed, int have, int depth)
 	{
