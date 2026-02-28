@@ -27,7 +27,7 @@ public static class ResourceSources
 		[ItemID.Diamond] = TileID.Diamond
 	};
 
-	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh }, true);
+	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh, TileID.VanityTreeSakura, TileID.VanityTreeYellowWillow, TileID.LivingWood }, true);
 
 	static readonly Dictionary<int, Landmark> ForageGrounds = new()
 	{
@@ -69,6 +69,8 @@ public static class ResourceSources
 		tileSources = null;
 		npcSources = null;
 	}
+
+	public static bool IsWood(int itemType) => WoodItems.Contains(itemType);
 
 	public static ResourceSource For(int itemType)
 	{

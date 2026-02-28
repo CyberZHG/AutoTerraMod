@@ -360,7 +360,8 @@ public sealed class GatherTask : BotTask
 			Prospect();
 			return;
 		}
-		var tool = Tiles.IsTree ? Bot.Hands.BestAxe : Bot.Hands.BestPickaxe;
+		bool chopping = Tiles.IsTree && !TileQuery.IsExposedLivingWood(tile.X, tile.Y);
+		var tool = chopping ? Bot.Hands.BestAxe : Bot.Hands.BestPickaxe;
 		if (tool != null && Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.Stop();
@@ -371,7 +372,7 @@ public sealed class GatherTask : BotTask
 				target = null;
 				return;
 			}
-			var result = Tiles.IsTree ? Bot.Hands.Chop(tile)
+			var result = chopping ? Bot.Hands.Chop(tile)
 				: Main.tileCut[tileType] ? Bot.Hands.Cut(tile)
 				: Bot.Hands.Dig(tile);
 			if (result is ToolResult.Unbreakable or ToolResult.NoTool)
@@ -387,7 +388,7 @@ public sealed class GatherTask : BotTask
 	{
 		if (target is not Point tile || !Tiles.TileTypes.Contains(TileQuery.TypeAt(tile)) || !Tiles.Accepts(tile.X, tile.Y))
 			return false;
-		return !Tiles.IsTree || TileQuery.IsTreeBase(tile.X, tile.Y);
+		return !Tiles.IsTree || TileQuery.IsWoodSource(tile.X, tile.Y);
 	}
 
 	void Abandon(Point tile)
@@ -401,7 +402,7 @@ public sealed class GatherTask : BotTask
 	{
 		var origin = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
-		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsTreeBase : (x, y) => !HouseInspector.IsProtected(x, y) && Tiles.Accepts(x, y);
+		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsWoodSource : (x, y) => !HouseInspector.IsProtected(x, y) && Tiles.Accepts(x, y);
 		var visible = WorldScan.NearestVisibleTile(origin, Tiles.TileTypes, accept, unreachable, knowledge);
 		if (visible != null)
 			return visible;
@@ -495,7 +496,7 @@ public sealed class PickupTask : BotTask
 		Detail = item.Name;
 		if (item.type == ItemID.FallenStar)
 			return 58f;
-		if (IsMinedTreasure(item) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
+		if ((IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
 			return FreshDropPriority;
 		bool planned = Bot.Brain.Plan is GatherStep gather && gather.ItemType == item.type;
 		return planned ? 60f : 40f;
