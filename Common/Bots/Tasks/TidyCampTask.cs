@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -93,12 +94,13 @@ public sealed class TidyCampTask : BotTask
 	{
 		Point? nearest = null;
 		long nearestDistance = long.MaxValue;
-		if (PavingBlock() == null)
-			return null;
+		bool canPave = PavingBlock() != null;
+		bool canBuildEntrance = EntrancePlatform() != null;
 		int y = settlement.Floor;
 		for (int x = settlement.Left - CampMargin; x <= settlement.Right + CampMargin; x++)
 		{
-			if (!IsRoadGap(settlement, x, y) || RecentlyFailed(new Point(x, y)))
+			bool work = canPave && IsRoadGap(settlement, x, y) || IsEntranceWork(settlement, x, y) && (TileQuery.HasTile(new Point(x, y)) || canBuildEntrance);
+			if (!work || RecentlyFailed(new Point(x, y)))
 				continue;
 			long distance = WorldScan.DistanceSq(Bot.CenterTile, new Point(x, y));
 			if (distance < nearestDistance)
@@ -109,6 +111,33 @@ public sealed class TidyCampTask : BotTask
 		}
 		return nearest;
 	}
+
+	const int EntranceWidth = 3;
+	static readonly int[] EntranceOffsets = { 5, 25 };
+
+	static bool IsEntrance(Building.Settlement settlement, int x)
+	{
+		foreach (int offset in EntranceOffsets)
+		{
+			int leftStart = settlement.Left - offset - EntranceWidth + 1;
+			int rightStart = settlement.Right + offset;
+			if (x >= leftStart && x < leftStart + EntranceWidth || x >= rightStart && x < rightStart + EntranceWidth)
+				return true;
+		}
+		return false;
+	}
+
+	static bool IsEntranceWork(Building.Settlement settlement, int x, int y)
+	{
+		if (y != settlement.Floor || !IsEntrance(settlement, x) || TileQuery.IsPlatform(x, y) || !WorldGen.InWorld(x, y, 10)
+			|| Main.tile[x, y].LiquidAmount > 0 || Building.HouseInspector.IsProtected(x, y) || InAnotherCamp(settlement, x, y))
+			return false;
+		if (!TileQuery.HasTile(new Point(x, y)))
+			return true;
+		return !Main.tileFrameImportant[Main.tile[x, y].TileType] && WorldGen.CanKillTile(x, y);
+	}
+
+	Item EntrancePlatform() => Inventory.Items(Avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]);
 
 	static bool InCamp(Building.Settlement settlement, int x) => x >= settlement.Left - CampMargin && x <= settlement.Right + CampMargin;
 
@@ -132,7 +161,7 @@ public sealed class TidyCampTask : BotTask
 
 	static bool IsRoadGap(Building.Settlement settlement, int x, int y)
 	{
-		if (!InCamp(settlement, x) || y != settlement.Floor || !WorldGen.InWorld(x, y, 10))
+		if (!InCamp(settlement, x) || IsEntrance(settlement, x) || y != settlement.Floor || !WorldGen.InWorld(x, y, 10))
 			return false;
 		var tile = Main.tile[x, y];
 		return !tile.HasTile && tile.LiquidAmount == 0 && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y);
@@ -156,7 +185,7 @@ public sealed class TidyCampTask : BotTask
 		if (IsClutter(tile.X, tile.Y))
 			return true;
 		var settlement = Bot.Faction.Settlement;
-		return settlement != null && (IsCampObstacle(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
+		return settlement != null && (IsCampObstacle(settlement, tile.X, tile.Y) || IsEntranceWork(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
 	}
 
 	const float RopeInUseDistance = 16f * 4f;
@@ -192,8 +221,15 @@ public sealed class TidyCampTask : BotTask
 			return;
 		}
 		Bot.Motor.RopesForbidden = true;
-		bool paving = Bot.Faction.Settlement is { } camp && IsRoadGap(camp, tile.X, tile.Y);
-		var tool = paving ? PavingBlock() : Bot.Hands.BestPickaxe;
+		var camp = Bot.Faction.Settlement;
+		bool entrance = camp != null && IsEntranceWork(camp, tile.X, tile.Y) && !TileQuery.HasTile(tile);
+		bool paving = entrance || camp != null && IsRoadGap(camp, tile.X, tile.Y);
+		var tool = entrance ? EntrancePlatform() : paving ? PavingBlock() : Bot.Hands.BestPickaxe;
+		if (tool == null)
+		{
+			GiveUp(tile);
+			return;
+		}
 		if (!Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.MoveTo(tile.ToWorldCoordinates(), 24f);
