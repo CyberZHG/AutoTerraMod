@@ -41,6 +41,12 @@ public sealed class EscapeTask : BotTask
 	int highestY;
 	uint climbedAt;
 	bool startedForAir;
+	bool climbAllTheWay;
+	Vector2 lastEscapeStart;
+	uint lastEscapeAt;
+	const int LocalEscapeTiles = 20;
+	const int RepeatEscapeTiles = 40;
+	const uint RepeatEscapeTicks = 7200;
 
 	public EscapeTask(Bot bot) : base(bot) { }
 
@@ -54,6 +60,9 @@ public sealed class EscapeTask : BotTask
 		base.Start();
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
+		climbAllTheWay = lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
+		lastEscapeStart = Bot.Center;
+		lastEscapeAt = Main.GameUpdateCount;
 		startedForAir = Bot.Npc is NPC swimmer && (swimmer.wet || Bot.Vitals.BreathFraction < 1f);
 		climbStartedAt = 0;
 		routedAt = Main.GameUpdateCount;
@@ -120,6 +129,12 @@ public sealed class EscapeTask : BotTask
 		var here = Bot.CenterTile;
 		bool reachedSurface = headingForSurface && (here.Y <= TileQuery.SurfaceY(here.X) + surfaceMargin || legIsSurfaceExit && Bot.Motor.HasArrived);
 		bool standing = Bot.Npc is NPC body && body.velocity.Y == 0f;
+		if (headingForSurface && !climbAllTheWay && standing && Vector2.Distance(Bot.Center, start) > LocalEscapeTiles * 16f)
+		{
+			BotDiagnostics.Log(Bot, $"got clear of {start.ToTileCoordinates()} at {here}, ending the escape");
+			Finish();
+			return;
+		}
 		if (startedForAir && standing && !Bot.Npc.wet && Bot.Vitals.BreathFraction >= 1f)
 		{
 			BotDiagnostics.Log(Bot, $"out of the water at {here}, ending the escape");

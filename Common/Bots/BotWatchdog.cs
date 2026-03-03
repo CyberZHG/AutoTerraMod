@@ -14,7 +14,7 @@ public sealed class BotWatchdog
 	const int TrappedRadiusTiles = 10;
 	const int ForceEscapeStallTicks = 3600;
 	const int NavigationFailureWindowTicks = 3600;
-	const int NavigationFailuresBeforeEscape = 3;
+	const int NavigationFailuresBeforeEscape = 4;
 
 	readonly Bot bot;
 	uint lastProgress;

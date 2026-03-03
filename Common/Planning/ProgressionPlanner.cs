@@ -312,6 +312,8 @@ public static class ProgressionPlanner
 			var source = ResourceSources.For(itemType);
 			if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
 				return PlanStep.Blocked;
+			if (source is TileSource { IsTree: true } && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin)
+				return PlanStep.Blocked;
 			if (source != null)
 				return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
 			foreach (var recipe in RecipeIndex.For(itemType))
@@ -403,6 +405,7 @@ public static class ProgressionPlanner
 	}
 
 	const int EasyPurchaseShare = 4;
+	const int UndergroundMargin = 20;
 
 	public static bool CanAffordEasily(Bot bot, int itemType, int amount)
 	{

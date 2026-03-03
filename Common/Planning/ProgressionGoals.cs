@@ -269,7 +269,10 @@ public sealed class StructureGoal : ProgressionGoal
 		var placement = HouseMaterials.ReplacementFor(operation.Action);
 		if (!HouseMaterials.IsNeeded(placement))
 			return new BuildHouseStep(operation);
-		var line = ConstructionBill.For(structure, materials, bot).First(entry => entry.Placement == placement);
+		if (ConstructionBill.For(structure, materials, bot).Where(entry => entry.Placement == placement).Select(entry => (BillLine?)entry).FirstOrDefault() is not BillLine line)
+			return HouseMaterials.Find(bot.Avatar, placement, materials) == null
+				? ProgressionPlanner.ObtainAny(bot, HouseMaterials.Options(placement, materials))
+				: new BuildHouseStep(operation);
 		int batch = Math.Min(line.Amount, MaterialBatch);
 		if (HouseMaterials.Find(bot.Avatar, placement, materials) == null)
 			return placement is BuildAction.PlaceDoor or BuildAction.PlaceTable or BuildAction.PlaceChair
