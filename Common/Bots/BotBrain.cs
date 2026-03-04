@@ -193,6 +193,7 @@ public sealed class BotBrain
 		using (Probes.Measure("Upkeep"))
 		{
 			StatBoosters.ConsumeUsable(bot);
+			Bags.OpenOneAtHome(bot);
 			bot.Hands.DrinkObsidianSkinIfInHell();
 			TreePlanter.PlantIfUseful(bot);
 			Inventory.TidySpecialSlots(bot.Avatar);

@@ -65,6 +65,25 @@ public abstract class BotTask
 		return true;
 	}
 
+	protected bool TryRandomTeleport()
+	{
+		var potion = Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.TeleportationPotion);
+		if (potion == null || Bot.Npc is not NPC body)
+			return false;
+		var before = Avatar.position;
+		using (AvatarPresence.Enter())
+			Avatar.TeleportationPotion();
+		if (Avatar.position == before)
+			return false;
+		Inventory.ConsumeOne(Avatar, potion);
+		body.Bottom = Avatar.Bottom;
+		body.velocity = Vector2.Zero;
+		Bot.Vitals.Teleported(body);
+		Bot.Motor.Stop();
+		BotDiagnostics.Log(Bot, $"drank a Teleportation Potion and landed at {Bot.CenterTile}");
+		return true;
+	}
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
 		Bot.Motor.MoveTo(target, radius);

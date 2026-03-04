@@ -39,6 +39,7 @@ public static class Kit
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
 				|| Tasks.CraftTask.IsPortableStation(item)
+				|| item.type == ItemID.TeleportationPotion
 				|| item.type == ItemID.Bed || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)

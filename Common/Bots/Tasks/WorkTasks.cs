@@ -341,7 +341,11 @@ public sealed class GatherTask : BotTask
 		prospectTarget = null;
 		searchCooldown = 0;
 		prospectDirection = Main.rand.NextBool() ? 1 : -1;
+		if (!Tiles.IsTree && Main.rand.NextFloat() < TeleportChance && Shops.WithinShoppingTrip(Bot, Bot.Faction.BaseCenter))
+			TryRandomTeleport();
 	}
+
+	const float TeleportChance = 0.3f;
 
 	public override void Tick()
 	{

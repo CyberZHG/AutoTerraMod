@@ -21,6 +21,8 @@ public sealed class TidyCampTask : BotTask
 	void GiveUp(Point tile)
 	{
 		failedTiles[tile] = Main.GameUpdateCount;
+		tombstone = null;
+		workingOn = null;
 		if (failedTiles.Count > 256)
 			failedTiles.Clear();
 		IsFinished = true;
@@ -32,13 +34,20 @@ public sealed class TidyCampTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (tombstone is not Point held || !NeedsWork(held))
+		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance)
+			return 0f;
+		if (tombstone is not Point held || !NeedsWork(held) || RecentlyFailed(held))
 			tombstone = FindTombstone();
 		if (tombstone == null || Bot.Hands.BestPickaxe == null)
 			return 0f;
 		Detail = "";
 		return 45f + Traits.Building * 15f;
 	}
+
+	const float MaxTidyDistance = 16f * 120f;
+	const uint TargetPatienceTicks = 300;
+	Point? workingOn;
+	uint workingSince;
 
 	const int ScanIntervalTicks = 120;
 	const uint RopeScanIntervalTicks = 18000;
@@ -146,7 +155,7 @@ public sealed class TidyCampTask : BotTask
 		if (!InCamp(settlement, x) || y >= settlement.Floor || y < settlement.Top - CampRowsAbove || !WorldGen.InWorld(x, y, 10) || !TileQuery.IsSolid(x, y))
 			return false;
 		int type = Main.tile[x, y].TileType;
-		return !Main.tileFrameImportant[type] && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y) && WorldGen.CanKillTile(x, y);
+		return !Main.tileFrameImportant[type] && TileQuery.IsExposed(x, y) && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y) && WorldGen.CanKillTile(x, y);
 	}
 
 	static bool InAnotherCamp(Building.Settlement own, int x, int y)
@@ -232,9 +241,20 @@ public sealed class TidyCampTask : BotTask
 		}
 		if (!Bot.Hands.CanReach(tool, tile))
 		{
+			workingOn = null;
 			Bot.Motor.MoveTo(tile.ToWorldCoordinates(), 24f);
-			if (Bot.Motor.IsStuck)
+			if (Bot.Motor.IsStuck || Bot.Motor.HasArrived)
 				GiveUp(tile);
+			return;
+		}
+		if (workingOn != tile)
+		{
+			workingOn = tile;
+			workingSince = Main.GameUpdateCount;
+		}
+		else if (Main.GameUpdateCount - workingSince > TargetPatienceTicks)
+		{
+			GiveUp(tile);
 			return;
 		}
 		Bot.Motor.Stop();
