@@ -128,8 +128,8 @@ public sealed class BotMotor
 	public bool HasRoute => destination != null && follower.HasPath;
 	public Vector2? Destination => destination;
 	public bool ScaffoldingAllowed { get; set; }
-	public bool RopesForbidden { get; set; }
-	bool MayPlaceRope => bot.Hands.HasRope && !RopesForbidden;
+	public bool PlacementForbidden { get; set; }
+	bool MayPlaceRope => bot.Hands.HasRope && !PlacementForbidden;
 	public bool ClimbingStraightUp { get; set; }
 	public bool Tunneling { get; private set; }
 
@@ -214,7 +214,7 @@ public sealed class BotMotor
 		{
 			TrackProgress(npc);
 			ScaffoldingAllowed = false;
-			RopesForbidden = false;
+			PlacementForbidden = false;
 			return;
 		}
 
@@ -264,14 +264,20 @@ public sealed class BotMotor
 
 		if (TileToDig is Point dig)
 			PassThrough(dig, npc.direction);
-		else if (BridgeTile is Point bridge)
+		else if (!PlacementForbidden)
+			PlacePlannedSupport();
+		ScaffoldingAllowed = false;
+		PlacementForbidden = false;
+	}
+
+	void PlacePlannedSupport()
+	{
+		if (BridgeTile is Point bridge)
 			bot.Hands.PlaceBridge(bridge);
 		else if (RopeTile is Point rope)
 			bot.Hands.PlaceRope(rope);
 		else if (ScaffoldTile is Point scaffold)
 			PlaceFoothold(scaffold);
-		ScaffoldingAllowed = false;
-		RopesForbidden = false;
 	}
 
 	void TunnelStep(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump)
@@ -624,11 +630,12 @@ public sealed class BotMotor
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
 				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe);
 		}
-		bool canRope = gear.CanRope && !RopesForbidden;
+		bool canRope = gear.CanRope && !PlacementForbidden;
 		return gear with
 		{
 			CanRope = canRope,
-			CanPillar = gear.CanBridge && (ScaffoldingAllowed || !canRope),
+			CanBridge = gear.CanBridge && !PlacementForbidden,
+			CanPillar = gear.CanBridge && !PlacementForbidden && (ScaffoldingAllowed || !canRope),
 			MaxFall = gear.FlyRise > 0 ? WingedSafeFall : AffordableFall
 		};
 	}

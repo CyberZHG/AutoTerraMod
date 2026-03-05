@@ -730,6 +730,14 @@ public sealed class BotHands
 			SoundEngine.PlaySound(item.UseSound.Value, npc.Center);
 	}
 
+	void PutAwayHeldItem()
+	{
+		if (Avatar.HeldItem.holdStyle == ItemHoldStyleID.None)
+			return;
+		Avatar.selectedItem = Math.Max(0, Inventory.FindSlot(Avatar, BestPickaxe));
+		Avatar.lastVisualizedSelectedItem = Avatar.HeldItem.Clone();
+	}
+
 	void Animate()
 	{
 		if (Avatar.itemAnimation <= 0)
@@ -737,6 +745,11 @@ public sealed class BotHands
 		Avatar.itemAnimation--;
 		if (Avatar.itemTime > 0)
 			Avatar.itemTime--;
+		if (Avatar.itemAnimation == 0)
+		{
+			PutAwayHeldItem();
+			return;
+		}
 		var item = Avatar.lastVisualizedSelectedItem;
 		if (item == null || item.IsAir)
 			return;

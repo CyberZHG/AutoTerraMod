@@ -75,6 +75,8 @@ public sealed class BotGrapple
 		Anchor = hold;
 		climbing = true;
 		hangTicks = 0;
+		closestPull = float.MaxValue;
+		snaggedTicks = 0;
 		body.noGravity = true;
 		SoundEngine.PlaySound(SoundID.Item1, body.Center);
 		BotDiagnostics.Log(bot, $"hooked {hold.ToTileCoordinates()} to climb");
@@ -101,6 +103,8 @@ public sealed class BotGrapple
 		lastAnchor = anchor;
 		lastAnchorAt = Main.GameUpdateCount;
 		hangTicks = 0;
+		closestPull = float.MaxValue;
+		snaggedTicks = 0;
 		body.noGravity = true;
 		SoundEngine.PlaySound(SoundID.Item1, body.Center);
 		BotDiagnostics.Log(bot, $"grappled to {anchor.Value.ToTileCoordinates()}");
@@ -115,6 +119,13 @@ public sealed class BotGrapple
 		float distance = toAnchor.Length();
 		IsHanging = distance <= HangDistance;
 		body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * PullSpeed;
+		if (!IsHanging && Snagged(distance))
+		{
+			if (distance > SnagLogDistance)
+				BotDiagnostics.Log(bot, $"hook pull snagged on an edge {distance / 16f:0.0} tiles short of {anchor.ToTileCoordinates()}, letting go");
+			Release(body, jump: true);
+			return;
+		}
 		if (climbing)
 		{
 			if (IsHanging || ++hangTicks > ClimbPullTicks)
@@ -128,6 +139,23 @@ public sealed class BotGrapple
 			Release(body, jump: false);
 		else if (destination is Vector2 target && ShouldLetGo(anchor, target))
 			Release(body, jump: target.Y < anchor.Y);
+	}
+
+	const int SnagTicks = 30;
+	const float SnagLogDistance = 16f * 3f;
+	const float PullProgress = 2f;
+	float closestPull;
+	int snaggedTicks;
+
+	bool Snagged(float distance)
+	{
+		if (distance < closestPull - PullProgress)
+		{
+			closestPull = distance;
+			snaggedTicks = 0;
+			return false;
+		}
+		return ++snaggedTicks > SnagTicks;
 	}
 
 	public void Release(NPC body, bool jump)
@@ -150,6 +178,8 @@ public sealed class BotGrapple
 			return false;
 		Anchor = anchor;
 		hangTicks = 0;
+		closestPull = float.MaxValue;
+		snaggedTicks = 0;
 		body.noGravity = true;
 		SoundEngine.PlaySound(SoundID.Item1, body.Center);
 		BotDiagnostics.Log(bot, $"hooked {anchor.Value.ToTileCoordinates()} to break a fall");

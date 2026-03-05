@@ -41,7 +41,7 @@ public sealed class TidyCampTask : BotTask
 		if (tombstone == null || Bot.Hands.BestPickaxe == null)
 			return 0f;
 		Detail = "";
-		return 45f + Traits.Building * 15f;
+		return 42f + Traits.Building * 10f;
 	}
 
 	const float MaxTidyDistance = 16f * 120f;
@@ -229,7 +229,7 @@ public sealed class TidyCampTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		Bot.Motor.RopesForbidden = true;
+		Bot.Motor.PlacementForbidden = true;
 		var camp = Bot.Faction.Settlement;
 		bool entrance = camp != null && IsEntranceWork(camp, tile.X, tile.Y) && !TileQuery.HasTile(tile);
 		bool paving = entrance || camp != null && IsRoadGap(camp, tile.X, tile.Y);
