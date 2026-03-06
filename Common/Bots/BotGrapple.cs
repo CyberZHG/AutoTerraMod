@@ -73,6 +73,7 @@ public sealed class BotGrapple
 			return false;
 		NoteLatch(body);
 		Anchor = hold;
+		pullTo = BesideEdge(body, hold);
 		climbing = true;
 		hangTicks = 0;
 		closestPull = float.MaxValue;
@@ -81,6 +82,15 @@ public sealed class BotGrapple
 		SoundEngine.PlaySound(SoundID.Item1, body.Center);
 		BotDiagnostics.Log(bot, $"hooked {hold.ToTileCoordinates()} to climb");
 		return true;
+	}
+
+	Vector2 pullTo;
+	const float EdgeClearance = 2f;
+
+	static Vector2 BesideEdge(NPC body, Vector2 hold)
+	{
+		int hang = World.TileQuery.IsSolid((int)(hold.X - 1f) / 16, (int)hold.Y / 16) ? 1 : -1;
+		return hold + new Vector2(hang * (body.width / 2f + EdgeClearance), 0f);
 	}
 
 	public bool ConsumeClimbRelease()
@@ -100,6 +110,7 @@ public sealed class BotGrapple
 			return false;
 		NoteLatch(body);
 		Anchor = anchor;
+		pullTo = anchor.Value;
 		lastAnchor = anchor;
 		lastAnchorAt = Main.GameUpdateCount;
 		hangTicks = 0;
@@ -115,7 +126,7 @@ public sealed class BotGrapple
 	{
 		if (Anchor is not Vector2 anchor)
 			return;
-		var toAnchor = anchor - body.Center;
+		var toAnchor = pullTo - body.Center;
 		float distance = toAnchor.Length();
 		IsHanging = distance <= HangDistance;
 		body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * PullSpeed;
@@ -177,6 +188,7 @@ public sealed class BotGrapple
 		if (anchor == null)
 			return false;
 		Anchor = anchor;
+		pullTo = anchor.Value;
 		hangTicks = 0;
 		closestPull = float.MaxValue;
 		snaggedTicks = 0;

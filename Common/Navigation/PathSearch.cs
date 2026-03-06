@@ -331,7 +331,7 @@ public sealed class PathSearch
 		}
 	}
 
-	const int HookColumnSpan = 6;
+	const int HookColumnSpan = 10;
 	const float HookCost = 5f;
 	const float HookCostPerTile = 0.4f;
 

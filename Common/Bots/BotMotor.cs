@@ -899,7 +899,7 @@ public sealed class BotMotor
 				return;
 			}
 		}
-		if (rise > JumpReachPixels && bot.Grapple.TryLatch(npc, target))
+		if (rise > JumpReachPixels && HasNoRoute && bot.Grapple.TryLatch(npc, target))
 			return;
 		if (ClimbRope(npc, body, grounded))
 			return;

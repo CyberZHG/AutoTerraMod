@@ -183,6 +183,8 @@ public sealed class PathFollower
 	static float AimX(PathNode node) => node.Arrival == MoveKind.Drop ? PathFinder.CenterXOf(node.Feet.X) : FootingCenterX(node.Feet);
 
 	const int HookJumpHoldTicks = 15;
+	const float HookLaunchClearance = 6f;
+	Point? hookedToward;
 
 	MotorIntent Execute(NPC body, Point feet, bool grounded, PathNode node, NavigationAbilities abilities)
 	{
@@ -190,15 +192,33 @@ public sealed class PathFollower
 		if (node.Arrival == MoveKind.Hook)
 		{
 			intent.MoveDirection = Math.Sign(FootingCenterX(node.Feet) - body.Center.X);
-			if (grounded && PathFinder.HookHold(feet, node.Feet, abilities.HookReach) is Vector2 hold)
+			if (grounded || hookedToward != node.Feet)
 			{
-				intent.HookAt = hold;
-				intent.MoveDirection = 0;
+				hookedToward = null;
+				if (PathFinder.HookHold(feet, node.Feet, abilities.HookReach) is Vector2 hold)
+				{
+					int hang = hold.X > FootingCenterX(node.Feet) ? 1 : -1;
+					float launchX = hold.X + hang * (body.width / 2f + HookLaunchClearance);
+					if ((body.Center.X - launchX) * hang >= 0f)
+					{
+						intent.HookAt = hold;
+						intent.MoveDirection = 0;
+						hookedToward = node.Feet;
+						return intent;
+					}
+					intent.MoveDirection = hang;
+					intent.Jump = grounded && !PathFinder.IsSupportedNow(feet.X + hang, feet.Y);
+					return intent;
+				}
 			}
-			else if (!grounded)
+			if (!grounded)
 			{
-				intent.Jump = body.velocity.Y < 0f;
+				bool aboveLedge = feet.Y <= node.Feet.Y;
+				float toLedge = FootingCenterX(node.Feet) - body.Center.X;
+				intent.Jump = body.velocity.Y < 0f && !aboveLedge;
 				intent.JumpHoldTicks = HookJumpHoldTicks;
+				intent.MoveDirection = Math.Abs(toLedge) > CenteringTolerance ? Math.Sign(toLedge) : 0;
+				intent.Creep = aboveLedge;
 			}
 			return intent;
 		}
