@@ -124,7 +124,7 @@ public sealed class TidyCampTask : BotTask
 	const int EntranceWidth = 3;
 	static readonly int[] EntranceOffsets = { 5, 25 };
 
-	static bool IsEntrance(Building.Settlement settlement, int x)
+	public static bool IsEntrance(Building.Settlement settlement, int x)
 	{
 		foreach (int offset in EntranceOffsets)
 		{

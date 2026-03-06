@@ -64,6 +64,7 @@ public sealed class BotBrain
 			new StoreTask(bot),
 			new DeliverTask(bot),
 			new TidyCampTask(bot),
+			new PlantTreesTask(bot),
 			new WithdrawTask(bot),
 			new ReturnHomeTask(bot),
 			new ExploreTask(bot),
@@ -195,7 +196,6 @@ public sealed class BotBrain
 			StatBoosters.ConsumeUsable(bot);
 			Bags.OpenOneAtHome(bot);
 			bot.Hands.DrinkObsidianSkinIfInHell();
-			TreePlanter.PlantIfUseful(bot);
 			Inventory.TidySpecialSlots(bot.Avatar);
 		}
 		if (++reconsiderCount % ObserveEveryReconsiders == 0)

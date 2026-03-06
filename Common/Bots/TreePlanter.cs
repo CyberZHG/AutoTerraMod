@@ -12,34 +12,42 @@ public static class TreePlanter
 	const int GroveMargin = 40;
 	const int MaxSaplings = 12;
 	const int SaplingSpacing = 3;
-	const float NearBase = 16f * 40f;
 
-	public static void PlantIfUseful(Bot bot)
+	const int GroveGap = 3;
+	const int GroundSearchAbove = 15;
+	const int GroundSearchBelow = 10;
+
+	public static bool WantsSaplings(Building.Settlement settlement) => CountSaplings(settlement) < MaxSaplings;
+
+	public static Point? FindSpot(Bot bot, Building.Settlement settlement, Item acorn)
 	{
-		var settlement = bot.Faction.Settlement;
-		if (settlement == null || Vector2.Distance(bot.Center, bot.Faction.BaseCenter) > NearBase)
-			return;
-		var acorn = Inventory.Items(bot.Avatar).FirstOrDefault(item => item.type == ItemID.Acorn);
-		if (acorn == null || CountSaplings(settlement) >= MaxSaplings)
-			return;
+		Point? best = null;
+		long bestDistance = long.MaxValue;
 		var here = bot.CenterTile;
-		for (int dx = -Player.tileRangeX; dx <= Player.tileRangeX; dx++)
+		for (int x = settlement.Left - GroveMargin; x <= settlement.Right + GroveMargin; x++)
 		{
-			int x = here.X + dx;
-			if (x >= settlement.Left - 2 && x <= settlement.Right + 2)
+			if (x >= settlement.Left - GroveGap && x <= settlement.Right + GroveGap || Tasks.TidyCampTask.IsEntrance(settlement, x) || !WorldGen.InWorld(x, settlement.Floor, 10))
 				continue;
-			for (int y = here.Y - 3; y <= here.Y + 4; y++)
+			if (GroundAt(x, settlement.Floor) is not Point spot || !IsGoodPlantingSpot(spot) || !bot.Hands.CanPlaceAt(acorn, spot))
+				continue;
+			long distance = WorldScan.DistanceSq(here, spot);
+			if (distance < bestDistance)
 			{
-				var spot = new Point(x, y);
-				if (!IsGoodPlantingSpot(spot) || !bot.Hands.CanPlaceAt(acorn, spot))
-					continue;
-				if (bot.Hands.Place(acorn, spot))
-				{
-					BotDiagnostics.Log(bot, $"planted an acorn at {spot}");
-					return;
-				}
+				best = spot;
+				bestDistance = distance;
 			}
 		}
+		return best;
+	}
+
+	static Point? GroundAt(int x, int floor)
+	{
+		for (int y = floor - GroundSearchAbove; y <= floor + GroundSearchBelow; y++)
+		{
+			if (TileQuery.IsSolid(x, y + 1))
+				return Main.tile[x, y].HasTile ? null : new Point(x, y);
+		}
+		return null;
 	}
 
 	static bool IsGoodPlantingSpot(Point spot)

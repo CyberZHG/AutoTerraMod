@@ -80,7 +80,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile))
+		if (InOtherBase(tile) || IsGrowingSapling(tile))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
@@ -219,11 +219,15 @@ public sealed class BotHands
 		return true;
 	}
 
+	public static bool IsGrowingSapling(Point tile) =>
+		TileID.Sets.TreeSapling[Math.Max(0, TileQuery.TypeAt(tile))] && TileQuery.HasTile(tile)
+		&& !Systems.BotWorldSystem.Factions.Any(faction => faction.Settlement?.Contains(tile.X, tile.Y) == true);
+
 	public ToolResult Cut(Point tile)
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile))
+		if (InOtherBase(tile) || IsGrowingSapling(tile))
 			return ToolResult.Unbreakable;
 		var tool = BestWeapon() ?? BestPickaxe;
 		if (tool == null)
@@ -307,7 +311,7 @@ public sealed class BotHands
 	static void ClearReplaceableTile(Point tile)
 	{
 		var existing = Main.tile[tile.X, tile.Y];
-		if (existing.HasTile && (Main.tileCut[existing.TileType] || TileID.Sets.BreakableWhenPlacing[existing.TileType]))
+		if (existing.HasTile && !IsGrowingSapling(tile) && (Main.tileCut[existing.TileType] || TileID.Sets.BreakableWhenPlacing[existing.TileType]))
 			WorldGen.KillTile(tile.X, tile.Y);
 	}
 

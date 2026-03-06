@@ -42,6 +42,7 @@ public sealed class EscapeTask : BotTask
 	uint climbedAt;
 	bool startedForAir;
 	bool climbAllTheWay;
+	bool underCamp;
 	Vector2 lastEscapeStart;
 	uint lastEscapeAt;
 	const int LocalEscapeTiles = 20;
@@ -60,7 +61,8 @@ public sealed class EscapeTask : BotTask
 		base.Start();
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
-		climbAllTheWay = lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
+		underCamp = BelowOwnCamp();
+		climbAllTheWay = underCamp || lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
 		lastEscapeStart = Bot.Center;
 		lastEscapeAt = Main.GameUpdateCount;
 		startedForAir = Bot.Npc is NPC swimmer && (swimmer.wet || Bot.Vitals.BreathFraction < 1f);
@@ -80,8 +82,8 @@ public sealed class EscapeTask : BotTask
 			destination = Bot.Center + new Vector2(Bot.Watchdog.EscapeDirection * OpenGroundTrip * 16f, 0f);
 			return;
 		}
-		surfaceMargin = SurfaceMarginTiles;
-		headingForSurface = here.Y > surfaceY + SurfaceMarginTiles;
+		surfaceMargin = BelowOwnCamp() ? PitSurfaceMargin : SurfaceMarginTiles;
+		headingForSurface = here.Y > surfaceY + surfaceMargin;
 		exitPlannedAt = 0;
 		exitSearch?.Cancel();
 		exitSearch = null;
@@ -100,6 +102,11 @@ public sealed class EscapeTask : BotTask
 	public override void Tick()
 	{
 		Bot.Motor.ScaffoldingAllowed = true;
+		if (underCamp)
+		{
+			TunnelOutFromUnderCamp();
+			return;
+		}
 		if (climbStartedAt == 0 && ShouldClimbStraightUp() && !Bot.Brain.OnExpedition && TryRecallHome())
 		{
 			Finish();
@@ -203,6 +210,30 @@ public sealed class EscapeTask : BotTask
 		if (!followingExit)
 			BotDiagnostics.Log(Bot, $"escaping toward exit {route.Nodes[^1].Feet} (reaches surface={route.ReachesGoal}) via {leg}");
 		followingExit = true;
+	}
+
+	const int BelowCampDepth = 60;
+	const int CampExitMargin = 6;
+
+	void TunnelOutFromUnderCamp()
+	{
+		var camp = Bot.Faction.Settlement;
+		var here = Bot.CenterTile;
+		if (camp == null || here.Y < camp.Floor - 1 || Main.GameUpdateCount - startedAt > MaxEscapeTicks)
+		{
+			Finish();
+			return;
+		}
+		int exitX = here.X - camp.Left < camp.Right - here.X ? camp.Left - CampExitMargin : camp.Right + CampExitMargin;
+		Bot.Motor.TunnelTo(new Vector2(exitX * 16f + 8f, (TileQuery.SurfaceY(exitX) - 2) * 16f), 32f);
+		if (Bot.Motor.HasArrived)
+			Finish();
+	}
+
+	bool BelowOwnCamp()
+	{
+		var here = Bot.CenterTile;
+		return Bot.Faction.Settlement is { } camp && here.X >= camp.Left && here.X <= camp.Right && here.Y > camp.Floor && here.Y < camp.Floor + BelowCampDepth;
 	}
 
 	bool ShouldClimbStraightUp() =>

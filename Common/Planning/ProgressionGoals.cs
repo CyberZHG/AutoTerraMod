@@ -866,7 +866,7 @@ public static class ProgressionGoals
 		goals.Add(new OutpostKitGoal());
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
-		goals.Add(new StockpileGoal("Wood", 150, 300, bot => Wood));
+		goals.Add(new StockpileGoal("Wood", 150, 300, bot => World.TreeSupply.Plentiful(bot.Faction) ? Wood : System.Array.Empty<int>()));
 		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
 		goals.Add(new StockpileGoal("Arrows", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Arrow)));
 		goals.Add(new StockpileGoal("Bullets", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Bullet)));

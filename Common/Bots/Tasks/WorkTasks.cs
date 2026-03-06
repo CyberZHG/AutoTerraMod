@@ -72,7 +72,8 @@ public sealed class CraftTask : BotTask
 		int missingStation = recipe.requiredTile.FirstOrDefault(tile => !Avatar.adjTile[tile], -1);
 		if (missingStation >= 0)
 		{
-			if (FarFromStation(missingStation) && SetUpPortableStation(missingStation, PortableDepth))
+			bool stationUnreachable = Main.GameUpdateCount - stationStuckAt < StationStuckMemoryTicks;
+			if ((stationUnreachable || FarFromStation(missingStation)) && SetUpPortableStation(missingStation, PortableDepth))
 				return;
 			WalkToStation(missingStation);
 			return;
@@ -242,6 +243,9 @@ public sealed class CraftTask : BotTask
 		}
 	}
 
+	const uint StationStuckMemoryTicks = 1800;
+	uint stationStuckAt;
+
 	void WalkToStation(int stationTile)
 	{
 		var location = Stations.LocateAnywhere(Bot.Faction, stationTile, Bot.CenterTile);
@@ -259,6 +263,9 @@ public sealed class CraftTask : BotTask
 		if (Bot.Motor.IsStuck)
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}; motor: {Bot.Motor.Describe()}{World.TerrainDump.Around(Bot.CenterTile, 30, 12)}");
+			stationStuckAt = Main.GameUpdateCount;
+			if (Bot.Faction.Settlement is { } camp && camp.Contains(station.X, station.Y) && Bot.CenterTile.Y > camp.Floor)
+				Bot.Watchdog.RequestEscape();
 			IsFinished = true;
 		}
 	}
