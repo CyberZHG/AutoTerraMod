@@ -3,6 +3,7 @@ using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ID;
 
 namespace AutoTerraMod.Common.Bots.Tasks;
 
@@ -175,6 +176,16 @@ public sealed class BuildTask : BotTask
 
 	static bool Overlaps(Point feet, Point tile) => tile.X >= feet.X && tile.X <= feet.X + 1 && tile.Y >= feet.Y - 2 && tile.Y <= feet.Y;
 
+	static void Flatten(int x, int y)
+	{
+		var anchor = Main.tile[x, y];
+		if (!anchor.HasTile || !anchor.IsHalfBlock && anchor.Slope == SlopeType.Solid)
+			return;
+		anchor.IsHalfBlock = false;
+		anchor.Slope = SlopeType.Solid;
+		WorldGen.SquareTileFrame(x, y);
+	}
+
 	bool Execute(BuildOperation operation, Item tool)
 	{
 		var tile = operation.Tile;
@@ -204,6 +215,10 @@ public sealed class BuildTask : BotTask
 						return true;
 				}
 				return false;
+			case BuildAction.PlaceDoor:
+				Flatten(tile.X, tile.Y - 2);
+				Flatten(tile.X, tile.Y + 2);
+				return Bot.Hands.Place(tool, tile);
 			case BuildAction.PlaceBlock when Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsSolid(tile) && !Main.tileCut[Main.tile[tile.X, tile.Y].TileType]:
 				if (TileQuery.IsPlatform(tile.X, tile.Y) || !Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType])
 					return Bot.Hands.Dig(tile) == ToolResult.Working;
