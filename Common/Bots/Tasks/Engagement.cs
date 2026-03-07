@@ -198,7 +198,32 @@ public static class Engagement
 				bot.Motor.RequestJump();
 			return;
 		}
-		bot.Motor.MoveTo(approach, BotHands.MeleeReach(weapon) * 0.5f);
+		KeepMeleeSpacing(bot, target, weapon);
+	}
+
+	const float MinMeleeGap = 6f;
+	const float MeleeStandoff = 0.6f;
+	const float BackOffStep = 48f;
+
+	static void KeepMeleeSpacing(Bot bot, NPC target, Item weapon)
+	{
+		var body = bot.Npc;
+		float reach = BotHands.MeleeReach(weapon);
+		int side = body.Center.X >= target.Center.X ? 1 : -1;
+		float gap = Math.Abs(target.Center.X - body.Center.X) - (target.width + body.width) / 2f;
+		bool inReach = bot.Hands.InMeleeReach(target, weapon);
+		if (inReach && gap < MinMeleeGap)
+		{
+			bot.Motor.MoveTo(body.Center + new Vector2(side * BackOffStep, 0f), 8f);
+			return;
+		}
+		if (inReach)
+		{
+			bot.Motor.Stop();
+			return;
+		}
+		var stand = new Vector2(target.Center.X + side * ((target.width + body.width) / 2f + reach * MeleeStandoff), target.Center.Y);
+		bot.Motor.MoveTo(stand, reach * 0.3f);
 	}
 
 	static void FightWorm(Bot bot, NPC anyPart)
