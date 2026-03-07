@@ -280,7 +280,7 @@ public sealed class PathSearch
 		if (abilities.CanPillar && supported && !swimming)
 			AddPillarEdges(x, y);
 
-		if (abilities.FlyRise > abilities.JumpRise && supported)
+		if (abilities.FlyRise > 0 && supported)
 			AddFlyEdges(x, y);
 
 		if (abilities.HookReach > abilities.JumpRise && supported)
@@ -320,7 +320,7 @@ public sealed class PathSearch
 
 	void AddFlyEdges(int x, int y)
 	{
-		for (int rise = 1; rise <= abilities.FlyRise && BodyClear(x, y - rise); rise++)
+		for (int rise = 1; rise <= abilities.JumpRise + abilities.FlyRise && BodyClear(x, y - rise); rise++)
 		{
 			if (rise <= abilities.JumpRise)
 				continue;

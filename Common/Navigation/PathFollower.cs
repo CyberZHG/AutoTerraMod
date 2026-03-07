@@ -55,6 +55,7 @@ public sealed class PathFollower
 		? $"path {index}/{path.Nodes.Count} next={path.Nodes[index].Feet}:{path.Nodes[index].Arrival} reachesGoal={path.ReachesGoal} stepTicks={stepTicks} goal={plannedGoal} intent(move={lastIntent.MoveDirection} jump={lastIntent.Jump} dig={lastIntent.DigTile} bridge={lastIntent.BridgeTile} climb={lastIntent.ClimbDirection})"
 		: $"no path (noRoute={HasNoRoute}, plannedAgo={Main.GameUpdateCount - plannedAt})";
 	public bool ReachesGoal => path.ReachesGoal;
+	public bool FinishedShortOfGoal => path.Nodes.Count > 0 && index >= path.Nodes.Count && !path.ReachesGoal;
 
 	public void Invalidate()
 	{
@@ -72,7 +73,7 @@ public sealed class PathFollower
 		var goal = new Point((int)(destination.X / 16f), (int)((destination.Y + 21f) / 16f));
 		bool grounded = body.velocity.Y == 0f || body.wet;
 		RememberFailedStep(feet);
-		if (pending == null && NeedsReplan(feet, goal, grounded) && MayReplan())
+		if (pending == null && (NeedsReplan(feet, goal, grounded) || OutOfMaterial(abilities)) && MayReplan())
 			BeginReplan(feet, goal, arriveRadius, abilities);
 		if (pending != null && PathFinder.Advance(pending))
 			InstallPending(feet);
@@ -94,6 +95,9 @@ public sealed class PathFollower
 			lastIntent.Creep = true;
 		return lastIntent;
 	}
+
+	bool OutOfMaterial(NavigationAbilities abilities) =>
+		index < path.Nodes.Count && (path.Nodes[index].Arrival == MoveKind.Pillar && !abilities.CanPillar || path.Nodes[index].Arrival == MoveKind.Bridge && !abilities.CanBridge);
 
 	bool NeedsReplan(Point feet, Point goal, bool grounded)
 	{
@@ -270,8 +274,6 @@ public sealed class PathFollower
 			case MoveKind.Fly:
 				intent.Fly = true;
 				intent.Jump = true;
-				if (rise > 0)
-					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Drop:
 				intent.DropThroughPlatforms = grounded && overNode;

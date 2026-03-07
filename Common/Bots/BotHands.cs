@@ -348,7 +348,58 @@ public sealed class BotHands
 
 	public bool HasBridgeMaterial => BridgeMaterial() != null;
 
-	public bool PlaceBridge(Point tile) => Place(BridgeMaterial(), tile);
+	public int BridgeMaterialCount()
+	{
+		int count = 0;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item)))
+				count += item.stack;
+		}
+		return count;
+	}
+
+	public bool PlaceBridge(Point tile)
+	{
+		var material = BridgeMaterial();
+		int type = material?.type ?? 0;
+		if (!Place(material, tile))
+			return false;
+		RememberPlaced(tile, type);
+		return true;
+	}
+
+	const int PlacedMemory = 64;
+	readonly System.Collections.Generic.Dictionary<Point, int> placedBlocks = new();
+
+	void RememberPlaced(Point tile, int itemType)
+	{
+		if (placedBlocks.Count >= PlacedMemory)
+			placedBlocks.Clear();
+		placedBlocks[tile] = itemType;
+	}
+
+	public System.Collections.Generic.IEnumerable<Point> PlacedBlocks => placedBlocks.Keys;
+
+	public bool IsReclaimable(Point tile) =>
+		placedBlocks.TryGetValue(tile, out int itemType) && TileQuery.HasTile(tile) && TileQuery.TypeAt(tile) == ContentSamples.ItemsByType[itemType].createTile;
+
+	public bool Reclaim(Point tile)
+	{
+		var pickaxe = BestPickaxe;
+		if (!IsReclaimable(tile) || pickaxe == null || !Ready || !CanReach(pickaxe, tile))
+			return false;
+		int itemType = placedBlocks[tile];
+		WorldGen.KillTile(tile.X, tile.Y, noItem: true);
+		if (TileQuery.HasTile(tile))
+			return false;
+		placedBlocks.Remove(tile);
+		Inventory.Add(Avatar, new Item(itemType));
+		Swing(pickaxe, CombinedHooks.TotalUseTime(pickaxe.useTime, Avatar, pickaxe), tile.ToWorldCoordinates());
+		bot.Motor.RefreshGear();
+		bot.Watchdog.RecordProgress();
+		return true;
+	}
 
 	public string DescribeBridgePlacement(Point tile)
 	{

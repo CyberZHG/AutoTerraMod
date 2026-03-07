@@ -26,6 +26,7 @@ public sealed class NavigationBench : ModSystem
 	const int BuildingBlocks = 60;
 	const int BenchRopes = 40;
 	const int BenchPlatforms = 40;
+	const int RecycleBlocks = 2;
 
 	static readonly BenchCase[] BuiltInCases =
 	{
@@ -670,6 +671,125 @@ public sealed class NavigationBench : ModSystem
 			"#....................................................#",
 			"######################################################"
 		}),
+		new("FledglingBlock", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................G...............#",
+			"#......................#...............#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#.................S....................#",
+			"########################################"
+		}),
+		new("RecyclePit", new[]
+		{
+			"##############",
+			"#............#",
+			"#............#",
+			"#............#",
+			"#.G..........#",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####....#####",
+			"#####.S..#####",
+			"##############"
+		}),
+		new("RecycleGap", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#....S............................G....#",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"##############............##############",
+			"########################################"
+		}),
 		new("HookShelf", new[]
 		{
 			"####################################################",
@@ -1010,7 +1130,7 @@ public sealed class NavigationBench : ModSystem
 		if (elapsed < SettleTicks)
 			return;
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
-		if (!arrived && elapsed < (Cases[caseIndex].InWorld ? WorldTripTimeoutTicks : TimeoutTicks))
+		if (!arrived && elapsed < (Cases[caseIndex].InWorld || Cases[caseIndex].Name.StartsWith("Recycle") ? WorldTripTimeoutTicks : TimeoutTicks))
 			return;
 		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
@@ -1088,7 +1208,7 @@ public sealed class NavigationBench : ModSystem
 		}
 		ClearClutter(runner);
 		EquipBenchGear(runner, bench.Name);
-		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud") || bench.Name.StartsWith("Hook");
+		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud") || bench.Name.StartsWith("Hook") || bench.Name.StartsWith("Fledgling");
 		if (!toolless)
 		{
 			if (runner.Hands.BestPickaxe == null)
@@ -1109,6 +1229,12 @@ public sealed class NavigationBench : ModSystem
 			TopUp(runner, ItemID.TempleKey, 1);
 		if (bench.Name.StartsWith("Hook"))
 			TopUp(runner, ItemID.GrapplingHook, 1);
+		if (bench.Name.StartsWith("Recycle"))
+		{
+			var spares = new int[] { ItemID.Rope, ItemID.WoodPlatform, ItemID.DirtBlock };
+			Inventory.Consume(runner.Avatar, spares, Inventory.CountAny(runner.Avatar, spares));
+			TopUp(runner, ItemID.DirtBlock, RecycleBlocks);
+		}
 		var body = runner.Npc;
 		body.position = new Vector2((start.X + 1) * 16f - body.width / 2f, (start.Y + 1) * 16f - body.height);
 		body.velocity = Vector2.Zero;
@@ -1121,7 +1247,7 @@ public sealed class NavigationBench : ModSystem
 		caseStartedAt = Main.GameUpdateCount;
 	}
 
-	static readonly int[] BenchAccessories = { ItemID.AngelWings, ItemID.CloudinaBottle };
+	static readonly int[] BenchAccessories = { ItemID.AngelWings, ItemID.CreativeWings, ItemID.CloudinaBottle };
 
 	static void EquipBenchGear(Bot runner, string name)
 	{
@@ -1131,7 +1257,7 @@ public sealed class NavigationBench : ModSystem
 			if (BenchAccessories.Contains(armor[slot].type))
 				armor[slot].TurnToAir();
 		}
-		int wanted = name.StartsWith("Wing") ? ItemID.AngelWings : name.StartsWith("Cloud") ? ItemID.CloudinaBottle : ItemID.None;
+		int wanted = name.StartsWith("Wing") ? ItemID.AngelWings : name.StartsWith("Fledgling") ? ItemID.CreativeWings : name.StartsWith("Cloud") ? ItemID.CloudinaBottle : ItemID.None;
 		if (wanted != ItemID.None)
 			armor[Planning.Equipment.LastAccessorySlot].SetDefaults(wanted);
 		runner.Avatar.UpdateEquips(runner.Avatar.whoAmI);

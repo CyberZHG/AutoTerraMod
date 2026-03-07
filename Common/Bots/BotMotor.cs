@@ -604,7 +604,85 @@ public sealed class BotMotor
 			ApplyIntent(npc, intent, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 			return;
 		}
+		if ((follower.HasNoRoute || follower.FinishedShortOfGoal) && !PlacementForbidden && RecycleBlocks(npc, delta, ref moveDirection, ref wantsJump, ref jumpHoldTicks))
+			return;
 		SteerGreedy(npc, target, delta, ref moveDirection, ref wantsJump);
+	}
+
+	const int RecycleFrontierLimit = 40;
+	const float FrontierTolerance = 4f;
+	const float FrontierCreepSpeed = 1f;
+
+	bool RecycleBlocks(NPC npc, Vector2 delta, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
+	{
+		if (bot.Hands.BestPickaxe == null)
+			return false;
+		var body = BodyTiles.Of(npc);
+		bool grounded = npc.velocity.Y == 0f;
+		int column = (int)(npc.Center.X / 16f);
+		if (delta.Y < -(Abilities().JumpRise + 1) * 16f)
+			return RecycleUpward(npc, body, column, grounded, ref wantsJump, ref jumpHoldTicks);
+		return delta.X != 0f && RecycleAcross(npc, body, column, grounded, Math.Sign(delta.X), ref moveDirection);
+	}
+
+	bool RecycleUpward(NPC npc, BodyTiles body, int column, bool grounded, ref bool wantsJump, ref int jumpHoldTicks)
+	{
+		if (TileQuery.IsSolid(column, body.Top - 1))
+			return false;
+		if (bot.Hands.HasBridgeMaterial)
+		{
+			wantsJump = grounded || jumpHold > 0;
+			jumpHoldTicks = ClimbJumpHoldTicks;
+			bool risenOneTileAboveSupport = !grounded && !PathFinder.IsSupportedNow(column, body.Bottom) && PathFinder.IsSupportedNow(column, body.Bottom + 1);
+			if (risenOneTileAboveSupport)
+				BridgeTile = new Point(column, body.Bottom + 1);
+			return true;
+		}
+		if (!grounded)
+			return true;
+		var pickaxe = bot.Hands.BestPickaxe;
+		Point? spare = null;
+		foreach (var placed in bot.Hands.PlacedBlocks)
+		{
+			bool supportsBody = placed.Y == body.Bottom + 1 && placed.X >= body.Left && placed.X <= body.Right;
+			if (placed.Y > body.Bottom && !supportsBody && bot.Hands.IsReclaimable(placed) && bot.Hands.CanReach(pickaxe, placed) && (spare is not Point best || placed.Y < best.Y))
+				spare = placed;
+		}
+		if (spare is not Point reclaim)
+			return false;
+		bot.Hands.Reclaim(reclaim);
+		return true;
+	}
+
+	bool RecycleAcross(NPC npc, BodyTiles body, int column, bool grounded, int direction, ref int moveDirection)
+	{
+		if (!grounded)
+			return true;
+		int row = body.Bottom + 1;
+		int frontier = column;
+		while (TileQuery.CanStandOn(frontier + direction, row) && Math.Abs(frontier - column) < RecycleFrontierLimit)
+			frontier += direction;
+		if (DropDepth(frontier + direction, body.Bottom) <= AffordableFall)
+			return false;
+		float offset = frontier * 16f + 8f - npc.Center.X;
+		if (Math.Abs(offset) > FrontierTolerance)
+		{
+			moveDirection = Math.Sign(offset);
+			npc.velocity.X = Math.Clamp(npc.velocity.X, -FrontierCreepSpeed, FrontierCreepSpeed);
+			return true;
+		}
+		npc.velocity.X = 0f;
+		var ahead = new Point(frontier + direction, row);
+		if (bot.Hands.HasBridgeMaterial)
+		{
+			BridgeTile = ahead;
+			return true;
+		}
+		var behind = new Point(frontier - direction, row);
+		if (!bot.Hands.IsReclaimable(behind))
+			return false;
+		bot.Hands.Reclaim(behind);
+		return true;
 	}
 
 	const float AffordableFallDamageShare = 0.4f;
@@ -614,6 +692,7 @@ public sealed class BotMotor
 	int AffordableFall => PathFinder.MaxSafeFall + (int)(bot.Avatar.statLife * AffordableFallDamageShare / FallDamagePerTile);
 
 	const int GearRefreshTicks = 15;
+	const int ScarceBridgeMaterial = 5;
 
 	NavigationAbilities gear;
 	uint gearCheckedAt;
@@ -627,7 +706,7 @@ public sealed class BotMotor
 			gearCheckedAt = Math.Max(1u, Main.GameUpdateCount);
 			int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 			int flyRise = FlightRise;
-			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.HasBridgeMaterial, false, bot.Hands.HasRope,
+			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.BridgeMaterialCount() >= ScarceBridgeMaterial, false, bot.Hands.HasRope,
 				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe);
 		}
 		bool canRope = gear.CanRope && !PlacementForbidden;
@@ -643,7 +722,7 @@ public sealed class BotMotor
 	const int WingedSafeFall = 120;
 	const int ExtraJumpRise = 4;
 	const int MaxFlightRise = 40;
-	const float FlightRiseEfficiency = 0.6f;
+	const float FlightRiseEfficiency = 0.9f;
 
 	const int RocketBootTicks = 70;
 
