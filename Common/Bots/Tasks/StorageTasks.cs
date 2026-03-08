@@ -79,7 +79,7 @@ public sealed class StoreTask : ChestVisitTask
 		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
 		if (atBase && Kit.CarriesSurplusTreasure(Bot))
 			return SurplusTreasurePriority;
-		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any())
+		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any() || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
 			return 0f;
 		if (used >= FullishSlots)
 			return 60f + (used - FullishSlots) * 3f;

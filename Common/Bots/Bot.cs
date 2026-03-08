@@ -66,6 +66,27 @@ public sealed class Bot
 	public Vector2? SavedFeetPosition { get; set; }
 	public Point? OutpostBed { get; set; }
 
+	const uint MiningCommitmentTicks = 20 * 60 * 60;
+	const int UndergroundDepth = 20;
+	const uint SessionCheckTicks = 60;
+	uint undergroundSince;
+	uint sessionCheckedAt;
+
+	public bool CommittedToMining => undergroundSince != 0 && Main.GameUpdateCount - undergroundSince < MiningCommitmentTicks;
+
+	public void TrackMiningSession()
+	{
+		if (Main.GameUpdateCount - sessionCheckedAt < SessionCheckTicks)
+			return;
+		sessionCheckedAt = Main.GameUpdateCount;
+		var here = CenterTile;
+		bool underground = here.Y > World.TileQuery.SurfaceY(here.X) + UndergroundDepth;
+		if (!underground)
+			undergroundSince = 0;
+		else if (undergroundSince == 0)
+			undergroundSince = Math.Max(1u, Main.GameUpdateCount);
+	}
+
 	public Faction Faction => BotWorldSystem.Factions[FactionId];
 	public bool IsAlive => Npc != null;
 	public Vector2 Center => Npc?.Center ?? Avatar.Center;

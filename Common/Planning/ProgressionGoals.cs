@@ -27,6 +27,7 @@ public abstract class ProgressionGoal
 	public abstract bool IsMet(Bot bot);
 	public abstract PlanStep Plan(Bot bot);
 	public virtual bool IsExpedition => false;
+	public virtual bool NeedsSurface => false;
 
 	string probeLabel;
 	public string ProbeLabel => probeLabel ??= "g:" + ProgressionGoals.Unwrap(this).GetType().Name;
@@ -277,6 +278,8 @@ public sealed class RopeGoal : ProgressionGoal
 
 public sealed class StorageGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	const int MinimumChests = 2;
 
 	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsComplete(bot.Faction, bot.Faction.Settlement.Storage);
@@ -296,6 +299,8 @@ public sealed class StorageGoal : ProgressionGoal
 
 public sealed class ClaimBoostersGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	public override bool IsMet(Bot bot) => ClaimableBooster(bot) < 0;
 
 	public override PlanStep Plan(Bot bot) => new WithdrawStep(ClaimableBooster(bot), 1);
@@ -319,6 +324,8 @@ public sealed class ManaCrystalGoal : ProgressionGoal
 
 public sealed class StructureGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	readonly System.Func<Settlement, IEnumerable<HouseBlueprint>> select;
 
 	const int MaterialBatch = 60;
@@ -371,6 +378,8 @@ public sealed class StructureGoal : ProgressionGoal
 
 public sealed class SupportConstructionGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	const float MinimumCooperation = 0.4f;
 	const int BatchSize = 40;
 
@@ -583,6 +592,8 @@ public sealed class AspirationGoal : ProgressionGoal
 
 public sealed class FurnishBedroomsGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	public override string Describe() => "FurnishBedrooms";
 
 	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot);
@@ -595,6 +606,8 @@ public sealed class FurnishBedroomsGoal : ProgressionGoal
 
 public sealed class OutpostKitGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	public override string Describe() => "OutpostKit";
 
 	public override bool AppliesTo(Bot bot) => !Outpost.IsDeep(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar);
@@ -677,6 +690,8 @@ public sealed class SmashAltarsGoal : ProgressionGoal
 
 public sealed class StockpileGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	readonly string name;
 	readonly int floor;
 	readonly int target;
@@ -803,6 +818,8 @@ public sealed class ShareSuppliesGoal : ProgressionGoal
 
 public sealed class ShoppingGoal : ProgressionGoal
 {
+	public override bool NeedsSurface => true;
+
 	const long CoinReserve = 5000;
 	const int PotionStock = 10;
 	const int PotionRestockBelow = 4;

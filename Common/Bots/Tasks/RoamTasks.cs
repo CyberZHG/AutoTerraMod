@@ -136,7 +136,7 @@ public sealed class ReturnHomeTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Main.dayTime || Traits.Courage >= 0.5f)
+		if (Main.dayTime || Traits.Courage >= 0.5f || Bot.CommittedToMining)
 			return 0f;
 		float score = 25f + (0.5f - Traits.Courage) * 60f;
 		return Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > FarFromBase ? score : score * 0.4f;

@@ -157,12 +157,31 @@ public static class HouseInspector
 		return false;
 	}
 
+	const uint BuilderShiftTicks = 60 * 60 * 60;
+
+	const uint BuilderCacheTicks = 60;
+	static readonly Dictionary<int, (uint at, int botId)> builders = new();
+
 	public static bool IsDesignatedBuilder(Bot bot)
 	{
-		var builder = BotWorldSystem.Bots
-			.Where(member => member.FactionId == bot.FactionId)
-			.MaxBy(member => member.Personality.Building);
-		return builder == bot || bot.Personality.Building >= 0.6f;
+		if (!builders.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= BuilderCacheTicks)
+			builders[bot.FactionId] = cached = (Main.GameUpdateCount, PickBuilder(bot.FactionId));
+		return cached.botId == bot.Id;
+	}
+
+	static int PickBuilder(int factionId)
+	{
+		var members = BotWorldSystem.Bots.Where(member => member.FactionId == factionId && member.IsAlive).OrderBy(member => member.Id).ToList();
+		if (members.Count == 0)
+			return -1;
+		int shift = (int)(Main.GameUpdateCount / BuilderShiftTicks % (uint)members.Count) + factionId;
+		for (int offset = 0; offset < members.Count; offset++)
+		{
+			var candidate = members[(shift + offset) % members.Count];
+			if (!candidate.CommittedToMining)
+				return candidate.Id;
+		}
+		return -1;
 	}
 
 	public static bool HasScaffoldMaterial(Player avatar) =>

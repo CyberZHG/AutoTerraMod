@@ -34,7 +34,7 @@ public sealed class TidyCampTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance)
+		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance || !Building.HouseInspector.IsDesignatedBuilder(Bot))
 			return 0f;
 		if (tombstone is not Point held || !NeedsWork(held) || RecentlyFailed(held))
 			tombstone = FindTombstone();

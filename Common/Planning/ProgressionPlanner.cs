@@ -87,7 +87,7 @@ public static class ProgressionPlanner
 			if (focus is GearTrack track && goal.Track != GearTrack.None && goal.Track != track)
 				continue;
 			using var probe = Probes.Measure(goal.ProbeLabel);
-			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+			if (isSuppressed(goal) || goal.NeedsSurface && bot.CommittedToMining || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
 			var step = PlanUnlessStuck(bot, goal);
 			if (step is not BlockedStep and not IdleStep)
@@ -298,7 +298,7 @@ public static class ProgressionPlanner
 		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
 		var local = ResolveWithoutStorage(context, itemType, amount, have, depth);
-		return stored > 0 && local is BlockedStep ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
+		return stored > 0 && local is BlockedStep && !context.Bot.CommittedToMining ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
 	}
 
 	static PlanStep ResolveWithoutStorage(Context context, int itemType, int amount, int have, int depth)

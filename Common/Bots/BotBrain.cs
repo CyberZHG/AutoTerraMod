@@ -100,6 +100,7 @@ public sealed class BotBrain
 			bot.Vitals.Tick(body);
 		if (!bot.IsAlive)
 			return;
+		bot.TrackMiningSession();
 		if (Override != null)
 		{
 			bot.Hands.Tick();
@@ -195,6 +196,7 @@ public sealed class BotBrain
 		{
 			StatBoosters.ConsumeUsable(bot);
 			Bags.OpenOneAtHome(bot);
+			BannerHanger.HangWhereFound(bot);
 			bot.Hands.DrinkObsidianSkinIfInHell();
 			Inventory.TidySpecialSlots(bot.Avatar);
 		}
