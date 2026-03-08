@@ -22,7 +22,11 @@ public static class TorchPlacer
 		int keep = TorchesToKeep(bot, center);
 		if (keep < 0 || HasLightNearby(center))
 			return;
-		var torch = Inventory.Items(bot.Avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Torch[item.createTile]);
+		bool underwater = bot.Npc?.wet == true;
+		var torch = Inventory.Items(bot.Avatar)
+			.Where(item => item.createTile >= 0 && TileID.Sets.Torch[item.createTile] && (!underwater || Planning.WaterproofTorchGoal.Torches.Contains(item.type)))
+			.OrderBy(item => Planning.WaterproofTorchGoal.Torches.Contains(item.type) != underwater)
+			.FirstOrDefault();
 		if (torch == null || Inventory.Count(bot.Avatar, torch.type) <= keep)
 			return;
 		foreach (var offset in CandidateOffsets)

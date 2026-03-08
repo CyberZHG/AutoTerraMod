@@ -97,7 +97,7 @@ public static class Junk
 		if (shopkeeper == null)
 			return;
 		var hammer = bot.Hands.BestHammer;
-		var loot = Kit.ItemsToStore(bot).Where(item => item != hammer && IsSellableLoot(item) && (item.damage <= 0 || Outclassed(bot, item))).ToList();
+		var loot = Kit.ItemsToStore(bot).Where(item => item != hammer && IsSellableLoot(item) && (item.damage <= 0 || Outclassed(bot, item)) && !UpgradesTeammate(bot, item)).ToList();
 		if (loot.Count == 0)
 			return;
 		long earned = 0;
@@ -108,6 +108,28 @@ public static class Junk
 		}
 		Inventory.AddCoins(bot.Avatar, earned);
 		BotDiagnostics.Log(bot, $"sold {loot.Count} pieces of outgrown loot to the {shopkeeper.TypeName} for {earned} copper");
+	}
+
+	static readonly Planning.GearKind[] ShareableKinds =
+	{
+		Planning.GearKind.Head, Planning.GearKind.Body, Planning.GearKind.Legs, Planning.GearKind.Pickaxe,
+		Planning.GearKind.MeleeWeapon, Planning.GearKind.RangedWeapon, Planning.GearKind.MagicWeapon, Planning.GearKind.SummonWeapon
+	};
+
+	static bool UpgradesTeammate(Bot bot, Item item)
+	{
+		foreach (var kind in ShareableKinds)
+		{
+			int power = Planning.Equipment.PowerOf(item, kind);
+			if (power <= 0)
+				continue;
+			foreach (var mate in Systems.BotWorldSystem.Bots)
+			{
+				if (mate.FactionId == bot.FactionId && mate != bot && Planning.Equipment.BestPower(mate.Avatar, kind) < power)
+					return true;
+			}
+		}
+		return item.accessory && Building.BaseStorage.Count(bot.Faction, item.type) == 0;
 	}
 
 	static bool Outclassed(Bot bot, Item weapon) =>

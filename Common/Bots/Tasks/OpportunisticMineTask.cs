@@ -21,7 +21,7 @@ public sealed class OpportunisticMineTask : BotTask
 		[TileID.Iron] = 2, [TileID.Lead] = 2,
 		[TileID.Silver] = 3, [TileID.Tungsten] = 3,
 		[TileID.Gold] = 4, [TileID.Platinum] = 4,
-		[TileID.Demonite] = 5, [TileID.Crimtane] = 5, [TileID.Meteorite] = 5,
+		[TileID.Demonite] = 5, [TileID.Crimtane] = 5, [TileID.Meteorite] = 5, [TileID.Obsidian] = 5,
 		[TileID.Hellstone] = 6,
 		[TileID.Cobalt] = 7, [TileID.Palladium] = 7,
 		[TileID.Mythril] = 8, [TileID.Orichalcum] = 8,

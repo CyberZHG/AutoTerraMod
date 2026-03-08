@@ -70,8 +70,28 @@ public sealed class BotMotor
 
 	int stickyBreak;
 
+	const float IceBreakingFallSpeed = 7f;
+
+	static void BreakThinIce(NPC body)
+	{
+		if (body.velocity.Y <= IceBreakingFallSpeed)
+			return;
+		var next = body.position + body.velocity;
+		int left = (int)(next.X / 16f), right = (int)((next.X + body.width) / 16f);
+		int top = (int)((body.position.Y + body.height + 1f) / 16f);
+		for (int x = left; x <= right; x++)
+		{
+			for (int y = top; y <= top + 1; y++)
+			{
+				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].HasTile && !Main.tile[x, y].IsActuated && Main.tile[x, y].TileType == TileID.BreakableIce && !WorldGen.SolidTile(x, y - 1))
+					WorldGen.KillTile(x, y);
+			}
+		}
+	}
+
 	public void ApplyTerrainHazards(NPC body)
 	{
+		BreakThinIce(body);
 		Collision.SwitchTiles(bot.Avatar, body.position, body.width, body.height, body.oldPosition, 1);
 		var sticky = Collision.StickyTiles(body.position, body.velocity, body.width, body.height);
 		if (sticky.X == -1f || sticky.Y == -1f)

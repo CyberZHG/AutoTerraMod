@@ -116,6 +116,91 @@ public sealed class ReserveGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, itemType, restockTo);
 }
 
+public sealed class CraftableUpgradeGoal : ProgressionGoal
+{
+	const uint CacheTicks = 600;
+	static List<Terraria.Recipe> gearRecipes;
+	readonly Dictionary<int, (uint at, PlanStep step)> cache = new();
+
+	public override string Describe() => "CraftableUpgrade";
+
+	public override bool IsMet(Bot bot) => Upgrade(bot) == null;
+
+	public override PlanStep Plan(Bot bot) => Upgrade(bot) ?? PlanStep.Idle;
+
+	static IEnumerable<GearKind> KindsFor(Bot bot)
+	{
+		yield return GearKind.Head;
+		yield return GearKind.Body;
+		yield return GearKind.Legs;
+		yield return GearKind.Pickaxe;
+		switch (bot.Personality.Style)
+		{
+			case CombatStyle.Melee: yield return GearKind.MeleeWeapon; break;
+			case CombatStyle.Ranged: yield return GearKind.RangedWeapon; break;
+			case CombatStyle.Magic: yield return GearKind.MagicWeapon; break;
+		}
+	}
+
+	static bool Improves(Bot bot, Item item) => KindsFor(bot).Any(kind => Equipment.PowerOf(item, kind) > Equipment.BestPower(bot.Avatar, kind));
+
+	static List<Terraria.Recipe> GearRecipes() => gearRecipes ??= Terraria.Main.recipe.Take(Terraria.Recipe.numRecipes)
+		.Where(recipe => recipe.createItem.headSlot >= 0 || recipe.createItem.bodySlot >= 0 || recipe.createItem.legSlot >= 0 || recipe.createItem.pick > 0 || recipe.createItem.damage > 0)
+		.ToList();
+
+	static PlanStep StoredUpgrade(Bot bot)
+	{
+		if (!Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter))
+			return null;
+		foreach (var chest in BaseStorage.Chests(bot.Faction))
+		{
+			foreach (var item in chest.item)
+			{
+				if (item != null && !item.IsAir && Improves(bot, item))
+					return new WithdrawStep(item.type, 1);
+			}
+		}
+		return null;
+	}
+
+	static PlanStep CraftedUpgrade(Bot bot)
+	{
+		foreach (var recipe in GearRecipes())
+		{
+			if (Crafting.HasIngredients(bot.Avatar, recipe) && Improves(bot, recipe.createItem))
+				return new CraftStep(recipe);
+		}
+		return null;
+	}
+
+	static bool StillValid(Bot bot, PlanStep step) => step switch
+	{
+		CraftStep craft => Crafting.HasIngredients(bot.Avatar, craft.Recipe) && Improves(bot, craft.Recipe.createItem),
+		WithdrawStep withdraw => BaseStorage.Count(bot.Faction, withdraw.ItemType) > 0 && Improves(bot, ContentSamples.ItemsByType[withdraw.ItemType]),
+		_ => true
+	};
+
+	PlanStep Upgrade(Bot bot)
+	{
+		if (cache.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < CacheTicks && StillValid(bot, cached.step))
+			return cached.step;
+		var step = StoredUpgrade(bot) ?? CraftedUpgrade(bot);
+		cache[bot.Id] = (Terraria.Main.GameUpdateCount, step);
+		return step;
+	}
+}
+
+public sealed class WaterproofTorchGoal : ProgressionGoal
+{
+	public static readonly int[] Torches = { ItemID.CursedTorch, ItemID.IchorTorch };
+	const int Minimum = 20;
+	const int RestockTo = 50;
+
+	public override bool IsMet(Bot bot) => Inventory.CountAny(bot.Avatar, Torches) >= Minimum;
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Torches, RestockTo);
+}
+
 public sealed class AmmoGoal : ProgressionGoal
 {
 	const int Minimum = 100;
@@ -873,6 +958,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
+		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },
@@ -899,6 +985,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.DemonBow, ItemID.TendonBow },
 			staffs: new int[] { ItemID.Vilethorn, ItemID.CrimsonRod },
 			armor: new (int, int, int)[] { (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves), (ItemID.CrimsonHelmet, ItemID.CrimsonScalemail, ItemID.CrimsonGreaves) });
+		goals.Add(new OwnGoal(ItemID.ObsidianSkull, ItemID.ObsidianHorseshoe, ItemID.ObsidianShield, ItemID.AnkhShield, ItemID.ObsidianSkullRose, ItemID.MoltenSkullRose, ItemID.LavaSkull, ItemID.MoltenCharm));
 		goals.Add(new StationGoal(TileID.Hellforge, ItemID.Hellforge));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.MoltenPickaxe },
@@ -913,6 +1000,7 @@ public static class ProgressionGoals
 		int hardmodeStart = goals.Count;
 		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon));
 		goals.Add(new SmashAltarsGoal());
+		goals.Add(new WaterproofTorchGoal());
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.CobaltPickaxe, ItemID.PalladiumPickaxe },
 			swords: new int[] { ItemID.CobaltSword, ItemID.PalladiumSword },
