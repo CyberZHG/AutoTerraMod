@@ -292,7 +292,7 @@ public sealed class PathSearch
 		if (abilities.CanDig && supported)
 			TryDig(node, new Point(x, y + 1));
 
-		if (abilities.CanRope && (supported || onRope))
+		if (abilities.CanRope && !swimming && (supported || onRope))
 			AddRopeClimbEdges(x, y);
 
 		if (onRope || PathFinder.RopeColumn(x, y - 2) >= 0)

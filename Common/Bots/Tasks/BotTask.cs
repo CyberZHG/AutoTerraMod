@@ -44,6 +44,8 @@ public abstract class BotTask
 
 	static readonly int[] RecallItems = { ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone, ItemID.RecallPotion };
 
+	public static bool IsRecall(Item item) => RecallItems.Contains(item.type);
+
 	public static bool CarriesRecall(Player avatar) => Inventory.Items(avatar).Any(item => RecallItems.Contains(item.type));
 
 	protected bool TryRecallHome()

@@ -892,6 +892,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.GoldBow, ItemID.PlatinumBow },
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
 			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) });
+		goals.Add(new OwnGoal(ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.NightmarePickaxe, ItemID.DeathbringerPickaxe },
 			swords: new int[] { ItemID.LightsBane, ItemID.BloodButcherer },

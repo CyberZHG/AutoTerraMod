@@ -40,6 +40,7 @@ public static class Kit
 				|| plannedTypes.Contains(item.type)
 				|| Tasks.CraftTask.IsPortableStation(item)
 				|| item.type == ItemID.TeleportationPotion
+				|| Tasks.BotTask.IsRecall(item)
 				|| item.type == ItemID.Acorn
 				|| item.type == ItemID.Bed || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)

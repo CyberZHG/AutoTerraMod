@@ -723,6 +723,23 @@ public sealed class BotHands
 	public bool InOtherBase(Point tile) =>
 		Systems.BotWorldSystem.Factions.Any(faction => faction.Id != bot.FactionId && faction.Settlement?.Contains(tile.X, tile.Y) == true);
 
+	const float DropPickupRange = 16f * 4f;
+
+	public bool PickUpDropNear(Point tile, Func<Item, bool> kind)
+	{
+		var origin = tile.ToWorldCoordinates();
+		foreach (var item in Main.ActiveItems)
+		{
+			if (!kind(item) || Vector2.Distance(item.Center, origin) > DropPickupRange)
+				continue;
+			Inventory.Add(Avatar, item);
+			if (item.IsAir)
+				item.active = false;
+			return true;
+		}
+		return false;
+	}
+
 	public void CollectNearbyItems()
 	{
 		var npc = bot.Npc;

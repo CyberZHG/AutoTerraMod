@@ -101,6 +101,8 @@ public sealed class OpportunisticMineTask : BotTask
 		if (!tile.HasTile || unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y))
 			return false;
 		int type = tile.TileType;
+		if (type == TileID.Pots)
+			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
 			return false;
 		return WantsMore(type) && PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
@@ -139,12 +141,13 @@ public sealed class OpportunisticMineTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var pickaxe = Bot.Hands.BestPickaxe;
-		if (pickaxe != null && Bot.Hands.CanReach(pickaxe, tile))
+		bool pot = Main.tile[tile.X, tile.Y].TileType == TileID.Pots;
+		var tool = pot ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : Bot.Hands.BestPickaxe;
+		if (tool != null && Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.Face(tile.ToWorldCoordinates());
-			if (Bot.Hands.Dig(tile) is ToolResult.Unbreakable or ToolResult.NoTool)
+			if ((pot ? Bot.Hands.Cut(tile) : Bot.Hands.Dig(tile)) is ToolResult.Unbreakable or ToolResult.NoTool)
 				GiveUp(tile);
 			return;
 		}

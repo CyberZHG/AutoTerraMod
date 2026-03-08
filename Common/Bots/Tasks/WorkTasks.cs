@@ -194,25 +194,9 @@ public sealed class CraftTask : BotTask
 			if (!Main.tile[tile.X, tile.Y].HasTile || !PortableStationTiles.Contains(Main.tile[tile.X, tile.Y].TileType))
 				continue;
 			WorldGen.KillTile(tile.X, tile.Y);
-			PickUpDropped(tile, itemType);
+			Bot.Hands.PickUpDropNear(tile, item => item.type == itemType);
 		}
 		placedStations.Clear();
-	}
-
-	const float DroppedStationRange = 16f * 4f;
-
-	void PickUpDropped(Point tile, int itemType)
-	{
-		var origin = tile.ToWorldCoordinates();
-		foreach (var item in Main.ActiveItems)
-		{
-			if (item.type != itemType || Vector2.Distance(item.Center, origin) > DroppedStationRange)
-				continue;
-			Inventory.Add(Avatar, item);
-			if (item.IsAir)
-				item.active = false;
-			return;
-		}
 	}
 
 	bool RecallLandsAtBase()
@@ -372,7 +356,8 @@ public sealed class GatherTask : BotTask
 			return;
 		}
 		bool chopping = Tiles.IsTree && !TileQuery.IsExposedLivingWood(tile.X, tile.Y);
-		var tool = chopping ? Bot.Hands.BestAxe : Bot.Hands.BestPickaxe;
+		bool cutting = !Tiles.IsTree && Main.tileCut[Math.Max(0, TileQuery.TypeAt(tile))];
+		var tool = chopping ? Bot.Hands.BestAxe : cutting ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : Bot.Hands.BestPickaxe;
 		if (tool != null && Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.Stop();

@@ -77,6 +77,8 @@ public sealed class LootTask : BotTask
 		var result = Bot.Hands.Dig(chestTile);
 		if (result is ToolResult.Unbreakable or ToolResult.NoTool)
 			BotWorldSystem.KnowledgeOf(Bot.Faction).AbandonChest(chestIndex);
+		if (!TileQuery.HasTile(chestTile))
+			Bot.Hands.PickUpDropNear(chestTile, item => item.createTile >= 0 && TileID.Sets.BasicChest[item.createTile]);
 		if (result is not ToolResult.Working)
 			IsFinished = true;
 	}

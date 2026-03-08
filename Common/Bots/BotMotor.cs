@@ -77,7 +77,9 @@ public sealed class BotMotor
 		if (sticky.X == -1f || sticky.Y == -1f)
 			return;
 		int x = (int)sticky.X, y = (int)sticky.Y;
-		if (Main.tile[x, y].TileType == TileID.Cobweb && body.velocity != Vector2.Zero && ++stickyBreak > Main.rand.Next(20, 100))
+		if (Main.tile[x, y].TileType == TileID.Cobweb && bot.Hands.Ready)
+			bot.Hands.Cut(new Point(x, y));
+		else if (Main.tile[x, y].TileType == TileID.Cobweb && body.velocity != Vector2.Zero && ++stickyBreak > Main.rand.Next(20, 100))
 		{
 			stickyBreak = 0;
 			WorldGen.KillTile(x, y);
@@ -129,7 +131,7 @@ public sealed class BotMotor
 	public Vector2? Destination => destination;
 	public bool ScaffoldingAllowed { get; set; }
 	public bool PlacementForbidden { get; set; }
-	bool MayPlaceRope => bot.Hands.HasRope && !PlacementForbidden;
+	bool MayPlaceRope => bot.Hands.HasRope && !PlacementForbidden && bot.Npc?.wet != true;
 	public bool ClimbingStraightUp { get; set; }
 	public bool Tunneling { get; private set; }
 
