@@ -9,6 +9,8 @@ public sealed class SettingsScenario : ModSystem
 {
 	const uint ChangeAtTick = 20 * 60;
 	const uint ReportAtTick = 40 * 60;
+	const uint ShrinkAtTick = 60 * 60;
+	const uint RegrowAtTick = 80 * 60;
 
 	static bool Active => HeadlessTestMode.Scenario == "settings";
 
@@ -25,6 +27,16 @@ public sealed class SettingsScenario : ModSystem
 		}
 		if (Main.GameUpdateCount == ReportAtTick)
 			Report("later");
+		if (Main.GameUpdateCount == ShrinkAtTick)
+		{
+			BotWorldSystem.ChangeSettings(settings with { FactionCount = 1, BotsPerFaction = 1 });
+			Report("shrunk");
+		}
+		if (Main.GameUpdateCount == RegrowAtTick)
+		{
+			BotWorldSystem.ChangeSettings(settings with { FactionCount = 2, BotsPerFaction = 3 });
+			Report("regrown");
+		}
 	}
 
 	static void Report(string stage)
@@ -32,6 +44,7 @@ public sealed class SettingsScenario : ModSystem
 		var settings = BotWorldSystem.Settings;
 		string factions = string.Join(", ", BotWorldSystem.Factions.Select(faction =>
 			$"{faction.Name}@{faction.BaseTile.X}: {BotWorldSystem.Bots.Count(bot => bot.FactionId == faction.Id)} bots, {BotWorldSystem.Bots.Count(bot => bot.FactionId == faction.Id && bot.IsAlive)} alive"));
-		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"settings scenario {stage}: {settings} relation={BotWorldSystem.Relation} [{factions}]");
+		int npcs = Main.npc.Count(npc => npc.active && npc.ModNPC is Content.NPCs.BotNPC);
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"settings scenario {stage}: {settings} relation={BotWorldSystem.Relation} botNpcs={npcs} [{factions}] names={string.Join(",", BotWorldSystem.Bots.Select(bot => bot.Name))}");
 	}
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AutoTerraMod.Content.NPCs;
 using Microsoft.Xna.Framework;
@@ -12,6 +13,7 @@ public sealed class BotMapReveal : ModSystem
 	const int Radius = 14;
 	const int FullLightRadius = 8;
 	const int EdgeLight = 110;
+	const int RevealStep = 6;
 
 	readonly Dictionary<int, Point> lastRevealed = new();
 	int cursor;
@@ -29,7 +31,7 @@ public sealed class BotMapReveal : ModSystem
 			if (!npc.active || npc.ModNPC is not BotNPC)
 				continue;
 			var center = npc.Center.ToTileCoordinates();
-			if (lastRevealed.TryGetValue(npc.whoAmI, out var previous) && previous == center)
+			if (lastRevealed.TryGetValue(npc.whoAmI, out var previous) && Math.Abs(previous.X - center.X) < RevealStep && Math.Abs(previous.Y - center.Y) < RevealStep)
 				continue;
 			if (Reveal(center))
 				lastRevealed[npc.whoAmI] = center;

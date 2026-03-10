@@ -212,8 +212,6 @@ public sealed class EscapeTask : BotTask
 		followingExit = true;
 	}
 
-	const int BelowCampDepth = 60;
-	const int CampExitMargin = 6;
 
 	void TunnelOutFromUnderCamp()
 	{
@@ -224,16 +222,9 @@ public sealed class EscapeTask : BotTask
 			Finish();
 			return;
 		}
-		int exitX = here.X - camp.Left < camp.Right - here.X ? camp.Left - CampExitMargin : camp.Right + CampExitMargin;
-		Bot.Motor.TunnelTo(new Vector2(exitX * 16f + 8f, (TileQuery.SurfaceY(exitX) - 2) * 16f), 32f);
+		Bot.Motor.TunnelTo(CampExitAbove(Bot.Faction.BaseCenter) ?? Bot.Faction.BaseCenter, 32f);
 		if (Bot.Motor.HasArrived)
 			Finish();
-	}
-
-	bool BelowOwnCamp()
-	{
-		var here = Bot.CenterTile;
-		return Bot.Faction.Settlement is { } camp && here.X >= camp.Left && here.X <= camp.Right && here.Y > camp.Floor && here.Y < camp.Floor + BelowCampDepth;
 	}
 
 	bool ShouldClimbStraightUp() =>

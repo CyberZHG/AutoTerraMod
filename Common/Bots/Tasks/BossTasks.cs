@@ -19,6 +19,7 @@ public sealed class SummonTask : BotTask
 	const int TravelRetries = 3;
 	const int RallyCooldownTicks = 2 * 3600;
 	const float GatherRadius = 16f * 20f;
+	const float BelowCampTolerance = 16f * 3f;
 	const float ArrivalRadius = 16f * 10f;
 	const float StuckAcceptRadius = 16f * 25f;
 	const float OldManSearchRadius = 16f * 150f;
@@ -31,6 +32,7 @@ public sealed class SummonTask : BotTask
 
 	SummonBossStep step;
 	int travelFailures;
+	string headcount;
 
 	public SummonTask(Bot bot) : base(bot) { }
 
@@ -41,7 +43,7 @@ public sealed class SummonTask : BotTask
 		if (Bot.Brain.Plan is not SummonBossStep summon)
 			return 0f;
 		step = summon;
-		Detail = summon.Challenge.Name;
+		Detail = Bot.Faction.RallyAssembled ? summon.Challenge.Name : headcount ?? summon.Challenge.Name;
 		return Engagement.NearestHostile(Bot, RallyTask.SelfDefenseRadius, true) != null ? RallyTask.YieldToSelfDefense : 85f;
 	}
 
@@ -50,6 +52,7 @@ public sealed class SummonTask : BotTask
 		base.Start();
 		travelFailures = 0;
 		lacewing = null;
+		headcount = null;
 		var faction = Bot.Faction;
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
@@ -86,10 +89,14 @@ public sealed class SummonTask : BotTask
 		var faction = Bot.Faction;
 		if (faction.RallyAssembled)
 			return true;
-		Bot.Motor.Stop();
 		Bot.Watchdog.RecordProgress();
+		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
+			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
+		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
+			Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
 		int present = team.Count(member => member.IsAlive && Vector2.Distance(member.Center, Bot.Center) < GatherRadius);
+		headcount = $"{step.Challenge.Name} {present}/{team.Count}";
 		bool waiting = faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
 		if (present < team.Count && waiting)
 			return false;

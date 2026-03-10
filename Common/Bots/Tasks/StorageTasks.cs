@@ -60,6 +60,7 @@ public sealed class StoreTask : ChestVisitTask
 	const int OpportunisticSlots = 30;
 	const float NearBase = 16f * 12f;
 	const float SurplusTreasurePriority = 45f;
+	const float StoreAfterDeathPriority = 82f;
 
 	public StoreTask(Bot bot) : base(bot) { }
 
@@ -79,6 +80,8 @@ public sealed class StoreTask : ChestVisitTask
 		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
 		if (atBase && Kit.CarriesSurplusTreasure(Bot))
 			return SurplusTreasurePriority;
+		if (atBase && Bot.StoreAfterDeath && !Bot.UpgradeAfterDeath && Kit.ItemsToStore(Bot).Any())
+			return StoreAfterDeathPriority;
 		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any() || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
 			return 0f;
 		if (used >= FullishSlots)
@@ -117,6 +120,7 @@ public sealed class StoreTask : ChestVisitTask
 			}
 		}
 		BotDiagnostics.Log(Bot, $"stored {stored} items by category");
+		Bot.FinishChoresAfterDeath();
 	}
 }
 

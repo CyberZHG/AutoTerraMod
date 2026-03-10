@@ -406,13 +406,13 @@ public sealed class PathSearch
 		{
 			for (int row = top; row <= to.Y; row++)
 			{
-				if (!CountDiggable(column, row, ref solids, ref loosensSand))
+				if (!CountDiggable(column, row, from.Y, ref solids, ref loosensSand))
 					return;
 			}
 		}
 		for (int row = to.Y - 2; row <= from.Y - 3; row++)
 		{
-			if (!CountDiggable(from.X, row, ref solids, ref loosensSand) || !CountDiggable(from.X + 1, row, ref solids, ref loosensSand))
+			if (!CountDiggable(from.X, row, from.Y, ref solids, ref loosensSand) || !CountDiggable(from.X + 1, row, from.Y, ref solids, ref loosensSand))
 				return;
 		}
 		if (loosensSand && to.Y < from.Y)
@@ -424,11 +424,11 @@ public sealed class PathSearch
 			edges.Add(new Edge(destination, MoveKind.Dig, 1f + solids * DigCostPerTile + (destination.Y - to.Y) * 0.3f + (loosensSand ? LooseSandPenalty : 0f)));
 	}
 
-	bool CountDiggable(int x, int y, ref int solids, ref bool loosensSand)
+	bool CountDiggable(int x, int y, int feetY, ref int solids, ref bool loosensSand)
 	{
 		if (!TileQuery.IsSolid(x, y) || IsPassableDoor(x, y))
 			return true;
-		if (!Diggable(x, y))
+		if (!Diggable(x, y) || y <= feetY && TileQuery.HoldsBackLava(x, y))
 			return false;
 		solids++;
 		loosensSand |= PathFinder.UnderFallingBlock(x, y);

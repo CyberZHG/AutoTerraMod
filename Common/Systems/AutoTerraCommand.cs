@@ -40,9 +40,9 @@ public sealed class AutoTerraCommand : ModCommand
 	{
 		switch (setting)
 		{
-			case "factions" when int.TryParse(value, out int factions) && factions >= current.FactionCount && factions <= WorldFactionSettings.MaxFactions:
+			case "factions" when int.TryParse(value, out int factions) && factions >= 1 && factions <= WorldFactionSettings.MaxFactions:
 				return current with { FactionCount = factions };
-			case "bots" when int.TryParse(value, out int bots) && bots >= current.BotsPerFaction && bots <= WorldFactionSettings.MaxBotsPerFaction:
+			case "bots" when int.TryParse(value, out int bots) && bots >= 1 && bots <= WorldFactionSettings.MaxBotsPerFaction:
 				return current with { BotsPerFaction = bots };
 			case "relation" when Enum.TryParse<FactionRelation>(value, true, out var relation) && Enum.IsDefined(relation):
 				return current with { Relation = relation };

@@ -35,4 +35,14 @@ public sealed class AutoTerraConfig : ModConfig
 
 	[DefaultValue(false)]
 	public bool DiagnosticLogging;
+
+	public override void OnChanged()
+	{
+		var current = Systems.BotWorldSystem.Settings;
+		if (current == null || !Systems.BotWorldSystem.IsRunning)
+			return;
+		var wanted = current with { FactionCount = FactionCount, BotsPerFaction = BotsPerFaction, Relation = Relation };
+		if (wanted != current)
+			Systems.BotWorldSystem.ChangeSettings(wanted);
+	}
 }

@@ -24,6 +24,8 @@ public sealed class BotWorldSystem : ModSystem
 
 	public static readonly List<Faction> Factions = new();
 	public static readonly List<Bot> Bots = new();
+	static readonly List<Faction> dormantFactions = new();
+	static readonly List<Bot> dormantBots = new();
 	public static FactionRelation Relation { get; private set; }
 	public static WorldFactionSettings Settings { get; private set; }
 	static FactionKnowledge sharedKnowledge = new();
@@ -64,6 +66,8 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		Factions.Clear();
 		Bots.Clear();
+		dormantFactions.Clear();
+		dormantBots.Clear();
 		sharedKnowledge = new FactionKnowledge();
 		Relation = FactionRelation.Race;
 		Settings = null;
@@ -90,8 +94,8 @@ public sealed class BotWorldSystem : ModSystem
 			return;
 		tag["relation"] = (int)Relation;
 		tag["nextBotId"] = nextBotId;
-		tag["factions"] = Factions.Select(faction => faction.Save()).ToList();
-		tag["bots"] = Bots.Select(bot => bot.Save()).ToList();
+		tag["factions"] = Factions.Concat(dormantFactions).OrderBy(faction => faction.Id).Select(faction => faction.Save()).ToList();
+		tag["bots"] = Bots.Concat(dormantBots).OrderBy(bot => bot.Id).Select(bot => bot.Save()).ToList();
 		tag["sharedKnowledge"] = sharedKnowledge.Save();
 	}
 
@@ -116,13 +120,57 @@ public sealed class BotWorldSystem : ModSystem
 		Relation = HeadlessTestMode.RelationOverride ?? settings.Relation;
 		if (!initialized)
 			return;
-		int firstNew = Bots.Count;
+		var wasActive = Bots.ToHashSet();
+		foreach (var bot in Bots)
+			bot.SavedFeetPosition = bot.Npc?.Bottom;
+		ReleaseAvatarSlots();
 		GrowToConfig();
 		DesignMissingHouses();
-		for (int i = firstNew; i < Bots.Count; i++)
+		foreach (var bot in dormantBots.Where(wasActive.Contains))
+			Hide(bot);
+		AssignAvatarSlots();
+		foreach (var bot in Bots)
 		{
-			AssignAvatarSlot(i);
-			Spawn(Bots[i], Bots[i].Faction.BaseFeet);
+			if (!wasActive.Contains(bot))
+				Spawn(bot, bot.SavedFeetPosition ?? bot.Faction.BaseFeet);
+			bot.SavedFeetPosition = null;
+		}
+	}
+
+	static void Hide(Bot bot)
+	{
+		if (bot.Npc is { } npc)
+		{
+			bot.Grapple.Release(npc, jump: false);
+			npc.active = false;
+		}
+		bot.NpcIndex = -1;
+		BotDiagnostics.LogWorld($"{bot.Name} hidden by the faction settings");
+	}
+
+	static void ApplyLimits(int botsPerFaction)
+	{
+		Factions.AddRange(dormantFactions);
+		Bots.AddRange(dormantBots);
+		dormantFactions.Clear();
+		dormantBots.Clear();
+		Factions.Sort((a, b) => a.Id.CompareTo(b.Id));
+		Bots.Sort((a, b) => a.Id.CompareTo(b.Id));
+		while (Factions.Count > Settings.FactionCount)
+		{
+			dormantFactions.Insert(0, Factions[^1]);
+			Factions.RemoveAt(Factions.Count - 1);
+		}
+		var members = new Dictionary<int, int>();
+		for (int i = 0; i < Bots.Count; i++)
+		{
+			var bot = Bots[i];
+			int rank = members.GetValueOrDefault(bot.FactionId);
+			members[bot.FactionId] = rank + 1;
+			if (bot.FactionId < Factions.Count && rank < botsPerFaction)
+				continue;
+			dormantBots.Add(bot);
+			Bots.RemoveAt(i--);
 		}
 	}
 
@@ -166,20 +214,21 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		Settings ??= WorldFactionSettings.FromConfig(ModContent.GetInstance<AutoTerraConfig>());
 		Relation = HeadlessTestMode.RelationOverride ?? Settings.Relation;
+		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? Settings.BotsPerFaction;
+		ApplyLimits(botsPerFaction);
 		bool firstSetup = Factions.Count == 0;
 		for (int index = Factions.Count; index < Settings.FactionCount; index++)
 		{
 			var baseTile = firstSetup ? FindBaseTile(index, Settings.FactionCount) : FindBaseTileAwayFromOthers();
 			Factions.Add(new Faction { Id = index, BaseTile = baseTile });
 		}
-		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? Settings.BotsPerFaction;
 		foreach (var faction in Factions)
 		{
 			int members = Bots.Count(bot => bot.FactionId == faction.Id);
 			if (members >= botsPerFaction)
 				continue;
 			for (; members < botsPerFaction; members++)
-				Bots.Add(Bot.Create(nextBotId++, faction, Main.rand, Bots.Select(bot => bot.Name).ToHashSet()));
+				Bots.Add(Bot.Create(nextBotId++, faction, Main.rand, Bots.Concat(dormantBots).Select(bot => bot.Name).ToHashSet()));
 			faction.ForgetSettlement();
 		}
 		Building.HouseInspector.Reset();

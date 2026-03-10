@@ -492,7 +492,7 @@ public sealed class PickupTask : BotTask
 		Detail = item.Name;
 		if (item.type == ItemID.FallenStar)
 			return 58f;
-		if ((IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
+		if ((item.timeSinceItemSpawned < FreshDropTicks || IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
 			return FreshDropPriority;
 		bool planned = Bot.Brain.Plan is GatherStep gather && gather.ItemType == item.type;
 		return planned ? 60f : 40f;
@@ -500,6 +500,7 @@ public sealed class PickupTask : BotTask
 
 	const float FreshDropRadius = 16f * 8f;
 	const float FreshDropPriority = 86f;
+	const int FreshDropTicks = 600;
 
 	static readonly HashSet<int> Gems = new() { ItemID.Amethyst, ItemID.Topaz, ItemID.Sapphire, ItemID.Emerald, ItemID.Ruby, ItemID.Diamond, ItemID.Amber };
 
@@ -516,7 +517,7 @@ public sealed class PickupTask : BotTask
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || unreachable.Contains(i) || Junk.IsUnwanted(Bot, item))
+			if (!item.active || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsUnwanted(Bot, item))
 				continue;
 			if (!Inventory.HasRoomFor(Avatar, item) && !Bot.Brain.PlannedItemTypes.Contains(item.type))
 				continue;

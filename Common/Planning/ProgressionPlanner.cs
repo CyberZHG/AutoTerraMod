@@ -4,6 +4,7 @@ using System.Linq;
 using AutoTerraMod.Common.Bots;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Systems;
+using Microsoft.Xna.Framework;
 using Terraria;
 
 namespace AutoTerraMod.Common.Planning;
@@ -55,6 +56,13 @@ public static class ProgressionPlanner
 				source = goal;
 				return step;
 			}
+		}
+		if (bot.UpgradeAfterDeath)
+		{
+			expeditions.Remove(bot.Id);
+			if (UpgradeAfterDeath(bot, isSuppressed, out source) is PlanStep chore)
+				return chore;
+			bot.UpgradeAfterDeath = false;
 		}
 		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
 		{
@@ -165,6 +173,32 @@ public static class ProgressionPlanner
 		return null;
 	}
 
+	static ProgressionGoal craftableUpgrade;
+
+	static PlanStep UpgradeAfterDeath(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
+	{
+		if (!bot.StoreAfterDeath)
+		{
+			source = null;
+			return null;
+		}
+		craftableUpgrade ??= ladder.First(goal => ProgressionGoals.Unwrap(goal) is CraftableUpgradeGoal);
+		source = craftableUpgrade;
+		if (!isSuppressed(craftableUpgrade) && !craftableUpgrade.IsMet(bot))
+			return craftableUpgrade.Plan(bot);
+		upgradeGoals ??= ladder.Where(goal => ProgressionGoals.Unwrap(goal) is GearGoal or OwnGoal or CageGoal).ToList();
+		for (int pass = 0; pass * UpgradeChecksPerStep < upgradeGoals.Count; pass++)
+		{
+			if (ReadyUpgrade(bot, isSuppressed) is (ProgressionGoal goal, PlanStep step))
+			{
+				source = goal;
+				return step;
+			}
+		}
+		source = null;
+		return null;
+	}
+
 	static PlanStep IsHandsOn(PlanStep step) => step is CraftStep or WithdrawStep or PlaceStationStep ? step : null;
 
 	static PlanStep ContinueExpedition(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
@@ -222,7 +256,7 @@ public static class ProgressionPlanner
 		return context.Release(PlanStation(context, stationItems, 0));
 	}
 
-	static PlanStep ObtainAny(Context context, IEnumerable<int> options, int depth)
+	static PlanStep ObtainAny(Context context, IEnumerable<int> options, int depth, bool allowGrind = true)
 	{
 		PlanStep grind = null;
 		var ranked = RankByReadiness(context, options);
@@ -244,7 +278,7 @@ public static class ProgressionPlanner
 			ranked.Clear();
 			rankPool.Push(ranked);
 		}
-		return grind ?? PlanStep.Blocked;
+		return allowGrind && grind != null ? grind : PlanStep.Blocked;
 	}
 
 	static readonly Stack<List<(int type, int readiness)>> rankPool = new();
@@ -281,7 +315,7 @@ public static class ProgressionPlanner
 			if (context.Count(item) > 0)
 				return new PlaceStationStep(item);
 		}
-		return ObtainAny(context, stationItems, depth);
+		return ObtainAny(context, stationItems, depth, allowGrind: false);
 	}
 
 	static int resolveCalls;
@@ -289,6 +323,8 @@ public static class ProgressionPlanner
 	static PlanStep Resolve(Context context, int itemType, int amount, int depth)
 	{
 		resolveCalls++;
+		if (context.Resolves > ResolveBudget)
+			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
 		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
@@ -301,33 +337,46 @@ public static class ProgressionPlanner
 		return stored > 0 && local is BlockedStep && !context.Bot.CommittedToMining ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
 	}
 
+	const int ResolveBudget = 600;
+
 	static PlanStep ResolveWithoutStorage(Context context, int itemType, int amount, int have, int depth)
 	{
+		if (++context.Resolves > ResolveBudget || context.Blocked.Contains(itemType))
+			return PlanStep.Blocked;
 		if (depth > MaxDepth || !context.Visiting.Add(itemType))
 			return PlanStep.Blocked;
+		PlanStep result = null;
 		try
 		{
-			if (CanAffordEasily(context.Bot, itemType, amount - have))
-				return PlanPurchase(context.Bot, itemType, amount - have);
-			var source = ResourceSources.For(itemType);
-			if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
-				return PlanStep.Blocked;
-			if (source is TileSource { IsTree: true } && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin)
-				return PlanStep.Blocked;
-			if (source != null)
-				return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
-			foreach (var recipe in RecipeIndex.For(itemType))
-			{
-				var step = PlanRecipe(context, recipe, depth);
-				if (step is not BlockedStep)
-					return step;
-			}
-			return PlanPurchase(context.Bot, itemType, amount - have);
+			return result = ResolveFresh(context, itemType, amount, have, depth);
 		}
 		finally
 		{
 			context.Visiting.Remove(itemType);
+			if (result is BlockedStep && context.Resolves <= ResolveBudget)
+				context.Blocked.Add(itemType);
 		}
+	}
+
+	static PlanStep ResolveFresh(Context context, int itemType, int amount, int have, int depth)
+	{
+		if (CanAffordEasily(context.Bot, itemType, amount - have))
+			return PlanPurchase(context.Bot, itemType, amount - have);
+		var source = ResourceSources.For(itemType);
+		if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
+			return PlanStep.Blocked;
+		if (source is TileSource { IsTree: true } trees && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin
+			&& Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).NearestKnown(context.Bot.CenterTile, trees.TileTypes, NoExclusions, NearbyTreeTiles) == null)
+			return PlanStep.Blocked;
+		if (source != null)
+			return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
+		foreach (var recipe in RecipeIndex.For(itemType))
+		{
+			var step = PlanRecipe(context, recipe, depth);
+			if (step is not BlockedStep)
+				return step;
+		}
+		return PlanPurchase(context.Bot, itemType, amount - have);
 	}
 
 	static bool CanMineAny(Bot bot, TileSource tiles)
@@ -406,6 +455,8 @@ public static class ProgressionPlanner
 
 	const int EasyPurchaseShare = 4;
 	const int UndergroundMargin = 20;
+	const int NearbyTreeTiles = 40;
+	static readonly HashSet<Point> NoExclusions = new();
 
 	public static bool CanAffordEasily(Bot bot, int itemType, int amount)
 	{
@@ -465,6 +516,19 @@ public static class ProgressionPlanner
 		return score;
 	}
 
+	const uint BlockedMemoTicks = 600;
+	static readonly Dictionary<int, (uint at, HashSet<int> items)> blockedByBot = new();
+
+	static HashSet<int> BlockedFor(Bot bot)
+	{
+		if (blockedByBot.TryGetValue(bot.Id, out var memo) && Main.GameUpdateCount - memo.at < BlockedMemoTicks)
+			return memo.items;
+		var items = memo.items ?? new HashSet<int>();
+		items.Clear();
+		blockedByBot[bot.Id] = (Main.GameUpdateCount, items);
+		return items;
+	}
+
 	sealed class Context
 	{
 		static Context idle;
@@ -472,6 +536,8 @@ public static class ProgressionPlanner
 		public Bot Bot { get; private set; }
 		public bool Fresh { get; set; }
 		public HashSet<int> Visiting { get; } = new();
+		public HashSet<int> Blocked { get; private set; }
+		public int Resolves { get; set; }
 		readonly Dictionary<int, int> held = new();
 		readonly Dictionary<int, int> readiness = new();
 
@@ -482,6 +548,8 @@ public static class ProgressionPlanner
 			context.Bot = bot;
 			context.Fresh = false;
 			context.Visiting.Clear();
+			context.Blocked = BlockedFor(bot);
+			context.Resolves = 0;
 			context.readiness.Clear();
 			context.counted = false;
 			return context;

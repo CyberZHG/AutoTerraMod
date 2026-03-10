@@ -72,6 +72,13 @@ public sealed class Bot
 	uint undergroundSince;
 	uint sessionCheckedAt;
 
+	const uint ChoresAfterDeathTicks = 2 * 60 * 60;
+	uint diedAt;
+
+	public bool UpgradeAfterDeath { get; set; }
+	public void FinishChoresAfterDeath() => diedAt = 0;
+	public bool StoreAfterDeath => diedAt != 0 && Main.GameUpdateCount - diedAt < ChoresAfterDeathTicks;
+
 	public bool CommittedToMining => undergroundSince != 0 && Main.GameUpdateCount - undergroundSince < MiningCommitmentTicks;
 
 	public void TrackMiningSession()
@@ -131,6 +138,9 @@ public sealed class Bot
 		NpcIndex = -1;
 		SavedFeetPosition = null;
 		Brain.Reset();
+		diedAt = Math.Max(1u, Main.GameUpdateCount);
+		UpgradeAfterDeath = true;
+		undergroundSince = 0;
 		Motor.Stop();
 		Grapple.Release(npc, jump: false);
 	}

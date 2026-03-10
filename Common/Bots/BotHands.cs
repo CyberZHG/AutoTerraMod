@@ -80,7 +80,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || IsGrowingSapling(tile))
+		if (InOtherBase(tile) || IsGrowingSapling(tile) || tile.Y <= (int)(bot.Npc.Bottom.Y - 1f) / 16 && TileQuery.HoldsBackLava(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
@@ -568,17 +568,36 @@ public sealed class BotHands
 
 	public static float MeleeReach(Item weapon) => IsYoyo(weapon) ? YoyoReach : IsWhip(weapon) ? WhipReach : 10f + Math.Max(weapon.width, weapon.height) * weapon.scale;
 
-	public bool InMeleeReach(NPC target, Item weapon)
+	public bool InMeleeReach(NPC target, Item weapon) => SwingArea(target, weapon).Intersects(target.Hitbox);
+
+	Rectangle SwingArea(NPC target, Item weapon)
 	{
 		var npc = bot.Npc;
 		float reach = MeleeReach(weapon);
 		int facing = target.Center.X >= npc.Center.X ? 1 : -1;
-		var swingArea = new Rectangle(
+		return new Rectangle(
 			(int)(facing > 0 ? npc.Center.X : npc.Center.X - reach),
 			(int)(npc.Center.Y - reach * 0.75f),
 			(int)reach,
 			(int)(reach * 1.5f));
-		return swingArea.Intersects(target.Hitbox);
+	}
+
+	void CutTilesIn(Rectangle area)
+	{
+		int left = Math.Max(1, area.Left / 16), right = Math.Min(Main.maxTilesX - 2, area.Right / 16);
+		int top = Math.Max(1, area.Top / 16), bottom = Math.Min(Main.maxTilesY - 2, area.Bottom / 16);
+		for (int x = left; x <= right; x++)
+		{
+			for (int y = top; y <= bottom; y++)
+			{
+				var tile = Main.tile[x, y];
+				if (!tile.HasTile || !Main.tileCut[tile.TileType] || IsGrowingSapling(new Point(x, y)) || InOtherBase(new Point(x, y))
+					|| Building.HouseInspector.IsProtected(x, y) || !WorldGen.CanCutTile(x, y, TileCuttingContext.AttackMelee))
+					continue;
+				using (Systems.AvatarPresence.Enter())
+					WorldGen.KillTile(x, y);
+			}
+		}
 	}
 
 	public bool Strike(NPC target, Item weapon)
@@ -587,6 +606,7 @@ public sealed class BotHands
 			return false;
 		int direction = target.Center.X >= bot.Center.X ? 1 : -1;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
+		CutTilesIn(SwingArea(target, weapon));
 		bool crit = Main.rand.Next(100) < Avatar.GetWeaponCrit(weapon);
 		if (Tasks.Engagement.EnemyBotOf(bot, target) is Bot enemy)
 		{

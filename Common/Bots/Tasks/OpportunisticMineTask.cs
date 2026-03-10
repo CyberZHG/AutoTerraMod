@@ -60,6 +60,7 @@ public sealed class OpportunisticMineTask : BotTask
 		}
 		scannedAt = Main.GameUpdateCount;
 		wantsMore.Clear();
+		wantsWood = Bot.Hands.HasAxe && Bot.CenterTile.Y > TileQuery.SurfaceY(Bot.CenterTile.X) + UndergroundMargin && WoodCarried() < EnoughWood;
 		target = Scan();
 		if (target is not Point found)
 			return 0f;
@@ -101,6 +102,8 @@ public sealed class OpportunisticMineTask : BotTask
 		if (!tile.HasTile || unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y))
 			return false;
 		int type = tile.TileType;
+		if (TileQuery.IsChoppableTree(type))
+			return wantsWood && TileQuery.IsTreeBase(x, y);
 		if (type == TileID.Pots)
 			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
@@ -120,6 +123,21 @@ public sealed class OpportunisticMineTask : BotTask
 	}
 
 	const int EnoughOfOneKind = 100;
+	const int EnoughWood = 200;
+	const int UndergroundMargin = 20;
+
+	bool wantsWood;
+
+	int WoodCarried()
+	{
+		int total = 0;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (ResourceSources.IsWood(item.type))
+				total += item.stack;
+		}
+		return total;
+	}
 
 	readonly Dictionary<int, bool> wantsMore = new();
 
@@ -141,13 +159,15 @@ public sealed class OpportunisticMineTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		bool pot = Main.tile[tile.X, tile.Y].TileType == TileID.Pots;
-		var tool = pot ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : Bot.Hands.BestPickaxe;
+		int type = Main.tile[tile.X, tile.Y].TileType;
+		bool pot = type == TileID.Pots;
+		bool tree = TileQuery.IsChoppableTree(type);
+		var tool = pot ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : tree ? Bot.Hands.BestAxe : Bot.Hands.BestPickaxe;
 		if (tool != null && Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.Face(tile.ToWorldCoordinates());
-			if ((pot ? Bot.Hands.Cut(tile) : Bot.Hands.Dig(tile)) is ToolResult.Unbreakable or ToolResult.NoTool)
+			if ((pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : Bot.Hands.Dig(tile)) is ToolResult.Unbreakable or ToolResult.NoTool)
 				GiveUp(tile);
 			return;
 		}

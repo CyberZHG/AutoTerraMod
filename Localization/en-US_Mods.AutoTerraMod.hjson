@@ -4,12 +4,12 @@ Configs: {
 
 		FactionCount: {
 			Label: Faction count
-			Tooltip: Number of AI factions used when a new world starts (1-4). Afterwards each world keeps its own settings; change them in game with /autoterra.
+			Tooltip: Number of AI factions used when a new world starts (1-4). Afterwards each world keeps its own settings; changing it while in a world applies to that world, and lowering it hides the extra bots while keeping them in the save.
 		}
 
 		BotsPerFaction: {
 			Label: Bots per faction
-			Tooltip: Number of AI bots per faction used when a new world starts (1-6). Afterwards each world keeps its own settings; change them in game with /autoterra.
+			Tooltip: Number of AI bots per faction used when a new world starts (1-6). Afterwards each world keeps its own settings; changing it while in a world applies to that world, and lowering it hides the extra bots while keeping them in the save.
 		}
 
 		Relation: {
@@ -54,7 +54,7 @@ Configs: {
 }
 
 Commands: {
-	Description: Shows or changes this world's faction settings (counts can only grow)
+	Description: Shows or changes this world's faction settings (lowering a count hides bots, keeping them in the save)
 	NotStarted: Factions have not started in this world yet.
 	Usage: Usage: {0}
 	Current: This world: {0} factions, {1} bots each, relation: {2}

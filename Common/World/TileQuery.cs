@@ -79,6 +79,9 @@ public static class TileQuery
 		return tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava;
 	}
 
+	public static bool HoldsBackLava(int x, int y) =>
+		IsDangerousLiquid(x - 1, y) || IsDangerousLiquid(x + 1, y) || IsDangerousLiquid(x, y - 1);
+
 	public static int SurfaceY(int x)
 	{
 		int top = (int)(Main.worldSurface * 0.35);

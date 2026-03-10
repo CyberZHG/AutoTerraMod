@@ -86,8 +86,13 @@ public abstract class BotTask
 		return true;
 	}
 
+	Vector2? campExit;
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
+		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && BelowOwnCamp())
+			return true;
+		campExit = null;
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
@@ -99,8 +104,34 @@ public abstract class BotTask
 			Bot.Motor.MoveTo(target, radius);
 			return true;
 		}
+		if (CampExitAbove(target) is Vector2 exit)
+		{
+			BotDiagnostics.Log(Bot, $"stuck under the camp, tunneling out to {exit.ToTileCoordinates()}");
+			campExit = exit;
+			Bot.Motor.TunnelTo(exit, 32f);
+			return true;
+		}
 		BotDiagnostics.Log(Bot, $"no walkable route to {target.ToTileCoordinates()}, tunneling");
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
+	}
+
+	const int BelowCampDepth = 60;
+	const int CampExitMargin = 6;
+
+	protected bool BelowOwnCamp()
+	{
+		var here = Bot.CenterTile;
+		return Bot.Faction.Settlement is { } camp && here.X >= camp.Left && here.X <= camp.Right && here.Y > camp.Floor && here.Y < camp.Floor + BelowCampDepth;
+	}
+
+	protected Vector2? CampExitAbove(Vector2 target)
+	{
+		if (!BelowOwnCamp() || target.Y / 16f > Bot.Faction.Settlement.Floor)
+			return null;
+		var camp = Bot.Faction.Settlement;
+		var here = Bot.CenterTile;
+		int exitX = here.X - camp.Left < camp.Right - here.X ? camp.Left - CampExitMargin : camp.Right + CampExitMargin;
+		return new Vector2(exitX * 16f + 8f, (World.TileQuery.SurfaceY(exitX) - 2) * 16f);
 	}
 }
