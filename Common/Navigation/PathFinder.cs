@@ -20,7 +20,9 @@ public enum MoveKind
 	Swim,
 	RopeDown,
 	Fly,
-	Hook
+	Hook,
+	Leap,
+	HookHang
 }
 
 public readonly record struct PathNode(Point Feet, MoveKind Arrival);
@@ -143,6 +145,19 @@ public static class PathFinder
 	}
 
 	public static Vector2 BodyCenterAt(Point feet) => new((feet.X + 1) * 16f, (feet.Y + 1) * 16f - 21f);
+
+	public static Vector2? HangHold(Point feet)
+	{
+		int headRow = feet.Y - 3;
+		if (TileQuery.IsSolid(feet.X, headRow) || TileQuery.IsSolid(feet.X + 1, headRow))
+			return new Vector2((feet.X + 1) * 16f, (headRow + 1) * 16f);
+		int chestRow = feet.Y - 1;
+		if (TileQuery.IsSolid(feet.X - 1, chestRow))
+			return new Vector2(feet.X * 16f, chestRow * 16f + 8f);
+		if (TileQuery.IsSolid(feet.X + 2, chestRow))
+			return new Vector2((feet.X + 2) * 16f, chestRow * 16f + 8f);
+		return null;
+	}
 
 	public static Vector2? HookHold(Point from, Point ledge, int reach)
 	{

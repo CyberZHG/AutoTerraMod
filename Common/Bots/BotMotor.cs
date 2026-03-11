@@ -232,7 +232,7 @@ public sealed class BotMotor
 		bot.Grapple.Tick(npc, destination);
 		if (bot.Grapple.ConsumeClimbRelease())
 			jumpHold = JumpHoldTicks;
-		if (bot.Grapple.IsAttached)
+		if (bot.Grapple.IsAttached && !bot.Grapple.HangingInPlace)
 		{
 			TrackProgress(npc);
 			ScaffoldingAllowed = false;
@@ -755,8 +755,9 @@ public sealed class BotMotor
 			int ticks = bot.Avatar.rocketBoots > 0 ? RocketBootTicks : 0;
 			for (int slot = Equipment.FirstAccessorySlot; slot <= Equipment.LastAccessorySlot; slot++)
 			{
-				int wingSlot = bot.Avatar.armor[slot].wingSlot;
-				if (wingSlot > 0)
+				var worn = bot.Avatar.armor[slot];
+				int wingSlot = worn.wingSlot;
+				if (wingSlot > 0 && !worn.IsAir)
 					return ticks + ArmorIDs.Wing.Sets.Stats[wingSlot].FlyTime;
 			}
 			return ticks;
@@ -798,8 +799,18 @@ public sealed class BotMotor
 			RequestFlight(FlightIntentTicks);
 			wantsJump = true;
 		}
-		if (intent.HookAt is Vector2 hold && !bot.Grapple.IsAttached)
-			bot.Grapple.LatchForClimb(npc, hold);
+		if (intent.HangAt is Vector2 hangCenter && intent.HookAt is Vector2 hangHold)
+		{
+			if (bot.Grapple.Anchor != hangHold)
+				bot.Grapple.LatchToHang(npc, hangHold, hangCenter);
+		}
+		else
+		{
+			if (bot.Grapple.HangingInPlace)
+				bot.Grapple.Release(npc, jump: false);
+			if (intent.HookAt is Vector2 hold && !bot.Grapple.IsAttached)
+				bot.Grapple.LatchForClimb(npc, hold);
+		}
 		if (intent.HoldRope)
 		{
 			npc.velocity.Y = 0f;
@@ -973,7 +984,7 @@ public sealed class BotMotor
 		int depth = 0;
 		while (depth <= MaxMeasuredDrop && !TileQuery.CanStandOn(x, feetY + depth + 1) && Main.tile[x, feetY + depth + 1].LiquidAmount == 0)
 			depth++;
-		return depth;
+		return TileQuery.IsDangerousLiquid(x, feetY + depth + 1) ? int.MaxValue : depth;
 	}
 
 	void Descend(BodyTiles body)

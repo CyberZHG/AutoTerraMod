@@ -133,7 +133,7 @@ public static class ResourceSources
 		var drops = new List<DropRateInfo>();
 		for (int npcType = 1; npcType < NPCLoader.NPCCount; npcType++)
 		{
-			if (!ContentSamples.NpcsByNetId.TryGetValue(npcType, out var sample) || sample.friendly || sample.boss || sample.townNPC)
+			if (!ContentSamples.NpcsByNetId.TryGetValue(npcType, out var sample) || sample.friendly || sample.boss || sample.townNPC || Bosses.BossCatalog.ChallengeOf(npcType) != null)
 				continue;
 			drops.Clear();
 			foreach (var rule in Main.ItemDropsDB.GetRulesForNPCID(npcType, false))

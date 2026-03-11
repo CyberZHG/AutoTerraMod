@@ -22,12 +22,14 @@ public struct MotorIntent
 	public bool HoldRope;
 	public bool Fly;
 	public Vector2? HookAt;
+	public Vector2? HangAt;
 }
 
 public sealed class PathFollower
 {
 	const int ReplanIntervalTicks = 180;
 	const int StepTimeoutTicks = 120;
+	const int MaxLeapTicks = 600;
 	const int ForgetFailedStepsTicks = 1800;
 	const int ExtendedSearchMultiplier = 3;
 	const int OffPathTolerance = 4;
@@ -79,7 +81,7 @@ public sealed class PathFollower
 			InstallPending(feet);
 		if (path.Nodes.Count == 0)
 			return default;
-		SkipReachedNodes(feet, grounded, body.Center.X);
+		SkipReachedNodes(feet, grounded || body.velocity == Vector2.Zero, body.Center.X);
 		if (index >= path.Nodes.Count)
 			return default;
 		stepTicks++;
@@ -105,6 +107,8 @@ public sealed class PathFollower
 			return true;
 		if (Math.Abs(goal.X - plannedGoal.X) > GoalShiftTolerance || Math.Abs(goal.Y - plannedGoal.Y) > GoalShiftTolerance)
 			return true;
+		if (!grounded && stepTicks < MaxLeapTicks && (path.Nodes[index].Arrival is MoveKind.Leap or MoveKind.HookHang || index > 0 && path.Nodes[index - 1].Arrival == MoveKind.HookHang))
+			return false;
 		if (Main.GameUpdateCount - plannedAt > ReplanIntervalTicks || stepTicks > StepTimeoutTicks)
 			return true;
 		var next = path.Nodes[index].Feet;
@@ -184,7 +188,41 @@ public sealed class PathFollower
 		return column && (feet.Y == node.Feet.Y || onPlatformInNode || sunkBelow);
 	}
 
-	static float AimX(PathNode node) => node.Arrival == MoveKind.Drop ? PathFinder.CenterXOf(node.Feet.X) : FootingCenterX(node.Feet);
+	static float AimX(PathNode node) => node.Arrival switch
+	{
+		MoveKind.Drop => PathFinder.CenterXOf(node.Feet.X),
+		MoveKind.HookHang => PathFinder.BodyCenterAt(node.Feet).X,
+		_ => FootingCenterX(node.Feet)
+	};
+
+	static int AirSteer(NPC body, float toLanding)
+	{
+		float speedToward = body.velocity.X * Math.Sign(toLanding);
+		float stoppingDistance = speedToward > 0f ? speedToward * speedToward / (2f * AirSlowdown) : 0f;
+		return Math.Abs(toLanding) > CenteringTolerance + stoppingDistance ? Math.Sign(toLanding) : 0;
+	}
+
+	const float LeapLandingSlack = 24f;
+	const float AirSlowdown = 0.2f;
+
+	static void Leap(NPC body, Point feet, bool grounded, PathNode node, NavigationAbilities abilities, ref MotorIntent intent)
+	{
+		float toLanding = FootingCenterX(node.Feet) - body.Center.X;
+		int heading = Math.Sign(node.Feet.X - feet.X);
+		if (grounded)
+		{
+			intent.MoveDirection = heading;
+			bool atEdge = !PathFinder.IsSupportedNow(heading > 0 ? feet.X + 2 : feet.X - 1, feet.Y);
+			intent.Jump = atEdge && Math.Abs(node.Feet.X - feet.X) > 1;
+			intent.JumpHoldTicks = HoldTicksForRise(PathFinder.BaseJumpRise);
+			return;
+		}
+		bool farFromLanding = Math.Abs(toLanding) > LeapLandingSlack;
+		intent.MoveDirection = AirSteer(body, toLanding);
+		intent.Jump = farFromLanding || feet.Y > node.Feet.Y;
+		intent.JumpHoldTicks = HoldTicksForRise(PathFinder.BaseJumpRise);
+		intent.Fly = intent.Jump && body.velocity.Y > 0f && abilities.FlyRise > 0;
+	}
 
 	const int HookJumpHoldTicks = 15;
 	const float HookLaunchClearance = 6f;
@@ -193,6 +231,12 @@ public sealed class PathFollower
 	MotorIntent Execute(NPC body, Point feet, bool grounded, PathNode node, NavigationAbilities abilities)
 	{
 		var intent = new MotorIntent();
+		if (node.Arrival == MoveKind.HookHang)
+		{
+			intent.HookAt = PathFinder.HangHold(node.Feet);
+			intent.HangAt = PathFinder.BodyCenterAt(node.Feet);
+			return intent;
+		}
 		if (node.Arrival == MoveKind.Hook)
 		{
 			intent.MoveDirection = Math.Sign(FootingCenterX(node.Feet) - body.Center.X);
@@ -268,12 +312,17 @@ public sealed class PathFollower
 			case MoveKind.Jump:
 				intent.Jump = grounded || body.velocity.Y < 0f || rise > PathFinder.BaseJumpRise;
 				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, PathFinder.BaseJumpRise));
+				if (!grounded && body.velocity.Y > 0f)
+					intent.MoveDirection = AirSteer(body, offset);
 				if (rise > 0 && intent.MoveDirection != 0 && OverhangBeside(body, intent.MoveDirection))
 					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Fly:
 				intent.Fly = true;
 				intent.Jump = true;
+				break;
+			case MoveKind.Leap:
+				Leap(body, feet, grounded, node, abilities, ref intent);
 				break;
 			case MoveKind.Drop:
 				intent.DropThroughPlatforms = grounded && overNode;
@@ -371,7 +420,7 @@ public sealed class PathFollower
 
 	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall)
 	{
-		if (intent.Jump || intent.Fly || intent.HookAt != null || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly or MoveKind.Hook || body.wet)
+		if (intent.Jump || intent.Fly || intent.HookAt != null || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly or MoveKind.Hook or MoveKind.Leap || body.wet)
 			return false;
 		int heading = intent.MoveDirection != 0 ? intent.MoveDirection : Math.Sign(body.velocity.X);
 		if (heading == 0)

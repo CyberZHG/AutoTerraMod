@@ -190,6 +190,7 @@ public sealed class BotBrain
 			Equipment.EquipBestArmor(bot.Avatar);
 			Equipment.EquipBestAccessories(bot.Avatar, PlannedItemTypes);
 			Equipment.EquipMiscGear(bot.Avatar, PlannedItemTypes);
+			DyeTaste.Wear(bot);
 			Kit.ArrangeHotbar(bot);
 		}
 		using (Probes.Measure("Upkeep"))

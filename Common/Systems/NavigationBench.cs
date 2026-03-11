@@ -972,6 +972,213 @@ public sealed class NavigationBench : ModSystem
 			"#S!.########",
 			"############"
 		}),
+		new("BareParkour", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#..................................G...#",
+			"#...............................########",
+			"#..........................##...########",
+			"#.....................##...##...########",
+			"#S...............##...##...##...########",
+			"############.....##...##...##...########",
+			"############.....##...##...##...########",
+			"############%%%%%##%%%##%%%##%%%########",
+			"########################################"
+		}),
+		new("BareZigzag", new[]
+		{
+			"####################",
+			"#..................#",
+			"#..................#",
+			"#.............G....#",
+			"#######.....########",
+			"#..................#",
+			"#..................#",
+			"#..........=====...#",
+			"#..................#",
+			"#..................#",
+			"#...=====..........#",
+			"#..................#",
+			"#..................#",
+			"#..........=====...#",
+			"#..................#",
+			"#..................#",
+			"#S.................#",
+			"####################"
+		}),
+		new("BareDropMaze", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"#################..###",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"###..#################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#################..###",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"######################"
+		}),
+		new("CloudLavaGap", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S.........................G...........#",
+			"##########..........####################",
+			"##########%%%%%%%%%%####################",
+			"########################################"
+		}),
+		new("CloudChimney", new[]
+		{
+			"##################",
+			"#................#",
+			"#................#",
+			"#............G...#",
+			"#.........########",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"########.........#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#................#",
+			"#S...............#",
+			"##################"
+		}),
+		new("HookChimney", new[]
+		{
+			"####################",
+			"#..................#",
+			"#..................#",
+			"#.........G........#",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########...#########",
+			"########S..#########",
+			"####################"
+		}),
+		new("HookLavaSwing", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S........................G............#",
+			"#########...............################",
+			"#########%%%%%%%%%%%%%%%################",
+			"########################################"
+		}),
+		new("WingLavaLake", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S...................................G.#",
+			"#####..........................#########",
+			"#####%%%%%%%%%%%%%%%%%%%%%%%%%%#########",
+			"########################################"
+		}),
+		new("WingZigzag", new[]
+		{
+			"######################",
+			"#....................#",
+			"#....................#",
+			"#.................G..#",
+			"################...###",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"###...################",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"################...###",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#....................#",
+			"#S...................#",
+			"######################"
+		}),
+		new("CloudHookTower", new[]
+		{
+			"##############################",
+			"#............................#",
+			"#............................#",
+			"#..........G.................#",
+			"#.......#####................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#..#####.....................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#S...........................#",
+			"##############################"
+		}),
 	};
 
 	static string[] LidShaft(int goalColumn, string surface, string grass, string soil, string shaft, string bottom)
@@ -1099,6 +1306,7 @@ public sealed class NavigationBench : ModSystem
 	readonly List<string> results = new();
 
 	static bool Active => HeadlessTestMode.Scenario == "nav";
+	static readonly bool Trace = System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_TRACE") == "1";
 
 	public override void OnWorldUnload()
 	{
@@ -1127,12 +1335,14 @@ public sealed class NavigationBench : ModSystem
 			runner.Avatar.immune = true;
 			runner.Avatar.immuneTime = SettleTicks;
 		}
+		if (Trace && elapsed % 5 == 0)
+			BotDiagnostics.LogWorld($"nav trace t={elapsed} {runner.Motor.Describe()}");
 		if (elapsed < SettleTicks)
 			return;
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
 		if (!arrived && elapsed < (Cases[caseIndex].InWorld || Cases[caseIndex].Name.StartsWith("Recycle") ? WorldTripTimeoutTicks : TimeoutTicks))
 			return;
-		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
+		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready} armor=[{string.Join(",", runner.Avatar.armor.Select(item => item.type))}] rocket={runner.Avatar.rocketBoots}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
 		BotDiagnostics.LogWorld($"nav bench {Cases[caseIndex].Name}: {verdict}");
 		if (caseIndex + 1 < Cases.Length)
@@ -1208,7 +1418,7 @@ public sealed class NavigationBench : ModSystem
 		}
 		ClearClutter(runner);
 		EquipBenchGear(runner, bench.Name);
-		bool toolless = bench.Name.StartsWith("Wing") || bench.Name.StartsWith("Cloud") || bench.Name.StartsWith("Hook") || bench.Name.StartsWith("Fledgling");
+		bool toolless = new[] { "Wing", "Cloud", "Hook", "Fledgling", "Bare" }.Any(bench.Name.StartsWith);
 		if (!toolless)
 		{
 			if (runner.Hands.BestPickaxe == null)
@@ -1227,7 +1437,7 @@ public sealed class NavigationBench : ModSystem
 			StripTools(runner);
 		if (bench.InWorld)
 			TopUp(runner, ItemID.TempleKey, 1);
-		if (bench.Name.StartsWith("Hook"))
+		if (bench.Name.StartsWith("Hook") || bench.Name.StartsWith("CloudHook"))
 			TopUp(runner, ItemID.GrapplingHook, 1);
 		if (bench.Name.StartsWith("Recycle"))
 		{
@@ -1242,6 +1452,7 @@ public sealed class NavigationBench : ModSystem
 		runner.Grapple.ForgetSuppression();
 		runner.Avatar.statLife = runner.Avatar.statLifeMax2;
 		runner.Motor.Stop();
+		runner.Motor.RefreshGear();
 		goal = target.ToWorldCoordinates();
 		runner.Brain.Override = new BenchMoveTask(runner, goal, bench.Name.StartsWith("Climb"));
 		caseStartedAt = Main.GameUpdateCount;
@@ -1260,7 +1471,8 @@ public sealed class NavigationBench : ModSystem
 		int wanted = name.StartsWith("Wing") ? ItemID.AngelWings : name.StartsWith("Fledgling") ? ItemID.CreativeWings : name.StartsWith("Cloud") ? ItemID.CloudinaBottle : ItemID.None;
 		if (wanted != ItemID.None)
 			armor[Planning.Equipment.LastAccessorySlot].SetDefaults(wanted);
-		runner.Avatar.UpdateEquips(runner.Avatar.whoAmI);
+		runner.Avatar.miscEquips[Planning.Equipment.HookSlot].TurnToAir();
+		runner.Vitals.RefreshVanillaStats();
 	}
 
 	static void StripTools(Bot runner)

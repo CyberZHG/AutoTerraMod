@@ -17,7 +17,21 @@ public static class TreePlanter
 	const int GroundSearchAbove = 15;
 	const int GroundSearchBelow = 10;
 
-	public static bool WantsSaplings(Building.Settlement settlement) => CountSaplings(settlement) < MaxSaplings;
+	const uint SaplingCountTicks = 300;
+	static Building.Settlement countedSettlement;
+	static uint countedAt;
+	static int countedSaplings;
+
+	public static bool WantsSaplings(Building.Settlement settlement)
+	{
+		if (settlement != countedSettlement || Main.GameUpdateCount - countedAt >= SaplingCountTicks)
+		{
+			countedSettlement = settlement;
+			countedAt = Main.GameUpdateCount;
+			countedSaplings = CountSaplings(settlement);
+		}
+		return countedSaplings < MaxSaplings;
+	}
 
 	public static Point? FindSpot(Bot bot, Building.Settlement settlement, Item acorn)
 	{

@@ -76,7 +76,7 @@ public static class Equipment
 	{
 		for (int slot = FirstAccessorySlot; slot <= LastAccessorySlot; slot++)
 		{
-			if (slot != exceptSlot && avatar.armor[slot].wingSlot > 0)
+			if (slot != exceptSlot && avatar.armor[slot].wingSlot > 0 && !avatar.armor[slot].IsAir)
 				return true;
 		}
 		return false;

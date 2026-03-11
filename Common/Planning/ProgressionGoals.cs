@@ -479,6 +479,38 @@ public sealed class BossGoal : ProgressionGoal
 	}
 }
 
+public sealed class RefightGoal : ProgressionGoal
+{
+	public override bool IsExpedition => true;
+
+	public override string Describe() => "Refight";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.RefightWishes.Count > 0 && BossGoal.IsSummoner(bot);
+
+	public override bool IsMet(Bot bot) => !Wanted(bot).Any();
+
+	static IEnumerable<Bosses.BossChallenge> Wanted(Bot bot) =>
+		Bosses.BossCatalog.Challenges.Where(challenge => bot.Faction.WantsRefight(challenge.BossType) && Bosses.BossCredit.HasDefeated(bot.Faction, challenge));
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Terraria.Main.GameUpdateCount < bot.Faction.RallyCooldownUntil)
+			return PlanStep.Idle;
+		foreach (var challenge in Wanted(bot))
+		{
+			if (Bosses.BossCatalog.IsBossAlive(challenge) || !Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot).IsReady)
+				continue;
+			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
+			{
+				var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
+				if (step is not BlockedStep and not IdleStep)
+					return step;
+			}
+		}
+		return PlanStep.Idle;
+	}
+}
+
 public sealed class HellevatorGoal : ProgressionGoal
 {
 	public override bool IsExpedition => true;
@@ -816,6 +848,39 @@ public sealed class ShareSuppliesGoal : ProgressionGoal
 	}
 }
 
+public sealed class AcornGoal : ProgressionGoal
+{
+	const int Batch = 10;
+
+	public override bool NeedsSurface => true;
+
+	public override string Describe() => "Acorns";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement is { } camp && Shops.TradesWith(bot, NPCID.Dryad) && TreePlanter.WantsSaplings(camp);
+
+	public override bool IsMet(Bot bot) => BaseStorage.Count(bot.Faction, ItemID.Acorn) > 0
+		|| BotWorldSystem.Bots.Any(member => member.FactionId == bot.FactionId && Inventory.Count(member.Avatar, ItemID.Acorn) > 0);
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanPurchase(bot, ItemID.Acorn, Batch);
+}
+
+public sealed class DyeGoal : ProgressionGoal
+{
+	public override bool NeedsSurface => true;
+
+	public override string Describe() => "Dye";
+
+	public override bool AppliesTo(Bot bot) => DyeTaste.MissingDyes(bot.Avatar) > 0 && !DyeTaste.CarriesFavorite(bot);
+
+	public override bool IsMet(Bot bot)
+	{
+		int dye = DyeTaste.FavoriteOnSale(bot);
+		return dye == ItemID.None || !ProgressionPlanner.CanAffordEasily(bot, dye, 1);
+	}
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanPurchase(bot, DyeTaste.FavoriteOnSale(bot), 1);
+}
+
 public sealed class ShoppingGoal : ProgressionGoal
 {
 	public override bool NeedsSurface => true;
@@ -949,6 +1014,7 @@ public static class ProgressionGoals
 			new SupportConstructionGoal(),
 			new OutpostGoal(),
 			new BossGoal(),
+			new RefightGoal(),
 			new HellevatorGoal(),
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
@@ -968,6 +1034,8 @@ public static class ProgressionGoals
 		goals.Add(new OutpostKitGoal());
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
+		goals.Add(new AcornGoal());
+		goals.Add(new DyeGoal());
 		goals.Add(new StockpileGoal("Wood", 150, 300, bot => World.TreeSupply.Plentiful(bot.Faction) ? Wood : System.Array.Empty<int>()));
 		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
 		goals.Add(new StockpileGoal("Arrows", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Arrow)));

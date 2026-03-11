@@ -14,6 +14,7 @@ public sealed class BotGrapple
 	const float CappedAnchorPenalty = 16f * 12f;
 	const float PullSpeed = 11f;
 	const float HangDistance = 20f;
+	const float HangSnap = 1f;
 	const int MaxHangTicks = 600;
 
 	readonly Bot bot;
@@ -93,6 +94,28 @@ public sealed class BotGrapple
 		return hold + new Vector2(hang * (body.width / 2f + EdgeClearance), 0f);
 	}
 
+	bool hangMode;
+
+	public bool HangingInPlace => hangMode && IsHanging;
+
+	public bool LatchToHang(NPC body, Vector2 hold, Vector2 bodyCenter)
+	{
+		if (Suppressed || FindHook() == null)
+			return false;
+		Anchor = hold;
+		pullTo = bodyCenter;
+		hangMode = true;
+		climbing = false;
+		IsHanging = false;
+		hangTicks = 0;
+		closestPull = float.MaxValue;
+		snaggedTicks = 0;
+		body.noGravity = true;
+		SoundEngine.PlaySound(SoundID.Item1, body.Center);
+		BotDiagnostics.Log(bot, $"hooked {hold.ToTileCoordinates()} to hang");
+		return true;
+	}
+
 	public bool ConsumeClimbRelease()
 	{
 		bool released = climbReleased;
@@ -128,6 +151,16 @@ public sealed class BotGrapple
 			return;
 		var toAnchor = pullTo - body.Center;
 		float distance = toAnchor.Length();
+		if (hangMode)
+		{
+			IsHanging = distance <= HangSnap;
+			body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * System.Math.Min(PullSpeed, distance);
+			if (!IsHanging && Snagged(distance))
+				Release(body, jump: false);
+			else if (IsHanging && ++hangTicks > MaxHangTicks)
+				Release(body, jump: false);
+			return;
+		}
 		IsHanging = distance <= HangDistance;
 		body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * PullSpeed;
 		if (!IsHanging && Snagged(distance))
@@ -174,6 +207,7 @@ public sealed class BotGrapple
 		Anchor = null;
 		IsHanging = false;
 		climbing = false;
+		hangMode = false;
 		body.noGravity = false;
 		if (jump)
 			body.velocity.Y = -5f;

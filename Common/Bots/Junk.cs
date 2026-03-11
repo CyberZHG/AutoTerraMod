@@ -27,7 +27,7 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
-		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item) || FitsExistingStack(bot.Avatar, item))
+		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item) || FitsExistingStack(bot.Avatar, item) || DyeTaste.IsFavorite(bot.Faction, item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
 		return Inventory.Count(bot.Avatar, item.type) >= reserve;

@@ -216,7 +216,7 @@ public sealed class BotVitals
 		return false;
 	}
 
-	void RefreshVanillaStats()
+	public void RefreshVanillaStats()
 	{
 		try
 		{

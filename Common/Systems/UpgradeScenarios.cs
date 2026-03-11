@@ -33,6 +33,14 @@ public sealed class UpgradeScenarios : ModSystem
 			new (int, int)[] { (ItemID.DemoniteOre, 330), (ItemID.ShadowScale, 80), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 65 && WearsAny(bot, (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves)),
 			"nightmare pickaxe and full shadow armor"),
+		["refight"] = new(new int[] { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu },
+			new (int, int)[] { (ItemID.DemoniteBar, 60), (ItemID.CrimtaneBar, 60), (ItemID.GoldPickaxe, 1), (ItemID.GoldBroadsword, 1), (ItemID.GoldHelmet, 1), (ItemID.GoldChainmail, 1), (ItemID.GoldGreaves, 1), (ItemID.LifeCrystal, 10), (ItemID.HealingPotion, 20), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
+			bot => Inventory.Count(bot.Avatar, ItemID.ShadowScale) + Inventory.Count(bot.Avatar, ItemID.TissueSample) > 0,
+			"shadow scales or tissue samples from a world evil boss fought again"),
+		["dyes"] = new(PreHardmode,
+			new (int, int)[] { (ItemID.RedDye, 3), (ItemID.BlueDye, 3), (ItemID.GreenDye, 3), (ItemID.YellowDye, 3), (ItemID.PurpleDye, 3), (ItemID.IronHelmet, 1), (ItemID.IronChainmail, 1), (ItemID.IronGreaves, 1) },
+			bot => bot.Avatar.dye.Take(3).All(dye => DyeTaste.IsFavorite(bot.Faction, dye)),
+			"armor dyed in the faction's own color"),
 		["upgrade-hell"] = new(PreHardmode,
 			new (int, int)[] { (ItemID.Hellstone, 360), (ItemID.Obsidian, 120), (ItemID.Hellforge, 1), (ItemID.IronOre, 30), (ItemID.Wood, 80), (ItemID.StoneBlock, 60) },
 			bot => Pick(bot) >= 100 && WearsAny(bot, (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves)),
@@ -84,7 +92,7 @@ public sealed class UpgradeScenarios : ModSystem
 			"pickaxe axe/drax and full hallowed armor")
 	};
 
-	public static bool GearFirst => Active != null && HeadlessTestMode.Scenario is not ("banners" or "collector" or "naturalist");
+	public static bool GearFirst => Active != null && HeadlessTestMode.Scenario is not ("banners" or "collector" or "naturalist" or "dyes");
 
 	static bool HasCageAtBase(Factions.Faction faction)
 	{

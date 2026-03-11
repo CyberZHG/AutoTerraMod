@@ -63,9 +63,9 @@ public sealed class PathSearch
 	Dictionary<Point, float> costSoFar => frontier.CostSoFar;
 	readonly List<Edge> edges = new(32);
 	const int ScanMargin = 130;
-	const byte BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128;
+	const ushort BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128, HangKnown = 256, HangBit = 512;
 
-	byte[] cells;
+	ushort[] cells;
 	readonly int originX;
 	readonly int originY;
 	readonly int span;
@@ -87,7 +87,7 @@ public sealed class PathSearch
 		span = reach * 2 + 1;
 		originX = start.X - reach;
 		originY = start.Y - reach;
-		cells = System.Buffers.ArrayPool<byte>.Shared.Rent(span * span);
+		cells = System.Buffers.ArrayPool<ushort>.Shared.Rent(span * span);
 		Array.Clear(cells, 0, span * span);
 		costSoFar[start] = 0f;
 		open.Enqueue(start, HeuristicWeight * heuristic(start));
@@ -120,7 +120,7 @@ public sealed class PathSearch
 	void ReleaseBuffers()
 	{
 		if (cells != null)
-			System.Buffers.ArrayPool<byte>.Shared.Return(cells);
+			System.Buffers.ArrayPool<ushort>.Shared.Return(cells);
 		cells = null;
 		if (frontier == null)
 			return;
@@ -137,16 +137,16 @@ public sealed class PathSearch
 		return (uint)cx < (uint)span && (uint)cy < (uint)span ? cx + cy * span : -1;
 	}
 
-	bool Flag(int x, int y, byte known, byte bit, out int index)
+	bool Flag(int x, int y, ushort known, ushort bit, out int index)
 	{
 		index = Cell(x, y);
 		return index >= 0 && (cells[index] & known) != 0;
 	}
 
-	bool Remember(int index, byte known, byte bit, bool value)
+	bool Remember(int index, ushort known, ushort bit, bool value)
 	{
 		if (index >= 0)
-			cells[index] |= (byte)(known | (value ? bit : 0));
+			cells[index] |= (ushort)(known | (value ? bit : 0));
 		return value;
 	}
 	public bool IsDone => Result != null;
@@ -198,7 +198,8 @@ public sealed class PathSearch
 			best = current;
 		}
 		edges.Clear();
-		Expand(current, cameFrom.TryGetValue(current, out var arrival) && arrival.kind == MoveKind.Bridge);
+		bool arrived = cameFrom.TryGetValue(current, out var arrival);
+		Expand(current, arrived && arrival.kind == MoveKind.Bridge, arrived && arrival.kind == MoveKind.HookHang);
 		float here = costSoFar[current];
 		foreach (var edge in edges)
 		{
@@ -224,13 +225,18 @@ public sealed class PathSearch
 		return nodes;
 	}
 
-	void Expand(Point node, bool standsOnBridge)
+	void Expand(Point node, bool standsOnBridge, bool hanging)
 	{
 		int x = node.X;
 		int y = node.Y;
 		bool onRope = PathFinder.RopeColumn(x, y) >= 0 || PathFinder.RopeColumn(x, y - 1) >= 0;
 		bool supported = standsOnBridge || Supported(x, y);
 		bool anchored = supported || onRope;
+		if (hanging && !supported)
+		{
+			ExpandHang(x, y);
+			return;
+		}
 
 		foreach (int dir in Directions)
 		{
@@ -283,8 +289,15 @@ public sealed class PathSearch
 		if (abilities.FlyRise > 0 && supported)
 			AddFlyEdges(x, y);
 
+		if (supported && !swimming)
+			AddLeapEdges(x, y);
+
 		if (abilities.HookReach > abilities.JumpRise && supported)
+		{
 			AddHookEdges(x, y);
+			if (HangEdges)
+				AddHangEdgesFromGround(x, y);
+		}
 
 		if (IsPlatformBelow(x, y) && DropLanding(x, y + 1, abilities.MaxFall) is Point belowPlatform)
 			edges.Add(new Edge(belowPlatform, MoveKind.Drop, 1f + (belowPlatform.Y - y) * 0.3f));
@@ -331,6 +344,35 @@ public sealed class PathSearch
 		}
 	}
 
+	public static bool HangEdges = true;
+	const int BaseLeapTiles = 6;
+	const int LeapDropTiles = 8;
+	const float LeapCost = 4f;
+
+	void AddLeapEdges(int x, int y)
+	{
+		int reach = BaseLeapTiles + (abilities.JumpRise - PathFinder.BaseJumpRise) * 3 / 2 + abilities.FlyRise * 2 / 3;
+		int arc = y - 2;
+		for (int direction = -1; direction <= 1; direction += 2)
+		{
+			if (Supported(x + direction, y) || !BodyClear(x + direction, y) || !BodyClear(x, arc))
+				continue;
+			for (int dx = 2; dx <= reach; dx++)
+			{
+				int nx = x + direction * dx;
+				if (!BodyClear(nx, arc))
+					break;
+				for (int ny = y - 1; ny <= y + LeapDropTiles && BodyClear(nx, ny); ny++)
+				{
+					if (!Supported(nx, ny))
+						continue;
+					edges.Add(new Edge(new Point(nx, ny), MoveKind.Leap, LeapCost + dx * 0.6f + Math.Abs(ny - y) * 0.3f));
+					break;
+				}
+			}
+		}
+	}
+
 	const int HookColumnSpan = 10;
 	const float HookCost = 5f;
 	const float HookCostPerTile = 0.4f;
@@ -347,6 +389,75 @@ public sealed class PathSearch
 				var ledge = new Point(column, row);
 				if (PathFinder.HookHold(from, ledge, abilities.HookReach) != null)
 					edges.Add(new Edge(ledge, MoveKind.Hook, HookCost + (y - row) * HookCostPerTile));
+				break;
+			}
+		}
+	}
+
+	const float HangCost = 12f;
+	const int MaxHangSightChecks = 1;
+	const float HangCostPerTile = 0.5f;
+
+	bool HangSpot(int x, int y)
+	{
+		if (Flag(x, y, HangKnown, HangBit, out int index))
+			return (cells[index] & HangBit) != 0;
+		return Remember(index, HangKnown, HangBit, BodyClear(x, y) && !Supported(x, y) && PathFinder.HangHold(new Point(x, y)) != null);
+	}
+
+	static bool ClearLine(Vector2 from, Vector2 to)
+	{
+		var delta = to - from;
+		int steps = (int)(Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y)) / 8f) + 1;
+		var step = delta / steps;
+		for (int i = 1; i < steps; i++)
+		{
+			var point = from + step * i;
+			if (TileQuery.IsSolid((int)(point.X / 16f), (int)(point.Y / 16f)))
+				return false;
+		}
+		return true;
+	}
+
+	bool DeepDropBeside(int column, int y) =>
+		!Supported(column, y) && BodyClear(column, y) && (DropLanding(column, y, abilities.MaxFall) is not Point landing || landing.Y - y > abilities.JumpRise);
+
+	void AddHangEdgesFromGround(int x, int y)
+	{
+		if (DeepDropBeside(x - 1, y))
+			AddHangEdges(x, y, x - HookColumnSpan, x, y + 2);
+		if (DeepDropBeside(x + 1, y))
+			AddHangEdges(x, y, x, x + HookColumnSpan, y + 2);
+		if (TileQuery.IsSolid(x - 1, y - 1) || TileQuery.IsSolid(x + 2, y - 1))
+			AddHangEdges(x, y, x - 1, x + 1, y - abilities.JumpRise - 1);
+	}
+
+	void ExpandHang(int x, int y)
+	{
+		AddHookEdges(x, y);
+		AddHangEdges(x, y, x - HookColumnSpan, x + HookColumnSpan, y + 2);
+		AddJumpEdges(x, y, PathFinder.BaseJumpRise);
+		if (DropLanding(x, y + 1, abilities.MaxFall) is Point landing)
+			edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
+	}
+
+	void AddHangEdges(int x, int y, int firstColumn, int lastColumn, int lowestRow)
+	{
+		var origin = PathFinder.BodyCenterAt(new Point(x, y));
+		float reach = abilities.HookReach * 16f;
+		for (int column = firstColumn; column <= lastColumn; column++)
+		{
+			int sightChecks = 0;
+			for (int row = y - abilities.HookReach; row <= lowestRow && sightChecks < MaxHangSightChecks; row++)
+			{
+				if (column == x && row >= y - 1 || !HangSpot(column, row) || PathFinder.HangHold(new Point(column, row)) is not Vector2 hold)
+					continue;
+				if (Vector2.Distance(origin, hold) > reach)
+					continue;
+				sightChecks++;
+				if (!ClearLine(origin, hold + Vector2.Normalize(origin - hold) * 4f))
+					continue;
+				edges.Add(new Edge(new Point(column, row), MoveKind.HookHang, HangCost + (Math.Abs(column - x) + Math.Abs(row - y)) * HangCostPerTile));
 				break;
 			}
 		}

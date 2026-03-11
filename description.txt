@@ -2,7 +2,7 @@ Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spe
 - Gather, craft, build bases and upgrade gear; melee, ranged, magic and summoner bots.
 - Fight every boss from King Slime to Moon Lord and chase end-game gear.
 - Use ammo, earn and spend money, share supplies with teammates.
-- Rescue and house town NPCs; hobbies like fishing, banners, mannequins and critter cages.
+- Rescue and house town NPCs; hobbies like fishing, banners, mannequins, critter cages and faction-colored dyes.
 - Modes: Race, Cooperate, War. Settings are saved per world (/autoterra).
 Single-player only.
 
@@ -10,6 +10,6 @@ Single-player only.
 - 采集、合成、建造基地、升级装备；近战、射手、法师、召唤师四种职业。
 - 挑战从史莱姆王到月亮领主的所有 Boss，追求终局装备。
 - 使用弹药、赚钱花钱、与队友共享物资。
-- 解救并安置城镇 NPC；钓鱼、挂旗帜、摆人体模型、养小动物等爱好。
+- 解救并安置城镇 NPC；钓鱼、挂旗帜、摆人体模型、养小动物、穿阵营色染料等爱好。
 - 模式：竞速、合作、敌对；设置随世界保存（/autoterra）。
 仅支持单人模式。

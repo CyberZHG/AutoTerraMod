@@ -29,6 +29,13 @@ public sealed class Faction
 	public uint RallyCooldownUntil { get; set; }
 	public int RallyLeaderId { get; set; } = -1;
 	public bool RallyAssembled { get; set; }
+	public Dictionary<int, uint> RefightWishes { get; } = new();
+
+	const uint RefightWishTicks = 20 * 3600;
+
+	public void WishRefight(int bossType) => RefightWishes[bossType] = Terraria.Main.GameUpdateCount + RefightWishTicks;
+
+	public bool WantsRefight(int bossType) => RefightWishes.TryGetValue(bossType, out uint until) && Terraria.Main.GameUpdateCount < until;
 	public World.Hellbridge Hellbridge { get; set; }
 	public World.Hellevator Hellevator { get; set; }
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);

@@ -376,6 +376,8 @@ public static class ProgressionPlanner
 			if (step is not BlockedStep)
 				return step;
 		}
+		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(context.Bot.Faction, boss))
+			context.Bot.Faction.WishRefight(boss.BossType);
 		return PlanPurchase(context.Bot, itemType, amount - have);
 	}
 
@@ -466,7 +468,7 @@ public static class ProgressionPlanner
 		return coins > 0 && Shops.Offer(bot, itemType) is var (seller, price) && Shops.WithinShoppingTrip(bot, seller.Center) && (long)price * amount * EasyPurchaseShare <= coins;
 	}
 
-	static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
+	public static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
 	{
 		if (Shops.Offer(bot, itemType) is not var (seller, price) || !Shops.WithinShoppingTrip(bot, seller.Center))
 			return PlanStep.Blocked;
