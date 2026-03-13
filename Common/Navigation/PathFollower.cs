@@ -88,7 +88,8 @@ public sealed class PathFollower
 		lastIntent = Execute(body, feet, grounded, path.Nodes[index], abilities);
 		if (!grounded && index > 0 && path.Nodes[index - 1].Arrival == MoveKind.Fly)
 			lastIntent.Fly = true;
-		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall))
+		bool launchesNext = index + 1 < path.Nodes.Count && path.Nodes[index + 1].Arrival is not (MoveKind.Walk or MoveKind.Drop);
+		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall, launchesNext))
 		{
 			lastIntent.MoveDirection = 0;
 			lastIntent.Brake = true;
@@ -204,6 +205,7 @@ public sealed class PathFollower
 
 	const float LeapLandingSlack = 24f;
 	const float AirSlowdown = 0.2f;
+	const float TurnAroundSpeed = 0.5f;
 
 	static void Leap(NPC body, Point feet, bool grounded, PathNode node, NavigationAbilities abilities, ref MotorIntent intent)
 	{
@@ -214,13 +216,13 @@ public sealed class PathFollower
 			intent.MoveDirection = heading;
 			bool atEdge = !PathFinder.IsSupportedNow(heading > 0 ? feet.X + 2 : feet.X - 1, feet.Y);
 			intent.Jump = atEdge && Math.Abs(node.Feet.X - feet.X) > 1;
-			intent.JumpHoldTicks = HoldTicksForRise(PathFinder.BaseJumpRise);
+			intent.JumpHoldTicks = HoldTicksForRise(abilities.SingleJumpRise);
 			return;
 		}
 		bool farFromLanding = Math.Abs(toLanding) > LeapLandingSlack;
 		intent.MoveDirection = AirSteer(body, toLanding);
 		intent.Jump = farFromLanding || feet.Y > node.Feet.Y;
-		intent.JumpHoldTicks = HoldTicksForRise(PathFinder.BaseJumpRise);
+		intent.JumpHoldTicks = HoldTicksForRise(abilities.SingleJumpRise);
 		intent.Fly = intent.Jump && body.velocity.Y > 0f && abilities.FlyRise > 0;
 	}
 
@@ -310,8 +312,8 @@ public sealed class PathFollower
 				intent.JumpHoldTicks = HoldTicksForRise(2);
 				break;
 			case MoveKind.Jump:
-				intent.Jump = grounded || body.velocity.Y < 0f || rise > PathFinder.BaseJumpRise;
-				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, PathFinder.BaseJumpRise));
+				intent.Jump = grounded && body.velocity.X * intent.MoveDirection > -TurnAroundSpeed || body.velocity.Y < 0f || rise > abilities.SingleJumpRise;
+				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, abilities.SingleJumpRise));
 				if (!grounded && body.velocity.Y > 0f)
 					intent.MoveDirection = AirSteer(body, offset);
 				if (rise > 0 && intent.MoveDirection != 0 && OverhangBeside(body, intent.MoveDirection))
@@ -418,7 +420,7 @@ public sealed class PathFollower
 		return index + nodes <= path.Nodes.Count;
 	}
 
-	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall)
+	static bool OvershootsIntoDeadlyDrop(NPC body, Point feet, PathNode node, MotorIntent intent, int maxFall, bool launchesNext)
 	{
 		if (intent.Jump || intent.Fly || intent.HookAt != null || intent.BridgeTile != null || node.Arrival is MoveKind.Jump or MoveKind.Bridge or MoveKind.Pillar or MoveKind.Fly or MoveKind.Hook or MoveKind.Leap || body.wet)
 			return false;
@@ -427,6 +429,8 @@ public sealed class PathFollower
 			return false;
 		int aheadX = heading > 0 ? feet.X + 2 : feet.X - 1;
 		float aimEdge = AimX(node) + heading * body.width / 2f;
+		if (!launchesNext && CoastsPast(body, node, heading) is int beyond && DropBelow(beyond, node.Feet.Y) > maxFall)
+			return true;
 		bool staysOutOfAhead = heading > 0 ? (int)((aimEdge - 1f) / 16f) < aheadX : (int)(aimEdge / 16f) > aheadX;
 		if (intent.MoveDirection == heading && staysOutOfAhead)
 			return false;
@@ -440,12 +444,22 @@ public sealed class PathFollower
 		return !insideNodeFootprint || !steppingOntoNode;
 	}
 
+	static int? CoastsPast(NPC body, PathNode node, int heading)
+	{
+		if (body.velocity.X * heading <= 0f)
+			return null;
+		int beyond = heading > 0 ? node.Feet.X + 2 : node.Feet.X - 1;
+		float coastEdge = body.Center.X + heading * (body.width / 2f + body.velocity.X * body.velocity.X / (2f * AirSlowdown));
+		bool crosses = heading > 0 ? coastEdge >= beyond * 16f + body.width / 2f : coastEdge <= (beyond + 1) * 16f - body.width / 2f;
+		return crosses ? beyond : null;
+	}
+
 	static int DropBelow(int x, int feetY)
 	{
 		int depth = 0;
 		while (depth <= PathFinder.MaxSafeFall * 4 && !TileQuery.CanStandOn(x, feetY + depth + 1) && Main.tile[x, feetY + depth + 1].LiquidAmount == 0)
 			depth++;
-		return depth;
+		return TileQuery.IsDangerousLiquid(x, feetY + depth + 1) ? int.MaxValue : depth;
 	}
 
 	static Point? MissingBridgeTile(Point feet, Point node)
@@ -460,7 +474,7 @@ public sealed class PathFollower
 		return null;
 	}
 
-	static int HoldTicksForRise(int rise) => rise <= 1 ? 1 : Math.Min(15, (rise * 16 - 21) / 5 + 2);
+	static int HoldTicksForRise(int rise) => rise <= 1 ? 1 : (rise * 16 - 21) / 5 + 2;
 
 	static Point? FirstSolidToDig(Point feet, Point next)
 	{

@@ -21,6 +21,7 @@ public sealed class HuntTask : BotTask
 	Vector2? huntingGround;
 	bool skyHunt;
 	int wanderDirection = 1;
+	Vector2? wanderTarget;
 
 	public HuntTask(Bot bot) : base(bot) { }
 
@@ -84,6 +85,7 @@ public sealed class HuntTask : BotTask
 	{
 		base.Start();
 		wanderDirection = Main.rand.NextBool() ? 1 : -1;
+		wanderTarget = null;
 		huntingGround = null;
 		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
 		skyHunt = Bot.Brain.Plan is GatherStep { Source: NpcSource { Sky: true } };
@@ -114,10 +116,14 @@ public sealed class HuntTask : BotTask
 				huntingGround = null;
 			return;
 		}
-		int x = Utils.Clamp(Bot.CenterTile.X + wanderDirection * WanderTiles, 50, Main.maxTilesX - 50);
-		bool underground = Bot.CenterTile.Y > Main.worldSurface + UndergroundMargin;
-		float y = underground || skyHunt ? Bot.Center.Y : TileQuery.SurfaceY(x) * 16f - 24f;
-		Bot.Motor.MoveTo(new Vector2(x * 16f, y), 32f);
+		if (wanderTarget == null)
+		{
+			int x = Utils.Clamp(Bot.CenterTile.X + wanderDirection * WanderTiles, 50, Main.maxTilesX - 50);
+			bool underground = Bot.CenterTile.Y > Main.worldSurface + UndergroundMargin;
+			float y = underground || skyHunt ? Bot.Center.Y : TileQuery.SurfaceY(x) * 16f - 24f;
+			wanderTarget = new Vector2(x * 16f, y);
+		}
+		Bot.Motor.MoveTo(wanderTarget.Value, 32f);
 		if (Bot.Motor.HasArrived || Bot.Motor.IsStalled)
 		{
 			wanderDirection = -wanderDirection;

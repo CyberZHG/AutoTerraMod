@@ -13,8 +13,7 @@ namespace AutoTerraMod.Common.Bots;
 
 public sealed class BotMotor
 {
-	const float JumpSpeed = 5.01f;
-	const int JumpHoldTicks = 15;
+	const int JumpHoldTicks = 99;
 	const int MaxJumpableWall = 4;
 	const float PlayerGravity = 0.4f;
 	const float NpcBaseGravity = 0.3f;
@@ -161,6 +160,11 @@ public sealed class BotMotor
 
 	public void TunnelTo(Vector2 target, float radius)
 	{
+		if (Tunneling && destination is Vector2 current && Vector2.DistanceSquared(current, target) <= 32f * 32f)
+		{
+			arriveRadius = radius;
+			return;
+		}
 		MoveTo(target, radius);
 		Tunneling = true;
 		ResetProgress();
@@ -231,7 +235,7 @@ public sealed class BotMotor
 
 		bot.Grapple.Tick(npc, destination);
 		if (bot.Grapple.ConsumeClimbRelease())
-			jumpHold = JumpHoldTicks;
+			jumpHold = bot.Vitals.JumpHeight;
 		if (bot.Grapple.IsAttached && !bot.Grapple.HangingInPlace)
 		{
 			TrackProgress(npc);
@@ -626,9 +630,31 @@ public sealed class BotMotor
 			ApplyIntent(npc, intent, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 			return;
 		}
+		if (npc.velocity.Y == 0f && CoastsOffDeadlyEdge(npc))
+		{
+			npc.velocity.X = 0f;
+			return;
+		}
 		if ((follower.HasNoRoute || follower.FinishedShortOfGoal) && !PlacementForbidden && RecycleBlocks(npc, delta, ref moveDirection, ref wantsJump, ref jumpHoldTicks))
 			return;
 		SteerGreedy(npc, target, delta, ref moveDirection, ref wantsJump);
+	}
+
+	bool CoastsOffDeadlyEdge(NPC npc)
+	{
+		float speed = npc.velocity.X;
+		if (speed == 0f)
+			return false;
+		float coast = Math.Sign(speed) * speed * speed / (2f * bot.Avatar.runSlowdown);
+		int left = (int)((npc.position.X + coast) / 16f);
+		int right = (int)((npc.position.X + npc.width - 1f + coast) / 16f);
+		int row = BodyTiles.Of(npc).Bottom;
+		for (int x = left; x <= right; x++)
+		{
+			if (TileQuery.CanStandOn(x, row + 1))
+				return false;
+		}
+		return DropDepth(speed > 0f ? left : right, row) > AffordableFall;
 	}
 
 	const int RecycleFrontierLimit = 40;
@@ -711,7 +737,7 @@ public sealed class BotMotor
 	const int FallDamagePerTile = 10;
 	const int MaxMeasuredDrop = 200;
 
-	int AffordableFall => PathFinder.MaxSafeFall + (int)(bot.Avatar.statLife * AffordableFallDamageShare / FallDamagePerTile);
+	int AffordableFall => bot.Avatar.noFallDmg ? WingedSafeFall : bot.Vitals.SafeFall - 1 + (int)(bot.Avatar.statLife * AffordableFallDamageShare / FallDamagePerTile);
 
 	const int GearRefreshTicks = 15;
 	const int ScarceBridgeMaterial = 5;
@@ -728,8 +754,10 @@ public sealed class BotMotor
 			gearCheckedAt = Math.Max(1u, Main.GameUpdateCount);
 			int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 			int flyRise = FlightRise;
+			bool extraJump = HasExtraJump;
+			int singleRise = SingleJumpRise;
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.BridgeMaterialCount() >= ScarceBridgeMaterial, false, bot.Hands.HasRope,
-				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, PathFinder.BaseJumpRise + (HasExtraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe);
+				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, singleRise + (extraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe, singleRise, LeapReach(extraJump, flyRise));
 		}
 		bool canRope = gear.CanRope && !PlacementForbidden;
 		return gear with
@@ -757,7 +785,7 @@ public sealed class BotMotor
 			{
 				var worn = bot.Avatar.armor[slot];
 				int wingSlot = worn.wingSlot;
-				if (wingSlot > 0 && !worn.IsAir)
+				if (wingSlot > 0 && !worn.IsAir && bot.Avatar.IsItemSlotUnlockedAndUsable(slot))
 					return ticks + ArmorIDs.Wing.Sets.Stats[wingSlot].FlyTime;
 			}
 			return ticks;
@@ -779,7 +807,7 @@ public sealed class BotMotor
 		{
 			for (int slot = Equipment.FirstAccessorySlot; slot <= Equipment.LastAccessorySlot; slot++)
 			{
-				if (DoubleJumpAccessories.Contains(bot.Avatar.armor[slot].type))
+				if (DoubleJumpAccessories.Contains(bot.Avatar.armor[slot].type) && bot.Avatar.IsItemSlotUnlockedAndUsable(slot))
 					return true;
 			}
 			return false;
@@ -1120,7 +1148,9 @@ public sealed class BotMotor
 	void Run(NPC npc, int direction)
 	{
 		var avatar = bot.Avatar;
-		float maxSpeed = (sprinting ? Math.Max(avatar.maxRunSpeed, avatar.accRunSpeed) : avatar.maxRunSpeed) * avatar.moveSpeed;
+		float maxSpeed = avatar.maxRunSpeed * avatar.moveSpeed;
+		if (sprinting)
+			maxSpeed = Math.Max(maxSpeed, avatar.accRunSpeed);
 		float acceleration = avatar.runAcceleration * avatar.moveSpeed;
 		if (direction != 0)
 		{
@@ -1143,20 +1173,21 @@ public sealed class BotMotor
 			jumpHold = 0;
 			return;
 		}
+		float jumpSpeed = bot.Vitals.JumpSpeed;
 		if (jumpHold == 0 && (npc.velocity.Y == 0f || npc.wet || OnRope(npc)))
 		{
-			npc.velocity.Y = -JumpSpeed;
-			jumpHold = holdTicks;
+			npc.velocity.Y = -jumpSpeed;
+			jumpHold = HoldFor(holdTicks);
 		}
 		else if (jumpHold > 0)
 		{
-			npc.velocity.Y = -JumpSpeed;
+			npc.velocity.Y = -jumpSpeed;
 			jumpHold--;
 		}
 		else if (extraJumpReady && flightTicks == 0 && npc.velocity.Y >= 0f)
 		{
-			npc.velocity.Y = -JumpSpeed;
-			jumpHold = holdTicks;
+			npc.velocity.Y = -jumpSpeed;
+			jumpHold = HoldFor(holdTicks);
 			extraJumpReady = false;
 		}
 		else if (flightTicks > 0 && wingTimeLeft > 0)
@@ -1165,6 +1196,34 @@ public sealed class BotMotor
 			wingTimeLeft--;
 		}
 	}
+
+	int HoldFor(int baseTicks)
+	{
+		var vitals = bot.Vitals;
+		if (baseTicks >= JumpHoldTicks)
+			return vitals.JumpHeight;
+		float speed = vitals.JumpSpeed;
+		float wanted = BotVitals.BaseJumpSpeed * baseTicks + (BotVitals.BaseJumpSpeed * BotVitals.BaseJumpSpeed - speed * speed) / (2f * PlayerGravity);
+		return Math.Clamp((int)MathF.Ceiling(wanted / speed), 0, vitals.JumpHeight);
+	}
+
+	static float JumpApex(float speed, int height) => speed * (height + 1) + speed * speed / (2f * PlayerGravity);
+
+	static float JumpAirTicks(float speed, int height) => height + 1 + speed / PlayerGravity + MathF.Sqrt(2f * JumpApex(speed, height) / PlayerGravity);
+
+	static readonly float BaseApex = JumpApex(BotVitals.BaseJumpSpeed, BotVitals.BaseJumpHeight);
+	static readonly float BaseLeapPixels = JumpAirTicks(BotVitals.BaseJumpSpeed, BotVitals.BaseJumpHeight) * 3f;
+
+	int SingleJumpRise => Math.Max(1, PathFinder.BaseJumpRise + (int)MathF.Floor((JumpApex(bot.Vitals.JumpSpeed, bot.Vitals.JumpHeight) - BaseApex) / 16f));
+
+	int LeapReach(bool extraJump, int flyRise)
+	{
+		float run = bot.Avatar.maxRunSpeed * bot.Avatar.moveSpeed;
+		float pixels = JumpAirTicks(bot.Vitals.JumpSpeed, bot.Vitals.JumpHeight) * run;
+		return (int)(BaseLeapTiles * pixels / BaseLeapPixels) + (extraJump ? ExtraJumpRise * 3 / 2 : 0) + flyRise * 2 / 3;
+	}
+
+	const int BaseLeapTiles = 6;
 
 	const float WingLift = 0.6f;
 	const float WingRiseSpeed = 6f;

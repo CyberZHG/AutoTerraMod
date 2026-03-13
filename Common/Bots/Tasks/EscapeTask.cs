@@ -42,7 +42,7 @@ public sealed class EscapeTask : BotTask
 	uint climbedAt;
 	bool startedForAir;
 	bool climbAllTheWay;
-	bool underCamp;
+	Vector2? campExit;
 	Vector2 lastEscapeStart;
 	uint lastEscapeAt;
 	const int LocalEscapeTiles = 20;
@@ -61,8 +61,8 @@ public sealed class EscapeTask : BotTask
 		base.Start();
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
-		underCamp = BelowOwnCamp();
-		climbAllTheWay = underCamp || lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
+		campExit = CampExitAbove(Bot.Faction.BaseCenter);
+		climbAllTheWay = campExit != null || lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
 		lastEscapeStart = Bot.Center;
 		lastEscapeAt = Main.GameUpdateCount;
 		startedForAir = Bot.Npc is NPC swimmer && (swimmer.wet || Bot.Vitals.BreathFraction < 1f);
@@ -102,9 +102,9 @@ public sealed class EscapeTask : BotTask
 	public override void Tick()
 	{
 		Bot.Motor.ScaffoldingAllowed = true;
-		if (underCamp)
+		if (campExit is Vector2 exit)
 		{
-			TunnelOutFromUnderCamp();
+			TunnelOutFromUnderCamp(exit);
 			return;
 		}
 		if (climbStartedAt == 0 && ShouldClimbStraightUp() && !Bot.Brain.OnExpedition && TryRecallHome())
@@ -213,7 +213,7 @@ public sealed class EscapeTask : BotTask
 	}
 
 
-	void TunnelOutFromUnderCamp()
+	void TunnelOutFromUnderCamp(Vector2 exit)
 	{
 		var camp = Bot.Faction.Settlement;
 		var here = Bot.CenterTile;
@@ -222,7 +222,7 @@ public sealed class EscapeTask : BotTask
 			Finish();
 			return;
 		}
-		Bot.Motor.TunnelTo(CampExitAbove(Bot.Faction.BaseCenter) ?? Bot.Faction.BaseCenter, 32f);
+		Bot.Motor.TunnelTo(exit, 32f);
 		if (Bot.Motor.HasArrived)
 			Finish();
 	}

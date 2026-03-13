@@ -19,6 +19,7 @@ public sealed class NavigationBench : ModSystem
 	const int ArenaTop = 60;
 	const int ArenaLeft = 300;
 	const int ArenaSpacing = 60;
+	const int ArenaRowHeight = 100;
 	const int TimeoutTicks = 30 * 60;
 	const int WorldTripTimeoutTicks = 90 * 60;
 	const int SettleTicks = 60;
@@ -1179,6 +1180,124 @@ public sealed class NavigationBench : ModSystem
 			"#S...........................#",
 			"##############################"
 		}),
+		new("FrogLedge", new[]
+		{
+			"################",
+			"#..............#",
+			"#..............#",
+			"#..............#",
+			"#..........G...#",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#S........######",
+			"################"
+		}),
+		new("BalloonLedge", new[]
+		{
+			"################",
+			"#..............#",
+			"#..............#",
+			"#..............#",
+			"#..........G...#",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#S........######",
+			"################"
+		}),
+		new("RocketLedge", new[]
+		{
+			"################",
+			"#..............#",
+			"#..............#",
+			"#..............#",
+			"#..........G...#",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#.........######",
+			"#S........######",
+			"################"
+		}),
+		new("FrogLavaGap", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S..................G..................#",
+			"##########.......#######################",
+			"##########%%%%%%%#######################",
+			"########################################"
+		}),
+		new("SwiftLavaGap", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S..................G..................#",
+			"##########.......#######################",
+			"##########%%%%%%%#######################",
+			"########################################"
+		}),
+		new("HermesPillars", new[]
+		{
+			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#S..................................G..#",
+			"###############...##...##...##...#######",
+			"###############%%%##%%%##%%%##%%%#######",
+			"########################################"
+		}),
+		new("SlowDetour", new[]
+		{
+			"##################################",
+			"#................................#",
+			"#................................#",
+			"#................................#",
+			"#................................#",
+			"#...S..............G.............#",
+			"#..#######%%%%###############....#",
+			"#..##########################....#",
+			"#................................#",
+			"#..............................###",
+			"#..............................###",
+			"##################################"
+		}),
+		new("FrogTunnel", new[]
+		{
+			"##############################",
+			"#............................#",
+			"#............................#",
+			"#............................#",
+			"#S.....#.....#.....#.......G.#",
+			"##############################"
+		}),
+		new("HorseshoeFall", FallShaft(60)),
 	};
 
 	static string[] LidShaft(int goalColumn, string surface, string grass, string soil, string shaft, string bottom)
@@ -1376,14 +1495,16 @@ public sealed class NavigationBench : ModSystem
 	{
 		caseIndex = index;
 		var bench = Cases[index];
-		int left = ArenaLeft + index * ArenaSpacing;
+		int perRow = (Main.maxTilesX - ArenaLeft * 2) / ArenaSpacing;
+		int left = ArenaLeft + index % perRow * ArenaSpacing;
+		int top = ArenaTop + index / perRow * ArenaRowHeight;
 		Point start = bench.WorldStart, target = bench.WorldGoal;
 		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
 			{
 				int x = left + column;
-				int y = ArenaTop + row;
+				int y = top + row;
 				char glyph = bench.Map[row][column];
 				Build(x, y, glyph);
 				if (glyph == 'S')
@@ -1397,13 +1518,13 @@ public sealed class NavigationBench : ModSystem
 			for (int column = 0; column < bench.Map[row].Length; column++)
 			{
 				if (bench.Map[row][column] == 'D')
-					WorldGen.PlaceDoor(left + column, ArenaTop + row - 1, TileID.ClosedDoor);
+					WorldGen.PlaceDoor(left + column, top + row - 1, TileID.ClosedDoor);
 			}
 		}
 		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
-				WorldGen.SquareTileFrame(left + column, ArenaTop + row, true);
+				WorldGen.SquareTileFrame(left + column, top + row, true);
 		}
 		foreach (bool walls in new[] { false, true })
 		{
@@ -1412,13 +1533,13 @@ public sealed class NavigationBench : ModSystem
 				for (int column = 0; column < bench.Map[row].Length; column++)
 				{
 					if (bench.Map[row][column] == 'W' == walls)
-						PlaceLate(left + column, ArenaTop + row, bench.Map[row][column]);
+						PlaceLate(left + column, top + row, bench.Map[row][column]);
 				}
 			}
 		}
 		ClearClutter(runner);
 		EquipBenchGear(runner, bench.Name);
-		bool toolless = new[] { "Wing", "Cloud", "Hook", "Fledgling", "Bare" }.Any(bench.Name.StartsWith);
+		bool toolless = new[] { "Wing", "Cloud", "Hook", "Fledgling", "Bare", "Frog", "Balloon", "Rocket", "Swift", "Hermes", "Slow", "Horseshoe" }.Any(bench.Name.StartsWith);
 		if (!toolless)
 		{
 			if (runner.Hands.BestPickaxe == null)
@@ -1453,27 +1574,47 @@ public sealed class NavigationBench : ModSystem
 		runner.Avatar.statLife = runner.Avatar.statLifeMax2;
 		runner.Motor.Stop();
 		runner.Motor.RefreshGear();
+		BotDiagnostics.LogWorld($"nav bench {bench.Name} start: {runner.Motor.Abilities()} jump={runner.Vitals.JumpSpeed:0.##}x{runner.Vitals.JumpHeight} run={runner.Avatar.maxRunSpeed * runner.Avatar.moveSpeed:0.##}/{runner.Avatar.accRunSpeed:0.##}");
 		goal = target.ToWorldCoordinates();
 		runner.Brain.Override = new BenchMoveTask(runner, goal, bench.Name.StartsWith("Climb"));
 		caseStartedAt = Main.GameUpdateCount;
 	}
 
-	static readonly int[] BenchAccessories = { ItemID.AngelWings, ItemID.CreativeWings, ItemID.CloudinaBottle };
+	static readonly (string prefix, int item)[] BenchLoadouts =
+	{
+		("Wing", ItemID.AngelWings), ("Fledgling", ItemID.CreativeWings), ("Cloud", ItemID.CloudinaBottle), ("Frog", ItemID.FrogLeg),
+		("Balloon", ItemID.ShinyRedBalloon), ("Rocket", ItemID.RocketBoots), ("Hermes", ItemID.HermesBoots), ("Horseshoe", ItemID.LuckyHorseshoe)
+	};
+
+	static readonly (string prefix, int buff)[] BenchBuffs = { ("Slow", BuffID.Slow), ("Swift", BuffID.Swiftness) };
 
 	static void EquipBenchGear(Bot runner, string name)
 	{
 		var armor = runner.Avatar.armor;
 		for (int slot = Planning.Equipment.FirstAccessorySlot; slot <= Planning.Equipment.LastAccessorySlot; slot++)
 		{
-			if (BenchAccessories.Contains(armor[slot].type))
+			if (BenchLoadouts.Any(loadout => loadout.item == armor[slot].type))
 				armor[slot].TurnToAir();
 		}
-		int wanted = name.StartsWith("Wing") ? ItemID.AngelWings : name.StartsWith("Fledgling") ? ItemID.CreativeWings : name.StartsWith("Cloud") ? ItemID.CloudinaBottle : ItemID.None;
-		if (wanted != ItemID.None)
-			armor[Planning.Equipment.LastAccessorySlot].SetDefaults(wanted);
+		foreach (var (prefix, item) in BenchLoadouts)
+		{
+			if (name.StartsWith(prefix))
+			{
+				armor[Planning.Equipment.FirstAccessorySlot].SetDefaults(item);
+				break;
+			}
+		}
+		foreach (var (prefix, buff) in BenchBuffs)
+		{
+			runner.Avatar.ClearBuff(buff);
+			if (name.StartsWith(prefix))
+				runner.Avatar.AddBuff(buff, BenchBuffTicks, true);
+		}
 		runner.Avatar.miscEquips[Planning.Equipment.HookSlot].TurnToAir();
 		runner.Vitals.RefreshVanillaStats();
 	}
+
+	const int BenchBuffTicks = 60 * 600;
 
 	static void StripTools(Bot runner)
 	{

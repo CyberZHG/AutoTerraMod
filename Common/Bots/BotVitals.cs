@@ -220,12 +220,18 @@ public sealed class BotVitals
 	{
 		try
 		{
+			Avatar.maxRunSpeed = BaseRunSpeed;
+			Avatar.accRunSpeed = BaseRunSpeed;
+			Avatar.runAcceleration = BaseRunAcceleration;
+			Avatar.runSlowdown = BaseRunSlowdown;
 			Avatar.ResetEffects();
 			RecountOwnedProjectiles();
 			KeepPets();
 			Avatar.UpdateBuffs(Avatar.whoAmI);
 			Avatar.UpdateEquips(Avatar.whoAmI);
 			Avatar.UpdateArmorSets(Avatar.whoAmI);
+			ApplyMovementDebuffs();
+			UpdateJump();
 			Avatar.UpdateLifeRegen();
 			Avatar.UpdateManaRegen();
 		}
@@ -236,6 +242,40 @@ public sealed class BotVitals
 			statsFailureLogged = true;
 			ModContent.GetInstance<AutoTerraMod>().Logger.Warn($"Vanilla stat refresh failed for {bot.Name}", exception);
 		}
+	}
+
+	const float BaseRunSpeed = 3f;
+	const float BaseRunAcceleration = 0.08f;
+	const float BaseRunSlowdown = 0.2f;
+	public const int BaseJumpHeight = 15;
+	public const float BaseJumpSpeed = 5.01f;
+
+	public int JumpHeight { get; private set; } = BaseJumpHeight;
+	public float JumpSpeed { get; private set; } = BaseJumpSpeed;
+
+	void ApplyMovementDebuffs()
+	{
+		if (Avatar.slowOgreSpit || Avatar.dazed)
+			Avatar.moveSpeed /= 3f;
+		else if (Avatar.slow)
+			Avatar.moveSpeed /= 2f;
+		else if (Avatar.chilled)
+			Avatar.moveSpeed *= 0.75f;
+		if (Avatar.chilled)
+			Avatar.accRunSpeed = Avatar.maxRunSpeed;
+	}
+
+	void UpdateJump()
+	{
+		int height = Player.jumpHeight;
+		float speed = Player.jumpSpeed;
+		Player.jumpHeight = BaseJumpHeight;
+		Player.jumpSpeed = BaseJumpSpeed;
+		Avatar.UpdateJumpHeight();
+		JumpHeight = Player.jumpHeight;
+		JumpSpeed = Player.jumpSpeed;
+		Player.jumpHeight = height;
+		Player.jumpSpeed = speed;
 	}
 
 	void TickImmunity()

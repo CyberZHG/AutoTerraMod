@@ -345,13 +345,12 @@ public sealed class PathSearch
 	}
 
 	public static bool HangEdges = true;
-	const int BaseLeapTiles = 6;
 	const int LeapDropTiles = 8;
 	const float LeapCost = 4f;
 
 	void AddLeapEdges(int x, int y)
 	{
-		int reach = BaseLeapTiles + (abilities.JumpRise - PathFinder.BaseJumpRise) * 3 / 2 + abilities.FlyRise * 2 / 3;
+		int reach = abilities.LeapReach;
 		int arc = y - 2;
 		for (int direction = -1; direction <= 1; direction += 2)
 		{
@@ -492,7 +491,8 @@ public sealed class PathSearch
 		int headroom = 0;
 		while (headroom < maxRise && RowClear(x, y - 3 - headroom))
 			headroom++;
-		for (int dx = -MaxJumpReach; dx <= MaxJumpReach; dx++)
+		int reach = Math.Clamp(abilities.LeapReach / 2, 1, MaxJumpReach);
+		for (int dx = -reach; dx <= reach; dx++)
 		{
 			int nx = x + dx;
 			for (int rise = dx == 0 ? 2 : 1; rise <= headroom; rise++)
