@@ -90,7 +90,7 @@ public abstract class BotTask
 
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
-		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && BelowOwnCamp())
+		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		campExit = null;
 		Bot.Motor.MoveTo(target, radius);

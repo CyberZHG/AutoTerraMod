@@ -95,7 +95,7 @@ public sealed class SummonTask : BotTask
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
-		int present = team.Count(member => member.IsAlive && Vector2.Distance(member.Center, Bot.Center) < GatherRadius);
+		int present = team.Count(member => RallyTask.Joined(member, Bot.Center, GatherRadius));
 		headcount = $"{step.Challenge.Name} {present}/{team.Count}";
 		bool waiting = faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
 		if (present < team.Count && waiting)
@@ -213,7 +213,7 @@ public sealed class SummonTask : BotTask
 	{
 		Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
-		int present = team.Count(member => member.IsAlive && Vector2.Distance(member.Center, step.Place) < GatherRadius);
+		int present = team.Count(member => RallyTask.Joined(member, step.Place, GatherRadius));
 		bool stillWaiting = Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
 		if (present == team.Count)
 			return true;
@@ -434,6 +434,10 @@ public sealed class RallyTask : BotTask
 
 	public RallyTask(Bot bot) : base(bot) { }
 
+	public static bool Joined(Bot member, Vector2 point, float radius) =>
+		member.IsAlive && member.Npc is NPC body && Vector2.Distance(body.Center, point) < radius
+		&& Collision.CanHitLine(body.position, body.width, body.height, point - new Vector2(8f), 16, 16);
+
 	public override string NameKey => "Rally";
 
 	public override float Evaluate()
@@ -452,7 +456,8 @@ public sealed class RallyTask : BotTask
 		}
 		var leader = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId);
 		var target = leader is { IsAlive: true } && leader != Bot ? leader.Center : rally.point;
-		TravelOrTunnel(target, ArrivalRadius);
+		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
+		TravelOrTunnel(target, inSight ? ArrivalRadius : 16f);
 		if (Bot.Motor.HasArrived)
 			Bot.Watchdog.RecordProgress();
 	}

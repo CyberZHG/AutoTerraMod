@@ -250,7 +250,7 @@ public sealed class BotMotor
 		if (ClimbingStraightUp)
 			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else if (destination is Vector2 tunnelGoal && Tunneling)
-			TunnelStep(npc, tunnelGoal, ref moveDirection, ref wantsJump);
+			TunnelStep(npc, tunnelGoal, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else if (destination is Vector2 target)
 			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
@@ -306,7 +306,7 @@ public sealed class BotMotor
 			PlaceFoothold(scaffold);
 	}
 
-	void TunnelStep(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump)
+	void TunnelStep(NPC npc, Vector2 target, ref int moveDirection, ref bool wantsJump, ref int jumpHoldTicks)
 	{
 		var delta = target - npc.Center;
 		if (Math.Abs(delta.X) <= arriveRadius && Math.Abs(delta.Y) <= arriveRadius + 24f)
@@ -315,6 +315,11 @@ public sealed class BotMotor
 			return;
 		}
 		HasArrived = false;
+		if (Math.Abs(delta.X) < 16f && delta.Y < 0f)
+		{
+			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
+			return;
+		}
 		int pickPower = bot.Hands.BestPickaxe?.pick ?? 0;
 		var body = BodyTiles.Of(npc);
 		bool grounded = npc.velocity.Y == 0f || npc.wet;
@@ -328,7 +333,7 @@ public sealed class BotMotor
 			return;
 		int direction = delta.X >= 0f ? 1 : -1;
 		int column = direction > 0 ? body.Right + 1 : body.Left - 1;
-		int top = delta.Y < -16f ? body.Top - 1 : body.Top;
+		int top = delta.Y < -16f && !Unbreakable(column, body.Top - 1, pickPower) ? body.Top - 1 : body.Top;
 		int bottom = delta.Y > 16f ? body.Bottom + 1 : body.Bottom;
 		if (TunnelTile(column, column, top, bottom, pickPower) is Point wall)
 		{
@@ -360,6 +365,8 @@ public sealed class BotMotor
 		}
 		return null;
 	}
+
+	bool Unbreakable(int x, int y, int pickPower) => TileQuery.IsSolid(x, y) && !CanBreak(x, y, pickPower);
 
 	static bool LavaNear(int x, int y)
 	{
