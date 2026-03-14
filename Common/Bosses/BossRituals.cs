@@ -139,7 +139,7 @@ public static class BossRituals
 		if (!challenge.CanSummonNow)
 			return PlanStep.Idle;
 		if (trigger.Place is not Landmark landmark)
-			return new SummonBossStep(challenge, trigger, bot.Faction.BaseCenter, null);
+			return new SummonBossStep(challenge, trigger, Grounds.CampArena(bot.Faction), null);
 		return Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is Vector2 place
 			? new SummonBossStep(challenge, trigger, place, null)
 			: new ScoutStep(landmark, false);

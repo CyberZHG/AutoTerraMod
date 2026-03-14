@@ -1,3 +1,4 @@
+using System;
 using AutoTerraMod.Common.Factions;
 using Microsoft.Xna.Framework;
 using Terraria;
@@ -47,6 +48,34 @@ public static class Grounds
 		if (knowledge.LandmarkOf(ground) is not Point anchor || OpenSpotNear(anchor, ground) is not Point feet)
 			return null;
 		return new Vector2(feet.X * 16f + 8f, feet.Y * 16f);
+	}
+
+	const int CampArenaNearest = 14;
+	const int CampArenaFarthest = 40;
+	const int CampArenaClimbPenalty = 12;
+
+	public static Vector2 CampArena(Faction faction)
+	{
+		if (faction.Settlement is not { } camp)
+			return faction.BaseCenter;
+		Point? best = null;
+		int bestScore = int.MinValue;
+		for (int offset = CampArenaNearest; offset <= CampArenaFarthest; offset += OpenSearchStep)
+		{
+			foreach (int x in new[] { camp.Right + offset, camp.Left - offset })
+			{
+				int y = TileQuery.SurfaceY(x) - 1;
+				if (!WorldGen.InWorld(x, y, OpennessHalfWidth + OpennessHeight + 2) || !IsDryFooting(x, y))
+					continue;
+				int score = Openness(x, y) - CampArenaClimbPenalty * Math.Abs(y + 1 - camp.Floor);
+				if (score > bestScore)
+				{
+					bestScore = score;
+					best = new Point(x, y);
+				}
+			}
+		}
+		return best is Point feet ? new Vector2(feet.X * 16f + 8f, feet.Y * 16f - 5f) : faction.BaseCenter;
 	}
 
 	const int OpenSearchRadius = 150;

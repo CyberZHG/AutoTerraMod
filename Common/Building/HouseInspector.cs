@@ -151,7 +151,7 @@ public static class HouseInspector
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
-			if (settlement != null && settlement.Contains(x, y) && settlement.IsShell(x, y))
+			if (settlement != null && settlement.IsShell(x, y))
 				return true;
 		}
 		return false;

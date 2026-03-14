@@ -93,6 +93,12 @@ public sealed class HouseBlueprint
 		foreach (int x in new[] { center, center + 1 })
 			platforms.Add(new Point(x, Floor));
 	}
+	public void AddApron(int fromX, int toX)
+	{
+		for (int x = fromX; x <= toX; x++)
+			platforms.Add(new Point(x, Floor));
+	}
+
 	public bool IsOutOfReachFromFloor(Point tile) => tile.Y < Floor - 7;
 
 	public IEnumerable<Point> ChestSlots()

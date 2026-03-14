@@ -4,6 +4,7 @@ using AutoTerraMod.Common.Config;
 using AutoTerraMod.Common.Systems;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.GameInput;
 using Terraria.ID;
 using Terraria.Localization;
@@ -159,6 +160,24 @@ public sealed class SpectatorPlayer : ModPlayer
 			return;
 		Player.Center = followed.Center;
 		Player.velocity = Vector2.Zero;
+	}
+
+	bool Ghosting => ghostedBySpectator && SpectatorSystem.IsSpectating;
+
+	public override bool FreeDodge(Player.HurtInfo info) => Ghosting;
+
+	public override bool PreKill(double damage, int hitDirection, bool pvp, ref bool playSound, ref bool genDust, ref PlayerDeathReason damageSource)
+	{
+		if (!Ghosting)
+			return true;
+		Player.statLife = Player.statLifeMax2;
+		return false;
+	}
+
+	public override void PostUpdateBuffs()
+	{
+		if (Ghosting)
+			Player.suffocating = false;
 	}
 
 	void ToggleInventoryLikeVanilla()
