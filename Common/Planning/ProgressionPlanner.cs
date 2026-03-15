@@ -148,8 +148,11 @@ public static class ProgressionPlanner
 	{
 		if (readyUpgrades.TryGetValue(bot.Id, out var cached) && cached.goal != null && Main.GameUpdateCount - cached.at < UpgradeScanTicks)
 		{
-			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(cached.goal.Plan(bot)) is PlanStep again)
+			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(bot, cached.goal.Plan(bot)) is PlanStep again)
+			{
+				readyUpgrades[bot.Id] = (Main.GameUpdateCount, cached.goal);
 				return (cached.goal, again);
+			}
 			readyUpgrades.Remove(bot.Id);
 		}
 		upgradeGoals ??= ladder.Where(goal => ProgressionGoals.Unwrap(goal) is GearGoal or OwnGoal or CageGoal).ToList();
@@ -162,7 +165,7 @@ public static class ProgressionPlanner
 			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
-			if (IsHandsOn(goal.Plan(bot)) is PlanStep step)
+			if (IsHandsOn(bot, goal.Plan(bot)) is PlanStep step)
 			{
 				upgradeCursor[bot.Id] = (cursor + checkedGoals + 1) % upgradeGoals.Count;
 				readyUpgrades[bot.Id] = (Main.GameUpdateCount, goal);
@@ -199,7 +202,20 @@ public static class ProgressionPlanner
 		return null;
 	}
 
-	static PlanStep IsHandsOn(PlanStep step) => step is CraftStep or WithdrawStep or PlaceStationStep ? step : null;
+	const float HandsOnReach = 16f * 25f;
+
+	static PlanStep IsHandsOn(Bot bot, PlanStep step) => step switch
+	{
+		PlaceStationStep => step,
+		WithdrawStep => Microsoft.Xna.Framework.Vector2.Distance(bot.Center, bot.Faction.BaseCenter) < HandsOnReach ? step : null,
+		CraftStep craft => craft.Recipe.requiredTile.All(tile => tile < 0 || StationWithin(bot, tile, HandsOnReach)) ? step : null,
+		_ => null
+	};
+
+	static bool StationWithin(Bot bot, int tile, float reach) =>
+		Bots.Tasks.CraftTask.IsPortableStationTile(tile) && Stations.ItemsPlacing(tile).Any(item => Inventory.Count(bot.Avatar, item) > 0)
+		|| Stations.LocateAnywhere(bot.Faction, tile, bot.CenterTile) is Microsoft.Xna.Framework.Point station
+		&& Microsoft.Xna.Framework.Vector2.Distance(bot.Center, station.ToWorldCoordinates()) <= reach;
 
 	static PlanStep ContinueExpedition(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed)
 	{
@@ -372,7 +388,8 @@ public static class ProgressionPlanner
 			return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
 		foreach (var recipe in RecipeIndex.For(itemType))
 		{
-			var step = PlanRecipe(context, recipe, depth);
+			int crafts = (amount - have + recipe.createItem.stack - 1) / Math.Max(1, recipe.createItem.stack);
+			var step = PlanRecipe(context, recipe, depth, crafts);
 			if (step is not BlockedStep)
 				return step;
 		}
@@ -392,7 +409,7 @@ public static class ProgressionPlanner
 		return false;
 	}
 
-	static PlanStep PlanRecipe(Context context, Recipe recipe, int depth)
+	static PlanStep PlanRecipe(Context context, Recipe recipe, int depth, int crafts)
 	{
 		if (!ConditionsAchievable(context.Bot, recipe))
 			return PlanStep.Blocked;
@@ -418,7 +435,7 @@ public static class ProgressionPlanner
 				have += Equipment.WornCount(avatar, type);
 			if (have >= required.stack)
 				continue;
-			return ResolveIngredient(context, accepted, required.stack, have, depth);
+			return ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
 		}
 		return new CraftStep(recipe);
 	}

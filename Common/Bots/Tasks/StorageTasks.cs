@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Planning;
@@ -78,15 +79,15 @@ public sealed class StoreTask : ChestVisitTask
 		}
 		Detail = "";
 		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
-		if (atBase && Kit.CarriesSurplusTreasure(Bot))
-			return SurplusTreasurePriority;
-		if (atBase && Bot.StoreAfterDeath && !Bot.UpgradeAfterDeath && Kit.ItemsToStore(Bot).Any())
+		float score = atBase && Kit.CarriesSurplusTreasure(Bot) ? SurplusTreasurePriority : 0f;
+		bool hasItemsToStore = Kit.ItemsToStore(Bot).Any();
+		if (atBase && Bot.StoreAfterDeath && !Bot.UpgradeAfterDeath && hasItemsToStore)
 			return StoreAfterDeathPriority;
-		if (used < OpportunisticSlots || !Kit.ItemsToStore(Bot).Any() || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
-			return 0f;
+		if (used < OpportunisticSlots || !hasItemsToStore || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
+			return score;
 		if (used >= FullishSlots)
-			return 60f + (used - FullishSlots) * 3f;
-		return atBase ? 40f : 0f;
+			return Math.Max(score, 60f + (used - FullishSlots) * 3f);
+		return Math.Max(score, atBase ? 40f : 0f);
 	}
 
 	protected override Chest PickChest() => BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center);

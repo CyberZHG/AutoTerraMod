@@ -87,7 +87,7 @@ public sealed class Bot
 			return;
 		sessionCheckedAt = Main.GameUpdateCount;
 		var here = CenterTile;
-		bool underground = here.Y > World.TileQuery.SurfaceY(here.X) + UndergroundDepth;
+		bool underground = here.Y > World.TileQuery.SurfaceY(here.X) + UndergroundDepth && Faction.Settlement?.Contains(here.X, here.Y) != true;
 		if (!underground)
 			undergroundSince = 0;
 		else if (undergroundSince == 0)

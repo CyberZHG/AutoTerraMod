@@ -268,7 +268,7 @@ public sealed class PathSearch
 		}
 
 		bool swimming = PathFinder.InWater(x, y);
-		if (supported)
+		if (supported || onRope)
 			AddJumpEdges(x, y, abilities.JumpRise);
 		else if (swimming && !PathFinder.InWater(x, y - 1))
 			AddJumpEdges(x, y, Math.Min(abilities.JumpRise, WaterJumpRise));

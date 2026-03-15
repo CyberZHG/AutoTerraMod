@@ -76,11 +76,18 @@ public sealed class BotHands
 			&& (npc.position.Y + npc.height) / 16f + Player.tileRangeY + boost - 2f + range >= tile.Y;
 	}
 
+	bool HoldsSandOverhead(Point tile)
+	{
+		var body = bot.Npc;
+		return tile.Y < (int)(body.position.Y / 16f) && tile.X >= (int)(body.position.X / 16f) && tile.X <= (int)((body.position.X + body.width - 1f) / 16f)
+			&& Navigation.PathFinder.UnderFallingBlock(tile.X, tile.Y);
+	}
+
 	public ToolResult Dig(Point tile)
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || IsGrowingSapling(tile) || tile.Y <= (int)(bot.Npc.Bottom.Y - 1f) / 16 && TileQuery.HoldsBackLava(tile.X, tile.Y))
+		if (InOtherBase(tile) || IsGrowingSapling(tile) || tile.Y <= (int)(bot.Npc.Bottom.Y - 1f) / 16 && TileQuery.HoldsBackLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
