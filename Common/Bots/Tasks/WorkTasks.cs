@@ -398,7 +398,7 @@ public sealed class GatherTask : BotTask
 	{
 		var origin = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
-		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsWoodSource : (x, y) => !HouseInspector.IsProtected(x, y) && Tiles.Accepts(x, y);
+		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsWoodSource : (x, y) => !HouseInspector.IsProtected(x, y) && Tiles.Accepts(x, y) && !Bot.Hands.IsReclaimable(new Point(x, y));
 		var visible = WorldScan.NearestVisibleTile(origin, Tiles.TileTypes, accept, unreachable, knowledge);
 		if (visible != null)
 			return visible;
@@ -453,6 +453,8 @@ public sealed class GatherTask : BotTask
 			int x = Utils.Clamp(here.X + prospectDirection * ProspectStepTiles, 50, Main.maxTilesX - 50);
 			return new Vector2(x * 16f, (float)(Main.rockLayer + DeepOreMarginTiles * 2) * 16f);
 		}
+		if (!DeepOre() && !Tiles.TileTypes.Contains(TileID.Hellstone))
+			return SidewaysProspect(here);
 		if (CaveFinder.NearestUnvisitedCave(here, visitedCaves) is Point cave && (!DeepOre() || cave.Y > Main.rockLayer))
 		{
 			visitedCaves.Add(CaveFinder.RegionOf(cave));
@@ -462,6 +464,28 @@ public sealed class GatherTask : BotTask
 		int targetX = Utils.Clamp(here.X + prospectDirection * ProspectStepTiles, 50, Main.maxTilesX - 50);
 		int targetY = deepEnough ? here.Y : here.Y + ProspectDepthTiles;
 		return new Vector2(targetX * 16f, targetY * 16f);
+	}
+
+	const int SidewaysStepTiles = 40;
+	const float LavaFreeShare = 0.35f;
+
+	static int LavaFreeDepth => (int)(Main.rockLayer + (Main.UnderworldLayer - Main.rockLayer) * LavaFreeShare);
+
+	Vector2 SidewaysProspect(Point here)
+	{
+		int deepest = LavaFreeDepth;
+		int edge = here.X + prospectDirection * SidewaysStepTiles;
+		if (edge < 50 || edge > Main.maxTilesX - 50)
+			prospectDirection = -prospectDirection;
+		if (here.Y <= deepest && CaveFinder.NearestUnvisitedCave(here, visitedCaves, prospectDirection, deepest) is Point cave)
+		{
+			visitedCaves.Add(CaveFinder.RegionOf(cave));
+			return cave.ToWorldCoordinates();
+		}
+		int x = Utils.Clamp(here.X + prospectDirection * SidewaysStepTiles, 50, Main.maxTilesX - 50);
+		int shallowest = (int)Main.worldSurface + ProspectDepthTiles / 2;
+		int y = here.Y < shallowest ? here.Y + ProspectDepthTiles : Math.Min(here.Y, deepest);
+		return new Vector2(x * 16f, y * 16f);
 	}
 }
 

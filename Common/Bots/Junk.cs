@@ -154,6 +154,60 @@ public static class Junk
 		BotDiagnostics.Log(bot, $"sold {name} x{amount} to the {shopkeeper.TypeName} for {price} copper ({reason})");
 	}
 
+	const int OutdatedGearValue = 5000;
+
+	public static bool IsStorageClutter(Bot bot, Item item, bool duplicate)
+	{
+		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || item.accessory || item.potion)
+			return false;
+		if (IsCheapClutter(item) || item.createTile == TileID.Statues || item.createTile == TileID.PressurePlates)
+			return true;
+		bool gear = item.damage > 0 || item.pick > 0 || item.axe > 0 || item.hammer > 0 || item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0;
+		return gear && item.maxStack == 1 && (duplicate || item.value < OutdatedGearValue) && !UpgradesTeammate(bot, item);
+	}
+
+	public static bool StorageHasClutter(Bot bot, IEnumerable<Chest> chests)
+	{
+		var seen = new HashSet<int>();
+		foreach (var chest in chests)
+		{
+			foreach (var item in chest.item)
+			{
+				if (item != null && !item.IsAir && IsStorageClutter(bot, item, !seen.Add(item.type)))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	public static void PurgeStorage(Bot bot, IEnumerable<Chest> chests)
+	{
+		var seen = new HashSet<int>();
+		var shopkeeper = Planning.Shops.NearbyShopkeeper(bot.Center);
+		int purged = 0;
+		long earned = 0;
+		foreach (var chest in chests)
+		{
+			foreach (var item in chest.item)
+			{
+				if (item == null || item.IsAir)
+					continue;
+				bool duplicate = !seen.Add(item.type);
+				if (!IsStorageClutter(bot, item, duplicate))
+					continue;
+				if (shopkeeper != null)
+					earned += Planning.Shops.SellPrice(item, item.stack);
+				item.TurnToAir();
+				purged++;
+			}
+		}
+		if (purged == 0)
+			return;
+		if (earned > 0)
+			Inventory.AddCoins(bot.Avatar, earned);
+		BotDiagnostics.Log(bot, $"cleared {purged} cluttering stacks from storage (earned {earned} copper)");
+	}
+
 	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
 
 	static readonly HashSet<int> RitualItems = new()

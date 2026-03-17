@@ -155,7 +155,7 @@ public sealed class BotGrapple
 		{
 			IsHanging = distance <= HangSnap;
 			body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * System.Math.Min(PullSpeed, distance);
-			if (!IsHanging && Snagged(distance))
+			if (!IsHanging && Snagged(distance) && !DigThroughSnag(body, toAnchor / distance))
 				Release(body, jump: false);
 			else if (IsHanging && ++hangTicks > MaxHangTicks)
 				Release(body, jump: false);
@@ -163,11 +163,17 @@ public sealed class BotGrapple
 		}
 		IsHanging = distance <= HangDistance;
 		body.velocity = IsHanging ? Vector2.Zero : toAnchor / distance * PullSpeed;
-		if (!IsHanging && Snagged(distance))
+		if (!IsHanging && Snagged(distance) && !DigThroughSnag(body, toAnchor / distance))
 		{
 			if (distance > SnagLogDistance)
 				BotDiagnostics.Log(bot, $"hook pull snagged on an edge {distance / 16f:0.0} tiles short of {anchor.ToTileCoordinates()}, letting go");
 			Release(body, jump: true);
+			return;
+		}
+		if (destination is Vector2 above && DigsUpward(anchor, above))
+		{
+			if (!HoldsAnchor(anchor) || IsHanging && !DigThroughSnag(body, -Vector2.UnitY))
+				Release(body, jump: true);
 			return;
 		}
 		if (climbing)
@@ -181,7 +187,7 @@ public sealed class BotGrapple
 		}
 		if (IsHanging && ++hangTicks > MaxHangTicks)
 			Release(body, jump: false);
-		else if (destination is Vector2 target && ShouldLetGo(anchor, target))
+		else if (destination is Vector2 target && ShouldLetGo(anchor, target) && !DigsUpward(anchor, target))
 			Release(body, jump: target.Y < anchor.Y);
 	}
 
@@ -191,15 +197,48 @@ public sealed class BotGrapple
 	float closestPull;
 	int snaggedTicks;
 
+	const int MaxSnagDigTicks = 240;
+	int snagDigTicks;
+
 	bool Snagged(float distance)
 	{
 		if (distance < closestPull - PullProgress)
 		{
 			closestPull = distance;
 			snaggedTicks = 0;
+			snagDigTicks = 0;
 			return false;
 		}
 		return ++snaggedTicks > SnagTicks;
+	}
+
+	static bool HoldsAnchor(Vector2 anchor) =>
+		TileQuery.IsSolid(anchor.ToTileCoordinates()) || TileQuery.IsSolid((anchor - new Vector2(0f, 2f)).ToTileCoordinates());
+
+	bool DigsUpward(Vector2 anchor, Vector2 target) =>
+		!climbing && !hangMode && target.Y < anchor.Y - 24f && bot.Hands.BestPickaxe != null && snagDigTicks <= MaxSnagDigTicks
+		&& bot.Faction.Settlement?.Contains((int)(anchor.X / 16f), (int)(anchor.Y / 16f)) != true;
+
+	bool DigThroughSnag(NPC body, Vector2 heading)
+	{
+		if (++snagDigTicks > MaxSnagDigTicks || bot.Hands.BestPickaxe == null)
+			return false;
+		var ahead = body.Hitbox;
+		ahead.Offset((int)(heading.X * 16f), (int)(heading.Y * 16f));
+		var settlement = bot.Faction.Settlement;
+		for (int x = ahead.Left / 16; x <= (ahead.Right - 1) / 16; x++)
+		{
+			for (int y = ahead.Top / 16; y <= (ahead.Bottom - 1) / 16; y++)
+			{
+				if (!TileQuery.IsSolid(x, y) || settlement?.Contains(x, y) == true)
+					continue;
+				if (bot.Hands.Dig(new Point(x, y)) != ToolResult.Working)
+					return false;
+				snaggedTicks = SnagTicks;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public void Release(NPC body, bool jump)

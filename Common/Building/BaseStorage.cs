@@ -88,6 +88,8 @@ public static class BaseStorage
 
 	public static bool HasRoom(Faction faction) => Chests(faction).Any(chest => chest.item.Any(item => item == null || item.IsAir));
 
+	public static int FreeSlots(Faction faction) => Chests(faction).Sum(chest => chest.item.Count(item => item == null || item.IsAir));
+
 	public static int FullChestCount(Faction faction) => Chests(faction).Count(chest => chest.item.All(item => item != null && !item.IsAir));
 
 	public static Chest ChestWith(Faction faction, int itemType, Vector2 near) => Chests(faction)

@@ -58,6 +58,7 @@ public abstract class ChestVisitTask : BotTask
 public sealed class StoreTask : ChestVisitTask
 {
 	const int FullishSlots = 40;
+	const int PurgeBelowFreeSlots = 20;
 	const int OpportunisticSlots = 30;
 	const float NearBase = 16f * 12f;
 	const float SurplusTreasurePriority = 45f;
@@ -70,7 +71,7 @@ public sealed class StoreTask : ChestVisitTask
 	public override float Evaluate()
 	{
 		int used = Inventory.UsedSlots(Avatar);
-		if (!BaseStorage.HasRoom(Bot.Faction))
+		if (!BaseStorage.HasRoom(Bot.Faction) && (used < FullishSlots || !Junk.StorageHasClutter(Bot, BaseStorage.Chests(Bot.Faction))))
 			return 0f;
 		if (StatBoosters.CarriesBoostersToShare(Bot))
 		{
@@ -90,7 +91,8 @@ public sealed class StoreTask : ChestVisitTask
 		return Math.Max(score, atBase ? 40f : 0f);
 	}
 
-	protected override Chest PickChest() => BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center);
+	protected override Chest PickChest() => BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center)
+		?? BaseStorage.Chests(Bot.Faction).OrderBy(chest => Vector2.DistanceSquared(Bot.Center, BaseStorage.TileOf(chest).ToWorldCoordinates())).FirstOrDefault();
 
 	protected override void UseChest(Chest chest)
 	{
@@ -99,6 +101,8 @@ public sealed class StoreTask : ChestVisitTask
 			.ToList();
 		if (!reachable.Contains(chest))
 			reachable.Add(chest);
+		if (BaseStorage.FreeSlots(Bot.Faction) < PurgeBelowFreeSlots)
+			Junk.PurgeStorage(Bot, BaseStorage.Chests(Bot.Faction));
 		int stored = 0;
 		foreach (var item in Kit.ItemsToStore(Bot))
 		{

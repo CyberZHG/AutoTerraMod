@@ -284,10 +284,14 @@ public sealed class StorageGoal : ProgressionGoal
 
 	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsComplete(bot.Faction, bot.Faction.Settlement.Storage);
 
+	const int SpareSlots = 20;
+
 	public override bool IsMet(Bot bot)
 	{
 		int chests = BaseStorage.ChestIndices(bot.Faction).Count;
-		return chests >= MinimumChests && chests > BaseStorage.FullChestCount(bot.Faction);
+		if (chests < MinimumChests)
+			return false;
+		return BaseStorage.FreeSlots(bot.Faction) >= SpareSlots || chests >= bot.Faction.Settlement.Storage.ChestSlots().Count();
 	}
 
 	public override PlanStep Plan(Bot bot)

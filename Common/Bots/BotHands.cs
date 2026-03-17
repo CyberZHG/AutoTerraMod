@@ -87,7 +87,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || IsGrowingSapling(tile) || tile.Y <= (int)(bot.Npc.Bottom.Y - 1f) / 16 && TileQuery.HoldsBackLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
+		if (InOtherBase(tile) || IsGrowingSapling(tile) || !Avatar.lavaImmune && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
@@ -360,7 +360,7 @@ public sealed class BotHands
 		int count = 0;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item)))
+			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item) && !bot.Brain.PlannedItemTypes.Contains(item.type)))
 				count += item.stack;
 		}
 		return count;
@@ -421,7 +421,7 @@ public sealed class BotHands
 		Item wood = null;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (!IsExpendableBlock(item))
+			if (!IsExpendableBlock(item) || bot.Brain.PlannedItemTypes.Contains(item.type))
 				continue;
 			if (item.type != ItemID.Wood)
 				return item;

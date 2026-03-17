@@ -528,7 +528,7 @@ public sealed class BotMotor
 	}
 
 	bool CanBreak(int x, int y, int pickPower) =>
-		CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower;
+		CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower && !bot.Hands.IsReclaimable(new Point(x, y));
 
 	void PlaceFoothold(Point tile)
 	{
@@ -665,6 +665,7 @@ public sealed class BotMotor
 	}
 
 	const int RecycleFrontierLimit = 40;
+	const float AlignedPixels = 12f;
 	const float FrontierTolerance = 4f;
 	const float FrontierCreepSpeed = 1f;
 
@@ -677,7 +678,7 @@ public sealed class BotMotor
 		int column = (int)(npc.Center.X / 16f);
 		if (delta.Y < -(Abilities().JumpRise + 1) * 16f)
 			return RecycleUpward(npc, body, column, grounded, ref wantsJump, ref jumpHoldTicks);
-		return delta.X != 0f && RecycleAcross(npc, body, column, grounded, Math.Sign(delta.X), ref moveDirection);
+		return Math.Abs(delta.X) >= AlignedPixels && Math.Abs(delta.X) >= delta.Y && RecycleAcross(npc, body, column, grounded, Math.Sign(delta.X), ref moveDirection);
 	}
 
 	bool RecycleUpward(NPC npc, BodyTiles body, int column, bool grounded, ref bool wantsJump, ref int jumpHoldTicks)
@@ -959,7 +960,7 @@ public sealed class BotMotor
 		bool grounded = npc.velocity.Y == 0f;
 		bool targetBelow = delta.Y > 40f;
 		bool targetAbove = delta.Y < -40f;
-		bool alignedHorizontally = Math.Abs(delta.X) < 12f;
+		bool alignedHorizontally = Math.Abs(delta.X) < AlignedPixels;
 
 		if (alignedHorizontally && targetBelow)
 		{
