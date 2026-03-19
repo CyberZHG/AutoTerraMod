@@ -151,6 +151,17 @@ public static class Engagement
 			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
+		if (Bosses.BossCatalog.IsBossPart(target) && CatchesBreath(bot))
+		{
+			if (CanShootFromHere(bot, target))
+			{
+				bot.Motor.Face(target.Center);
+				bot.Hands.Fire(target, weapon);
+			}
+			int away = bot.Center.X >= target.Center.X ? 1 : -1;
+			bot.Motor.MoveTo(new Vector2(target.Center.X + away * BreatherDistance, bot.Center.Y), 16f * 3f);
+			return;
+		}
 		if (!Bosses.BossCatalog.IsBossPart(target) && ChaseIsFutile(bot, target, weapon))
 		{
 			bot.IgnoreTarget(target);
@@ -168,6 +179,8 @@ public static class Engagement
 		{
 			bool clearShot = Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height);
 			bool kiting = Bosses.BossCatalog.IsBossPart(target) && bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
+			float gap = distance - Math.Max(target.width, target.height) / 2f;
+			float tooClose = Bosses.BossCatalog.IsBossPart(target) ? BossRangedGap : TooCloseForRanged;
 			if (clearShot && distance < MaxFireRange)
 			{
 				bot.Motor.Face(target.Center);
@@ -175,7 +188,7 @@ public static class Engagement
 			}
 			if (!clearShot || distance >= RangedStandoff)
 				bot.Motor.MoveTo(approach, RangedStandoff * 0.5f);
-			else if (kiting || distance < TooCloseForRanged)
+			else if (kiting || gap < tooClose)
 				bot.Motor.MoveTo(body.Center + new Vector2(Math.Sign(body.Center.X - target.Center.X) * 96f, 0f), 8f);
 			else if (Bosses.BossCatalog.IsBossPart(target) && CrowdingTeammate(bot) is Bot mate)
 				bot.Motor.MoveTo(body.Center + new Vector2(SpreadDirection(bot, mate) * SpreadStep, 0f), 8f);
@@ -191,7 +204,7 @@ public static class Engagement
 		}
 		if (Bosses.BossCatalog.IsBossPart(target))
 		{
-			bot.Motor.MoveTo(BossStandingSpot(body, target), StandingTolerance);
+			bot.Motor.MoveTo(BossStandingSpot(body, target, weapon), StandingTolerance);
 			bool overhead = target.Bottom.Y < body.Top.Y && target.Bottom.Y > body.Top.Y - JumpStrikeHeight
 				&& Math.Abs(target.Center.X - body.Center.X) < target.width / 2f + BotHands.MeleeReach(weapon);
 			if (overhead)
@@ -322,6 +335,24 @@ public static class Engagement
 			bot.Motor.MoveTo(bot.Center + new Vector2((bot.Center.X >= boss.Center.X ? 1 : -1) * 96f, 0f), 8f);
 	}
 
+	const float BreatherHealthFraction = 0.4f;
+	const float RejoinHealthFraction = 0.7f;
+	const float BreatherDistance = 16f * 25f;
+	const float BossRangedGap = 16f * 8f;
+	const float ReachMargin = 8f;
+
+	static readonly HashSet<int> catchingBreath = new();
+
+	static bool CatchesBreath(Bot bot)
+	{
+		float health = bot.Avatar.statLife / (float)bot.Avatar.statLifeMax2;
+		if (health < BreatherHealthFraction)
+			catchingBreath.Add(bot.Id);
+		else if (health >= RejoinHealthFraction)
+			catchingBreath.Remove(bot.Id);
+		return catchingBreath.Contains(bot.Id);
+	}
+
 	static bool CanShootFromHere(Bot bot, NPC target)
 	{
 		var body = bot.Npc;
@@ -336,10 +367,10 @@ public static class Engagement
 			bot.Avatar.MinionAttackTargetNPC = target.whoAmI;
 	}
 
-	static Vector2 BossStandingSpot(NPC body, NPC boss)
+	static Vector2 BossStandingSpot(NPC body, NPC boss, Item weapon)
 	{
 		int side = body.Center.X >= boss.Center.X ? 1 : -1;
-		float x = boss.Center.X + side * (boss.width / 2f + body.width / 2f + BossStandoff);
+		float x = boss.Center.X + side * (boss.width / 2f + Math.Max(body.width / 2f + BossStandoff, BotHands.MeleeReach(weapon) - ReachMargin));
 		float y = boss.velocity.Y == 0f ? boss.Bottom.Y - body.height / 2f : body.Center.Y;
 		return new Vector2(x, y);
 	}

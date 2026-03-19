@@ -36,7 +36,7 @@ public sealed class MacroRoute
 	public Vector2? LegToward(Point feet, Point target, int goalRadius, NavigationAbilities abilities, bool straightLineFailed)
 	{
 		bool maze = PathFinder.InsideMaze(target);
-		if (!maze && !straightLineFailed || Distance(feet, target) <= (maze ? LegTiles : PathFinder.LongTripTiles))
+		if (!maze && !straightLineFailed || Distance(feet, target) <= (maze ? LegTiles : LegReachedTiles))
 		{
 			Clear();
 			return null;
@@ -48,7 +48,11 @@ public sealed class MacroRoute
 		if (legIndex < 0)
 			return null;
 		if (Distance(feet, route.Nodes[legIndex].Feet) <= LegReachedTiles)
+		{
 			legIndex = FarthestLegFrom(feet, legIndex);
+			if (route.ReachesGoal && legIndex == route.Nodes.Count - 1 && Distance(feet, route.Nodes[legIndex].Feet) <= LegReachedTiles)
+				return null;
+		}
 		var leg = route.Nodes[legIndex].Feet;
 		return new Vector2(leg.X * 16f + 8f, leg.Y * 16f - 13f);
 	}

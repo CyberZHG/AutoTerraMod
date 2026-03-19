@@ -11,6 +11,8 @@ public sealed class Settlement
 	const int WorkshopWidth = 24;
 	const int RoomWidth = 10;
 	const int ApronWidth = 5;
+	const int HallHatchInset = 2;
+	const int HallHatchWidth = 2;
 	const int RoomInteriorHeight = 5;
 	const int MinimumStorageInteriorHeight = 4;
 	public const int GuestRoomCount = 3;
@@ -59,6 +61,7 @@ public sealed class Settlement
 		Floor = floor;
 		AddApron(structures.Where(structure => structure.Floor == floor).MinBy(structure => structure.Left), Left - ApronWidth, Left - 1);
 		AddApron(structures.Where(structure => structure.Floor == floor).MaxBy(structure => structure.Right), Right + 1, Right + ApronWidth);
+		Hall.AddFloorPlatforms(Hall.Left + HallHatchInset, Hall.Left + HallHatchInset + HallHatchWidth - 1);
 	}
 
 	public HouseBlueprint Hall { get; }
@@ -80,7 +83,7 @@ public sealed class Settlement
 
 	void AddApron(HouseBlueprint edge, int fromX, int toX)
 	{
-		edge.AddApron(fromX, toX);
+		edge.AddFloorPlatforms(fromX, toX);
 		for (int x = fromX; x <= toX; x++)
 			shell.Add(new Point(x, Floor));
 	}

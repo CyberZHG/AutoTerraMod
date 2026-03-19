@@ -125,7 +125,21 @@ public static class PathFinder
 	public static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
 
 	static bool IsGoal(Point node, Point goal, int radius) =>
-		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2;
+		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2 && !SealedBelow(node, goal);
+
+	static bool SealedBelow(Point node, Point goal)
+	{
+		int targetRow = goal.Y - 1;
+		int bodyTop = node.Y - 2;
+		if (bodyTop - 1 <= targetRow || TileQuery.IsSolid(goal.X, targetRow))
+			return false;
+		for (int y = targetRow + 1; y < bodyTop; y++)
+		{
+			if (TileQuery.IsSolid(node.X, y) || TileQuery.IsSolid(node.X + 1, y))
+				return true;
+		}
+		return false;
+	}
 
 	static float Heuristic(Point a, Point b) => Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
 

@@ -117,7 +117,7 @@ public abstract class BotTask
 	}
 
 	const int BelowCampDepth = 60;
-	const int CampExitMargin = 6;
+	const int CampExitMargin = 3;
 
 	protected bool BelowOwnCamp()
 	{
@@ -132,6 +132,6 @@ public abstract class BotTask
 		var camp = Bot.Faction.Settlement;
 		var here = Bot.CenterTile;
 		int exitX = here.X - camp.Left < camp.Right - here.X ? camp.Left - CampExitMargin : camp.Right + CampExitMargin;
-		return new Vector2(exitX * 16f + 8f, (World.TileQuery.SurfaceY(exitX) - 2) * 16f);
+		return new Vector2(exitX * 16f + 8f, (camp.Floor - 2) * 16f);
 	}
 }

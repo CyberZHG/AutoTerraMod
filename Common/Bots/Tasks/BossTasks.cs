@@ -429,6 +429,9 @@ public sealed class SummonTask : BotTask
 public sealed class RallyTask : BotTask
 {
 	const float ArrivalRadius = 16f * 8f;
+	const float LeaderDriftPixels = 16f * 8f;
+
+	Vector2? goal;
 	public const float SelfDefenseRadius = 16f * 10f;
 	public const float YieldToSelfDefense = 40f;
 
@@ -439,6 +442,12 @@ public sealed class RallyTask : BotTask
 		&& Collision.CanHitLine(body.position, body.width, body.height, point - new Vector2(8f), 16, 16);
 
 	public override string NameKey => "Rally";
+
+	public override void Start()
+	{
+		base.Start();
+		goal = null;
+	}
 
 	public override float Evaluate()
 	{
@@ -456,6 +465,9 @@ public sealed class RallyTask : BotTask
 		}
 		var leader = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId);
 		var target = leader is { IsAlive: true } && leader != Bot ? leader.Center : rally.point;
+		if (goal is Vector2 kept && Vector2.Distance(kept, target) < LeaderDriftPixels)
+			target = kept;
+		goal = target;
 		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
 		TravelOrTunnel(target, inSight ? ArrivalRadius : 16f);
 		if (Bot.Motor.HasArrived)

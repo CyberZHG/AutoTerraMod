@@ -93,10 +93,16 @@ public sealed class HouseBlueprint
 		foreach (int x in new[] { center, center + 1 })
 			platforms.Add(new Point(x, Floor));
 	}
-	public void AddApron(int fromX, int toX)
+	public void AddFloorPlatforms(int fromX, int toX)
 	{
 		for (int x = fromX; x <= toX; x++)
 			platforms.Add(new Point(x, Floor));
+	}
+
+	static bool HoldsFurniture(Point tile)
+	{
+		var above = Main.tile[tile.X, tile.Y - 1];
+		return above.HasTile && Main.tileFrameImportant[above.TileType];
 	}
 
 	public bool IsOutOfReachFromFloor(Point tile) => tile.Y < Floor - 7;
@@ -118,7 +124,7 @@ public sealed class HouseBlueprint
 		}
 		foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None))
 			yield return Operation(BuildAction.PlaceWall, tile);
-		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y)))
+		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
 		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile)))
 			yield return Operation(BuildAction.PlaceBlock, tile);
@@ -166,7 +172,7 @@ public sealed class HouseBlueprint
 		{
 			foreach (int x in new[] { center + offset, center - offset })
 			{
-				if (x > Left + 1 && x < Right - 1)
+				if (x > Left + 1 && x < Right - 1 && !IsPlatformSpot(new Point(x, Floor)))
 					yield return new Point(x, Floor - 1);
 			}
 		}

@@ -42,6 +42,7 @@ public sealed class BotMotor
 	int progressTimer;
 	int stalledChecks;
 	float closestDistance = float.MaxValue;
+	Vector2? progressAim;
 
 	public BotMotor(Bot bot) => this.bot = bot;
 
@@ -206,6 +207,7 @@ public sealed class BotMotor
 		stalledChecks = 0;
 		progressTimer = 0;
 		closestDistance = float.MaxValue;
+		progressAim = null;
 	}
 
 	public string Describe()
@@ -631,6 +633,9 @@ public sealed class BotMotor
 			longRoute.ClearPlanned();
 		}
 		var intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
+		if (leg == null && follower.HasNoRoute)
+			needsWholeRoute = true;
+		AimProgressAt(leg ?? target);
 		if (follower.HasPath)
 		{
 			sprinting = npc.velocity.Y == 0f && follower.FlatAhead(SprintLookahead);
@@ -1272,6 +1277,14 @@ public sealed class BotMotor
 		extraJumpReady = HasExtraJump;
 	}
 
+	void AimProgressAt(Vector2 aim)
+	{
+		if (progressAim is Vector2 previous && Vector2.DistanceSquared(previous, aim) <= LegRadius * LegRadius)
+			return;
+		progressAim = aim;
+		closestDistance = float.MaxValue;
+	}
+
 	void TrackProgress(NPC npc)
 	{
 		if (destination is not Vector2 target || HasArrived)
@@ -1282,7 +1295,7 @@ public sealed class BotMotor
 		if (++progressTimer < ProgressCheckInterval)
 			return;
 		progressTimer = 0;
-		float distance = Vector2.Distance(npc.Center, target);
+		float distance = Vector2.Distance(npc.Center, progressAim ?? target);
 		if (distance < closestDistance - MeaningfulProgress || bot.Hands.IsWorking)
 		{
 			closestDistance = Math.Min(distance, closestDistance);
