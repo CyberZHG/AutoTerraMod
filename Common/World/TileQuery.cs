@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
@@ -15,6 +16,20 @@ public static class TileQuery
 	}
 
 	public static bool IsSolid(Point tile) => IsSolid(tile.X, tile.Y);
+
+	public static bool ClearLine(Vector2 from, Vector2 to)
+	{
+		var delta = to - from;
+		int steps = (int)(Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y)) / 8f) + 1;
+		var step = delta / steps;
+		for (int i = 1; i < steps; i++)
+		{
+			var point = from + step * i;
+			if (IsSolid((int)(point.X / 16f), (int)(point.Y / 16f)))
+				return false;
+		}
+		return true;
+	}
 
 	public static bool IsPlatform(int x, int y)
 	{

@@ -54,6 +54,7 @@ public abstract class BotTask
 		var body = Bot.Npc;
 		if (recall == null || body == null)
 			return false;
+		string name = recall.Name;
 		if (recall.consumable)
 			Inventory.ConsumeOne(Avatar, recall);
 		SoundEngine.PlaySound(SoundID.Item6, body.Center);
@@ -62,9 +63,15 @@ public abstract class BotTask
 		body.velocity = Vector2.Zero;
 		Bot.Vitals.Teleported(body);
 		Bot.Motor.Stop();
-		BotDiagnostics.Log(Bot, $"used {recall.Name} to return home");
-		Spectating.SpectatorSystem.AnnounceJump(Bot, "RecalledHome", Bot.Name, recall.Name);
+		BotDiagnostics.Log(Bot, $"used {name} to return home");
+		Spectating.SpectatorSystem.AnnounceJump(Bot, "RecalledHome", Bot.Name, name);
 		return true;
+	}
+
+	protected bool RecallLandsAtBase()
+	{
+		var landing = BotWorldSystem.RespawnFeet(Bot).ToTileCoordinates();
+		return Bot.Faction.Settlement?.Contains(landing.X, landing.Y - 1) != false;
 	}
 
 	protected bool TryRandomTeleport()

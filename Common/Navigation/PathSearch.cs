@@ -404,20 +404,6 @@ public sealed class PathSearch
 		return Remember(index, HangKnown, HangBit, BodyClear(x, y) && !Supported(x, y) && PathFinder.HangHold(new Point(x, y)) != null);
 	}
 
-	static bool ClearLine(Vector2 from, Vector2 to)
-	{
-		var delta = to - from;
-		int steps = (int)(Math.Max(Math.Abs(delta.X), Math.Abs(delta.Y)) / 8f) + 1;
-		var step = delta / steps;
-		for (int i = 1; i < steps; i++)
-		{
-			var point = from + step * i;
-			if (TileQuery.IsSolid((int)(point.X / 16f), (int)(point.Y / 16f)))
-				return false;
-		}
-		return true;
-	}
-
 	bool DeepDropBeside(int column, int y) =>
 		!Supported(column, y) && BodyClear(column, y) && (DropLanding(column, y, abilities.MaxFall) is not Point landing || landing.Y - y > abilities.JumpRise);
 
@@ -454,7 +440,7 @@ public sealed class PathSearch
 				if (Vector2.Distance(origin, hold) > reach)
 					continue;
 				sightChecks++;
-				if (!ClearLine(origin, hold + Vector2.Normalize(origin - hold) * 4f))
+				if (!TileQuery.ClearLine(origin, hold + Vector2.Normalize(origin - hold) * 4f))
 					continue;
 				edges.Add(new Edge(new Point(column, row), MoveKind.HookHang, HangCost + (Math.Abs(column - x) + Math.Abs(row - y)) * HangCostPerTile));
 				break;

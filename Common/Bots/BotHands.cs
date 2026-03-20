@@ -346,7 +346,7 @@ public sealed class BotHands
 	public bool PlaceScaffold(Point tile)
 	{
 		var platform = FindPlaceable(IsPlatformTile);
-		var block = ExpendableBlock();
+		var block = ExpendableBlock(tile);
 		if (!Place(platform, tile) && !Place(block, tile))
 			return false;
 		bot.Faction.Scaffolding.Add(tile);
@@ -360,7 +360,7 @@ public sealed class BotHands
 		int count = 0;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item) && !bot.Brain.PlannedItemTypes.Contains(item.type)))
+			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item) && !TileID.Sets.Falling[item.createTile] && !bot.Brain.PlannedItemTypes.Contains(item.type)))
 				count += item.stack;
 		}
 		return count;
@@ -368,7 +368,7 @@ public sealed class BotHands
 
 	public bool PlaceBridge(Point tile)
 	{
-		var material = BridgeMaterial();
+		var material = BridgeMaterial(tile);
 		int type = material?.type ?? 0;
 		if (!Place(material, tile))
 			return false;
@@ -410,18 +410,19 @@ public sealed class BotHands
 
 	public string DescribeBridgePlacement(Point tile)
 	{
-		var item = BridgeMaterial();
+		var item = BridgeMaterial(tile);
 		return item == null ? "no material" : $"{item.Name} reach={CanReach(item, tile)} canPlace={CanPlaceAt(item, tile)} ready={Ready}";
 	}
 
-	Item BridgeMaterial() => FindPlaceable(IsPlatformTile) ?? ExpendableBlock();
+	Item BridgeMaterial(Point? tile = null) => FindPlaceable(IsPlatformTile) ?? ExpendableBlock(tile);
 
-	Item ExpendableBlock()
+	Item ExpendableBlock(Point? tile = null)
 	{
+		bool supported = tile is Point spot && TileQuery.IsSolid(spot.X, spot.Y + 1);
 		Item wood = null;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (!IsExpendableBlock(item) || bot.Brain.PlannedItemTypes.Contains(item.type))
+			if (!IsExpendableBlock(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || tile != null && !supported && TileID.Sets.Falling[item.createTile])
 				continue;
 			if (item.type != ItemID.Wood)
 				return item;
@@ -448,8 +449,7 @@ public sealed class BotHands
 		&& Main.tileSolid[item.createTile]
 		&& !Main.tileSolidTop[item.createTile]
 		&& !Main.tileFrameImportant[item.createTile]
-		&& !TileID.Sets.Ore[item.createTile]
-		&& item.createTile != TileID.Sand;
+		&& !TileID.Sets.Ore[item.createTile];
 
 	public Item BestWeapon()
 	{

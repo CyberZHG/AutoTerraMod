@@ -199,12 +199,6 @@ public sealed class CraftTask : BotTask
 		placedStations.Clear();
 	}
 
-	bool RecallLandsAtBase()
-	{
-		var landing = BotWorldSystem.RespawnFeet(Bot).ToTileCoordinates();
-		return Bot.Faction.Settlement?.Contains(landing.X, landing.Y - 1) != false;
-	}
-
 	public override void Stop()
 	{
 		PackUpPortableStations();

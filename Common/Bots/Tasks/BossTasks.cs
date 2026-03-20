@@ -437,9 +437,16 @@ public sealed class RallyTask : BotTask
 
 	public RallyTask(Bot bot) : base(bot) { }
 
+	const float RecallTripDistance = 16f * 80f;
+	const float RecallLandingRadius = 16f * 40f;
+
+	bool RecallShortensTrip(Vector2 target) =>
+		Vector2.Distance(Bot.Center, target) > RecallTripDistance && CarriesRecall(Avatar) && RecallLandsAtBase()
+		&& Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) < RecallLandingRadius;
+
 	public static bool Joined(Bot member, Vector2 point, float radius) =>
 		member.IsAlive && member.Npc is NPC body && Vector2.Distance(body.Center, point) < radius
-		&& Collision.CanHitLine(body.position, body.width, body.height, point - new Vector2(8f), 16, 16);
+		&& World.TileQuery.ClearLine(body.Center, point);
 
 	public override string NameKey => "Rally";
 
@@ -453,6 +460,11 @@ public sealed class RallyTask : BotTask
 	{
 		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep)
 			return 0f;
+		if (BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is not { IsAlive: true } leader || leader.Brain.Plan is not SummonBossStep)
+		{
+			Bot.Faction.Rally = null;
+			return 0f;
+		}
 		return Engagement.NearestHostile(Bot, SelfDefenseRadius, true) != null ? YieldToSelfDefense : 88f;
 	}
 
@@ -469,6 +481,8 @@ public sealed class RallyTask : BotTask
 			target = kept;
 		goal = target;
 		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
+		if (!inSight && RecallShortensTrip(target) && TryRecallHome())
+			return;
 		TravelOrTunnel(target, inSight ? ArrivalRadius : 16f);
 		if (Bot.Motor.HasArrived)
 			Bot.Watchdog.RecordProgress();
