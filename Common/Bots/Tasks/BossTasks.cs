@@ -497,6 +497,25 @@ public sealed class ScoutTask : BotTask
 	const int SpanMargin = 20;
 	const int MinShrineDepth = 15;
 	const int MaxShrineDepth = 110;
+	const int ShrineDepthBelowRock = 150;
+	const int UnderworldMargin = 50;
+	const int OpenSearchRadius = 15;
+
+	static Point OpenTileNear(Point origin)
+	{
+		for (int radius = 0; radius <= OpenSearchRadius; radius++)
+		{
+			for (int dx = -radius; dx <= radius; dx++)
+			{
+				foreach (int dy in new[] { -radius, radius })
+				{
+					if (!TileQuery.IsSolid(origin.X + dx, origin.Y + dy) && !TileQuery.IsSolid(origin.X + dx, origin.Y + dy - 1))
+						return new Point(origin.X + dx, origin.Y + dy);
+				}
+			}
+		}
+		return origin;
+	}
 
 	ScoutStep step;
 	Vector2 destination;
@@ -530,7 +549,10 @@ public sealed class ScoutTask : BotTask
 		if (step.Underground && knowledge.SpanOf(step.Landmark) is var (minX, maxX))
 		{
 			int column = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
-			return new Vector2(column * 16f, (TileQuery.SurfaceY(column) + Main.rand.Next(MinShrineDepth, MaxShrineDepth)) * 16f);
+			int surface = TileQuery.SurfaceY(column);
+			int deepest = Math.Min(Math.Max(surface + MaxShrineDepth, (int)Main.rockLayer + ShrineDepthBelowRock), Main.UnderworldLayer - UnderworldMargin);
+			var spot = OpenTileNear(new Point(column, Main.rand.Next(surface + MinShrineDepth, deepest)));
+			return new Vector2(spot.X * 16f + 8f, spot.Y * 16f);
 		}
 		int x = here.X + knowledge.ScoutDirection * SurfaceLeg;
 		if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
@@ -565,7 +587,7 @@ public sealed class ScoutTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (SearchingShrines)
 		{
-			bool found = BossRituals.KnowsShrine(Bot, step.Landmark);
+			bool found = step.SeekTile >= 0 ? BossRituals.KnowsTile(Bot, step.SeekTile) : BossRituals.KnowsShrine(Bot, step.Landmark);
 			if (found)
 				knowledge.FruitlessShrineSearches = 0;
 			return found;

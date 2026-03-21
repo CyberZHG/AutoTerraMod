@@ -249,7 +249,8 @@ public sealed class CraftTask : BotTask
 	}
 
 	static bool OnGround(Point spot) =>
-		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType];
+		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType]
+		|| Main.tile[spot.X, spot.Y + 1].HasTile && Main.tileTable[Main.tile[spot.X, spot.Y + 1].TileType];
 
 	void TickPlace(int itemType)
 	{
@@ -440,6 +441,11 @@ public sealed class GatherTask : BotTask
 		if (Tiles.IsTree || Tiles.OnSurface)
 		{
 			int x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, 50, Main.maxTilesX - 50);
+			if (Tiles.Ground is Landmark home && knowledge.SpanOf(home) is var (minX, maxX) && (x < minX || x > maxX))
+			{
+				prospectDirection = -prospectDirection;
+				x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, minX, maxX);
+			}
 			return new Vector2(x * 16f, TileQuery.SurfaceY(x) * 16f - 24f);
 		}
 		if (DeepOre() && here.Y < Main.rockLayer + DeepOreMarginTiles)

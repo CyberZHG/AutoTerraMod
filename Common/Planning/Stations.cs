@@ -88,12 +88,13 @@ public static class Stations
 	}
 
 	const int RemoteStationSearchRadius = 500;
+	const int WorldStationSearchRadius = 3000;
 
 	public static bool IsWorldOnly(int tileType) => ItemsPlacing(tileType).Count == 0;
 
 	public static Point? LocateAnywhere(Faction faction, int tileType, Point from) =>
 		Locate(faction, tileType)
-		?? Systems.BotWorldSystem.KnowledgeOf(faction).NearestKnown(from, new HashSet<int> { tileType }, new HashSet<Point>(), RemoteStationSearchRadius);
+		?? Systems.BotWorldSystem.KnowledgeOf(faction).NearestKnown(from, new HashSet<int> { tileType }, new HashSet<Point>(), IsWorldOnly(tileType) ? WorldStationSearchRadius : RemoteStationSearchRadius);
 
 	public static bool IsReachableStation(Faction faction, int tileType, Point from) =>
 		BaseHas(faction, tileType) || (IsWorldOnly(tileType) && LocateAnywhere(faction, tileType, from) != null);

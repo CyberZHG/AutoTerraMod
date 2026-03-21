@@ -425,6 +425,8 @@ public static class ProgressionPlanner
 				return portable && stationItems.Count > 0 ? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
 			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
+			if (tile == Terraria.ID.TileID.DemonAltar)
+				return new ScoutStep(World.Landmarks.WorldEvil, true, Terraria.ID.TileID.DemonAltar);
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
 		foreach (var required in recipe.requiredItem)

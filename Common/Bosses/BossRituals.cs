@@ -35,13 +35,23 @@ public static class BossRituals
 
 	public static bool KnowsShrine(Bot bot, Landmark landmark) => KnownShrine(bot, landmark) != null;
 
+	public static bool KnowsTile(Bot bot, int tileType) => KnownTile(bot, new HashSet<int> { tileType }) != null;
+
 	static Point? KnownShrine(Bot bot, Landmark landmark) => KnownTile(bot, ShrineTilesOf(landmark));
 
 	static Point? KnownTile(Bot bot, HashSet<int> tiles) =>
 		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, tiles, new HashSet<Point>(), ShrineSearchRadius);
 
 	public static IEnumerable<BossTrigger> InPreferredOrder(Bot bot, BossChallenge challenge) =>
-		challenge.Triggers.OrderBy(trigger => trigger is SummonItemTrigger item && Inventory.Count(bot.Avatar, item.Item) > 0 ? 0 : 1);
+		challenge.Triggers.OrderBy(trigger => trigger switch
+		{
+			SummonItemTrigger item when Inventory.Count(bot.Avatar, item.Item) > 0 => 0,
+			SmashOrbsTrigger when !CanMineEvilStone(bot) => 2,
+			_ => 1
+		});
+
+	public static bool CanMineEvilStone(Bot bot) =>
+		(bot.Hands.BestPickaxe?.pick ?? 0) >= Navigation.PickRequirement.MinimumPick(WorldGen.crimson ? TileID.Crimstone : TileID.Ebonstone, 0, 0);
 
 	public static PlanStep Plan(Bot bot, BossChallenge challenge, BossTrigger trigger) => trigger switch
 	{
