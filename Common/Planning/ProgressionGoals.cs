@@ -700,6 +700,33 @@ public sealed class GatedGoal : ProgressionGoal
 	public override bool IsExpedition => inner.IsExpedition;
 }
 
+public sealed class SurveyGoal : ProgressionGoal
+{
+	static World.Landmark[] Surveyed => new[] { World.Landmark.Jungle, World.Landmark.Snow, World.Landmark.Ocean, World.Landmarks.WorldEvil, World.Landmark.Dungeon };
+
+	public override bool IsExpedition => true;
+
+	public override string Describe() => "Survey";
+
+	public override bool AppliesTo(Bot bot) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Exploring) == bot;
+
+	public override bool IsMet(Bot bot) => Unknown(bot) == null;
+
+	static World.Landmark? Unknown(Bot bot)
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		foreach (var landmark in Surveyed)
+		{
+			if (knowledge.LandmarkOf(landmark) == null)
+				return landmark;
+		}
+		return null;
+	}
+
+	public override PlanStep Plan(Bot bot) => Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false) : PlanStep.Idle;
+}
+
 public sealed class SmashAltarsGoal : ProgressionGoal
 {
 	const int AltarsForAllOreTiers = 3;
@@ -718,7 +745,7 @@ public sealed class SmashAltarsGoal : ProgressionGoal
 		if (bot.Hands.BestHammer is not { } hammer || !BotHands.CanSmashAltars(hammer))
 			return ProgressionPlanner.ObtainAny(bot, Pwnhammers);
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		return knowledge.NearestKnown(bot.Faction.BaseTile, AltarTiles, new HashSet<Microsoft.Xna.Framework.Point>(), AltarSearchRadius) is Microsoft.Xna.Framework.Point altar
+		return knowledge.NearestKnown(bot.Faction.BaseTile, AltarTiles, new HashSet<Microsoft.Xna.Framework.Point>(World.SharedAltar.Tiles()), AltarSearchRadius) is Microsoft.Xna.Framework.Point altar
 			? new SmashShrineStep(altar)
 			: new ScoutStep(World.Landmarks.WorldEvil, true);
 	}
@@ -1067,6 +1094,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.GoldBow, ItemID.PlatinumBow },
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
 			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) });
+		goals.Add(new SurveyGoal());
 		goals.Add(new OwnGoal(ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.NightmarePickaxe, ItemID.DeathbringerPickaxe },

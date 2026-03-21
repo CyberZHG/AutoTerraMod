@@ -3,6 +3,7 @@ using System.Linq;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader.IO;
 
 namespace AutoTerraMod.Common.Factions;
@@ -121,6 +122,8 @@ public sealed class FactionKnowledge
 
 	public Point? NearestKnown(Point from, ISet<int> tileTypes, ISet<Point> excluded, int maxDistance)
 	{
+		if (tileTypes.Contains(TileID.DemonAltar) && World.SharedAltar.Stands && World.SharedAltar.Origin is Point altar && !excluded.Contains(altar))
+			Remember(altar, TileID.DemonAltar);
 		if (!KnowsAny(tileTypes))
 			return null;
 		ForgetVanished();

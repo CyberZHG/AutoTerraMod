@@ -317,6 +317,12 @@ public sealed class BotMotor
 			return;
 		}
 		HasArrived = false;
+		if (bot.Hands.Explosives.BlastCenter is Vector2 blast)
+		{
+			if (Vector2.Distance(npc.Center, blast) < Explosives.SafeDistance)
+				moveDirection = npc.Center.X >= blast.X ? 1 : -1;
+			return;
+		}
 		if (Math.Abs(delta.X) < 16f && delta.Y < 0f)
 		{
 			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
@@ -342,6 +348,8 @@ public sealed class BotMotor
 			TileToDig = wall;
 			return;
 		}
+		if (FirstSolid(column, top, bottom) is Point blocker && Unbreakable(blocker.X, blocker.Y, pickPower) && bot.Hands.Explosives.Light(blocker))
+			return;
 		if (grounded && DropDepth(column, body.Bottom) > AffordableFall)
 		{
 			if (bot.Hands.HasBridgeMaterial && !TileQuery.CanStandOn(column, body.Bottom + 1))

@@ -8,6 +8,7 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class DecorateTask : BotTask
 {
 	const float PlaceReach = 16f * 3f;
+	const int DoorSwing = 1;
 
 	Item decor;
 	Point? spot;
@@ -47,7 +48,7 @@ public sealed class DecorateTask : BotTask
 			return null;
 		foreach (var structure in settlement.Structures.Where(structure => structure.Purpose != Building.StructurePurpose.Storage))
 		{
-			for (int x = structure.Left + 1; x < structure.Right; x++)
+			for (int x = structure.Left + DoorSwing + 1; x < structure.Right - DoorSwing; x++)
 			{
 				var candidate = new Point(x, structure.Ceiling + 1);
 				if (World.TileQuery.IsSolid(x, structure.Ceiling) && Bot.Hands.CanPlaceAt(item, candidate))

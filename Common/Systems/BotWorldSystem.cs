@@ -69,6 +69,7 @@ public sealed class BotWorldSystem : ModSystem
 		dormantFactions.Clear();
 		dormantBots.Clear();
 		sharedKnowledge = new FactionKnowledge();
+		World.SharedAltar.Origin = null;
 		Relation = FactionRelation.Race;
 		Settings = null;
 		initialized = false;
@@ -97,6 +98,8 @@ public sealed class BotWorldSystem : ModSystem
 		tag["factions"] = Factions.Concat(dormantFactions).OrderBy(faction => faction.Id).Select(faction => faction.Save()).ToList();
 		tag["bots"] = Bots.Concat(dormantBots).OrderBy(bot => bot.Id).Select(bot => bot.Save()).ToList();
 		tag["sharedKnowledge"] = sharedKnowledge.Save();
+		if (World.SharedAltar.Origin is Microsoft.Xna.Framework.Point altar)
+			tag["sharedAltar"] = new Microsoft.Xna.Framework.Vector2(altar.X, altar.Y);
 	}
 
 	public override void LoadWorldData(TagCompound tag)
@@ -107,6 +110,8 @@ public sealed class BotWorldSystem : ModSystem
 		Bots.AddRange(tag.GetList<TagCompound>("bots").Select(Bot.Load));
 		if (tag.ContainsKey("sharedKnowledge"))
 			sharedKnowledge.Load(tag.GetCompound("sharedKnowledge"));
+		if (tag.ContainsKey("sharedAltar"))
+			World.SharedAltar.Origin = tag.Get<Microsoft.Xna.Framework.Vector2>("sharedAltar").ToPoint();
 		Settings = tag.ContainsKey("settings") ? WorldFactionSettings.Load(tag.GetCompound("settings"))
 			: Factions.Count > 0 ? new WorldFactionSettings(Factions.Count, Factions.Max(MembersOf), Relation)
 			: null;

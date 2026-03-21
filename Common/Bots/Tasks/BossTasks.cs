@@ -476,7 +476,7 @@ public sealed class RallyTask : BotTask
 			return;
 		}
 		var leader = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId);
-		var target = leader is { IsAlive: true } && leader != Bot ? leader.Center : rally.point;
+		var target = leader is { IsAlive: true } && leader != Bot && !Bot.Faction.RallyAssembled ? leader.Center : rally.point;
 		if (goal is Vector2 kept && Vector2.Distance(kept, target) < LeaderDriftPixels)
 			target = kept;
 		goal = target;

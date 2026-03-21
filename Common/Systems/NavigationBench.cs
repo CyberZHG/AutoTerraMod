@@ -26,6 +26,7 @@ public sealed class NavigationBench : ModSystem
 	const float ArrivalDistance = 40f;
 	const int BuildingBlocks = 60;
 	const int BenchRopes = 40;
+	const int BenchBombs = 5;
 	const int BenchPlatforms = 40;
 	const int RecycleBlocks = 2;
 
@@ -105,6 +106,15 @@ public sealed class NavigationBench : ModSystem
 			"#.........................!###",
 			"#.........................!###",
 			"#.........S...............!###",
+			"##############################"
+		}),
+		new("BombCrimstone", new[]
+		{
+			"##############################",
+			"#.............rrrr...........#",
+			"#.............rrrr...........#",
+			"#.............rrrr...........#",
+			"#..S..........rrrr.........G.#",
 			"##############################"
 		}),
 		new("RopeWall", new[]
@@ -1665,6 +1675,8 @@ public sealed class NavigationBench : ModSystem
 			TopUp(runner, ItemID.TempleKey, 1);
 		if (bench.Name.StartsWith("Hook") || bench.Name.StartsWith("CloudHook") || bench.Name.StartsWith("PickHook"))
 			TopUp(runner, ItemID.GrapplingHook, 1);
+		if (bench.Name.StartsWith("Bomb"))
+			TopUp(runner, ItemID.Bomb, BenchBombs);
 		if (bench.Name.StartsWith("PickHook"))
 		{
 			var spares = new int[] { ItemID.Rope, ItemID.WoodPlatform, ItemID.DirtBlock };
@@ -1686,7 +1698,7 @@ public sealed class NavigationBench : ModSystem
 		runner.Motor.RefreshGear();
 		BotDiagnostics.LogWorld($"nav bench {bench.Name} start: {runner.Motor.Abilities()} jump={runner.Vitals.JumpSpeed:0.##}x{runner.Vitals.JumpHeight} run={runner.Avatar.maxRunSpeed * runner.Avatar.moveSpeed:0.##}/{runner.Avatar.accRunSpeed:0.##}");
 		goal = target.ToWorldCoordinates();
-		runner.Brain.Override = new BenchMoveTask(runner, goal, bench.Name.StartsWith("Climb"));
+		runner.Brain.Override = new BenchMoveTask(runner, goal, bench.Name.StartsWith("Climb"), bench.Name.StartsWith("Bomb"));
 		caseStartedAt = Main.GameUpdateCount;
 	}
 
@@ -1767,6 +1779,9 @@ public sealed class NavigationBench : ModSystem
 			case 's':
 				WorldGen.PlaceTile(x, y, TileID.Stone, true, true);
 				break;
+			case 'r':
+				WorldGen.PlaceTile(x, y, TileID.Crimstone, true, true);
+				break;
 			case 'g':
 				WorldGen.PlaceTile(x, y, TileID.Dirt, true, true);
 				tile.TileType = TileID.Grass;
@@ -1818,11 +1833,13 @@ public sealed class NavigationBench : ModSystem
 		readonly Vector2 target;
 
 		readonly bool climbsStraightUp;
+		readonly bool tunnels;
 
-		public BenchMoveTask(Bot bot, Vector2 target, bool climbsStraightUp) : base(bot)
+		public BenchMoveTask(Bot bot, Vector2 target, bool climbsStraightUp, bool tunnels) : base(bot)
 		{
 			this.target = target;
 			this.climbsStraightUp = climbsStraightUp;
+			this.tunnels = tunnels;
 		}
 
 		public override string NameKey => "Explore";
@@ -1831,7 +1848,10 @@ public sealed class NavigationBench : ModSystem
 
 		public override void Tick()
 		{
-			Bot.Motor.MoveTo(target, 8f);
+			if (tunnels)
+				TravelOrTunnel(target, 8f);
+			else
+				Bot.Motor.MoveTo(target, 8f);
 			Bot.Motor.ClimbingStraightUp = climbsStraightUp;
 		}
 	}

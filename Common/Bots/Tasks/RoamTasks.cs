@@ -162,7 +162,7 @@ public sealed class ExploreTask : BotTask
 
 	public override string NameKey => "Explore";
 
-	public override float Evaluate() => Bot.Brain.Plan is IdleStep ? 20f + Traits.Exploring * 45f : 5f + Traits.Exploring * 25f;
+	public override float Evaluate() => Bot.Brain.Plan is IdleStep ? 30f + Traits.Exploring * 45f : 10f + Traits.Exploring * 30f;
 
 	public override void Start()
 	{

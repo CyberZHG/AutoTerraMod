@@ -31,7 +31,11 @@ public sealed class BotHands
 	uint lastWorkTick;
 	bool animationFailureLogged;
 
-	public BotHands(Bot bot) => this.bot = bot;
+	public BotHands(Bot bot)
+	{
+		this.bot = bot;
+		Explosives = new Explosives(bot);
+	}
 
 	Player Avatar => bot.Avatar;
 
@@ -58,10 +62,13 @@ public sealed class BotHands
 		return best;
 	}
 
+	public Explosives Explosives { get; }
+
 	public void Tick()
 	{
 		if (cooldown > 0)
 			cooldown--;
+		Explosives.Tick();
 		Animate();
 	}
 
@@ -151,7 +158,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile))
+		if (InOtherBase(tile) || World.SharedAltar.IsReserved(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		var hammer = BestHammer;
 		if (hammer == null)

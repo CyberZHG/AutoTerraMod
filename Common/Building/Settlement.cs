@@ -62,6 +62,7 @@ public sealed class Settlement
 		AddApron(structures.Where(structure => structure.Floor == floor).MinBy(structure => structure.Left), Left - ApronWidth, Left - 1);
 		AddApron(structures.Where(structure => structure.Floor == floor).MaxBy(structure => structure.Right), Right + 1, Right + ApronWidth);
 		Hall.AddFloorPlatforms(Hall.Left + HallHatchInset, Hall.Left + HallHatchInset + HallHatchWidth - 1);
+		structures[^1].Yard = YardTiles;
 	}
 
 	public HouseBlueprint Hall { get; }
@@ -80,6 +81,22 @@ public sealed class Settlement
 	public bool Contains(int x, int y) => x >= Left && x <= Right && y >= Top && y <= Floor;
 
 	public HouseBlueprint StructureWithInterior(int x, int y) => structures.FirstOrDefault(structure => structure.IsInterior(x, y));
+
+	const int YardHeadroom = 3;
+
+	IEnumerable<Point> YardTiles()
+	{
+		for (int y = Top - YardHeadroom; y < Floor; y++)
+		{
+			for (int x = Left - ApronWidth; x <= Right + ApronWidth; x++)
+			{
+				if (!World.TileQuery.IsSolid(x, y) || Terraria.Main.tileFrameImportant[Terraria.Main.tile[x, y].TileType] || shell.Contains(new Point(x, y)))
+					continue;
+				if (!structures.Any(structure => x >= structure.Left && x <= structure.Right && y >= structure.Top && y <= structure.Floor))
+					yield return new Point(x, y);
+			}
+		}
+	}
 
 	void AddApron(HouseBlueprint edge, int fromX, int toX)
 	{

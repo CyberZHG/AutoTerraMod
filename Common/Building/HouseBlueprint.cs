@@ -105,6 +105,8 @@ public sealed class HouseBlueprint
 		return above.HasTile && Main.tileFrameImportant[above.TileType];
 	}
 
+	public System.Func<IEnumerable<Point>> Yard { get; set; }
+
 	public bool IsOutOfReachFromFloor(Point tile) => tile.Y < Floor - 7;
 
 	public IEnumerable<Point> ChestSlots()
@@ -132,8 +134,14 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		foreach (int x in new[] { Left, Right })
 		{
-			if (!HasTileOfSet(x, Floor - 2, TileID.Sets.RoomNeeds.CountsAsDoor))
-				yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
+			if (IsRealDoor(x, Floor - 2))
+				continue;
+			for (int y = Floor - DoorHeight; y < Floor; y++)
+			{
+				if (Main.tile[x, y].HasTile && !IsRealDoor(x, y) && !TileQuery.IsSolid(x, y))
+					yield return Operation(BuildAction.ClearTile, new Point(x, y));
+			}
+			yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
 		}
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))
 			yield return Operation(BuildAction.PlaceTorch, new Point(center, Ceiling + 1));
@@ -150,6 +158,11 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.RenovateBlock, tile);
 		foreach (var tile in InteriorTiles().Where(tile => NeedsNewWall(tile, materials)))
 			yield return Operation(BuildAction.RenovateWall, tile);
+		if (Yard != null)
+		{
+			foreach (var tile in Yard())
+				yield return Operation(BuildAction.ClearTile, tile);
+		}
 	}
 
 	BuildOperation Operation(BuildAction action, Point tile) => new(action, tile, Index);
@@ -199,7 +212,7 @@ public sealed class HouseBlueprint
 	static bool NeedsNewWall(Point tile, HouseDesign materials)
 	{
 		int wall = Main.tile[tile.X, tile.Y].WallType;
-		return wall != WallID.None && !materials.AcceptsWall(wall) && Main.wallHouse[wall];
+		return wall != WallID.None && (!Main.wallHouse[wall] || !materials.AcceptsWall(wall));
 	}
 
 	void AddShell(int x, int y)
@@ -266,7 +279,7 @@ public sealed class HouseBlueprint
 				bool inLivingSpace = IsInterior(x, y) || IsDoorway(x, y);
 				if (!inLivingSpace || TileID.Sets.RoomNeeds.CountsAsDoor.Contains(tile.TileType))
 					continue;
-				if (TileQuery.IsSolid(x, y) || Main.tileCut[tile.TileType] || Main.tileRope[tile.TileType] || TileID.Sets.TreeSapling[tile.TileType])
+				if (TileQuery.IsSolid(x, y) || Main.tileRope[tile.TileType] || TileID.Sets.TreeSapling[tile.TileType])
 					yield return new Point(x, y);
 			}
 		}
@@ -298,6 +311,9 @@ public sealed class HouseBlueprint
 	}
 
 	bool InteriorHas(int[] tileTypes) => InteriorTiles().Any(tile => HasTileOfSet(tile.X, tile.Y, tileTypes));
+
+	static bool IsRealDoor(int x, int y) =>
+		HasTileOfSet(x, y, TileID.Sets.RoomNeeds.CountsAsDoor) && !TileQuery.IsPlatform(x, y);
 
 	static bool HasTileOfSet(int x, int y, int[] tileTypes) =>
 		Main.tile[x, y].HasTile && tileTypes.Contains(Main.tile[x, y].TileType);
