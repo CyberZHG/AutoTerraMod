@@ -646,7 +646,7 @@ public sealed class OutpostKitGoal : ProgressionGoal
 
 	public override string Describe() => "OutpostKit";
 
-	public override bool AppliesTo(Bot bot) => !Outpost.IsDeep(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar);
+	public override bool AppliesTo(Bot bot) => !Outpost.IsAfield(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar);
 
 	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar);
 

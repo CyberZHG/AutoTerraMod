@@ -350,7 +350,7 @@ public static class ProgressionPlanner
 		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
 		var local = ResolveWithoutStorage(context, itemType, amount, have, depth);
-		return stored > 0 && local is BlockedStep && !context.Bot.CommittedToMining ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
+		return stored > 0 && local is BlockedStep && !context.Bot.CommittedToMining && !Outpost.IsAfield(context.Bot) ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
 	}
 
 	const int ResolveBudget = 600;
@@ -414,7 +414,7 @@ public static class ProgressionPlanner
 		if (!ConditionsAchievable(context.Bot, recipe))
 			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
-		bool deep = Outpost.IsDeep(context.Bot);
+		bool deep = Outpost.IsAfield(context.Bot);
 		foreach (int tile in recipe.requiredTile)
 		{
 			var stationItems = Stations.ItemsPlacing(tile);

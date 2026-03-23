@@ -33,9 +33,13 @@ public static class Outpost
 
 	public static bool IsDeep(Bot bot) => bot.CenterTile.Y > Main.rockLayer && bot.CenterTile.Y < Main.UnderworldLayer - 10;
 
+	const int AfieldTiles = 100;
+
+	public static bool IsAfield(Bot bot) => IsDeep(bot) || System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X) > AfieldTiles;
+
 	public static bool WantsNew(Bot bot)
 	{
-		if (!IsDeep(bot))
+		if (!IsAfield(bot))
 			return false;
 		var anchor = bot.OutpostBed is Point bed ? bed.ToWorldCoordinates() : BotWorldSystem.RespawnFeet(bot);
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;
