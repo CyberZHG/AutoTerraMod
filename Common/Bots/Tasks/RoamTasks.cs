@@ -209,6 +209,39 @@ public sealed class ExploreTask : BotTask
 	}
 }
 
+public sealed class SurveyTask : BotTask
+{
+	SurveyStep step;
+
+	public SurveyTask(Bot bot) : base(bot) { }
+
+	public override string NameKey => "Survey";
+
+	public override float Evaluate()
+	{
+		if (Bot.Brain.Plan is not SurveyStep survey)
+			return 0f;
+		step = survey;
+		return 50f + Traits.Exploring * 30f;
+	}
+
+	public override void Tick()
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		if (knowledge.IsExplored(step.Target.X / cell, step.Target.Y / cell))
+		{
+			Bot.Watchdog.RecordProgress();
+			IsFinished = true;
+			return;
+		}
+		if (TravelOrTunnel(step.Target.ToWorldCoordinates(), 48f) && !Bot.Motor.HasArrived)
+			return;
+		knowledge.MarkExplored(step.Target);
+		IsFinished = true;
+	}
+}
+
 public sealed class IdleTask : BotTask
 {
 	public IdleTask(Bot bot) : base(bot) { }

@@ -70,6 +70,7 @@ public sealed class BotWorldSystem : ModSystem
 		dormantBots.Clear();
 		sharedKnowledge = new FactionKnowledge();
 		World.SharedAltar.Origin = null;
+		World.TilePresence.Reset();
 		Relation = FactionRelation.Race;
 		Settings = null;
 		initialized = false;

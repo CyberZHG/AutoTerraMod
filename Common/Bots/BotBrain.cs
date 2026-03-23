@@ -40,6 +40,7 @@ public sealed class BotBrain
 			new SummonTask(bot),
 			new RallyTask(bot),
 			new ScoutTask(bot),
+			new SurveyTask(bot),
 			new SmashShrineTask(bot),
 			new TravelTask(bot),
 			new BuildBridgeTask(bot),

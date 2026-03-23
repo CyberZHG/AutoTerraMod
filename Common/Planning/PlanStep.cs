@@ -30,6 +30,7 @@ public sealed record DeliverStep(int ItemType, int RecipientId, int Keep = 0, bo
 public sealed record SummonBossStep(Bosses.BossChallenge Challenge, Bosses.BossTrigger Trigger, Microsoft.Xna.Framework.Vector2 Place, Microsoft.Xna.Framework.Point? Shrine) : PlanStep;
 
 public sealed record ScoutStep(World.Landmark Landmark, bool Underground, int SeekTile = -1) : PlanStep;
+public sealed record SurveyStep(Microsoft.Xna.Framework.Point Target) : PlanStep;
 
 public sealed record SmashShrineStep(Microsoft.Xna.Framework.Point Shrine) : PlanStep;
 

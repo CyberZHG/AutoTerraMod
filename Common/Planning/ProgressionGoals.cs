@@ -711,7 +711,49 @@ public sealed class SurveyGoal : ProgressionGoal
 	public override bool AppliesTo(Bot bot) =>
 		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Exploring) == bot;
 
-	public override bool IsMet(Bot bot) => Unknown(bot) == null;
+	public override bool IsMet(Bot bot) => Unknown(bot) == null && UnexploredCave(bot) == null;
+
+	const int SurveyRingCells = 6;
+	const int OpenSearchTiles = 6;
+
+	static Microsoft.Xna.Framework.Point? UnexploredCave(Bot bot)
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		var here = bot.CenterTile;
+		int topCell = (int)Terraria.Main.worldSurface / cell + 1;
+		int bottomCell = (Terraria.Main.UnderworldLayer - cell) / cell;
+		for (int ring = 0; ring <= SurveyRingCells; ring++)
+		{
+			for (int dx = -ring; dx <= ring; dx++)
+			{
+				for (int dy = -ring; dy <= ring; dy++)
+				{
+					if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != ring)
+						continue;
+					int cellX = here.X / cell + dx, cellY = here.Y / cell + dy;
+					if (cellY < topCell || cellY > bottomCell || cellX < 2 || cellX > Terraria.Main.maxTilesX / cell - 2 || knowledge.IsExplored(cellX, cellY))
+						continue;
+					if (OpenTileNear(cellX * cell + cell / 2, cellY * cell + cell / 2) is Microsoft.Xna.Framework.Point open)
+						return open;
+				}
+			}
+		}
+		return null;
+	}
+
+	static Microsoft.Xna.Framework.Point? OpenTileNear(int x, int y)
+	{
+		for (int dx = -OpenSearchTiles; dx <= OpenSearchTiles; dx += 2)
+		{
+			for (int dy = -OpenSearchTiles; dy <= OpenSearchTiles; dy += 2)
+			{
+				if (!World.TileQuery.IsSolid(x + dx, y + dy) && !World.TileQuery.IsSolid(x + dx, y + dy - 1) && Terraria.Main.tile[x + dx, y + dy].LiquidAmount == 0)
+					return new Microsoft.Xna.Framework.Point(x + dx, y + dy);
+			}
+		}
+		return null;
+	}
 
 	static World.Landmark? Unknown(Bot bot)
 	{
@@ -724,7 +766,10 @@ public sealed class SurveyGoal : ProgressionGoal
 		return null;
 	}
 
-	public override PlanStep Plan(Bot bot) => Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false) : PlanStep.Idle;
+	public override PlanStep Plan(Bot bot) =>
+		Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false)
+		: UnexploredCave(bot) is Microsoft.Xna.Framework.Point cave ? new SurveyStep(cave)
+		: PlanStep.Idle;
 }
 
 public sealed class SmashAltarsGoal : ProgressionGoal

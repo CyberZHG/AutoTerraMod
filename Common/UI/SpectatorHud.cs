@@ -171,6 +171,7 @@ public sealed class SpectatorHud : ModSystem
 		SummonBossStep summon => Text("Plans.Summon", summon.Challenge.Name),
 		ScoutStep scout => Text("Plans.Scout", Text($"Landmarks.{scout.Landmark}")),
 		SmashShrineStep => Text("Plans.Smash"),
+		SurveyStep => Text("Plans.Survey"),
 		TravelStep => Text("Plans.Travel"),
 		BuildBridgeStep => Text("Tasks.BuildBridge"),
 		_ => Text("Plans.Idle")

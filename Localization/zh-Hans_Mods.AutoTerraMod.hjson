@@ -108,6 +108,7 @@ Tasks: {
 	Summon: 召唤 Boss
 	Rally: 集合
 	Scout: 侦察
+	Survey: 勘察洞穴
 	Smash: 砸暗影珠/猩红之心
 	Travel: 远行
 	BuildBridge: 修地狱桥
@@ -159,6 +160,7 @@ Plans: {
 	Build: 建房：{0}
 	Summon: 召唤{0}
 	Scout: 寻找{0}
+	Survey: 勘察未探索的洞穴
 	Smash: 砸暗影珠/猩红之心
 	Travel: 远行
 	BuildBridge: 修地狱桥

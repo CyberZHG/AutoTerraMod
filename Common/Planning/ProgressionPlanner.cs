@@ -379,7 +379,7 @@ public static class ProgressionPlanner
 		if (CanAffordEasily(context.Bot, itemType, amount - have))
 			return PlanPurchase(context.Bot, itemType, amount - have);
 		var source = ResourceSources.For(itemType);
-		if (source is TileSource { IsTree: false } tiles && !CanMineAny(context.Bot, tiles))
+		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes)))
 			return PlanStep.Blocked;
 		if (source is TileSource { IsTree: true } trees && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin
 			&& Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).NearestKnown(context.Bot.CenterTile, trees.TileTypes, NoExclusions, NearbyTreeTiles) == null)

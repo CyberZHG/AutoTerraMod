@@ -108,6 +108,7 @@ Tasks: {
 	Summon: Summoning boss
 	Rally: Rallying
 	Scout: Scouting
+	Survey: Surveying caves
 	Smash: Smashing orbs
 	Travel: Travelling
 	BuildBridge: Building the hellbridge
@@ -159,6 +160,7 @@ Plans: {
 	Build: Build house: {0}
 	Summon: Summon {0}
 	Scout: Look for the {0}
+	Survey: Survey unexplored caves
 	Smash: Smash an orb
 	Travel: Travel
 	BuildBridge: Build the hellbridge

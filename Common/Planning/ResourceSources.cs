@@ -89,7 +89,7 @@ public static class ResourceSources
 		tileSources ??= BuildTileSources();
 		if (tileSources.TryGetValue(itemType, out var tileSource))
 			return tileSource;
-		if (RecipeIndex.IsCraftable(itemType))
+		if (RecipeIndex.AnyFor(itemType).Count > 0)
 			return null;
 		npcSources ??= BuildNpcSources();
 		if (!npcSources.TryGetValue(itemType, out var npcSource))
@@ -125,7 +125,7 @@ public static class ResourceSources
 	}
 
 	static bool IsCraftedFromMaterials(int itemType) =>
-		RecipeIndex.For(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));
+		RecipeIndex.AnyFor(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));
 
 	static Dictionary<int, NpcSource> BuildNpcSources()
 	{
