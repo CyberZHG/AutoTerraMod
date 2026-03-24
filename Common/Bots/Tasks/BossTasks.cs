@@ -465,6 +465,8 @@ public sealed class RallyTask : BotTask
 			Bot.Faction.Rally = null;
 			return 0f;
 		}
+		if (!Bot.Faction.RallyAssembled && Bot.Brain.PoolingForChampion)
+			return 0f;
 		return Engagement.NearestHostile(Bot, SelfDefenseRadius, true) != null ? YieldToSelfDefense : 88f;
 	}
 

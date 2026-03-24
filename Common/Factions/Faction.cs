@@ -29,6 +29,7 @@ public sealed class Faction
 	public uint RallyCooldownUntil { get; set; }
 	public int RallyLeaderId { get; set; } = -1;
 	public bool RallyAssembled { get; set; }
+	public uint PoolUntil { get; set; }
 	public Dictionary<int, uint> RefightWishes { get; } = new();
 
 	const uint RefightWishTicks = 20 * 3600;

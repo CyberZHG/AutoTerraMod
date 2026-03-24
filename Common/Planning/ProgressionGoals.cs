@@ -129,7 +129,7 @@ public sealed class CraftableUpgradeGoal : ProgressionGoal
 
 	public override PlanStep Plan(Bot bot) => Upgrade(bot) ?? PlanStep.Idle;
 
-	static IEnumerable<GearKind> KindsFor(Bot bot)
+	public static IEnumerable<GearKind> KindsFor(Bot bot)
 	{
 		yield return GearKind.Head;
 		yield return GearKind.Body;
@@ -143,9 +143,9 @@ public sealed class CraftableUpgradeGoal : ProgressionGoal
 		}
 	}
 
-	static bool Improves(Bot bot, Item item) => KindsFor(bot).Any(kind => Equipment.PowerOf(item, kind) > Equipment.BestPower(bot.Avatar, kind));
+	public static bool Improves(Bot bot, Item item) => KindsFor(bot).Any(kind => Equipment.PowerOf(item, kind) > Equipment.BestPower(bot.Avatar, kind));
 
-	static List<Terraria.Recipe> GearRecipes() => gearRecipes ??= Terraria.Main.recipe.Take(Terraria.Recipe.numRecipes)
+	public static List<Terraria.Recipe> GearRecipes() => gearRecipes ??= Terraria.Main.recipe.Take(Terraria.Recipe.numRecipes)
 		.Where(recipe => recipe.createItem.headSlot >= 0 || recipe.createItem.bodySlot >= 0 || recipe.createItem.legSlot >= 0 || recipe.createItem.pick > 0 || recipe.createItem.damage > 0)
 		.ToList();
 
@@ -164,7 +164,7 @@ public sealed class CraftableUpgradeGoal : ProgressionGoal
 		return null;
 	}
 
-	static PlanStep CraftedUpgrade(Bot bot)
+	public static PlanStep CraftedUpgrade(Bot bot)
 	{
 		foreach (var recipe in GearRecipes())
 		{
@@ -1096,6 +1096,9 @@ public static class ProgressionGoals
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new AmmoGoal(),
 			new ShareSuppliesGoal(),
+			new ChampionCraftGoal(),
+			new ChampionPoolGoal(),
+			new HandDownGoal(),
 			new ShoppingGoal(),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),

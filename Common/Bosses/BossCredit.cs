@@ -94,6 +94,7 @@ public sealed class BossCredit : GlobalNPC
 		{
 			faction.DefeatedBosses.Add(challenge.BossType);
 			faction.RefightWishes.Remove(challenge.BossType);
+			faction.PoolUntil = Main.GameUpdateCount + Planning.Champions.AfterBossTicks;
 		}
 		string shares = string.Join(", ", byFaction.OrderByDescending(entry => entry.Value).Select(entry => $"{FactionById(entry.Key)?.Name} {entry.Value * 100 / total}%"));
 		BotDiagnostics.LogWorld($"boss {challenge.Name} defeated; damage shares: {shares}; credited: {string.Join(", ", credited.Select(faction => faction.Name))}");
