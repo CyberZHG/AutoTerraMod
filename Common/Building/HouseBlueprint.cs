@@ -135,7 +135,11 @@ public sealed class HouseBlueprint
 		foreach (int x in new[] { Left, Right })
 		{
 			if (IsRealDoor(x, Floor - 2))
+			{
+				foreach (var blocker in SwingToClear(x))
+					yield return Operation(BuildAction.ClearTile, blocker);
 				continue;
+			}
 			for (int y = Floor - DoorHeight; y < Floor; y++)
 			{
 				if (Main.tile[x, y].HasTile && !IsRealDoor(x, y) && !TileQuery.IsSolid(x, y))
@@ -172,7 +176,7 @@ public sealed class HouseBlueprint
 	public IEnumerable<Point> FurnitureSpots(Point preferred)
 	{
 		yield return preferred;
-		for (int x = Left + 1; x < Right; x++)
+		for (int x = Left + 2; x < Right - 1; x++)
 		{
 			if (x != preferred.X)
 				yield return new Point(x, Floor - 1);
@@ -311,6 +315,39 @@ public sealed class HouseBlueprint
 	}
 
 	bool InteriorHas(int[] tileTypes) => InteriorTiles().Any(tile => HasTileOfSet(tile.X, tile.Y, tileTypes));
+
+	IEnumerable<Point> SwingToClear(int doorX)
+	{
+		if (Main.tile[doorX, Floor - 2].TileType != TileID.ClosedDoor)
+			return Enumerable.Empty<Point>();
+		var left = SwingBlockers(doorX - 1);
+		var right = SwingBlockers(doorX + 1);
+		if (left.Count == 0 || right.Count == 0)
+			return Enumerable.Empty<Point>();
+		bool leftPrecious = left.Any(IsPrecious);
+		bool rightPrecious = right.Any(IsPrecious);
+		if (leftPrecious && rightPrecious)
+			return Enumerable.Empty<Point>();
+		return leftPrecious || !rightPrecious && right.Count < left.Count ? right : left;
+	}
+
+	List<Point> SwingBlockers(int x)
+	{
+		var blockers = new List<Point>();
+		for (int y = Floor - DoorHeight; y < Floor; y++)
+		{
+			var tile = Main.tile[x, y];
+			if (tile.HasTile && !Main.tileCut[tile.TileType] && tile.TileType is not (TileID.ClosedDoor or TileID.OpenDoor))
+				blockers.Add(new Point(x, y));
+		}
+		return blockers;
+	}
+
+	bool IsPrecious(Point tile)
+	{
+		int type = Main.tile[tile.X, tile.Y].TileType;
+		return IsShell(tile.X, tile.Y) || TileID.Sets.BasicChest[type] || type == TileID.Beds || type == TileID.DemonAltar;
+	}
 
 	static bool IsRealDoor(int x, int y) =>
 		HasTileOfSet(x, y, TileID.Sets.RoomNeeds.CountsAsDoor) && !TileQuery.IsPlatform(x, y);
