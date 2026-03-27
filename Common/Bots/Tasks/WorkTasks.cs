@@ -248,6 +248,25 @@ public sealed class CraftTask : BotTask
 		}
 	}
 
+	Point? GraveOnSpot(Item item)
+	{
+		if (Bot.Hands.BestPickaxe == null)
+			return null;
+		foreach (var spot in Stations.PlacementSpots(Bot.Faction, item))
+		{
+			for (int dx = 0; dx <= 1; dx++)
+			{
+				for (int dy = -1; dy <= 0; dy++)
+				{
+					var tile = Main.tile[spot.X + dx, spot.Y + dy];
+					if (tile.HasTile && tile.TileType == TileID.Tombstones)
+						return new Point(spot.X + dx, spot.Y + dy);
+				}
+			}
+		}
+		return null;
+	}
+
 	static bool OnGround(Point spot) =>
 		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType]
 		|| Main.tile[spot.X, spot.Y + 1].HasTile && Main.tileTable[Main.tile[spot.X, spot.Y + 1].TileType];
@@ -261,6 +280,20 @@ public sealed class CraftTask : BotTask
 			return;
 		}
 		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
+		if (spot == null && GraveOnSpot(item) is Point grave)
+		{
+			if (!Bot.Hands.CanReach(Bot.Hands.BestPickaxe, grave))
+			{
+				Bot.Motor.MoveTo(grave.ToWorldCoordinates(), BaseArrivalRadius);
+				if (Bot.Motor.IsStuck)
+					IsFinished = true;
+				return;
+			}
+			Bot.Motor.Stop();
+			if (Bot.Hands.Dig(grave) is ToolResult.Unbreakable or ToolResult.NoTool)
+				IsFinished = true;
+			return;
+		}
 		if (spot is not Point target)
 		{
 			BotDiagnostics.Log(Bot, $"no valid spot to place {item.Name} near base {Bot.Faction.BaseTile}");

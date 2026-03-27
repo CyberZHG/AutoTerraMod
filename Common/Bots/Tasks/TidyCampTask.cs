@@ -32,10 +32,19 @@ public sealed class TidyCampTask : BotTask
 
 	public override string NameKey => "TidyCamp";
 
+	const float GraveDiggerPriority = 50f;
+
 	public override float Evaluate()
 	{
-		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance || !Building.HouseInspector.IsDesignatedBuilder(Bot))
+		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance)
 			return 0f;
+		if (!Building.HouseInspector.IsDesignatedBuilder(Bot))
+		{
+			if (tombstone is not Point grave || !IsGrave(grave) || RecentlyFailed(grave))
+				tombstone = NearestGrave();
+			Detail = "";
+			return tombstone != null && Bot.Hands.BestPickaxe != null ? GraveDiggerPriority : 0f;
+		}
 		if (tombstone is not Point held || !NeedsWork(held) || RecentlyFailed(held))
 			tombstone = FindTombstone();
 		if (tombstone == null || Bot.Hands.BestPickaxe == null)
@@ -71,6 +80,31 @@ public sealed class TidyCampTask : BotTask
 			nearest = road;
 		campScans[Bot.FactionId] = (Main.GameUpdateCount, nearest != null);
 		return nearest;
+	}
+
+	static bool IsGrave(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tile[tile.X, tile.Y].TileType == TileID.Tombstones;
+
+	static readonly System.Collections.Generic.Dictionary<int, (uint at, System.Collections.Generic.List<Point> graves)> graveScans = new();
+
+	Point? NearestGrave()
+	{
+		var settlement = Bot.Faction.Settlement;
+		if (settlement == null)
+			return null;
+		if (!graveScans.TryGetValue(Bot.FactionId, out var scan) || Main.GameUpdateCount - scan.at >= ScanIntervalTicks)
+		{
+			var graves = new System.Collections.Generic.List<Point>();
+			for (int x = settlement.Left - CampMargin; x <= settlement.Right + CampMargin; x++)
+			{
+				for (int y = settlement.Top - CampRowsAbove; y <= settlement.Floor + CampRowsBelow; y++)
+				{
+					if (WorldGen.InWorld(x, y, 5) && IsGrave(new Point(x, y)))
+						graves.Add(new Point(x, y));
+				}
+			}
+			graveScans[Bot.FactionId] = scan = (Main.GameUpdateCount, graves);
+		}
+		return scan.graves.Where(grave => IsGrave(grave) && !RecentlyFailed(grave)).Cast<Point?>().MinBy(grave => WorldScan.DistanceSq(Bot.CenterTile, grave.Value));
 	}
 
 	Point? NearestTombstone(Building.Settlement settlement, bool ropes)
