@@ -37,7 +37,7 @@ public sealed class Explosives
 
 	public static bool CanBlast(int x, int y)
 	{
-		if (!TileQuery.IsSolid(x, y))
+		if (!TileQuery.IsSolid(x, y) || TileQuery.InOcean(x, y))
 			return false;
 		int type = Main.tile[x, y].TileType;
 		return !Main.tileFrameImportant[type] && !Main.tileDungeon[type] && TileLoader.CanExplode(x, y)

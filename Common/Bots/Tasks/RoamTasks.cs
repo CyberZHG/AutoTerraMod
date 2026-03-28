@@ -168,7 +168,7 @@ public sealed class ExploreTask : BotTask
 	public override void Start()
 	{
 		base.Start();
-		bool delveUnderground = Traits.Exploring > 0.7f && Main.rand.NextFloat() < 0.4f;
+		bool delveUnderground = Traits.Exploring > 0.4f && Main.rand.NextBool();
 		int depth = delveUnderground ? Bot.CenterTile.Y + Main.rand.Next(40, 120) : -1;
 		int here = Bot.CenterTile.X;
 		if (here + direction * SurfaceStepTiles < WorldEdgeMargin || here + direction * SurfaceStepTiles > Main.maxTilesX - WorldEdgeMargin)

@@ -525,7 +525,7 @@ public sealed class PathSearch
 	{
 		if (!TileQuery.IsSolid(x, y) || IsPassableDoor(x, y))
 			return true;
-		if (!Diggable(x, y) || TileQuery.TouchesLava(x, y))
+		if (!Diggable(x, y) || TileQuery.TouchesLava(x, y) || TileQuery.InOcean(x, y))
 			return false;
 		solids++;
 		loosensSand |= PathFinder.UnderFallingBlock(x, y);

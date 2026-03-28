@@ -94,7 +94,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || IsGrowingSapling(tile) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
+		if (InOtherBase(tile) || IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)

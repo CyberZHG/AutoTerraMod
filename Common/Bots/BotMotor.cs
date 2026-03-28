@@ -538,7 +538,7 @@ public sealed class BotMotor
 	}
 
 	bool CanBreak(int x, int y, int pickPower) =>
-		CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower && !bot.Hands.IsReclaimable(new Point(x, y));
+		!TileQuery.InOcean(x, y) && CanDigThrough(new Point(x, y)) && PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) <= pickPower && !bot.Hands.IsReclaimable(new Point(x, y));
 
 	void PlaceFoothold(Point tile)
 	{

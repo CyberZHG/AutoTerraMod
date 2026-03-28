@@ -713,19 +713,20 @@ public sealed class SurveyGoal : ProgressionGoal
 	public override bool AppliesTo(Bot bot) =>
 		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Exploring) == bot;
 
-	public override bool IsMet(Bot bot) => Unknown(bot) == null && UnexploredCave(bot) == null;
+	public override bool IsMet(Bot bot) => Unknown(bot) == null && UnexploredCave(bot, SurveyRingCells) == null;
 
 	const int SurveyRingCells = 6;
+	const int NearbyCaveRings = 2;
 	const int OpenSearchTiles = 6;
 
-	static Microsoft.Xna.Framework.Point? UnexploredCave(Bot bot)
+	static Microsoft.Xna.Framework.Point? UnexploredCave(Bot bot, int rings)
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
 		int cell = Factions.FactionKnowledge.ExploreCell;
 		var here = bot.CenterTile;
 		int topCell = (int)Terraria.Main.worldSurface / cell + 1;
 		int bottomCell = (Terraria.Main.UnderworldLayer - cell) / cell;
-		for (int ring = 0; ring <= SurveyRingCells; ring++)
+		for (int ring = 0; ring <= rings; ring++)
 		{
 			for (int dx = -ring; dx <= ring; dx++)
 			{
@@ -769,8 +770,9 @@ public sealed class SurveyGoal : ProgressionGoal
 	}
 
 	public override PlanStep Plan(Bot bot) =>
-		Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false)
-		: UnexploredCave(bot) is Microsoft.Xna.Framework.Point cave ? new SurveyStep(cave)
+		UnexploredCave(bot, NearbyCaveRings) is Microsoft.Xna.Framework.Point near ? new SurveyStep(near)
+		: Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false)
+		: UnexploredCave(bot, SurveyRingCells) is Microsoft.Xna.Framework.Point cave ? new SurveyStep(cave)
 		: PlanStep.Idle;
 }
 
