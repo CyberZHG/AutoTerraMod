@@ -574,7 +574,8 @@ public sealed class BotMotor
 		{
 			if (WorldGen.IsLockedDoor(tile.X, tile.Y))
 				UnlockWithKey(tile);
-			WorldGen.OpenDoor(tile.X, tile.Y, direction);
+			if (!WorldGen.OpenDoor(tile.X, tile.Y, direction))
+				WorldGen.OpenDoor(tile.X, tile.Y, -direction);
 			return;
 		}
 		if (!CanDigThrough(tile))
