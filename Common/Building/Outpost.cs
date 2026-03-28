@@ -20,7 +20,7 @@ public static class Outpost
 	{
 		int tile = item.createTile;
 		return tile >= 0 && Main.tileSolid[tile] && !Main.tileSolidTop[tile] && !Main.tileFrameImportant[tile]
-			&& !TileID.Sets.Falling[tile] && !TileID.Sets.Ore[tile];
+			&& !TileID.Sets.Falling[tile] && !TileID.Sets.Ore[tile] && !PlacementRules.IsEvil(tile);
 	}
 
 	public static bool IsHouseWall(Item item) => item.createWall > WallID.None && Main.wallHouse[item.createWall];

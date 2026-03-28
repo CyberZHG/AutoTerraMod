@@ -367,7 +367,7 @@ public sealed class BotHands
 		int count = 0;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item) && !TileID.Sets.Falling[item.createTile] && !bot.Brain.PlannedItemTypes.Contains(item.type)))
+			if (item.createTile >= 0 && (IsPlatformTile(item.createTile) || IsExpendableBlock(item) && !TileID.Sets.Falling[item.createTile] && !bot.Brain.PlannedItemTypes.Contains(item.type)) && Building.PlacementRules.Allows(bot, item))
 				count += item.stack;
 		}
 		return count;
@@ -429,7 +429,7 @@ public sealed class BotHands
 		Item wood = null;
 		foreach (var item in Inventory.Items(Avatar))
 		{
-			if (!IsExpendableBlock(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || tile != null && !supported && TileID.Sets.Falling[item.createTile])
+			if (!IsExpendableBlock(item) || !Building.PlacementRules.Allows(bot, item) || bot.Brain.PlannedItemTypes.Contains(item.type) || tile != null && !supported && TileID.Sets.Falling[item.createTile])
 				continue;
 			if (item.type != ItemID.Wood)
 				return item;

@@ -43,6 +43,8 @@ public sealed class OutpostTask : BotTask
 
 	public OutpostTask(Bot bot) : base(bot) { }
 
+	bool SafeBlock(Item item) => Outpost.IsBlock(item) && Building.PlacementRules.Allows(Bot, item);
+
 	public override string NameKey => "Outpost";
 
 	public override float Evaluate()
@@ -205,7 +207,7 @@ public sealed class OutpostTask : BotTask
 		if (TileQuery.HasTile(tile) && !TileQuery.IsSolid(tile))
 			return (tile, Bot.Hands.BestPickaxe, () => Clear(tile));
 		if (!TileQuery.HasTile(tile))
-			return (tile, Find(Outpost.IsBlock), () => Bot.Hands.Place(Find(Outpost.IsBlock), tile));
+			return (tile, Find(SafeBlock), () => Bot.Hands.Place(Find(SafeBlock), tile));
 		return null;
 	}
 

@@ -217,7 +217,7 @@ public sealed class TidyCampTask : BotTask
 		{
 			if (item.type == ItemID.DirtBlock)
 				return item;
-			if (fallback == null && item.type != ItemID.StoneBlock && Building.Outpost.IsBlock(item))
+			if (fallback == null && item.type != ItemID.StoneBlock && Building.Outpost.IsBlock(item) && Building.PlacementRules.Allows(Bot, item))
 				fallback = item;
 		}
 		return fallback;
