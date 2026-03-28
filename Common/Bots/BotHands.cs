@@ -226,7 +226,16 @@ public sealed class BotHands
 		if (wall == null || wall.createWall <= WallID.None || !Ready || !CanReach(wall, tile))
 			return false;
 		if (!WorldGen.NearFriendlyWall(tile.X, tile.Y) || !WorldGen.ReplaceWall(tile.X, tile.Y, (ushort)wall.createWall))
-			return false;
+		{
+			if (Main.wallHouse[Main.tile[tile.X, tile.Y].WallType] || BestHammer == null)
+				return false;
+			WorldGen.KillWall(tile.X, tile.Y);
+			if (Main.tile[tile.X, tile.Y].WallType != WallID.None)
+				return false;
+			WorldGen.PlaceWall(tile.X, tile.Y, wall.createWall);
+			if (Main.tile[tile.X, tile.Y].WallType != wall.createWall)
+				return false;
+		}
 		Swing(wall, CombinedHooks.TotalUseTime(wall.useTime, Avatar, wall), tile.ToWorldCoordinates());
 		Inventory.ConsumeOne(Avatar, wall);
 		bot.Watchdog.RecordProgress();

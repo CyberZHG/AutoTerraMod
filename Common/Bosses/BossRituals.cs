@@ -15,7 +15,7 @@ public static class BossRituals
 	const int ShrineSearchRadius = 3000;
 	const int ShrineSearchesBeforeGivingUp = 10;
 
-	static readonly int[] Hammers =
+	public static readonly int[] Hammers =
 	{
 		ItemID.WoodenHammer, ItemID.CopperHammer, ItemID.TinHammer, ItemID.IronHammer, ItemID.LeadHammer,
 		ItemID.SilverHammer, ItemID.TungstenHammer, ItemID.GoldHammer, ItemID.PlatinumHammer

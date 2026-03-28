@@ -74,6 +74,8 @@ public static class ProgressionPlanner
 			source = upgrade;
 			return ready;
 		}
+		if (ContinueCommitment(bot, isSuppressed, out source) is PlanStep committed)
+			return committed;
 		var focus = FocusTrack(bot);
 		if (WalkLadder(bot, isSuppressed, focus, out source) is PlanStep focused)
 			return focused;
@@ -102,12 +104,34 @@ public static class ProgressionPlanner
 			{
 				if (goal.IsExpedition)
 					expeditions[bot.Id] = (goal, Main.GameUpdateCount + ExpeditionCommitmentTicks);
+				else if (!commitments.TryGetValue(bot.Id, out var held) || held.goal != goal)
+					commitments[bot.Id] = (goal, Main.GameUpdateCount + CommitmentTicks);
 				source = goal;
 				return step;
 			}
 		}
 		source = null;
 		return null;
+	}
+
+	const uint CommitmentTicks = 900;
+
+	static readonly Dictionary<int, (ProgressionGoal goal, uint until)> commitments = new();
+
+	static PlanStep ContinueCommitment(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
+	{
+		source = null;
+		if (!commitments.TryGetValue(bot.Id, out var held) || Main.GameUpdateCount >= held.until)
+			return null;
+		var goal = held.goal;
+		var step = isSuppressed(goal) || goal.NeedsSurface && bot.CommittedToMining || !goal.AppliesTo(bot) || goal.IsMet(bot) ? null : PlanUnlessStuck(bot, goal);
+		if (step is null or BlockedStep or IdleStep)
+		{
+			commitments.Remove(bot.Id);
+			return null;
+		}
+		source = goal;
+		return step;
 	}
 
 	const int StuckRetryTicks = 240;

@@ -362,6 +362,8 @@ public sealed class StructureGoal : ProgressionGoal
 			return PlanStep.Idle;
 		}
 		var materials = HouseInspector.MaterialsFor(bot.Faction);
+		if (operation.Action == BuildAction.RenovateWall && bot.Hands.BestHammer == null && !Terraria.Main.wallHouse[Terraria.Main.tile[operation.Tile.X, operation.Tile.Y].WallType])
+			return ProgressionPlanner.ObtainAny(bot, Bosses.BossRituals.Hammers);
 		var placement = HouseMaterials.ReplacementFor(operation.Action);
 		if (!HouseMaterials.IsNeeded(placement))
 			return new BuildHouseStep(operation);
