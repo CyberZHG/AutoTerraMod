@@ -726,6 +726,7 @@ public sealed class SurveyGoal : ProgressionGoal
 		var here = bot.CenterTile;
 		int topCell = (int)Terraria.Main.worldSurface / cell + 1;
 		int bottomCell = (Terraria.Main.UnderworldLayer - cell) / cell;
+		int originCellY = System.Math.Max(here.Y / cell, topCell);
 		for (int ring = 0; ring <= rings; ring++)
 		{
 			for (int dx = -ring; dx <= ring; dx++)
@@ -734,10 +735,10 @@ public sealed class SurveyGoal : ProgressionGoal
 				{
 					if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != ring)
 						continue;
-					int cellX = here.X / cell + dx, cellY = here.Y / cell + dy;
+					int cellX = here.X / cell + dx, cellY = originCellY + dy;
 					if (cellY < topCell || cellY > bottomCell || cellX < 2 || cellX > Terraria.Main.maxTilesX / cell - 2 || knowledge.IsExplored(cellX, cellY))
 						continue;
-					if (OpenTileNear(cellX * cell + cell / 2, cellY * cell + cell / 2) is Microsoft.Xna.Framework.Point open)
+					if (OpenTileNear(cellX * cell + cell / 2, cellY * cell + cell / 2) is Microsoft.Xna.Framework.Point open && !World.TileQuery.InOcean(open.X, open.Y))
 						return open;
 				}
 			}
