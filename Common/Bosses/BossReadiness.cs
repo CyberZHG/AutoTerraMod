@@ -44,7 +44,7 @@ public static class BossReadiness
 		return new ReadinessReport(fighters.Count, teamDps, bossLife, killSeconds, surviveSeconds, requiredRatio);
 	}
 
-	static float DamagePerSecond(Bot bot, int bossDefense)
+	public static float DamagePerSecond(Bot bot, int bossDefense)
 	{
 		var weapon = bot.Hands.BestWeapon();
 		if (weapon == null)

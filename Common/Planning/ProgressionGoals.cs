@@ -456,6 +456,7 @@ public sealed class BossGoal : ProgressionGoal
 	{
 		if (Terraria.Main.GameUpdateCount < bot.Faction.RallyCooldownUntil)
 			return PlanStep.Idle;
+		PlanStep preparation = null;
 		foreach (var challenge in Bosses.BossCredit.OpenChallengesFor(bot.Faction))
 		{
 			if (Bosses.BossCatalog.IsBossAlive(challenge))
@@ -463,7 +464,10 @@ public sealed class BossGoal : ProgressionGoal
 			var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
 			LogReadiness(bot, challenge, report);
 			if (!report.IsReady)
+			{
+				preparation ??= Prepare(bot, challenge);
 				continue;
+			}
 			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
 			{
 				var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
@@ -471,7 +475,20 @@ public sealed class BossGoal : ProgressionGoal
 					return step;
 			}
 		}
-		return PlanStep.Idle;
+		return preparation ?? PlanStep.Idle;
+	}
+
+	static PlanStep Prepare(Bot bot, Bosses.BossChallenge challenge)
+	{
+		foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
+		{
+			var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
+			if (step is not BlockedStep and not IdleStep and not SummonBossStep)
+				return step;
+			if (step is SummonBossStep)
+				return null;
+		}
+		return null;
 	}
 
 	readonly Dictionary<int, uint> lastReadinessLog = new();
@@ -482,6 +499,38 @@ public sealed class BossGoal : ProgressionGoal
 			return;
 		lastReadinessLog[challenge.BossType] = Terraria.Main.GameUpdateCount;
 		BotDiagnostics.Log(bot, $"boss readiness for {challenge.Name}: fighters={report.Fighters} teamDps={report.TeamDps:0} bossLife={report.BossLife:0} kill={report.KillSeconds:0}s survive={report.SurviveSeconds:0}s needRatio={report.RequiredRatio:0.0} ready={report.IsReady}");
+	}
+}
+
+public sealed class BossSupportGoal : ProgressionGoal
+{
+	const float HelpRange = 16f * 400f;
+	const float HandOverRange = 16f * 30f;
+
+	public override string Describe() => "BossSupport";
+
+	public override bool AppliesTo(Bot bot) => !BossGoal.IsSummoner(bot) && Need(bot) != null;
+
+	public override bool IsMet(Bot bot) => Need(bot) == null;
+
+	static (Bot summoner, GatherStep gather)? Need(Bot bot)
+	{
+		var summoner = BotWorldSystem.Bots.FirstOrDefault(member => member.FactionId == bot.FactionId && member.IsAlive && BossGoal.IsSummoner(member));
+		if (summoner == null || summoner == bot || !summoner.Brain.WorksOnBoss || summoner.Brain.Plan is not GatherStep gather
+			|| Microsoft.Xna.Framework.Vector2.Distance(bot.Center, summoner.Center) > HelpRange)
+			return null;
+		return (summoner, gather);
+	}
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Need(bot) is not var (summoner, gather))
+			return PlanStep.Idle;
+		int held = Inventory.Count(bot.Avatar, gather.ItemType);
+		bool close = Microsoft.Xna.Framework.Vector2.Distance(bot.Center, summoner.Center) < HandOverRange;
+		if (held >= gather.Amount || held > 0 && close)
+			return new DeliverStep(gather.ItemType, summoner.Id, 0, HandOver: true);
+		return new GatherStep(gather.ItemType, gather.Amount - held, gather.Source);
 	}
 }
 
@@ -1095,6 +1144,7 @@ public static class ProgressionGoals
 			new SupportConstructionGoal(),
 			new OutpostGoal(),
 			new BossGoal(),
+			new BossSupportGoal(),
 			new RefightGoal(),
 			new HellevatorGoal(),
 			new HellbridgeGoal(),

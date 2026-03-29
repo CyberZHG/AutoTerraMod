@@ -88,7 +88,7 @@ public static class ProgressionPlanner
 	const uint TrackTurnTicks = 7200;
 	static readonly GearTrack[] Tracks = { GearTrack.Tools, GearTrack.Armor, GearTrack.Weapons, GearTrack.Accessories };
 
-	static GearTrack FocusTrack(Bot bot) => Tracks[(int)((Main.GameUpdateCount / TrackTurnTicks + (uint)bot.Id) % (uint)Tracks.Length)];
+	static GearTrack FocusTrack(Bot bot) => BossPrep.Focus(bot) ?? Tracks[(int)((Main.GameUpdateCount / TrackTurnTicks + (uint)bot.Id) % (uint)Tracks.Length)];
 
 	static PlanStep WalkLadder(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, GearTrack? focus, out ProgressionGoal source)
 	{

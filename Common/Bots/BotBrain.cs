@@ -77,6 +77,7 @@ public sealed class BotBrain
 	public BotTask Current => current;
 	public PlanStep Plan { get; private set; } = PlanStep.Idle;
 	public string GoalName => currentGoal?.Describe() ?? "none";
+	public bool WorksOnBoss => currentGoal is BossGoal;
 	public bool PoolingForChampion => currentGoal is ChampionCraftGoal or ChampionPoolGoal or HandDownGoal;
 	public bool OnExpedition => currentGoal?.IsExpedition == true || Plan is BuildBridgeStep or DigShaftStep
 		|| (bot.CenterTile.Y >= Main.UnderworldLayer && Bosses.BossRituals.PreparingForWall(bot.Faction));
