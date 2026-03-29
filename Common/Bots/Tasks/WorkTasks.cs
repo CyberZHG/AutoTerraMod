@@ -345,7 +345,7 @@ public sealed class GatherTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Bot.Brain.Plan is not GatherStep { Source: TileSource tiles } gather)
+		if (Bot.Brain.Plan is not GatherStep { Source: TileSource tiles } gather || !Inventory.HasRoomForType(Avatar, gather.ItemType))
 			return 0f;
 		step = gather;
 		Detail = $"{Lang.GetItemNameValue(gather.ItemType)} x{gather.Amount}";

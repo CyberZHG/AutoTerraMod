@@ -108,6 +108,9 @@ public sealed class OpportunisticMineTask : BotTask
 			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
 			return false;
+		int drop = GemDrops.TryGetValue(type, out int gem) ? gem : Planning.Stations.ItemsPlacing(type).Count > 0 ? Planning.Stations.ItemsPlacing(type)[0] : 0;
+		if (!Inventory.HasRoomForType(Avatar, drop))
+			return false;
 		return WantsMore(type) && PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
 	}
 

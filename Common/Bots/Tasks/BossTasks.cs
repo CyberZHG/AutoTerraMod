@@ -528,7 +528,7 @@ public sealed class ScoutTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Bot.Brain.Plan is not ScoutStep scout)
+		if (Bot.Brain.Plan is not ScoutStep scout || Inventory.IsNearlyFull(Avatar))
 			return 0f;
 		step = scout;
 		Detail = Terraria.Localization.Language.GetTextValue($"Mods.AutoTerraMod.Landmarks.{scout.Landmark}");

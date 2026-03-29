@@ -163,7 +163,7 @@ public sealed class ExploreTask : BotTask
 
 	public override string NameKey => "Explore";
 
-	public override float Evaluate() => Bot.Brain.Plan is IdleStep ? 30f + Traits.Exploring * 45f : 10f + Traits.Exploring * 30f;
+	public override float Evaluate() => Inventory.IsNearlyFull(Avatar) ? 0f : Bot.Brain.Plan is IdleStep ? 30f + Traits.Exploring * 45f : 10f + Traits.Exploring * 30f;
 
 	public override void Start()
 	{
@@ -219,7 +219,7 @@ public sealed class SurveyTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Bot.Brain.Plan is not SurveyStep survey)
+		if (Bot.Brain.Plan is not SurveyStep survey || Inventory.IsNearlyFull(Avatar))
 			return 0f;
 		step = survey;
 		return 50f + Traits.Exploring * 30f;

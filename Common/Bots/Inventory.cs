@@ -81,6 +81,10 @@ public static class Inventory
 
 	static bool IsAmmo(Item item) => item.ammo > 0 && !item.notAmmo;
 
+	public static bool IsNearlyFull(Player avatar) => UsedSlots(avatar) >= MainSlots - 1;
+
+	public static bool HasRoomForType(Player avatar, int itemType) => itemType > 0 && HasRoomFor(avatar, Terraria.ID.ContentSamples.ItemsByType[itemType]);
+
 	public static bool HasRoomFor(Player avatar, Item incoming)
 	{
 		if (incoming.IsACoin)
