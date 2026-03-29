@@ -44,12 +44,12 @@ public sealed class FishingTask : BotTask
 		{
 			angler = Main.npc[anglerIndex];
 			Detail = Lang.GetItemNameValue(QuestFish);
-			return 85f;
+			return Aspire(85f);
 		}
 		if (Pole == null || Bait == null || !(Main.dayTime && Main.time < MorningTicks) && Bot.Brain.Plan is not IdleStep)
 			return 0f;
 		Detail = "";
-		return Main.dayTime && Main.time < MorningTicks ? 70f : 30f;
+		return Aspire(Main.dayTime && Main.time < MorningTicks ? 70f : 30f);
 	}
 
 	public override void Start()

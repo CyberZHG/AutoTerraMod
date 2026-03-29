@@ -38,7 +38,7 @@ public sealed class DecorateTask : BotTask
 		if (spot == null)
 			return 0f;
 		Detail = decor.Name;
-		return 65f;
+		return Aspire(65f);
 	}
 
 	Point? CeilingSpot(Item item)

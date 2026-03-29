@@ -25,9 +25,12 @@ public sealed class CollectorTask : BotTask
 
 	public static bool CollectsArmor(Bot bot) => bot.Personality.Aspiration == Aspiration.Collector;
 
+	const uint NoRoomRetryTicks = 3 * 3600;
+	uint noRoomUntil;
+
 	public override float Evaluate()
 	{
-		if (!CollectsArmor(Bot) || !DecorateTask.Leisure(Bot))
+		if (!CollectsArmor(Bot) || !DecorateTask.Leisure(Bot) || Main.GameUpdateCount < noRoomUntil)
 			return 0f;
 		outfit = SpareSet();
 		if (outfit == null)
@@ -36,7 +39,7 @@ public sealed class CollectorTask : BotTask
 		if (stand == null && Inventory.Count(Avatar, ItemID.Mannequin) == 0)
 			return 0f;
 		Detail = outfit.Value.body.Name;
-		return 65f;
+		return Aspire(65f);
 	}
 
 	(Item, Item, Item)? SpareSet()
@@ -126,6 +129,7 @@ public sealed class CollectorTask : BotTask
 		if (spot is not Point target)
 		{
 			BotDiagnostics.Log(Bot, "no room at base for a mannequin");
+			noRoomUntil = Main.GameUpdateCount + NoRoomRetryTicks;
 			IsFinished = true;
 			return;
 		}

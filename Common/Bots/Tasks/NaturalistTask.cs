@@ -42,11 +42,11 @@ public sealed class NaturalistTask : BotTask
 			int x = Bot.Faction.BaseTile.X + (Main.rand.NextBool() ? 1 : -1) * Main.rand.Next(MinRamble, MaxRamble);
 			ramble = new Vector2(x * 16f, (World.TileQuery.SurfaceY(x) - 2) * 16f);
 			Detail = "";
-			return 30f;
+			return Aspire(30f);
 		}
 		ramble = null;
 		Detail = critter.GivenOrTypeName;
-		return 55f;
+		return Aspire(55f);
 	}
 
 	bool AlreadyCaged(int critterItem) =>

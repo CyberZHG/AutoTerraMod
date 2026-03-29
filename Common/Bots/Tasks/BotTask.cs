@@ -68,6 +68,10 @@ public abstract class BotTask
 		return true;
 	}
 
+	const float AspirationCap = 25f;
+
+	protected float Aspire(float score) => Bosses.BossCredit.NextChallengeFor(Bot.Faction) == null ? score : System.Math.Min(score, AspirationCap);
+
 	protected bool RecallLandsAtBase()
 	{
 		var landing = BotWorldSystem.RespawnFeet(Bot).ToTileCoordinates();

@@ -134,7 +134,11 @@ public static class Stations
 				yield return new Point(spot.X, groundY - 1);
 		}
 		foreach (int x in OutdoorColumns(faction))
-			yield return new Point(x, World.TileQuery.SurfaceY(x) - 1);
+		{
+			int y = World.TileQuery.SurfaceY(x) - 1;
+			if (y < settlement.Floor)
+				yield return new Point(x, y);
+		}
 	}
 
 	const int OutdoorPlacementRange = 30;

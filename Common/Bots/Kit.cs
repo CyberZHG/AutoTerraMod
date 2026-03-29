@@ -46,7 +46,7 @@ public static class Kit
 				|| item.type == ItemID.Bed || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
-				|| (Tasks.CollectorTask.CollectsArmor(bot) && !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
+				|| (Tasks.CollectorTask.CollectsArmor(bot) && (item.type == ItemID.Mannequin || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0)))
 				|| WithinReserve(item, keptByReserve);
 			if (!keep || IsSurplusTreasure(bot, item))
 				toStore.Add(item);
