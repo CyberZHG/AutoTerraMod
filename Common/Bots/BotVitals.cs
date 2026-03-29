@@ -216,6 +216,18 @@ public sealed class BotVitals
 		return false;
 	}
 
+	void TickBuffTimers()
+	{
+		for (int slot = 0; slot < Avatar.buffType.Length; slot++)
+		{
+			int buff = Avatar.buffType[slot];
+			if (buff <= 0 || BuffID.Sets.TimeLeftDoesNotDecrease[buff])
+				continue;
+			if (--Avatar.buffTime[slot] <= 0)
+				Avatar.DelBuff(slot--);
+		}
+	}
+
 	public void RefreshVanillaStats()
 	{
 		try
@@ -228,6 +240,8 @@ public sealed class BotVitals
 			RecountOwnedProjectiles();
 			KeepPets();
 			Avatar.UpdateBuffs(Avatar.whoAmI);
+			if (Avatar.whoAmI != Main.myPlayer)
+				TickBuffTimers();
 			Avatar.UpdateEquips(Avatar.whoAmI);
 			Avatar.UpdateArmorSets(Avatar.whoAmI);
 			ApplyMovementDebuffs();
