@@ -404,7 +404,12 @@ public static class ProgressionPlanner
 			return PlanPurchase(context.Bot, itemType, amount - have);
 		var source = ResourceSources.For(itemType);
 		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes)))
+		{
+			WishBossDrop(context.Bot, itemType);
 			return PlanStep.Blocked;
+		}
+		if (source is TileSource { IsTree: false } scarce && Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).KnownCount(scarce.TileTypes) < amount - have)
+			WishBossDrop(context.Bot, itemType);
 		if (source is TileSource { IsTree: true } trees && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin
 			&& Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).NearestKnown(context.Bot.CenterTile, trees.TileTypes, NoExclusions, NearbyTreeTiles) == null)
 			return PlanStep.Blocked;
@@ -417,9 +422,14 @@ public static class ProgressionPlanner
 			if (step is not BlockedStep)
 				return step;
 		}
-		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(context.Bot.Faction, boss))
-			context.Bot.Faction.WishRefight(boss.BossType);
+		WishBossDrop(context.Bot, itemType);
 		return PlanPurchase(context.Bot, itemType, amount - have);
+	}
+
+	static void WishBossDrop(Bot bot, int itemType)
+	{
+		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss))
+			bot.Faction.WishRefight(boss.BossType);
 	}
 
 	static bool CanMineAny(Bot bot, TileSource tiles)

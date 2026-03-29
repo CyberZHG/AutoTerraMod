@@ -110,6 +110,8 @@ public sealed class FactionKnowledge
 			knownCountByType[tileType] = count - 1;
 	}
 
+	public int KnownCount(ISet<int> tileTypes) => tileTypes.Sum(type => knownCountByType.GetValueOrDefault(type));
+
 	public bool KnowsAny(ISet<int> tileTypes)
 	{
 		foreach (int tileType in tileTypes)
