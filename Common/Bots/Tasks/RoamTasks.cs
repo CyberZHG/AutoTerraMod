@@ -167,6 +167,14 @@ public sealed class ExploreTask : BotTask
 	const uint DiveStallTicks = 3600;
 	int deepestY;
 	uint deepestAt;
+	int? crossDepth;
+	int crossDirection;
+	int crossLegX;
+	int crossProgress;
+	uint crossProgressAt;
+
+	const int CrossTopMargin = 20;
+	const int CrossBottomMargin = 60;
 
 	public ExploreTask(Bot bot) : base(bot) { }
 
@@ -177,14 +185,18 @@ public sealed class ExploreTask : BotTask
 	public override void Start()
 	{
 		base.Start();
-		if (diveX == null && Bot.Hands.BestPickaxe != null && Main.rand.NextBool() && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < DiveStartReach)
+		if (diveX == null && crossDepth == null && Bot.Hands.BestPickaxe != null && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < DiveStartReach)
 		{
-			diveX = DiveColumn();
-			diveLegY = 0;
-			deepestY = 0;
-			deepestAt = Main.GameUpdateCount;
-			if (diveX != null)
-				BotDiagnostics.Log(Bot, $"diving down at column {diveX}");
+			int strategy = Main.rand.Next(3);
+			if (strategy == 1)
+				StartDive();
+			else if (strategy == 2)
+				StartCrossing();
+		}
+		if (crossDepth != null)
+		{
+			Detail = crossDirection > 0 ? "⇘" : "⇙";
+			return;
 		}
 		if (diveX != null)
 		{
@@ -220,6 +232,68 @@ public sealed class ExploreTask : BotTask
 				return x;
 		}
 		return null;
+	}
+
+	void StartDive()
+	{
+		diveX = DiveColumn();
+		diveLegY = 0;
+		deepestY = 0;
+		deepestAt = Main.GameUpdateCount;
+		if (diveX != null)
+			BotDiagnostics.Log(Bot, $"diving down at column {diveX}");
+	}
+
+	void StartCrossing()
+	{
+		crossDepth = Main.rand.Next((int)Main.worldSurface + CrossTopMargin, Main.UnderworldLayer - CrossBottomMargin);
+		crossDirection = Main.rand.NextBool() ? 1 : -1;
+		crossLegX = Bot.CenterTile.X;
+		diveLegY = 0;
+		crossProgress = int.MinValue;
+		crossProgressAt = Main.GameUpdateCount;
+		BotDiagnostics.Log(Bot, $"heading down to depth {crossDepth} then {(crossDirection > 0 ? "east" : "west")}");
+	}
+
+	void Cross(int depth)
+	{
+		var here = Bot.CenterTile;
+		bool descending = here.Y < depth - DiveColumnSlack;
+		int progress = descending ? here.Y : Main.maxTilesY + here.X * crossDirection;
+		if (progress > crossProgress)
+		{
+			crossProgress = progress;
+			crossProgressAt = Main.GameUpdateCount;
+		}
+		int nextX = here.X + crossDirection * DiveLegTiles;
+		bool atEdge = !descending && (nextX < WorldEdgeMargin || nextX > Main.maxTilesX - WorldEdgeMargin || TileQuery.InOcean(nextX, depth));
+		if (atEdge || Main.GameUpdateCount - crossProgressAt > DiveStallTicks)
+		{
+			BotDiagnostics.Log(Bot, atEdge ? $"crossed to the edge at {here}" : $"crossing stalled at {here}");
+			crossDepth = null;
+			if (atEdge && CarriesRecall(Avatar))
+				TryRecallHome();
+			IsFinished = true;
+			return;
+		}
+		Vector2 target;
+		if (descending)
+		{
+			if (here.Y >= diveLegY - 2)
+				diveLegY = System.Math.Min(here.Y + DiveLegTiles, depth);
+			target = new Vector2(here.X * 16f + 8f, diveLegY * 16f);
+		}
+		else
+		{
+			if ((crossLegX - here.X) * crossDirection < DiveColumnSlack)
+				crossLegX = nextX;
+			target = new Vector2(crossLegX * 16f + 8f, depth * 16f);
+		}
+		if (!TravelOrTunnel(target, 32f))
+		{
+			crossDepth = null;
+			IsFinished = true;
+		}
 	}
 
 	int? DiveColumn()
@@ -276,6 +350,11 @@ public sealed class ExploreTask : BotTask
 
 	public override void Tick()
 	{
+		if (crossDepth is int depth)
+		{
+			Cross(depth);
+			return;
+		}
 		if (diveX is int column)
 		{
 			Dive(column);
