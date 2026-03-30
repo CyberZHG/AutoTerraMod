@@ -158,6 +158,15 @@ public sealed class ExploreTask : BotTask
 
 	Vector2 destination;
 	int direction = Main.rand.NextBool() ? 1 : -1;
+	int? diveX;
+	int diveLegY;
+
+	const float DiveStartReach = 16f * 80f;
+	const int DiveColumnSlack = 3;
+	const int DiveLegTiles = 30;
+	const uint DiveStallTicks = 3600;
+	int deepestY;
+	uint deepestAt;
 
 	public ExploreTask(Bot bot) : base(bot) { }
 
@@ -168,6 +177,20 @@ public sealed class ExploreTask : BotTask
 	public override void Start()
 	{
 		base.Start();
+		if (diveX == null && Bot.Hands.BestPickaxe != null && Main.rand.NextBool() && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < DiveStartReach)
+		{
+			diveX = DiveColumn();
+			diveLegY = 0;
+			deepestY = 0;
+			deepestAt = Main.GameUpdateCount;
+			if (diveX != null)
+				BotDiagnostics.Log(Bot, $"diving down at column {diveX}");
+		}
+		if (diveX != null)
+		{
+			Detail = "⇣";
+			return;
+		}
 		bool delveUnderground = Traits.Exploring > 0.4f && Main.rand.NextBool();
 		int depth = delveUnderground ? Bot.CenterTile.Y + Main.rand.Next(40, 120) : -1;
 		int here = Bot.CenterTile.X;
@@ -199,8 +222,65 @@ public sealed class ExploreTask : BotTask
 		return null;
 	}
 
+	int? DiveColumn()
+	{
+		for (int attempt = 0; attempt < 10; attempt++)
+		{
+			int x = Main.rand.Next(WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+			if (!TileQuery.InOcean(x, (int)Main.worldSurface - 1))
+				return x;
+		}
+		return null;
+	}
+
+	void Dive(int column)
+	{
+		var here = Bot.CenterTile;
+		if (here.Y >= Main.UnderworldLayer)
+		{
+			BotDiagnostics.Log(Bot, $"dove to the underworld at {here}");
+			diveX = null;
+			if (CarriesRecall(Avatar))
+				TryRecallHome();
+			IsFinished = true;
+			return;
+		}
+		bool approaching = System.Math.Abs(here.X - column) > DiveColumnSlack && here.Y <= TileQuery.SurfaceY(column) + DiveColumnSlack;
+		if (here.Y > deepestY || approaching)
+		{
+			deepestY = here.Y;
+			deepestAt = Main.GameUpdateCount;
+		}
+		else if (Main.GameUpdateCount - deepestAt > DiveStallTicks)
+		{
+			BotDiagnostics.Log(Bot, $"dive at column {column} stalled at {here}");
+			diveX = null;
+			IsFinished = true;
+			return;
+		}
+		Vector2 target;
+		if (approaching)
+			target = new Vector2(column * 16f + 8f, (TileQuery.SurfaceY(column) - 2) * 16f);
+		else
+		{
+			if (here.Y >= diveLegY - 2)
+				diveLegY = System.Math.Min(here.Y + DiveLegTiles, Main.UnderworldLayer + 2);
+			target = new Vector2(column * 16f + 8f, diveLegY * 16f);
+		}
+		if (!TravelOrTunnel(target, 32f))
+		{
+			diveX = null;
+			IsFinished = true;
+		}
+	}
+
 	public override void Tick()
 	{
+		if (diveX is int column)
+		{
+			Dive(column);
+			return;
+		}
 		Bot.Motor.MoveTo(destination, 32f);
 		if (Bot.Motor.IsStuck)
 			direction = -direction;

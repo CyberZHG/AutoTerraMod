@@ -768,7 +768,20 @@ public sealed class SurveyGoal : ProgressionGoal
 	const int NearbyCaveRings = 2;
 	const int OpenSearchTiles = 6;
 
+	static readonly Dictionary<int, int> headings = new();
+
 	static Microsoft.Xna.Framework.Point? UnexploredCave(Bot bot, int rings)
+	{
+		int heading = headings.GetValueOrDefault(bot.Id, bot.Id % 2 == 0 ? 1 : -1);
+		if (UnexploredCave(bot, rings, heading) is Microsoft.Xna.Framework.Point ahead)
+			return ahead;
+		if (UnexploredCave(bot, rings, -heading) is not Microsoft.Xna.Framework.Point behind)
+			return null;
+		headings[bot.Id] = -heading;
+		return behind;
+	}
+
+	static Microsoft.Xna.Framework.Point? UnexploredCave(Bot bot, int rings, int heading)
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
 		int cell = Factions.FactionKnowledge.ExploreCell;
@@ -782,7 +795,7 @@ public sealed class SurveyGoal : ProgressionGoal
 			{
 				for (int dy = -ring; dy <= ring; dy++)
 				{
-					if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != ring)
+					if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dy)) != ring || dx * heading < 0)
 						continue;
 					int cellX = here.X / cell + dx, cellY = originCellY + dy;
 					if (cellY < topCell || cellY > bottomCell || cellX < 2 || cellX > Terraria.Main.maxTilesX / cell - 2 || knowledge.IsExplored(cellX, cellY))
