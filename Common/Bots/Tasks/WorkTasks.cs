@@ -248,6 +248,27 @@ public sealed class CraftTask : BotTask
 		}
 	}
 
+	const int FootprintWidth = 3;
+
+	bool FlattenFloors(Item item)
+	{
+		bool changed = false;
+		foreach (var spot in Stations.PlacementSpots(Bot.Faction, item))
+		{
+			for (int dx = 0; dx < FootprintWidth; dx++)
+			{
+				var floor = Main.tile[spot.X + dx, spot.Y + 1];
+				if (!floor.HasTile || !floor.IsHalfBlock && floor.Slope == SlopeType.Solid || !Main.tileSolid[floor.TileType] || Main.tileSolidTop[floor.TileType])
+					continue;
+				floor.IsHalfBlock = false;
+				floor.Slope = SlopeType.Solid;
+				WorldGen.SquareTileFrame(spot.X + dx, spot.Y + 1);
+				changed = true;
+			}
+		}
+		return changed;
+	}
+
 	Point? GraveOnSpot(Item item)
 	{
 		if (Bot.Hands.BestPickaxe == null)
@@ -280,6 +301,8 @@ public sealed class CraftTask : BotTask
 			return;
 		}
 		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
+		if (spot == null && FlattenFloors(item))
+			spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 		if (spot == null && GraveOnSpot(item) is Point grave)
 		{
 			if (!Bot.Hands.CanReach(Bot.Hands.BestPickaxe, grave))

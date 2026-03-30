@@ -14,6 +14,7 @@ public sealed class OpportunisticMineTask : BotTask
 	const int ScanRadius = 8;
 	const int ScanIntervalTicks = 30;
 	const float Priority = 85f;
+	const float StoreAfterDeathReach = 16f * 40f;
 
 	public static readonly Dictionary<int, int> OreTiers = new()
 	{
@@ -49,6 +50,8 @@ public sealed class OpportunisticMineTask : BotTask
 
 	public override float Evaluate()
 	{
+		if (Inventory.IsNearlyFull(Avatar) || Bot.StoreAfterDeath && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < StoreAfterDeathReach)
+			return 0f;
 		if (target is Point known && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
 			return Priority;
 		if (Main.GameUpdateCount - scannedAt < ScanIntervalTicks || Main.GameUpdateCount < pausedUntil)
