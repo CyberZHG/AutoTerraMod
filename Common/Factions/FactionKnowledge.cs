@@ -54,13 +54,20 @@ public sealed class FactionKnowledge
 			["minX"] = landmarkSpans[entry.Key].minX,
 			["maxX"] = landmarkSpans[entry.Key].maxX
 		}).ToList(),
-		["explored"] = exploredCells.ToArray()
+		["explored"] = exploredCells.ToArray(),
+		["shrines"] = resourceTiles.Where(entry => World.WorldScan.IsBossShrine(entry.Value)).SelectMany(entry => new[] { entry.Key.X, entry.Key.Y, entry.Value }).ToArray()
 	};
 
 	public void Load(TagCompound tag)
 	{
 		if (tag.ContainsKey("explored"))
 			exploredCells.UnionWith(tag.GetIntArray("explored"));
+		if (tag.ContainsKey("shrines"))
+		{
+			var shrines = tag.GetIntArray("shrines");
+			for (int i = 0; i + 2 < shrines.Length; i += 3)
+				Remember(new Point(shrines[i], shrines[i + 1]), shrines[i + 2]);
+		}
 		foreach (var entry in tag.GetList<TagCompound>("landmarks"))
 		{
 			var kind = (Landmark)entry.GetInt("kind");

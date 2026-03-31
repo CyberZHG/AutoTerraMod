@@ -22,6 +22,7 @@ public sealed class SummonTask : BotTask
 	const float BelowCampTolerance = 16f * 3f;
 	const float ArrivalRadius = 16f * 10f;
 	const float StuckAcceptRadius = 16f * 25f;
+	const float RecallHomeDistance = 16f * 80f;
 	const float OldManSearchRadius = 16f * 150f;
 	const float TalkRadius = 16f * 4f;
 	const float ThrowRadius = 16f * 8f;
@@ -92,6 +93,8 @@ public sealed class SummonTask : BotTask
 		Bot.Watchdog.RecordProgress();
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
+		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > RecallHomeDistance && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+			return false;
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
@@ -439,6 +442,7 @@ public sealed class RallyTask : BotTask
 
 	const float RecallTripDistance = 16f * 80f;
 	const float RecallLandingRadius = 16f * 40f;
+	const float CampGatherRadius = 16f * 60f;
 
 	bool RecallShortensTrip(Vector2 target) =>
 		Vector2.Distance(Bot.Center, target) > RecallTripDistance && CarriesRecall(Avatar) && RecallLandsAtBase()
@@ -478,7 +482,10 @@ public sealed class RallyTask : BotTask
 			return;
 		}
 		var leader = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId);
-		var target = leader is { IsAlive: true } && leader != Bot && !Bot.Faction.RallyAssembled ? leader.Center : rally.point;
+		var camp = Bot.Faction.BaseFeet - new Vector2(0f, 16f * 2f);
+		var target = Bot.Faction.RallyAssembled ? rally.point
+			: leader is { IsAlive: true } && leader != Bot && Vector2.Distance(leader.Center, Bot.Faction.BaseCenter) < CampGatherRadius ? leader.Center
+			: camp;
 		if (goal is Vector2 kept && Vector2.Distance(kept, target) < LeaderDriftPixels)
 			target = kept;
 		goal = target;
