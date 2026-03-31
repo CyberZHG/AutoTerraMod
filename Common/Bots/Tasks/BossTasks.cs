@@ -563,6 +563,8 @@ public sealed class ScoutTask : BotTask
 			var spot = OpenTileNear(new Point(column, Main.rand.Next(surface + MinShrineDepth, deepest)));
 			return new Vector2(spot.X * 16f + 8f, spot.Y * 16f);
 		}
+		if (step.Landmark == Landmark.Dungeon && knowledge.LandmarkOf(Landmark.Jungle) is Point jungle)
+			knowledge.ScoutDirection = jungle.X > Main.maxTilesX / 2 ? -1 : 1;
 		int x = here.X + knowledge.ScoutDirection * SurfaceLeg;
 		if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 		{
