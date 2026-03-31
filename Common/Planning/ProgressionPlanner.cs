@@ -455,7 +455,7 @@ public static class ProgressionPlanner
 			bool portable = Bots.Tasks.CraftTask.IsPortableStationTile(tile);
 			if (portable && stationItems.Any(item => context.Count(item) > 0))
 				continue;
-			if (deep && !StationNearby(context.Bot, tile))
+			if (deep && !Stations.IsWorldOnly(tile) && !StationNearby(context.Bot, tile))
 				return portable && stationItems.Count > 0 ? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
 			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
