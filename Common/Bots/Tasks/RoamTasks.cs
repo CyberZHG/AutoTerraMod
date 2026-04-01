@@ -20,7 +20,8 @@ public sealed class HuntTask : BotTask
 	NPC prey;
 	Vector2? huntingGround;
 	bool skyHunt;
-	int wanderDirection = 1;
+	int wanderDirection = Main.rand.NextBool() ? 1 : -1;
+	int huntingFor;
 	Vector2? wanderTarget;
 
 	public HuntTask(Bot bot) : base(bot) { }
@@ -84,9 +85,13 @@ public sealed class HuntTask : BotTask
 	public override void Start()
 	{
 		base.Start();
-		wanderDirection = Main.rand.NextBool() ? 1 : -1;
 		wanderTarget = null;
-		huntingGround = null;
+		int quarry = Bot.Brain.Plan is GatherStep gather ? gather.ItemType : 0;
+		if (quarry != huntingFor)
+		{
+			huntingFor = quarry;
+			huntingGround = null;
+		}
 		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
 		skyHunt = Bot.Brain.Plan is GatherStep { Source: NpcSource { Sky: true } };
 		if (skyHunt && Bot.CenterTile.Y > SkyHeight + SkyTolerance)
@@ -94,7 +99,7 @@ public sealed class HuntTask : BotTask
 			var ladder = SkyLadder.Beside(Bot.Faction, SkyOffset);
 			huntingGround = new Vector2((ladder.X + 1) * 16f, (ladder.TopRung - 1) * 16f);
 		}
-		else if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } source } && (source.Underground || !Grounds.IsInside(knowledge, ground, Bot.CenterTile)))
+		else if (huntingGround == null && Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } source } && (source.Underground || !Grounds.IsInside(knowledge, ground, Bot.CenterTile)))
 			huntingGround = source.Underground ? Grounds.PickUndergroundSpot(knowledge, ground) : Grounds.PickSpot(knowledge, ground, Bot.CenterTile);
 	}
 
@@ -118,18 +123,30 @@ public sealed class HuntTask : BotTask
 		}
 		if (wanderTarget == null)
 		{
-			int x = Utils.Clamp(Bot.CenterTile.X + wanderDirection * WanderTiles, 50, Main.maxTilesX - 50);
+			int x = Bot.CenterTile.X + wanderDirection * WanderTiles;
+			if (x < WanderEdgeMargin || x > Main.maxTilesX - WanderEdgeMargin || LeavesHuntingGround(x))
+			{
+				wanderDirection = -wanderDirection;
+				x = Bot.CenterTile.X + wanderDirection * WanderTiles;
+			}
+			x = Utils.Clamp(x, WanderEdgeMargin, Main.maxTilesX - WanderEdgeMargin);
 			bool underground = Bot.CenterTile.Y > Main.worldSurface + UndergroundMargin;
 			float y = underground || skyHunt ? Bot.Center.Y : TileQuery.SurfaceY(x) * 16f - 24f;
 			wanderTarget = new Vector2(x * 16f, y);
 		}
 		Bot.Motor.MoveTo(wanderTarget.Value, 32f);
-		if (Bot.Motor.HasArrived || Bot.Motor.IsStalled)
-		{
+		if (Bot.Motor.IsStalled)
 			wanderDirection = -wanderDirection;
+		if (Bot.Motor.HasArrived || Bot.Motor.IsStalled)
 			IsFinished = true;
-		}
 	}
+
+	const int WanderEdgeMargin = 50;
+
+	bool LeavesHuntingGround(int x) =>
+		Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } }
+		&& Systems.BotWorldSystem.KnowledgeOf(Bot.Faction).SpanOf(ground) is var (minX, maxX)
+		&& (x < minX || x > maxX);
 }
 
 public sealed class ReturnHomeTask : BotTask
