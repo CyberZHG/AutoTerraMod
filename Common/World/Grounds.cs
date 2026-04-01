@@ -171,6 +171,38 @@ public static class Grounds
 		return new Vector2(x * 16f, y * 16f);
 	}
 
+	const int DensitySamples = 12;
+	const int DensityHalfWidth = 20;
+	const int DensityAbove = 10;
+	const int DensityBelow = 30;
+	const int DensityStep = 2;
+
+	static int DensestColumn(Landmark ground, int minX, int maxX)
+	{
+		int best = Main.rand.Next(minX, maxX + 1);
+		int bestCount = -1;
+		for (int sample = 0; sample < DensitySamples; sample++)
+		{
+			int x = Main.rand.Next(minX, maxX + 1);
+			int surface = TileQuery.SurfaceY(x);
+			int count = 0;
+			for (int dx = -DensityHalfWidth; dx <= DensityHalfWidth; dx += DensityStep)
+			{
+				for (int y = surface - DensityAbove; y <= surface + DensityBelow; y += DensityStep)
+				{
+					if (WorldGen.InWorld(x + dx, y, 2) && Main.tile[x + dx, y].HasTile && Landmarks.Classify(x + dx, y, Main.tile[x + dx, y].TileType) == ground)
+						count++;
+				}
+			}
+			if (count > bestCount)
+			{
+				best = x;
+				bestCount = count;
+			}
+		}
+		return best;
+	}
+
 	public static Vector2? PickSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
 		if (knowledge.LandmarkOf(ground) is not Point anchor || knowledge.SpanOf(ground) is not var (minX, maxX))
@@ -182,7 +214,7 @@ public static class Grounds
 			case Landmark.Dungeon:
 				return new Vector2((anchor.X + Main.rand.Next(-60, 61)) * 16f, (anchor.Y + Main.rand.Next(0, DungeonRange)) * 16f);
 			default:
-				int x = Main.rand.Next(minX, maxX + 1);
+				int x = DensestColumn(ground, minX, maxX);
 				return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
 		}
 	}

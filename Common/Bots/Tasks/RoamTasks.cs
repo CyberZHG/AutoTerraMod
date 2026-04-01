@@ -99,7 +99,7 @@ public sealed class HuntTask : BotTask
 			var ladder = SkyLadder.Beside(Bot.Faction, SkyOffset);
 			huntingGround = new Vector2((ladder.X + 1) * 16f, (ladder.TopRung - 1) * 16f);
 		}
-		else if (huntingGround == null && Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } source } && (source.Underground || !Grounds.IsInside(knowledge, ground, Bot.CenterTile)))
+		else if (huntingGround == null && Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } source } && (source.Underground || !InBiome(ground)))
 			huntingGround = source.Underground ? Grounds.PickUndergroundSpot(knowledge, ground) : Grounds.PickSpot(knowledge, ground, Bot.CenterTile);
 	}
 
@@ -119,6 +119,13 @@ public sealed class HuntTask : BotTask
 		{
 			if (!TravelOrTunnel(ground, 48f) || Bot.Motor.HasArrived)
 				huntingGround = null;
+			return;
+		}
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark home, Underground: false } } && !InBiome(home)
+			&& Grounds.PickSpot(Systems.BotWorldSystem.KnowledgeOf(Bot.Faction), home, Bot.CenterTile) is Vector2 spot)
+		{
+			huntingGround = spot;
+			wanderTarget = null;
 			return;
 		}
 		if (wanderTarget == null)
@@ -142,6 +149,13 @@ public sealed class HuntTask : BotTask
 	}
 
 	const int WanderEdgeMargin = 50;
+
+	bool InBiome(Landmark ground) => ground switch
+	{
+		Landmark.Snow => Avatar.ZoneSnow,
+		Landmark.Dungeon => Avatar.ZoneDungeon,
+		_ => Bosses.BossChallenge.InArena(Avatar, ground)
+	};
 
 	bool LeavesHuntingGround(int x) =>
 		Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark ground } }
