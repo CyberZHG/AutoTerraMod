@@ -35,6 +35,8 @@ public static class Grounds
 			return null;
 		int inset = System.Math.Min(SurfaceSpotInset, (maxX - minX) / 2);
 		int x = Utils.Clamp(from.X, minX + inset, maxX - inset);
+		if (Density(ground, x) < BiomeDensity)
+			x = CachedDensestColumn(ground, minX, maxX);
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
 	}
 
@@ -177,6 +179,36 @@ public static class Grounds
 	const int DensityBelow = 30;
 	const int DensityStep = 2;
 
+	const int BiomeDensity = 60;
+
+	static int Density(Landmark ground, int x)
+	{
+		int surface = TileQuery.SurfaceY(x);
+		int count = 0;
+		for (int dx = -DensityHalfWidth; dx <= DensityHalfWidth; dx += DensityStep)
+		{
+			for (int y = surface - DensityAbove; y <= surface + DensityBelow; y += DensityStep)
+			{
+				if (WorldGen.InWorld(x + dx, y, 2) && Main.tile[x + dx, y].HasTile && Landmarks.Classify(x + dx, y, Main.tile[x + dx, y].TileType) == ground)
+					count++;
+			}
+		}
+		return count;
+	}
+
+	const uint DensestCacheTicks = 10 * 3600;
+
+	static readonly System.Collections.Generic.Dictionary<Landmark, (uint at, int x)> densest = new();
+
+	static int CachedDensestColumn(Landmark ground, int minX, int maxX)
+	{
+		if (densest.TryGetValue(ground, out var cached) && Main.GameUpdateCount - cached.at < DensestCacheTicks && cached.x >= minX && cached.x <= maxX)
+			return cached.x;
+		int x = DensestColumn(ground, minX, maxX);
+		densest[ground] = (Main.GameUpdateCount, x);
+		return x;
+	}
+
 	static int DensestColumn(Landmark ground, int minX, int maxX)
 	{
 		int best = Main.rand.Next(minX, maxX + 1);
@@ -184,16 +216,7 @@ public static class Grounds
 		for (int sample = 0; sample < DensitySamples; sample++)
 		{
 			int x = Main.rand.Next(minX, maxX + 1);
-			int surface = TileQuery.SurfaceY(x);
-			int count = 0;
-			for (int dx = -DensityHalfWidth; dx <= DensityHalfWidth; dx += DensityStep)
-			{
-				for (int y = surface - DensityAbove; y <= surface + DensityBelow; y += DensityStep)
-				{
-					if (WorldGen.InWorld(x + dx, y, 2) && Main.tile[x + dx, y].HasTile && Landmarks.Classify(x + dx, y, Main.tile[x + dx, y].TileType) == ground)
-						count++;
-				}
-			}
+			int count = Density(ground, x);
 			if (count > bestCount)
 			{
 				best = x;
