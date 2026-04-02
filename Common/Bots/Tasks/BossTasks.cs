@@ -23,6 +23,8 @@ public sealed class SummonTask : BotTask
 	const float ArrivalRadius = 16f * 10f;
 	const float StuckAcceptRadius = 16f * 25f;
 	const float RecallHomeDistance = 16f * 80f;
+	const float DistantArenaReach = 16f * 100f;
+	const int DistantRallyTicks = 5 * 3600;
 	const float OldManSearchRadius = 16f * 150f;
 	const float TalkRadius = 16f * 4f;
 	const float ThrowRadius = 16f * 8f;
@@ -91,6 +93,13 @@ public sealed class SummonTask : BotTask
 		if (faction.RallyAssembled)
 			return true;
 		Bot.Watchdog.RecordProgress();
+		if (Vector2.Distance(step.Place, faction.BaseCenter) > DistantArenaReach)
+		{
+			faction.RallyAssembled = true;
+			faction.Rally = (step.Place, Main.GameUpdateCount + DistantRallyTicks);
+			BotDiagnostics.Log(Bot, $"calling the team to {step.Place.ToTileCoordinates()} for {step.Challenge.Name}");
+			return true;
+		}
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
 		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > RecallHomeDistance && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
@@ -123,7 +132,7 @@ public sealed class SummonTask : BotTask
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		if (distance <= ArrivalRadius || (Bot.Motor.IsStuck && distance <= StuckAcceptRadius))
 			return true;
-		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
+		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
 		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
 			return false;
 		if (++travelFailures >= TravelRetries)

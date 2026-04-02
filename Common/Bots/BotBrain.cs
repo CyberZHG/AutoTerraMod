@@ -254,9 +254,12 @@ public sealed class BotBrain
 		lastDecisionSignature = signature;
 	}
 
+	static bool ExecutesPlan(BotTask task) => task is SummonTask or ScoutTask or SurveyTask or SmashShrineTask or TravelTask or BuildBridgeTask
+		or DigShaftTask or OutpostTask or CraftTask or BuildTask or GatherTask or HuntTask or BuyTask or DeliverTask or WithdrawTask;
+
 	void BreakFailureLoops()
 	{
-		if (current is not { IsFinished: true } || current is Tasks.FightTask or Tasks.FleeTask)
+		if (current is not { IsFinished: true } || !ExecutesPlan(current))
 			return;
 		if (current.Accomplished || Main.GameUpdateCount - currentStartedAt > QuickFailureTicks)
 		{

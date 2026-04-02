@@ -173,8 +173,11 @@ public sealed class OpportunisticMineTask : BotTask
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.Face(tile.ToWorldCoordinates());
-			if ((pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : Bot.Hands.Dig(tile)) is ToolResult.Unbreakable or ToolResult.NoTool)
+			var result = pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : Bot.Hands.Dig(tile);
+			if (result is ToolResult.Unbreakable or ToolResult.NoTool)
 				GiveUp(tile);
+			else if (result is ToolResult.Done or ToolResult.Working)
+				Accomplished = true;
 			return;
 		}
 		Bot.Motor.MoveTo(tile.ToWorldCoordinates(), 24f);

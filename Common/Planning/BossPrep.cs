@@ -13,6 +13,36 @@ public static class BossPrep
 
 	static readonly Dictionary<int, (uint at, bool preparing, float medianDps, int bossDefense)> cache = new();
 
+	const int IngredientDepth = 2;
+
+	static readonly Dictionary<int, (uint at, HashSet<int> items)> summonMaterials = new();
+
+	public static bool IsSummonMaterial(Bot bot, int itemType)
+	{
+		if (!summonMaterials.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= CacheTicks)
+		{
+			var items = new HashSet<int>();
+			if (Bosses.BossCredit.NextChallengeFor(bot.Faction) is { } challenge)
+			{
+				foreach (var trigger in challenge.Triggers.OfType<Bosses.SummonItemTrigger>())
+					AddIngredients(trigger.Item, IngredientDepth, items);
+			}
+			summonMaterials[bot.FactionId] = cached = (Main.GameUpdateCount, items);
+		}
+		return cached.items.Contains(itemType);
+	}
+
+	static void AddIngredients(int itemType, int depth, HashSet<int> items)
+	{
+		if (!items.Add(itemType) || depth == 0)
+			return;
+		foreach (var recipe in RecipeIndex.For(itemType))
+		{
+			foreach (var required in recipe.requiredItem)
+				AddIngredients(required.type, depth - 1, items);
+		}
+	}
+
 	public static GearTrack? Focus(Bot bot)
 	{
 		var state = StateOf(bot.Faction);

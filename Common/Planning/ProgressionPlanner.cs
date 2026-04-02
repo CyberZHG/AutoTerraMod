@@ -374,7 +374,8 @@ public static class ProgressionPlanner
 		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
 		var local = ResolveWithoutStorage(context, itemType, amount, have, depth);
-		return stored > 0 && local is BlockedStep && !context.Bot.CommittedToMining && !Outpost.IsAfield(context.Bot) ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
+		bool storageCovers = stored >= amount - have && local is GatherStep;
+		return stored > 0 && (storageCovers || local is BlockedStep && !context.Bot.CommittedToMining && !Outpost.IsAfield(context.Bot)) ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
 	}
 
 	const int ResolveBudget = 600;

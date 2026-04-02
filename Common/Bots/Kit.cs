@@ -35,6 +35,7 @@ public static class Kit
 				|| item.IsACoin
 				|| (item.potion && item.healLife > 0)
 				|| Junk.IsBossSummon(item)
+				|| BossGoal.IsSummoner(bot) && BossPrep.IsSummonMaterial(bot, item.type)
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
