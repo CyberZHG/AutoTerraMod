@@ -524,8 +524,31 @@ public sealed class HeadlessTestMode : ModSystem
 		Netplay.HasClients = true;
 	}
 
+	static readonly string requestedGift = Environment.GetEnvironmentVariable("AUTOTERRA_GIFT");
+	static bool giftDelivered;
+
+	static void DeliverGift()
+	{
+		if (giftDelivered || requestedGift == null || BotWorldSystem.Bots.Count == 0)
+			return;
+		giftDelivered = true;
+		var parts = requestedGift.Split(':');
+		var bot = BotWorldSystem.Bots.FirstOrDefault(candidate => candidate.Name == parts[0]);
+		if (bot == null || !ItemID.Search.TryGetId(parts[1], out int type))
+		{
+			ModContent.GetInstance<AutoTerraMod>().Logger.Warn($"gift: cannot resolve {requestedGift}");
+			return;
+		}
+		int amount = parts.Length > 2 && int.TryParse(parts[2], out int parsed) ? parsed : 1;
+		Give(bot, type, Bots.Inventory.Count(bot.Avatar, type) + amount);
+		Terraria.IO.WorldFile.SaveWorld();
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"gift: gave {bot.Name} {amount} x {Lang.GetItemNameValue(type)} (now {Bots.Inventory.Count(bot.Avatar, type)}) and saved the world");
+	}
+
 	public override void PostUpdateWorld()
 	{
+		if (Enabled)
+			DeliverGift();
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 			Mod.Logger.Info($"headless test running: {Main.GameUpdateCount / 60}s of game time");
 	}
