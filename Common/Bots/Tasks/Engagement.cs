@@ -151,6 +151,17 @@ public static class Engagement
 			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
+		if (Bosses.BossCatalog.IsBossPart(target) && Bosses.BossCatalog.ChallengeOf(target.type) is { Arena: World.Landmark arena }
+			&& !Bosses.BossChallenge.InArena(bot.Avatar, arena) && bot.Faction.ArenaPoint is Vector2 arenaPoint)
+		{
+			if (CanShootFromHere(bot, target))
+			{
+				bot.Motor.Face(target.Center);
+				bot.Hands.Fire(target, weapon);
+			}
+			bot.Motor.MoveTo(arenaPoint, ArenaReturnRadius);
+			return;
+		}
 		if (Bosses.BossCatalog.IsBossPart(target) && CatchesBreath(bot))
 		{
 			if (CanShootFromHere(bot, target))
@@ -335,6 +346,7 @@ public static class Engagement
 			bot.Motor.MoveTo(bot.Center + new Vector2((bot.Center.X >= boss.Center.X ? 1 : -1) * 96f, 0f), 8f);
 	}
 
+	const float ArenaReturnRadius = 16f * 6f;
 	const float BreatherHealthFraction = 0.4f;
 	const float RejoinHealthFraction = 0.7f;
 	const float BreatherDistance = 16f * 25f;

@@ -82,6 +82,7 @@ public sealed class SummonTask : BotTask
 		if (!Perform(ritualTarget))
 			return;
 		Bot.Faction.Rally = null;
+		Bot.Faction.ArenaPoint = step.Place;
 		Bot.Watchdog.RecordProgress();
 		BotDiagnostics.Log(Bot, $"summoned {step.Challenge.Name} via {step.Trigger.GetType().Name}");
 		IsFinished = true;

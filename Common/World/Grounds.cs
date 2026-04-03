@@ -43,8 +43,16 @@ public static class Grounds
 	const int ArenaProbeDepth = 6;
 	const int StandingSearchRadius = 20;
 
+	const int EvilArenaDepth = 25;
+
 	public static Vector2? ArenaSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
+		if (ground is Landmark.Crimson or Landmark.Corruption && knowledge.SpanOf(ground) is var (minX, maxX))
+		{
+			int x = CachedDensestColumn(ground, minX, maxX);
+			if (OpenSpotNear(new Point(x, TileQuery.SurfaceY(x) + EvilArenaDepth), ground) is Point deep)
+				return new Vector2(deep.X * 16f + 8f, deep.Y * 16f);
+		}
 		if (SurfaceSpotNear(knowledge, ground, from) is Vector2 surface && (ground != Landmark.Hallow || IsGroundBeneath(ground, surface.ToTileCoordinates())))
 			return surface;
 		if (knowledge.LandmarkOf(ground) is not Point anchor || OpenSpotNear(anchor, ground) is not Point feet)
