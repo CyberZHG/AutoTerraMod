@@ -61,6 +61,7 @@ public sealed class SummonTask : BotTask
 			return;
 		faction.Rally = (step.Place, Main.GameUpdateCount + AssembleTicks);
 		faction.RallyLeaderId = Bot.Id;
+		faction.RallyLeaderSeenAt = Main.GameUpdateCount;
 		faction.RallyAssembled = false;
 	}
 
@@ -453,6 +454,7 @@ public sealed class RallyTask : BotTask
 	const float RecallTripDistance = 16f * 80f;
 	const float RecallLandingRadius = 16f * 40f;
 	const float CampGatherRadius = 16f * 60f;
+	const uint OrphanGraceTicks = 300;
 
 	bool RecallShortensTrip(Vector2 target) =>
 		Vector2.Distance(Bot.Center, target) > RecallTripDistance && CarriesRecall(Avatar) && RecallLandsAtBase()
@@ -474,7 +476,10 @@ public sealed class RallyTask : BotTask
 	{
 		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep)
 			return 0f;
-		if (BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is not { IsAlive: true } leader || leader.Brain.Plan is not SummonBossStep)
+		bool leading = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is { IsAlive: true } leader && (leader.Brain.Plan is SummonBossStep || leader.Brain.Current is SummonTask);
+		if (leading)
+			Bot.Faction.RallyLeaderSeenAt = Main.GameUpdateCount;
+		else if (Main.GameUpdateCount - Bot.Faction.RallyLeaderSeenAt > OrphanGraceTicks)
 		{
 			Bot.Faction.Rally = null;
 			return 0f;
