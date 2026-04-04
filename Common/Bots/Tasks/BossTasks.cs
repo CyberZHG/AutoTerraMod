@@ -15,6 +15,7 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class SummonTask : BotTask
 {
 	const int RallyTicks = 2 * 3600;
+	const float SummonPriority = 93f;
 	const int AssembleTicks = 3 * 3600;
 	const int TravelRetries = 3;
 	const int RallyCooldownTicks = 2 * 3600;
@@ -47,7 +48,7 @@ public sealed class SummonTask : BotTask
 			return 0f;
 		step = summon;
 		Detail = Bot.Faction.RallyAssembled ? summon.Challenge.Name : headcount ?? summon.Challenge.Name;
-		return Engagement.NearestHostile(Bot, RallyTask.SelfDefenseRadius, true) != null ? RallyTask.YieldToSelfDefense : 85f;
+		return SummonPriority;
 	}
 
 	public override void Start()
@@ -447,7 +448,7 @@ public sealed class RallyTask : BotTask
 
 	Vector2? goal;
 	public const float SelfDefenseRadius = 16f * 10f;
-	public const float YieldToSelfDefense = 40f;
+	const float RallyPriority = 93f;
 
 	public RallyTask(Bot bot) : base(bot) { }
 
@@ -486,7 +487,7 @@ public sealed class RallyTask : BotTask
 		}
 		if (!Bot.Faction.RallyAssembled && Bot.Brain.PoolingForChampion)
 			return 0f;
-		return Engagement.NearestHostile(Bot, SelfDefenseRadius, true) != null ? YieldToSelfDefense : 88f;
+		return RallyPriority;
 	}
 
 	public override void Tick()
