@@ -104,6 +104,8 @@ public abstract class BotTask
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		campExit = null;
+		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)
+			Bot.Motor.Stop();
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
@@ -123,9 +125,13 @@ public abstract class BotTask
 			return true;
 		}
 		BotDiagnostics.Log(Bot, $"no walkable route to {target.ToTileCoordinates()}, tunneling");
+		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
 	}
+
+	const uint TunnelPathRetryTicks = 600;
+	uint tunnelingSince;
 
 	const int BelowCampDepth = 60;
 	const int CampExitMargin = 3;

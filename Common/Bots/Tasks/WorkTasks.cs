@@ -280,7 +280,7 @@ public sealed class CraftTask : BotTask
 				for (int dy = -1; dy <= 0; dy++)
 				{
 					var tile = Main.tile[spot.X + dx, spot.Y + dy];
-					if (tile.HasTile && tile.TileType == TileID.Tombstones)
+					if (tile.HasTile && tile.TileType is TileID.Tombstones or TileID.Banners)
 						return new Point(spot.X + dx, spot.Y + dy);
 				}
 			}
