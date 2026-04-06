@@ -12,6 +12,9 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class OpportunisticMineTask : BotTask
 {
 	const int ScanRadius = 8;
+	const int GraveReach = 40;
+
+	static readonly HashSet<int> Graves = new() { TileID.Tombstones };
 	const int ScanIntervalTicks = 30;
 	const float Priority = 85f;
 	const float StoreAfterDeathReach = 16f * 40f;
@@ -94,7 +97,7 @@ public sealed class OpportunisticMineTask : BotTask
 				}
 			}
 		}
-		return best;
+		return best ?? Systems.BotWorldSystem.KnowledgeOf(Bot.Faction).NearestKnown(here, Graves, unreachable, GraveReach);
 	}
 
 	int PickPower() => Bot.Hands.BestPickaxe?.pick ?? 0;
@@ -109,6 +112,8 @@ public sealed class OpportunisticMineTask : BotTask
 			return wantsWood && TileQuery.IsTreeBase(x, y);
 		if (type == TileID.Pots)
 			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
+		if (type == TileID.Tombstones)
+			return WorldGen.CanKillTile(x, y);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
 			return false;
 		int drop = GemDrops.TryGetValue(type, out int gem) ? gem : Planning.Stations.ItemsPlacing(type).Count > 0 ? Planning.Stations.ItemsPlacing(type)[0] : 0;

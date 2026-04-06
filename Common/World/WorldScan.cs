@@ -43,6 +43,8 @@ public static class WorldScan
 		{
 			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType))
 				knowledge.Remember(new Point(x, y), tileType);
+			if (tileType == TileID.Tombstones)
+				knowledge.Remember(new Point(x, y), tileType);
 			if (tileType == TileID.DemonAltar)
 				SharedAltar.Claim(x, y);
 			if (Landmarks.Classify(x, y, tileType) is Landmark landmark)

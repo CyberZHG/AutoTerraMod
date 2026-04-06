@@ -456,7 +456,7 @@ public static class ProgressionPlanner
 			bool portable = Bots.Tasks.CraftTask.IsPortableStationTile(tile);
 			if (portable && stationItems.Any(item => context.Count(item) > 0))
 				continue;
-			if (deep && !Stations.IsWorldOnly(tile) && !StationNearby(context.Bot, tile))
+			if (deep && !Stations.IsWorldOnly(tile) && !BossPrep.IsSummonMaterial(context.Bot, recipe.createItem.type) && !StationNearby(context.Bot, tile))
 				return portable && stationItems.Count > 0 ? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
 			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
@@ -464,15 +464,19 @@ public static class ProgressionPlanner
 				return new ScoutStep(World.Landmarks.WorldEvil, true, Terraria.ID.TileID.DemonAltar);
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
+		bool atStations = recipe.requiredTile.All(tile => tile < 0 || StationWithin(context.Bot, tile, HandsOnReach));
 		foreach (var required in recipe.requiredItem)
 		{
 			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
 			int have = context.CountAny(accepted);
 			foreach (int type in accepted)
 				have += Equipment.WornCount(avatar, type);
-			if (have >= required.stack)
+			if (have >= required.stack * crafts || have >= required.stack && atStations)
 				continue;
-			return ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
+			var ingredient = ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
+			if (have >= required.stack && ingredient is BlockedStep)
+				continue;
+			return ingredient;
 		}
 		return new CraftStep(recipe);
 	}

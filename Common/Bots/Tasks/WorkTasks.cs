@@ -494,6 +494,13 @@ public sealed class GatherTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (Tiles.Ground is Landmark ground && !Grounds.IsInside(knowledge, ground, here) && Grounds.PickSpot(knowledge, ground, here) is Vector2 spot)
 			return spot;
+		if (Tiles.Ground == Landmark.Underworld)
+		{
+			int next = here.X + prospectDirection * ProspectDepthTiles;
+			if (next < 50 || next > Main.maxTilesX - 50)
+				prospectDirection = -prospectDirection;
+			return new Vector2(Utils.Clamp(here.X + prospectDirection * ProspectDepthTiles, 50, Main.maxTilesX - 50) * 16f, here.Y * 16f);
+		}
 		if (Tiles.IsTree || Tiles.OnSurface)
 		{
 			int x = Utils.Clamp(here.X + prospectDirection * TreeProspectTiles, 50, Main.maxTilesX - 50);

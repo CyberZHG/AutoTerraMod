@@ -57,6 +57,40 @@ public static class Engagement
 		return nearest;
 	}
 
+	const float MeleeMinionThreat = 16f * 6f;
+
+	public static List<NPC> HostilesIn(Bot bot, Rectangle area)
+	{
+		var hit = new List<NPC>();
+		var body = bot.Npc;
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
+		{
+			if (IsHostileTo(bot, npc) && !bot.IsIgnoring(npc) && npc.Hitbox.Intersects(area)
+				&& Collision.CanHitLine(body.position, body.width, body.height, npc.position, npc.width, npc.height))
+				hit.Add(npc);
+		}
+		return hit;
+	}
+
+	static NPC NearestMinion(Bot bot, float radius)
+	{
+		NPC nearest = null;
+		float nearestDistance = radius;
+		var body = bot.Npc;
+		foreach (var npc in World.EntityIndex.ActiveNpcs)
+		{
+			if (Bosses.BossCatalog.IsBossPart(npc) || !IsHostileTo(bot, npc) || bot.IsIgnoring(npc))
+				continue;
+			float distance = Vector2.Distance(body.Center, npc.Center);
+			if (distance < nearestDistance && Collision.CanHitLine(body.position, body.width, body.height, npc.position, npc.width, npc.height))
+			{
+				nearest = npc;
+				nearestDistance = distance;
+			}
+		}
+		return nearest;
+	}
+
 	const float ReflexFireRange = 16f * 12f;
 	const float ReflexMeleeSlack = 32f;
 
@@ -146,8 +180,8 @@ public static class Engagement
 				return;
 			}
 		}
-		if (Bosses.BossCatalog.IsBossPart(target) && bot.Hands.BestWeapon() is Item gun && BotHands.IsProjectileWeapon(gun)
-			&& NearestHostile(bot, MinionThreat, true) is NPC minion && !Bosses.BossCatalog.IsBossPart(minion))
+		if (Bosses.BossCatalog.IsBossPart(target) && !CatchesBreath(bot) && bot.Hands.BestWeapon() is Item held
+			&& NearestMinion(bot, BotHands.IsProjectileWeapon(held) ? MinionThreat : MeleeMinionThreat) is NPC minion)
 			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();

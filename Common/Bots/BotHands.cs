@@ -627,23 +627,33 @@ public sealed class BotHands
 	{
 		if (!Ready || !InMeleeReach(target, weapon))
 			return false;
-		int direction = target.Center.X >= bot.Center.X ? 1 : -1;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
-		CutTilesIn(SwingArea(target, weapon));
+		var area = SwingArea(target, weapon);
+		CutTilesIn(area);
+		HitWithSwing(target, weapon);
+		foreach (var npc in Tasks.Engagement.HostilesIn(bot, area))
+		{
+			if (npc != target)
+				HitWithSwing(npc, weapon);
+		}
+		bot.Watchdog.RecordProgress();
+		return true;
+	}
+
+	void HitWithSwing(NPC npc, Item weapon)
+	{
+		int direction = npc.Center.X >= bot.Center.X ? 1 : -1;
 		bool crit = Main.rand.Next(100) < Avatar.GetWeaponCrit(weapon);
-		if (Tasks.Engagement.EnemyBotOf(bot, target) is Bot enemy)
+		if (Tasks.Engagement.EnemyBotOf(bot, npc) is Bot enemy)
 		{
 			int damage = Avatar.GetWeaponDamage(weapon) * (crit ? 2 : 1);
 			enemy.Vitals.Hurt(Main.DamageVar(damage, Avatar.luck), direction, source: $"{bot.Faction.Name}/{bot.Name}'s {weapon.Name}");
 			enemy.Vitals.RememberAttacker(bot.Npc);
-			bot.Watchdog.RecordProgress();
-			return true;
+			return;
 		}
-		var hit = target.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
-		BannerCredit.RecordHit(target, bot);
-		Bosses.BossCredit.RecordDamage(target, bot.FactionId, target.StrikeNPC(hit));
-		bot.Watchdog.RecordProgress();
-		return true;
+		var hit = npc.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
+		BannerCredit.RecordHit(npc, bot);
+		Bosses.BossCredit.RecordDamage(npc, bot.FactionId, npc.StrikeNPC(hit));
 	}
 
 	public int ShotsFired { get; set; }
