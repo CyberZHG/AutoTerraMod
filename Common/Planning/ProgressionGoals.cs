@@ -71,7 +71,9 @@ public sealed class GearGoal : ProgressionGoal
 		requiredPower = Math.Max(1, options.Min(option => Equipment.SamplePower(option, kind)));
 	}
 
-	public override bool IsMet(Bot bot) => Equipment.BestPower(bot.Avatar, kind) >= requiredPower || Outgrown(bot);
+	public System.Func<Factions.Faction, bool> LeapWhen { get; set; }
+
+	public override bool IsMet(Bot bot) => Equipment.BestPower(bot.Avatar, kind) >= requiredPower || LeapWhen?.Invoke(bot.Faction) == true || Outgrown(bot);
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
 
 	public List<GearGoal> Successors { get; } = new();
@@ -553,6 +555,8 @@ public sealed class RefightGoal : ProgressionGoal
 			return PlanStep.Idle;
 		foreach (var challenge in Wanted(bot))
 		{
+			if (bot.Faction.Rally != null && bot.Faction.RallyBossType != challenge.BossType)
+				continue;
 			if (Bosses.BossCatalog.IsBossAlive(challenge) || !Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot).IsReady)
 				continue;
 			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
@@ -701,7 +705,9 @@ public sealed class OutpostKitGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar);
 
-	public override PlanStep Plan(Bot bot)
+	public override PlanStep Plan(Bot bot) => PlanKit(bot);
+
+	public static PlanStep PlanKit(Bot bot)
 	{
 		var avatar = bot.Avatar;
 		if (Inventory.Count(avatar, ItemID.Bed) == 0)
@@ -713,11 +719,44 @@ public sealed class OutpostKitGoal : ProgressionGoal
 	}
 }
 
+public sealed class ArenaKitGoal : ProgressionGoal
+{
+	public override string Describe() => "ArenaKit";
+
+	public override bool AppliesTo(Bot bot) => Reserves(bot);
+
+	public static bool Reserves(Bot bot) => BossGoal.IsSummoner(bot) && Outpost.ExpectsDistantArena(bot);
+
+	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.Count(bot.Avatar, Outpost.IsBlock) >= Outpost.BlocksNeeded;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		if (Outpost.CarriesKit(avatar))
+			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - Outpost.Count(avatar, Outpost.IsBlock));
+		return OutpostKitGoal.PlanKit(bot);
+	}
+}
+
+public sealed class ArenaOutpostGoal : ProgressionGoal
+{
+	public override string Describe() => "ArenaOutpost";
+
+	static bool Assigned(Bot bot) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && Outpost.WantsArenaOutpost(member)).MinBy(member => member.Id) == bot;
+
+	public override bool IsUrgent(Bot bot) => Outpost.WantsArenaOutpost(bot) && Assigned(bot);
+
+	public override bool IsMet(Bot bot) => !IsUrgent(bot);
+
+	public override PlanStep Plan(Bot bot) => IsUrgent(bot) ? new BuildOutpostStep() : PlanStep.Idle;
+}
+
 public sealed class OutpostGoal : ProgressionGoal
 {
 	public override string Describe() => "Outpost";
 
-	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar) && Outpost.WantsNew(bot);
+	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
 
 	public override bool IsMet(Bot bot) => false;
 
@@ -1156,8 +1195,10 @@ public static class ProgressionGoals
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
 			new OutpostGoal(),
+			new ArenaKitGoal(),
 			new BossGoal(),
 			new BossSupportGoal(),
+			new ArenaOutpostGoal(),
 			new RefightGoal(),
 			new HellevatorGoal(),
 			new HellbridgeGoal(),
@@ -1203,13 +1244,15 @@ public static class ProgressionGoals
 			swords: new int[] { ItemID.SilverBroadsword, ItemID.TungstenBroadsword },
 			bows: new int[] { ItemID.SilverBow, ItemID.TungstenBow },
 			staffs: new int[] { ItemID.SapphireStaff, ItemID.EmeraldStaff },
-			armor: new (int, int, int)[] { (ItemID.SilverHelmet, ItemID.SilverChainmail, ItemID.SilverGreaves), (ItemID.TungstenHelmet, ItemID.TungstenChainmail, ItemID.TungstenGreaves) });
+			armor: new (int, int, int)[] { (ItemID.SilverHelmet, ItemID.SilverChainmail, ItemID.SilverGreaves), (ItemID.TungstenHelmet, ItemID.TungstenChainmail, ItemID.TungstenGreaves) },
+			leapWhen: BeatenEvilBoss);
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.GoldPickaxe, ItemID.PlatinumPickaxe },
 			swords: new int[] { ItemID.GoldBroadsword, ItemID.PlatinumBroadsword },
 			bows: new int[] { ItemID.GoldBow, ItemID.PlatinumBow },
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
-			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) });
+			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) },
+			leapWhen: BeatenEvilBoss);
 		goals.Add(new SurveyGoal());
 		goals.Add(new OwnGoal(ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone));
 		AddOreTier(goals,
@@ -1255,7 +1298,7 @@ public static class ProgressionGoals
 			{
 				(ItemID.MythrilHelmet, ItemID.MythrilChainmail, ItemID.MythrilGreaves), (ItemID.MythrilHat, ItemID.MythrilChainmail, ItemID.MythrilGreaves), (ItemID.MythrilHood, ItemID.MythrilChainmail, ItemID.MythrilGreaves),
 				(ItemID.OrichalcumMask, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings), (ItemID.OrichalcumHelmet, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings), (ItemID.OrichalcumHeadgear, ItemID.OrichalcumBreastplate, ItemID.OrichalcumLeggings)
-			});
+			}, leapWhen: BeatenMechBoss);
 		goals.Add(new StationGoal(TileID.AdamantiteForge, ItemID.AdamantiteForge, ItemID.TitaniumForge));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.AdamantitePickaxe, ItemID.TitaniumPickaxe },
@@ -1266,7 +1309,7 @@ public static class ProgressionGoals
 			{
 				(ItemID.AdamantiteHelmet, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings), (ItemID.AdamantiteMask, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings), (ItemID.AdamantiteHeadgear, ItemID.AdamantiteBreastplate, ItemID.AdamantiteLeggings),
 				(ItemID.TitaniumMask, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings), (ItemID.TitaniumHelmet, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings), (ItemID.TitaniumHeadgear, ItemID.TitaniumBreastplate, ItemID.TitaniumLeggings)
-			});
+			}, leapWhen: BeatenMechBoss);
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.PickaxeAxe, ItemID.Drax },
 			swords: new int[] { ItemID.Excalibur },
@@ -1354,7 +1397,25 @@ public static class ProgressionGoals
 		ItemID.GrapplingHook, ItemID.AmethystHook, ItemID.TopazHook, ItemID.SapphireHook, ItemID.EmeraldHook, ItemID.RubyHook, ItemID.DiamondHook
 	};
 
-	static void AddOreTier(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor)
+	static bool Beaten(Factions.Faction faction, int npcType) =>
+		Bosses.BossCatalog.ChallengeOf(npcType) is { } challenge && Bosses.BossCredit.HasDefeated(faction, challenge);
+
+	static bool BeatenEvilBoss(Factions.Faction faction) =>
+		Beaten(faction, NPCID.EyeofCthulhu) && (Beaten(faction, NPCID.EaterofWorldsHead) || Beaten(faction, NPCID.BrainofCthulhu));
+
+	static bool BeatenMechBoss(Factions.Faction faction) =>
+		Beaten(faction, NPCID.TheDestroyer) || Beaten(faction, NPCID.Retinazer) || Beaten(faction, NPCID.SkeletronPrime);
+
+	static void AddOreTier(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor,
+		System.Func<Factions.Faction, bool> leapWhen = null)
+	{
+		int first = goals.Count;
+		AddOreTierGoals(goals, pickaxes, swords, bows, staffs, armor);
+		foreach (var gear in goals.Skip(first).Select(Unwrap).OfType<GearGoal>().Where(gear => gear.Kind != GearKind.Hook))
+			gear.LeapWhen = leapWhen;
+	}
+
+	static void AddOreTierGoals(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor)
 	{
 		goals.Add(new GearGoal(GearKind.Pickaxe, pickaxes));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, swords), CombatStyle.Melee));

@@ -61,6 +61,7 @@ public sealed class SummonTask : BotTask
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
 		faction.Rally = (step.Place, Main.GameUpdateCount + AssembleTicks);
+		faction.RallyBossType = step.Challenge.BossType;
 		faction.RallyLeaderId = Bot.Id;
 		faction.RallyLeaderSeenAt = Main.GameUpdateCount;
 		faction.RallyAssembled = false;
@@ -68,8 +69,10 @@ public sealed class SummonTask : BotTask
 
 	public override void Tick()
 	{
-		if (!step.Challenge.CanSummonNow || BossCatalog.IsBossAlive(step.Challenge))
+		if (!step.Challenge.WindowStillOpen || BossCatalog.IsBossAlive(step.Challenge))
 		{
+			if (Bot.Faction.RallyLeaderId == Bot.Id)
+				Bot.Faction.Rally = null;
 			IsFinished = true;
 			return;
 		}
@@ -79,6 +82,13 @@ public sealed class SummonTask : BotTask
 			return;
 		if (!ApproachRitual(out var ritualTarget))
 			return;
+		if (!step.Challenge.CanSummonNow)
+		{
+			Bot.Motor.Stop();
+			Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
 		if (!TeamGathered())
 			return;
 		if (!Perform(ritualTarget))
@@ -133,7 +143,8 @@ public sealed class SummonTask : BotTask
 	bool ReachedPlace()
 	{
 		float distance = Vector2.Distance(Bot.Center, step.Place);
-		if (distance <= ArrivalRadius || (Bot.Motor.IsStuck && distance <= StuckAcceptRadius))
+		bool noWayCloser = Bot.Motor.IsStalled || Bot.Motor.Tunneling || Bot.Motor.HasNoRoute;
+		if (distance <= ArrivalRadius || noWayCloser && distance <= StuckAcceptRadius)
 			return true;
 		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
 		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
@@ -453,13 +464,11 @@ public sealed class RallyTask : BotTask
 	public RallyTask(Bot bot) : base(bot) { }
 
 	const float RecallTripDistance = 16f * 80f;
-	const float RecallLandingRadius = 16f * 40f;
 	const float CampGatherRadius = 16f * 60f;
 	const uint OrphanGraceTicks = 300;
 
 	bool RecallShortensTrip(Vector2 target) =>
-		Vector2.Distance(Bot.Center, target) > RecallTripDistance && CarriesRecall(Avatar) && RecallLandsAtBase()
-		&& Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) < RecallLandingRadius;
+		CarriesRecall(Avatar) && Vector2.Distance(Bot.Center, target) - Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) > RecallTripDistance;
 
 	public static bool Joined(Bot member, Vector2 point, float radius) =>
 		member.IsAlive && member.Npc is NPC body && Vector2.Distance(body.Center, point) < radius
@@ -477,7 +486,7 @@ public sealed class RallyTask : BotTask
 	{
 		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep)
 			return 0f;
-		bool leading = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is { IsAlive: true } leader && (leader.Brain.Plan is SummonBossStep || leader.Brain.Current is SummonTask);
+		bool leading = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is { IsAlive: true } leader && (leader.Brain.Plan is SummonBossStep or BuildOutpostStep || leader.Brain.Current is SummonTask);
 		if (leading)
 			Bot.Faction.RallyLeaderSeenAt = Main.GameUpdateCount;
 		else if (Main.GameUpdateCount - Bot.Faction.RallyLeaderSeenAt > OrphanGraceTicks)
@@ -745,6 +754,7 @@ public sealed class BuildBridgeTask : BotTask
 		if (bridge.IsDeck(frontier))
 			return;
 		var deck = new Point(frontier, bridge.Y + 1);
+		const int DeckPlatformEvery = 8;
 		if (TileQuery.HasTile(deck))
 		{
 			if (Main.tileCut[Main.tile[deck.X, deck.Y].TileType])
@@ -753,7 +763,7 @@ public sealed class BuildBridgeTask : BotTask
 				Bot.Hands.Dig(deck);
 			return;
 		}
-		if (Bot.Hands.PlaceBridge(deck) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
+		if (Bot.Hands.PlaceBridge(deck, solidDeck: frontier % DeckPlatformEvery != 0) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
 			Bot.Watchdog.RecordProgress();
 		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
 			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");

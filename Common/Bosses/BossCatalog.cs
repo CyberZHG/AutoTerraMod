@@ -46,6 +46,18 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 
 	public bool CanSummonNow => !NightOnly || (!Main.dayTime && Main.time < LatestSummonTime);
 
+	const float TravelTicksPerTile = 20f;
+
+	public bool WindowStillOpen => !NightOnly || Main.dayTime || Main.time < LatestSummonTime;
+
+	public bool CanSetOut(float tilesToTravel)
+	{
+		if (!NightOnly)
+			return true;
+		float lead = tilesToTravel * TravelTicksPerTile;
+		return Main.dayTime ? Main.time >= Main.dayLength - lead : Main.time + lead < LatestSummonTime;
+	}
+
 	public float ThreatMultiplier => BossType switch
 	{
 		NPCID.QueenBee => 2.5f,
@@ -67,6 +79,13 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 		NPCID.WallofFlesh => Landmark.Underworld,
 		NPCID.Plantera => Landmark.Jungle,
 		NPCID.Golem => Landmark.Temple,
+		NPCID.DukeFishron => Landmark.Ocean,
+		_ => null
+	};
+
+	public Landmark? DistantArena => BossType switch
+	{
+		NPCID.SkeletronHead => Landmark.Dungeon,
 		NPCID.DukeFishron => Landmark.Ocean,
 		_ => null
 	};

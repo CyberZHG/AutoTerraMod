@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Terraria;
 using Terraria.GameContent.ItemDropRules;
 using Terraria.ID;
@@ -7,6 +8,8 @@ namespace AutoTerraMod.Common.Bosses;
 
 public static class BossDrops
 {
+	const float ReliableDropRate = 0.5f;
+
 	static Dictionary<int, BossChallenge> sourceByItem;
 
 	public static BossChallenge SourceOf(int itemType) => (sourceByItem ??= Build()).GetValueOrDefault(itemType);
@@ -26,11 +29,15 @@ public static class BossDrops
 				int item = drops[i].itemId;
 				if (ItemID.Sets.BossBag[item])
 					Report(Main.ItemDropsDB.GetRulesForItemID(item), drops);
-				map.TryAdd(item, challenge);
+				else if (drops[i].dropRate >= ReliableDropRate && !Planning.RecipeIndex.For(item).Any() && !IsFurniture(item))
+					map.TryAdd(item, challenge);
 			}
 		}
 		return map;
 	}
+
+	static bool IsFurniture(int itemType) =>
+		ContentSamples.ItemsByType[itemType].createTile is int tile && tile >= 0 && Main.tileFrameImportant[tile];
 
 	static void Report(List<IItemDropRule> rules, List<DropRateInfo> drops)
 	{

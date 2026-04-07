@@ -22,14 +22,14 @@ public sealed record HouseDesign(int Width, int InteriorHeight, RoofStyle Roof, 
 	{
 		BuildingTaste.StoneBrick => ItemID.GrayBrick,
 		BuildingTaste.RedBrick => ItemID.RedBrick,
-		_ => ItemID.Wood
+		_ => ItemID.StoneBlock
 	};
 
 	public int WallItem => Taste switch
 	{
 		BuildingTaste.StoneBrick => ItemID.GrayBrickWall,
 		BuildingTaste.RedBrick => ItemID.RedBrickWall,
-		_ => ItemID.WoodWall
+		_ => ItemID.StoneWall
 	};
 
 	static readonly int[] RusticBlocks =

@@ -146,8 +146,18 @@ public static class HouseInspector
 		BotDiagnostics.Log(bot, $"{structure.Purpose} {structure.Index} finished its blueprint but room check failed: {WorldGen.roomCheckFailureReason}");
 	}
 
+	const int DungeonEntranceHalfWidth = 12;
+	const int DungeonEntranceHeight = 14;
+	const int DungeonEntranceDepth = 2;
+
+	static bool InDungeonEntrance(int x, int y) =>
+		Main.dungeonX > 0 && System.Math.Abs(x - Main.dungeonX) <= DungeonEntranceHalfWidth
+		&& y >= Main.dungeonY - DungeonEntranceHeight && y <= Main.dungeonY + DungeonEntranceDepth;
+
 	public static bool IsProtected(int x, int y)
 	{
+		if (InDungeonEntrance(x, y))
+			return true;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
@@ -203,8 +213,8 @@ public static class HouseMaterials
 
 	public static Item Find(Player avatar, BuildAction action, HouseDesign design) => action switch
 	{
-		BuildAction.PlaceBlock => MostOf(avatar, design.BlockItems),
-		BuildAction.PlaceWall => MostOf(avatar, design.WallItems),
+		BuildAction.PlaceBlock => Preferring(avatar, design.BlockItems, ItemID.StoneBlock),
+		BuildAction.PlaceWall => Preferring(avatar, design.WallItems, ItemID.StoneWall),
 		BuildAction.PlacePlatform => Inventory.Items(avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]),
 		BuildAction.PlaceDoor => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsDoor),
 		BuildAction.PlaceTorch => FindPlacing(avatar, TileID.Sets.RoomNeeds.CountsAsTorch),
@@ -249,6 +259,11 @@ public static class HouseMaterials
 		return item.createTile >= 0 && tiles.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile];
 	}
 
+	static Item Preferring(Player avatar, int[] itemTypes, int preferred) =>
+		itemTypes.Contains(preferred) && Inventory.Items(avatar).FirstOrDefault(item => item.type == preferred) is Item held ? held : MostOf(avatar, itemTypes);
+
+	const int StoneForWalls = 4;
+
 	static Item MostOf(Player avatar, int[] itemTypes)
 	{
 		Item best = null;
@@ -265,6 +280,8 @@ public static class HouseMaterials
 	{
 		if (design.WallItems.Length == 1)
 			return design.WallItem;
+		if (Inventory.Count(bot.Avatar, ItemID.StoneBlock) + BaseStorage.Count(bot.Faction, ItemID.StoneBlock) >= StoneForWalls)
+			return ItemID.StoneWall;
 		int best = 0;
 		int bestCount = -1;
 		for (int index = 0; index < HouseDesign.RusticWalls.Length; index++)

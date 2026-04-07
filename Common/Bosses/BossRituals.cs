@@ -146,14 +146,21 @@ public static class BossRituals
 	{
 		if (Inventory.Count(bot.Avatar, trigger.Item) == 0)
 			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
-		if (!challenge.CanSummonNow)
-			return PlanStep.Idle;
 		if (trigger.Place is not Landmark landmark)
-			return new SummonBossStep(challenge, trigger, Grounds.CampArena(bot.Faction), null);
-		return Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is Vector2 place
-			? new SummonBossStep(challenge, trigger, place, null)
-			: new ScoutStep(landmark, false);
+		{
+			var arena = Grounds.CampArena(bot.Faction);
+			return MaySetOut(bot, challenge, arena) ? new SummonBossStep(challenge, trigger, arena, null) : PlanStep.Idle;
+		}
+		if (Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is not Vector2 place)
+			return new ScoutStep(landmark, false);
+		return MaySetOut(bot, challenge, place) ? new SummonBossStep(challenge, trigger, place, null) : PlanStep.Idle;
 	}
+
+	static bool MaySetOut(Bot bot, BossChallenge challenge, Vector2 place) =>
+		bot.Faction.Rally != null && bot.Faction.RallyLeaderId == bot.Id && challenge.WindowStillOpen || challenge.CanSetOut(FarthestTeammateTiles(bot, place));
+
+	static float FarthestTeammateTiles(Bot bot, Vector2 place) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Select(member => Vector2.Distance(member.Center, place) / 16f).DefaultIfEmpty(0f).Max();
 
 	static PlanStep PlanSmashOrbs(Bot bot, BossChallenge challenge, SmashOrbsTrigger trigger)
 	{
@@ -188,7 +195,9 @@ public static class BossRituals
 			return PlanStep.Blocked;
 		if (KnownLandmark(bot, Landmark.Dungeon) is not Point dungeon)
 			return new ScoutStep(Landmark.Dungeon, false);
-		return challenge.CanSummonNow ? new SummonBossStep(challenge, trigger, dungeon.ToWorldCoordinates(), null) : PlanStep.Idle;
+		int oldMan = NPC.FindFirstNPC(NPCID.OldMan);
+		var place = oldMan >= 0 ? Main.npc[oldMan].Center : dungeon.ToWorldCoordinates();
+		return MaySetOut(bot, challenge, place) ? new SummonBossStep(challenge, trigger, place, null) : PlanStep.Idle;
 	}
 
 	static PlanStep PlanClothier(Bot bot, BossChallenge challenge, ClothierDollTrigger trigger)
@@ -253,11 +262,15 @@ public static class BossRituals
 	}
 
 	const int BridgeMaterialRestock = 100;
+	const int BridgePlatformStone = 8;
 
 	static PlanStep BridgeWork(Bot bot, Hellbridge bridge)
 	{
 		if (!bot.Hands.HasBridgeMaterial)
-			return ProgressionPlanner.Obtain(bot, ItemID.WoodPlatform, BridgeMaterialRestock);
+			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BridgeMaterialRestock);
+		if (Inventory.Count(bot.Avatar, ItemID.StonePlatform) == 0 && Inventory.Count(bot.Avatar, ItemID.StoneBlock) >= BridgePlatformStone
+			&& ProgressionPlanner.Obtain(bot, ItemID.StonePlatform, BridgePlatformStone * 2) is CraftStep craft)
+			return craft;
 		int preferred = BridgeDirection(bot);
 		int direction = bridge.SideComplete(preferred) ? -preferred : preferred;
 		return new BuildBridgeStep(bridge, direction);

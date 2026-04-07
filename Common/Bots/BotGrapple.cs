@@ -149,6 +149,12 @@ public sealed class BotGrapple
 	{
 		if (Anchor is not Vector2 anchor)
 			return;
+		if (!AnchorStands(anchor))
+		{
+			BotDiagnostics.Log(bot, $"hooked tile at {anchor.ToTileCoordinates()} is gone, letting go");
+			Release(body, jump: false);
+			return;
+		}
 		var toAnchor = pullTo - body.Center;
 		float distance = toAnchor.Length();
 		if (hangMode)
@@ -210,6 +216,18 @@ public sealed class BotGrapple
 			return false;
 		}
 		return ++snaggedTicks > SnagTicks;
+	}
+
+	static bool AnchorStands(Vector2 anchor)
+	{
+		for (int dx = -2; dx <= 2; dx += 2)
+			for (int dy = -2; dy <= 2; dy += 2)
+			{
+				var tile = (anchor + new Vector2(dx, dy)).ToTileCoordinates();
+				if (TileQuery.IsSolid(tile) || TileQuery.IsPlatform(tile.X, tile.Y))
+					return true;
+			}
+		return false;
 	}
 
 	static bool HoldsAnchor(Vector2 anchor) =>

@@ -382,9 +382,9 @@ public sealed class BotHands
 		return count;
 	}
 
-	public bool PlaceBridge(Point tile)
+	public bool PlaceBridge(Point tile, bool solidDeck = false)
 	{
-		var material = BridgeMaterial(tile);
+		var material = solidDeck ? ExpendableBlock(tile) ?? BridgeMaterial(tile) : BridgeMaterial(tile);
 		int type = material?.type ?? 0;
 		if (!Place(material, tile))
 			return false;
@@ -436,9 +436,12 @@ public sealed class BotHands
 	{
 		bool supported = tile is Point spot && TileQuery.IsSolid(spot.X, spot.Y + 1);
 		Item wood = null;
+		bool keepKitBlocks = Building.Outpost.CarriesKit(Avatar) && Building.Outpost.Count(Avatar, Building.Outpost.IsBlock) <= Building.Outpost.BlocksNeeded;
 		foreach (var item in Inventory.Items(Avatar))
 		{
 			if (!IsExpendableBlock(item) || !Building.PlacementRules.Allows(bot, item) || bot.Brain.PlannedItemTypes.Contains(item.type) || tile != null && !supported && TileID.Sets.Falling[item.createTile])
+				continue;
+			if (keepKitBlocks && Building.Outpost.IsBlock(item))
 				continue;
 			if (item.type != ItemID.Wood)
 				return item;

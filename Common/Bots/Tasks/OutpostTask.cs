@@ -11,6 +11,7 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class OutpostTask : BotTask
 {
 	const float Priority = 75f;
+	const float ArenaPriority = 94f;
 	const float StandRadius = 12f;
 	const int FailuresBeforeGivingUp = 40;
 	const uint SiteRetryTicks = 600;
@@ -49,9 +50,10 @@ public sealed class OutpostTask : BotTask
 
 	public override float Evaluate()
 	{
+		float priority = Outpost.NearArenaSite(Bot) ? ArenaPriority : Priority;
 		if (site != null)
-			return Priority;
-		return Bot.Brain.Plan is BuildOutpostStep && Main.GameUpdateCount - siteRejectedAt > SiteRetryTicks ? Priority : 0f;
+			return priority;
+		return Bot.Brain.Plan is BuildOutpostStep && Main.GameUpdateCount - siteRejectedAt > SiteRetryTicks ? priority : 0f;
 	}
 
 	public override void Tick()
@@ -273,7 +275,10 @@ public sealed class OutpostTask : BotTask
 	void Finish()
 	{
 		var bed = FindBed().Value;
-		Bot.OutpostBed = bed;
+		if (Outpost.NearArenaSite(Bot))
+			Bot.Faction.ArenaBed = bed;
+		else
+			Bot.OutpostBed = bed;
 		bool usable = Outpost.IsUsable(bed);
 		BotDiagnostics.Log(Bot, usable ? $"outpost ready, respawning at the bed {bed}" : $"outpost at {bed} is not a valid room: {WorldGen.roomCheckFailureReason}");
 		ReleaseSite();

@@ -409,7 +409,7 @@ public static class ProgressionPlanner
 			WishBossDrop(context.Bot, itemType);
 			return PlanStep.Blocked;
 		}
-		if (source is TileSource { IsTree: false } scarce && Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).KnownCount(scarce.TileTypes) < amount - have)
+		if (source is TileSource { IsTree: false })
 			WishBossDrop(context.Bot, itemType);
 		if (source is TileSource { IsTree: true } trees && context.Bot.CenterTile.Y > World.TileQuery.SurfaceY(context.Bot.CenterTile.X) + UndergroundMargin
 			&& Systems.BotWorldSystem.KnowledgeOf(context.Bot.Faction).NearestKnown(context.Bot.CenterTile, trees.TileTypes, NoExclusions, NearbyTreeTiles) == null)

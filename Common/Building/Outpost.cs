@@ -45,6 +45,39 @@ public static class Outpost
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;
 	}
 
+	const float ArenaOutpostDistance = 16f * 300f;
+	const float ArenaSiteReach = 16f * 40f;
+	const float ArenaBedReach = 16f * 80f;
+	const float ArenaFightReach = 16f * 300f;
+
+	static bool BedStands(Point bed) =>
+		WorldGen.InWorld(bed.X, bed.Y, 10) && Main.tile[bed.X, bed.Y].HasTile && Main.tile[bed.X, bed.Y].TileType == TileID.Beds;
+
+	public static Point? ArenaBedFor(Factions.Faction faction)
+	{
+		if (faction.ArenaBed is not Point bed)
+			return null;
+		var at = bed.ToWorldCoordinates();
+		bool serving = faction.Rally is { } rally ? Vector2.Distance(rally.point, at) < ArenaBedReach : Bosses.BossCatalog.NearestActiveBoss(at, ArenaFightReach) != null;
+		return serving && BedStands(bed) ? bed : null;
+	}
+
+	public static bool NearArenaSite(Bot bot) =>
+		bot.Faction.Rally is { } rally && Vector2.Distance(bot.Center, rally.point) < ArenaSiteReach;
+
+	public static bool WantsArenaOutpost(Bot bot) =>
+		NearArenaSite(bot) && bot.Faction.Rally is { } rally && Vector2.Distance(rally.point, bot.Faction.BaseCenter) > ArenaOutpostDistance
+		&& ArenaBedFor(bot.Faction) == null && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded;
+
+	public static bool ExpectsDistantArena(Bot bot)
+	{
+		if (bot.Faction.Rally != null || Bosses.BossCredit.NextChallengeFor(bot.Faction) is not { DistantArena: { } arena } challenge)
+			return false;
+		return BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(arena) is Point site
+			&& Vector2.Distance(site.ToWorldCoordinates(), bot.Faction.BaseCenter) > ArenaOutpostDistance
+			&& Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot).IsReady;
+	}
+
 	public static bool IsUsable(Point bed) =>
 		WorldGen.InWorld(bed.X, bed.Y, 10) && Main.tile[bed.X, bed.Y].HasTile && Main.tile[bed.X, bed.Y].TileType == TileID.Beds
 		&& WorldGen.StartRoomCheck(bed.X, bed.Y);

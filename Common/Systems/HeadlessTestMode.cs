@@ -527,28 +527,50 @@ public sealed class HeadlessTestMode : ModSystem
 	static readonly string requestedGift = Environment.GetEnvironmentVariable("AUTOTERRA_GIFT");
 	static bool giftDelivered;
 
+	static bool startTimeApplied;
+
+	static void ApplyStartTime()
+	{
+		if (startTimeApplied)
+			return;
+		startTimeApplied = true;
+		if (double.TryParse(Environment.GetEnvironmentVariable("AUTOTERRA_DAY_TIME"), out double time))
+		{
+			Main.dayTime = true;
+			Main.time = time;
+		}
+	}
+
 	static void DeliverGift()
 	{
 		if (giftDelivered || requestedGift == null || BotWorldSystem.Bots.Count == 0)
 			return;
 		giftDelivered = true;
-		var parts = requestedGift.Split(':');
+		foreach (string gift in requestedGift.Split(','))
+			DeliverGift(gift.Split(':'));
+		Terraria.IO.WorldFile.SaveWorld();
+	}
+
+	static void DeliverGift(string[] parts)
+	{
 		var bot = BotWorldSystem.Bots.FirstOrDefault(candidate => candidate.Name == parts[0]);
 		if (bot == null || !ItemID.Search.TryGetId(parts[1], out int type))
 		{
-			ModContent.GetInstance<AutoTerraMod>().Logger.Warn($"gift: cannot resolve {requestedGift}");
+			ModContent.GetInstance<AutoTerraMod>().Logger.Warn($"gift: cannot resolve {string.Join(":", parts)}");
 			return;
 		}
 		int amount = parts.Length > 2 && int.TryParse(parts[2], out int parsed) ? parsed : 1;
 		Give(bot, type, Bots.Inventory.Count(bot.Avatar, type) + amount);
-		Terraria.IO.WorldFile.SaveWorld();
-		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"gift: gave {bot.Name} {amount} x {Lang.GetItemNameValue(type)} (now {Bots.Inventory.Count(bot.Avatar, type)}) and saved the world");
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"gift: gave {bot.Name} {amount} x {Lang.GetItemNameValue(type)} (now {Bots.Inventory.Count(bot.Avatar, type)})");
 	}
 
 	public override void PostUpdateWorld()
 	{
 		if (Enabled)
+		{
+			ApplyStartTime();
 			DeliverGift();
+		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 			Mod.Logger.Info($"headless test running: {Main.GameUpdateCount / 60}s of game time");
 	}
