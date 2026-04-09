@@ -99,9 +99,26 @@ public abstract class BotTask
 
 	Vector2? campExit;
 
+	const float LongTripTiles = 150f;
+	const float RecallSavesTiles = 100f;
+	const int UndergroundTiles = 30;
+
+	bool RecallBeatsLongTrip(Vector2 target)
+	{
+		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar))
+			return false;
+		float fromHere = System.Math.Abs(Bot.Center.X - target.X) / 16f;
+		if (fromHere < LongTripTiles)
+			return false;
+		float fromHome = System.Math.Abs(BotWorldSystem.RespawnFeet(Bot).X - target.X) / 16f;
+		return fromHere - fromHome > RecallSavesTiles;
+	}
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
+			return true;
+		if (RecallBeatsLongTrip(target) && TryRecallHome())
 			return true;
 		campExit = null;
 		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)

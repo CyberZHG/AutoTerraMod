@@ -34,13 +34,15 @@ public sealed class Faction
 	public uint PoolUntil { get; set; }
 	public Vector2? ArenaPoint { get; set; }
 	public Point? ArenaBed { get; set; }
-	public Dictionary<int, uint> RefightWishes { get; } = new();
+	public Dictionary<int, (uint until, bool forGear)> RefightWishes { get; } = new();
 
 	const uint RefightWishTicks = 20 * 3600;
 
-	public void WishRefight(int bossType) => RefightWishes[bossType] = Terraria.Main.GameUpdateCount + RefightWishTicks;
+	public void WishRefight(int bossType, bool forGear) =>
+		RefightWishes[bossType] = (Terraria.Main.GameUpdateCount + RefightWishTicks, forGear || WantsRefight(bossType, gearOnly: true));
 
-	public bool WantsRefight(int bossType) => RefightWishes.TryGetValue(bossType, out uint until) && Terraria.Main.GameUpdateCount < until;
+	public bool WantsRefight(int bossType, bool gearOnly = false) =>
+		RefightWishes.TryGetValue(bossType, out var wish) && Terraria.Main.GameUpdateCount < wish.until && (wish.forGear || !gearOnly);
 	public World.Hellbridge Hellbridge { get; set; }
 	public World.Hellevator Hellevator { get; set; }
 	public Settlement Settlement => HouseDesign == null ? null : settlement ??= new Settlement(BaseTile, HouseDesign, MemberCount);

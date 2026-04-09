@@ -18,13 +18,18 @@ public static class StabRenderer
 
 	public static void Draw(IEnumerable<Bot> bots)
 	{
-		var stabbing = bots.Where(IsStabbing).ToList();
+		var stabbing = bots.Where(bot => IsStabbing(bot) || IsThrowingYoyo(bot)).ToList();
 		if (stabbing.Count == 0)
 			return;
 		var spriteBatch = Main.spriteBatch;
 		spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, Main.DefaultSamplerState, DepthStencilState.None, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
 		foreach (var bot in stabbing)
-			DrawStab(spriteBatch, bot);
+		{
+			if (IsThrowingYoyo(bot))
+				DrawYoyo(spriteBatch, bot);
+			else
+				DrawStab(spriteBatch, bot);
+		}
 		spriteBatch.End();
 	}
 
@@ -33,6 +38,34 @@ public static class StabRenderer
 		var avatar = bot.Avatar;
 		var item = avatar.lastVisualizedSelectedItem;
 		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.useStyle == ItemUseStyleID.Rapier;
+	}
+
+	static bool IsThrowingYoyo(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		var item = avatar.lastVisualizedSelectedItem;
+		return avatar.itemAnimation > 0 && item != null && !item.IsAir && BotHands.IsYoyo(item) && item.shoot > ProjectileID.None;
+	}
+
+	const float YoyoSpinTurns = 6f;
+	const float YoyoMaxThrow = 16f * 14f;
+	const float YoyoFallbackThrow = 16f * 6f;
+	static readonly Color YoyoString = new(220, 220, 220);
+
+	static void DrawYoyo(SpriteBatch spriteBatch, Bot bot)
+	{
+		var avatar = bot.Avatar;
+		var item = avatar.lastVisualizedSelectedItem;
+		Main.instance.LoadProjectile(item.shoot);
+		var texture = TextureAssets.Projectile[item.shoot].Value;
+		float progress = 1f - avatar.itemAnimation / (float)Math.Max(1, avatar.itemAnimationMax);
+		var hand = bot.Center + new Vector2(avatar.direction * 6f, -2f);
+		var target = Vector2.Distance(hand, bot.Hands.YoyoTarget) <= YoyoMaxThrow ? bot.Hands.YoyoTarget : hand + bot.Hands.AimDirection * YoyoFallbackThrow;
+		var position = Vector2.Lerp(hand, target, (float)Math.Sin(progress * MathHelper.Pi));
+		var line = position - hand;
+		var light = Lighting.GetColor(position.ToTileCoordinates());
+		spriteBatch.Draw(TextureAssets.MagicPixel.Value, hand - Main.screenPosition, new Rectangle(0, 0, 1, 1), YoyoString.MultiplyRGB(light), line.ToRotation(), Vector2.Zero, new Vector2(line.Length(), 1f), SpriteEffects.None, 0f);
+		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, progress * MathHelper.TwoPi * YoyoSpinTurns, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
 	}
 
 	static void DrawStab(SpriteBatch spriteBatch, Bot bot)

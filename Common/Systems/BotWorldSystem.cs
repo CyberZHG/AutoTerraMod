@@ -84,6 +84,7 @@ public sealed class BotWorldSystem : ModSystem
 		Planning.Shops.Reset();
 		ProgressionPlanner.Reset();
 		Bosses.BossCredit.Reset();
+		World.Highway.Forget();
 		World.WaterFinder.Reset();
 		Navigation.DangerSpots.Reset();
 	}
@@ -382,7 +383,7 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		if (Building.Outpost.ArenaBedFor(bot.Faction) is Point arena)
 			return new Vector2(arena.X * 16f + 8f, (arena.Y + 1) * 16f);
-		if (bot.OutpostBed is Point outpost && Building.Outpost.IsUsable(outpost))
+		if (bot.OutpostBed is Point outpost && Building.Outpost.BedStands(outpost))
 			return new Vector2(outpost.X * 16f + 8f, (outpost.Y + 1) * 16f);
 		var settlement = bot.Faction.Settlement;
 		int memberIndex = Bots.Where(member => member.FactionId == bot.FactionId).ToList().IndexOf(bot);

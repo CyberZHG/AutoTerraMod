@@ -42,6 +42,8 @@ public sealed class BotHands
 	public bool IsWorking => Main.GameUpdateCount - lastWorkTick < WorkingWindowTicks;
 	public uint TicksSinceWork => Main.GameUpdateCount - lastWorkTick;
 	public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
+
+	public Vector2 YoyoTarget { get; private set; }
 	public bool Ready => cooldown <= 0;
 	public Item BestPickaxe => Avatar.GetBestPickaxe();
 	public Item BestAxe => BestTool(Avatar, AxePower);
@@ -90,11 +92,11 @@ public sealed class BotHands
 			&& Navigation.PathFinder.UnderFallingBlock(tile.X, tile.Y);
 	}
 
-	public ToolResult Dig(Point tile)
+	public ToolResult Dig(Point tile, bool clearSaplings = false)
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
+		if (InOtherBase(tile) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
@@ -298,6 +300,8 @@ public sealed class BotHands
 	{
 		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile))
 			return false;
+		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && World.Highway.InAnyClearance(tile.X, tile.Y))
+			return false;
 		ClearReplaceableTile(tile);
 		if (!TryPlaceTile(item, tile))
 			return false;
@@ -356,6 +360,8 @@ public sealed class BotHands
 	}
 
 	public bool HasRope => FindPlaceable(IsRopeTile) != null;
+
+	public bool HasPlatform => FindPlaceable(IsPlatformTile) != null;
 
 	public bool PlaceRope(Point tile) => Place(FindPlaceable(IsRopeTile), tile);
 
@@ -631,6 +637,7 @@ public sealed class BotHands
 		if (!Ready || !InMeleeReach(target, weapon))
 			return false;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
+		YoyoTarget = target.Center;
 		var area = SwingArea(target, weapon);
 		CutTilesIn(area);
 		HitWithSwing(target, weapon);

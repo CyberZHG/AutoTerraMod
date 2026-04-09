@@ -226,9 +226,19 @@ public static class BossRituals
 	}
 
 	const int ShaftOffsetFromBase = 24;
+	const int ShaftInApron = 2;
+
+	public static Hellevator ShaftFor(Factions.Faction faction)
+	{
+		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && (shaft.X + 1 >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
+			faction.Hellevator = null;
+		return faction.Hellevator ??= PlanShaft(faction);
+	}
 
 	static Hellevator PlanShaft(Factions.Faction faction)
 	{
+		if (faction.Settlement is { } camp)
+			return new Hellevator(camp.Right + ShaftInApron, camp.Floor - 1);
 		int x = faction.BaseTile.X + ShaftOffsetFromBase;
 		return new Hellevator(x, TileQuery.SurfaceY(x) - 1);
 	}
@@ -240,10 +250,24 @@ public static class BossRituals
 
 	public static PlanStep PlanShaftWork(Bot bot)
 	{
-		var shaft = bot.Faction.Hellevator ??= PlanShaft(bot.Faction);
+		var shaft = ShaftFor(bot.Faction);
 		if (shaft.IsComplete || bot.CenterTile.Y >= Main.UnderworldLayer || !IsChiefDigger(bot))
 			return PlanStep.Idle;
-		return new DigShaftStep(shaft);
+		return ShaftWork(bot, shaft);
+	}
+
+	const int BombRestock = 3;
+	const int ShaftPlatformRestock = 20;
+
+	public static PlanStep ShaftWork(Bot bot, Hellevator shaft)
+	{
+		if (!bot.Hands.HasPlatform && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
+			return platforms;
+		if (!Hellevator.LavaBelow(shaft.X, shaft.FirstUnfinishedRow()))
+			return new DigShaftStep(shaft);
+		if (shaft.LavaBlasts >= Hellevator.MaxLavaBlasts)
+			return PlanStep.Idle;
+		return bot.Hands.Explosives.Carries ? new DigShaftStep(shaft) : ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
 	}
 
 	static bool IsChiefDigger(Bot bot) =>
@@ -269,7 +293,7 @@ public static class BossRituals
 		if (!bot.Hands.HasBridgeMaterial)
 			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BridgeMaterialRestock);
 		if (Inventory.Count(bot.Avatar, ItemID.StonePlatform) == 0 && Inventory.Count(bot.Avatar, ItemID.StoneBlock) >= BridgePlatformStone
-			&& ProgressionPlanner.Obtain(bot, ItemID.StonePlatform, BridgePlatformStone * 2) is CraftStep craft)
+			&& ProgressionPlanner.ObtainPlatforms(bot, BridgePlatformStone * 2) is CraftStep craft)
 			return craft;
 		int preferred = BridgeDirection(bot);
 		int direction = bridge.SideComplete(preferred) ? -preferred : preferred;

@@ -36,7 +36,9 @@ public sealed class BotStatusReport : ModSystem
 	static string DescribeBridge(Factions.Faction faction)
 	{
 		var shaft = faction.Hellevator;
-		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstUnfinishedRow()} of {Main.UnderworldLayer}";
+		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstUnfinishedRow()} of {Main.UnderworldLayer}, rope missing at {Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1)?.ToString() ?? "none"}";
+		foreach (var highway in World.Highway.For(faction))
+			shaftText += $"\n    highway {(highway.Direction > 0 ? "east" : "west")} y={highway.Y} {highway.StartX}->{highway.EndX}: frontier {highway.Frontier(highway.Direction)}{(highway.BlockReason is string reason ? " blocked by " + reason : "")}, link row missing {highway.MissingLinkRow()?.ToString() ?? "none"}";
 		var bridge = faction.Hellbridge;
 		return shaftText + (bridge == null ? "" : $"\n    hellbridge y={bridge.Y}: built {bridge.Frontier(-1)}..{bridge.Frontier(1)} of {bridge.LeftEnd}..{bridge.RightEnd}");
 	}

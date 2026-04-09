@@ -708,7 +708,7 @@ public sealed class BuildBridgeTask : BotTask
 
 	public BuildBridgeTask(Bot bot) : base(bot) { }
 
-	public override string NameKey => "BuildBridge";
+	public override string NameKey => step?.Bridge is World.Highway ? "BuildHighway" : "BuildBridge";
 
 	public override float Evaluate()
 	{
@@ -723,8 +723,9 @@ public sealed class BuildBridgeTask : BotTask
 		var bridge = step.Bridge;
 		int direction = step.Direction;
 		int frontier = bridge.Frontier(direction);
-		if (frontier == (direction > 0 ? bridge.RightEnd : bridge.LeftEnd) && bridge.IsBuilt(frontier))
+		if (frontier == bridge.End(direction) && bridge.IsBuilt(frontier) || bridge.RequiresPlatform(frontier) && !bridge.IsDeck(frontier) && !Bot.Hands.HasPlatform)
 		{
+			BotDiagnostics.Log(Bot, $"corridor work at {frontier} ends: built={bridge.IsBuilt(frontier)} needsPlatform={bridge.RequiresPlatform(frontier)} hasPlatform={Bot.Hands.HasPlatform}");
 			IsFinished = true;
 			return;
 		}
@@ -746,7 +747,11 @@ public sealed class BuildBridgeTask : BotTask
 			{
 				if (TileQuery.IsSolid(column, y))
 				{
-					Bot.Hands.Dig(new Point(column, y));
+					if (Bot.Hands.Dig(new Point(column, y), clearSaplings: true) is ToolResult.Unbreakable or ToolResult.NoTool)
+					{
+						BotDiagnostics.Log(Bot, $"corridor blocked by an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
+						IsFinished = true;
+					}
 					return;
 				}
 			}
@@ -754,16 +759,18 @@ public sealed class BuildBridgeTask : BotTask
 		if (bridge.IsDeck(frontier))
 			return;
 		var deck = new Point(frontier, bridge.Y + 1);
-		const int DeckPlatformEvery = 8;
 		if (TileQuery.HasTile(deck))
 		{
 			if (Main.tileCut[Main.tile[deck.X, deck.Y].TileType])
 				Bot.Hands.Cut(deck);
-			else
-				Bot.Hands.Dig(deck);
+			else if (Bot.Hands.Dig(deck, clearSaplings: true) is ToolResult.Unbreakable or ToolResult.NoTool)
+			{
+				BotDiagnostics.Log(Bot, $"corridor deck {deck} is unbreakable {TileQuery.TypeAt(deck)}");
+				IsFinished = true;
+			}
 			return;
 		}
-		if (Bot.Hands.PlaceBridge(deck, solidDeck: frontier % DeckPlatformEvery != 0) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
+		if (Bot.Hands.PlaceBridge(deck, solidDeck: !bridge.WantsPlatform(frontier)) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
 			Bot.Watchdog.RecordProgress();
 		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
 			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");
@@ -799,7 +806,21 @@ public sealed class DigShaftTask : BotTask
 		}
 		if (Hellevator.LavaBelow(shaft.X, row))
 		{
-			BotDiagnostics.Log(Bot, $"hellevator stops above lava at row {row}");
+			if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks)
+			{
+				if (!Bot.Hands.Explosives.IsFused)
+					Bot.Motor.Stop();
+				Bot.Watchdog.RecordProgress();
+				return;
+			}
+			if (shaft.LavaBlasts < Hellevator.MaxLavaBlasts && shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor))
+			{
+				shaft.LavaBlasts++;
+				shaft.LastBlastAt = Main.GameUpdateCount;
+				BotDiagnostics.Log(Bot, $"blasting the floor of the lava at {floor} under the hellevator ({shaft.LavaBlasts}/{Hellevator.MaxLavaBlasts})");
+			}
+			else
+				BotDiagnostics.Log(Bot, $"hellevator stops above lava at row {row}");
 			IsFinished = true;
 			return;
 		}
@@ -823,13 +844,10 @@ public sealed class DigShaftTask : BotTask
 		}
 		if (shaft.NeedsPlatform(row) && !shaft.HasPlatform(row))
 		{
-			foreach (int column in new[] { shaft.X, shaft.X + 1 })
+			if (Bot.Hands.PlaceBridge(new Point(shaft.X, row)))
 			{
-				if (Bot.Hands.PlaceBridge(new Point(column, row)))
-				{
-					Bot.Watchdog.RecordProgress();
-					return;
-				}
+				Bot.Watchdog.RecordProgress();
+				return;
 			}
 			var anchor = new Point(shaft.X - 1, row);
 			if (!TileQuery.HasTile(anchor) && Bot.Hands.PlaceScaffold(anchor))

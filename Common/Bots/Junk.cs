@@ -21,7 +21,7 @@ public static class Junk
 		[ItemID.GraniteBlock] = 250,
 		[ItemID.MarbleBlock] = 250,
 		[ItemID.SandBlock] = 100,
-		[ItemID.ClayBlock] = 100,
+		[ItemID.ClayBlock] = 300,
 		[ItemID.Acorn] = 20
 	};
 

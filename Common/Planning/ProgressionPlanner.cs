@@ -427,10 +427,28 @@ public static class ProgressionPlanner
 		return PlanPurchase(context.Bot, itemType, amount - have);
 	}
 
+	public static PlanStep ObtainPlatforms(Bot bot, int amount) =>
+		Obtain(bot, Terraria.ID.ItemID.StonePlatform, amount) is var stone and not BlockedStep ? stone : Obtain(bot, Terraria.ID.ItemID.WoodPlatform, amount);
+
+	static int gearPlanning;
+
+	public static PlanStep ObtainGear(Bot bot, int[] options)
+	{
+		gearPlanning++;
+		try
+		{
+			return ObtainAny(bot, options);
+		}
+		finally
+		{
+			gearPlanning--;
+		}
+	}
+
 	static void WishBossDrop(Bot bot, int itemType)
 	{
 		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss))
-			bot.Faction.WishRefight(boss.BossType);
+			bot.Faction.WishRefight(boss.BossType, gearPlanning > 0);
 	}
 
 	static bool CanMineAny(Bot bot, TileSource tiles)

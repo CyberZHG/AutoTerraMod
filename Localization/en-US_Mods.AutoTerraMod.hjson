@@ -113,6 +113,8 @@ Tasks: {
 	Travel: Travelling
 	BuildBridge: Building the hellbridge
 	DigShaft: Digging the hellevator
+	BuildHighway: Building a highway
+	HangRope: Hanging rope
 	Outpost: Building an underground outpost
 	TidyCamp: Tidying the camp
 	PlantTrees: Planting trees
@@ -164,6 +166,8 @@ Plans: {
 	Smash: Smash an orb
 	Travel: Travel
 	BuildBridge: Build the hellbridge
+	BuildHighway: Build a highway
+	HangRope: Hang a rope
 }
 
 UI: {

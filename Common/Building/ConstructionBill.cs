@@ -36,7 +36,7 @@ public static class ConstructionBill
 			.Select(placement => new BillLine(placement, ItemFor(placement, materials, builder), counts[placement]))
 			.ToList();
 		if (operations.Any(operation => HouseMaterials.IsNeeded(operation.Action) && structure.IsOutOfReachFromFloor(operation.Tile)))
-			bill.Insert(0, new BillLine(BuildAction.RemoveScaffold, ItemID.WoodPlatform, ScaffoldPlatforms));
+			bill.Insert(0, new BillLine(BuildAction.RemoveScaffold, builder == null ? ItemID.WoodPlatform : HouseMaterials.PlatformToObtain(builder), ScaffoldPlatforms));
 		return bill;
 	}
 
@@ -46,6 +46,7 @@ public static class ConstructionBill
 		{
 			BuildAction.PlaceBlock => HouseMaterials.BlockToObtain(builder, materials),
 			BuildAction.PlaceWall => HouseMaterials.WallToObtain(builder, materials),
+			BuildAction.PlacePlatform => HouseMaterials.PlatformToObtain(builder),
 			_ => HouseMaterials.DefaultItem(placement, materials)
 		};
 
@@ -54,7 +55,7 @@ public static class ConstructionBill
 		foreach (var line in bill)
 		{
 			int onHand = line.Placement == BuildAction.RemoveScaffold
-				? Inventory.Count(bot.Avatar, line.ItemType)
+				? HouseMaterials.CountAvailable(bot.Avatar, BuildAction.PlacePlatform, materials)
 				: HouseMaterials.CountAvailable(bot.Avatar, line.Placement, materials);
 			int stored = line.Placement switch
 			{

@@ -270,8 +270,7 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static void CarveHellevator(Factions.Faction faction)
 	{
-		int x = faction.BaseTile.X + 24;
-		var shaft = faction.Hellevator ??= new World.Hellevator(x, World.TileQuery.SurfaceY(x) - 1);
+		var shaft = Bosses.BossRituals.ShaftFor(faction);
 		for (int y = shaft.TopY; y < Main.UnderworldLayer; y++)
 		{
 			for (int column = shaft.X; column <= shaft.X + 1; column++)

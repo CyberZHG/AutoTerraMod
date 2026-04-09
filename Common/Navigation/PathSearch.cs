@@ -251,7 +251,7 @@ public sealed class PathSearch
 						edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
 					else if (abilities.CanRope && abilities.CanBridge && anchored && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
 						edges.Add(new Edge(bottom, MoveKind.RopeDown, RopeClimbBaseCost + (bottom.Y - y) * RopeClimbCostPerTile));
-					if (abilities.CanBridge && anchored && !Main.tile[PathFinder.BridgeColumn(x, nx), y + 1].HasTile)
+					if (abilities.CanBridge && anchored && !Main.tile[PathFinder.BridgeColumn(x, nx), y + 1].HasTile && !World.Highway.InAnyClearance(PathFinder.BridgeColumn(x, nx), y + 1))
 						edges.Add(new Edge(new Point(nx, y), MoveKind.Bridge, BridgeCost));
 				}
 			}
@@ -464,7 +464,7 @@ public sealed class PathSearch
 	}
 
 	bool Placeable(int x, int y) =>
-		TileQuery.FreeForPlacing(x, y) || abilities.CanChop && TileQuery.IsChoppableTree(Main.tile[x, y].TileType);
+		(TileQuery.FreeForPlacing(x, y) || abilities.CanChop && TileQuery.IsChoppableTree(Main.tile[x, y].TileType)) && !World.Highway.InAnyClearance(x, y);
 
 	static bool RopeFits(int x, int y) => PathFinder.IsRope(x, y) || TileQuery.FreeForPlacing(x, y);
 

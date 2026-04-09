@@ -113,6 +113,8 @@ Tasks: {
 	Travel: 远行
 	BuildBridge: 修地狱桥
 	DigShaft: 挖地狱直通井
+	BuildHighway: 修水平通道
+	HangRope: 挂绳子
 	Outpost: 建造地下营地
 	TidyCamp: 整理营地
 	PlantTrees: 种树
@@ -164,6 +166,8 @@ Plans: {
 	Smash: 砸暗影珠/猩红之心
 	Travel: 远行
 	BuildBridge: 修地狱桥
+	BuildHighway: 修水平通道
+	HangRope: 挂绳子
 }
 
 UI: {

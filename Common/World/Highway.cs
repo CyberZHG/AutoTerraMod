@@ -1,0 +1,165 @@
+using System.Collections.Generic;
+using System.Linq;
+using AutoTerraMod.Common.Factions;
+using Terraria;
+using Terraria.ID;
+
+namespace AutoTerraMod.Common.World;
+
+public sealed record Highway(int FactionId, int Direction, int StartX, int EndX, int Y, int? LinkX) : ICorridor
+{
+	public const int Headroom = 3;
+	const int PlatformEvery = 20;
+	const int OceanMargin = 20;
+	const int EvilScanRows = 8;
+
+	static readonly Dictionary<int, Highway[]> planned = new();
+
+	public static void Forget() => planned.Clear();
+
+	public static Highway[] For(Faction faction)
+	{
+		if (planned.TryGetValue(faction.Id, out var known))
+			return known;
+		if (faction.Settlement is not { } camp || Systems.BotWorldSystem.Factions.Any(other => other.Settlement == null))
+			return System.Array.Empty<Highway>();
+		var highways = new[] { Plan(faction, camp, -1), Plan(faction, camp, 1) }.Where(highway => highway != null).ToArray();
+		planned[faction.Id] = highways;
+		return highways;
+	}
+
+	public static bool ProtectsAnyDeck(int x, int y)
+	{
+		foreach (var highways in planned.Values)
+			foreach (var highway in highways)
+				if (highway.ProtectsDeck(x, y))
+					return true;
+		return false;
+	}
+
+	public static bool InAnyClearance(int x, int y)
+	{
+		foreach (var highways in planned.Values)
+			foreach (var highway in highways)
+				if (highway.InClearance(x, y))
+					return true;
+		return false;
+	}
+
+	static Highway Plan(Faction faction, Building.Settlement camp, int direction)
+	{
+		int start = direction > 0 ? camp.Right + Building.Settlement.ApronWidth + 1 : camp.Left - Building.Settlement.ApronWidth - 1;
+		var neighbour = Systems.BotWorldSystem.Factions
+			.Where(other => other != faction && System.Math.Sign(other.BaseTile.X - faction.BaseTile.X) == direction)
+			.MinBy(other => System.Math.Abs(other.BaseTile.X - faction.BaseTile.X));
+		int end;
+		int? link = null;
+		if (neighbour?.Settlement is { } theirs)
+		{
+			link = direction > 0 ? theirs.Left - Building.Settlement.ApronWidth - 1 : theirs.Right + Building.Settlement.ApronWidth + 1;
+			end = link.Value - direction;
+		}
+		else
+		{
+			end = direction > 0 ? Main.maxTilesX - TileQuery.OceanWidth - OceanMargin : TileQuery.OceanWidth + OceanMargin;
+		}
+		if ((end - start) * direction <= 0)
+			return null;
+		return new Highway(faction.Id, direction, start, end, camp.Floor - 1, link);
+	}
+
+	public int End(int direction) => EndX;
+
+	public bool Spans(int x) => Direction > 0 ? x >= StartX && x <= EndX : x <= StartX && x >= EndX;
+
+	public bool IsDeck(int x) => RequiresPlatform(x) ? TileQuery.IsPlatform(x, Y + 1) : TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1);
+
+	public bool HeadroomClear(int x)
+	{
+		for (int y = Y - Headroom + 1; y <= Y; y++)
+		{
+			if (TileQuery.IsSolid(x, y))
+				return false;
+		}
+		return true;
+	}
+
+	public bool IsBuilt(int x) => IsDeck(x) && HeadroomClear(x);
+
+	public bool WantsPlatform(int x) => x != StartX && (x - StartX) % PlatformEvery == 0 || !TileQuery.IsSolid(x, Y + 2);
+
+	public bool RequiresPlatform(int x) => WantsPlatform(x);
+
+	public int Frontier(int direction)
+	{
+		for (int x = StartX; x != EndX; x += Direction)
+		{
+			if (!IsBuilt(x))
+				return x;
+		}
+		return EndX;
+	}
+
+	public bool IsComplete => Frontier(Direction) == EndX && IsBuilt(EndX);
+
+	public string BlockReason { get; private set; }
+
+	public bool BlockedAt(int x, int pickPower)
+	{
+		BlockReason = null;
+		for (int y = Y - Headroom + 1; y <= Y + 1; y++)
+		{
+			var tile = Main.tile[x, y];
+			if (tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava)
+			{
+				BlockReason = $"lava at {x},{y}";
+				return true;
+			}
+			if (!TileQuery.IsSolid(x, y) || y == Y + 1 && !RequiresPlatform(x))
+				continue;
+			if (Navigation.PickRequirement.MinimumPick(tile.TileType, x, y) > pickPower || Building.HouseInspector.IsProtected(x, y) && !ProtectsDeck(x, y))
+			{
+				BlockReason = $"tile {tile.TileType} at {x},{y} (pick {pickPower})";
+				return true;
+			}
+		}
+		for (int y = Y + 1; y <= Y + EvilScanRows; y++)
+		{
+			if (Main.tile[x, y].HasTile && Building.PlacementRules.IsEvil(Main.tile[x, y].TileType) && Navigation.PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) > pickPower)
+			{
+				BlockReason = $"evil ground at {x},{y}";
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public bool ProtectsDeck(int x, int y) => y == Y + 1 && Spans(x) && IsDeck(x);
+
+	public bool InClearance(int x, int y) => y > Y - Headroom && y <= Y && Spans(x) || LinkX == x && LinkRows is var (top, bottom) && y >= top && y <= bottom;
+
+	public (int top, int bottom)? LinkRows
+	{
+		get
+		{
+			if (LinkX is not int x)
+				return null;
+			int ground = TileQuery.SurfaceY(x) - 1;
+			if (System.Math.Abs(ground - Y) <= 1)
+				return null;
+			return (System.Math.Min(ground, Y), System.Math.Max(ground, Y));
+		}
+	}
+
+	public int? MissingLinkRow()
+	{
+		if (LinkX is not int x || LinkRows is not var (top, bottom))
+			return null;
+		for (int y = top; y <= bottom; y++)
+		{
+			if (!Main.tile[x, y].HasTile || !Main.tileRope[Main.tile[x, y].TileType])
+				return y;
+		}
+		return null;
+	}
+}

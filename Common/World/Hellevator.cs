@@ -6,6 +6,29 @@ namespace AutoTerraMod.Common.World;
 public sealed record Hellevator(int X, int TopY)
 {
 	public const int PlatformSpacing = 4;
+	public const int MaxLavaBlasts = 6;
+	const int LavaFloorScan = 40;
+
+	public int LavaBlasts { get; set; }
+
+	public uint LastBlastAt { get; set; }
+
+	public const uint DrainTicks = 600;
+
+	public int RopeX => X + 1;
+
+	public Microsoft.Xna.Framework.Point? LavaFloor(int row)
+	{
+		for (int y = row; y < System.Math.Min(row + LavaFloorScan, Main.maxTilesY - 10); y++)
+		{
+			for (int x = X; x <= X + 1; x++)
+			{
+				if (TileQuery.IsSolid(x, y))
+					return new Microsoft.Xna.Framework.Point(x, y);
+			}
+		}
+		return null;
+	}
 
 	public bool IsShaftRow(int y) => !TileQuery.IsSolid(X, y) && !TileQuery.IsSolid(X + 1, y);
 

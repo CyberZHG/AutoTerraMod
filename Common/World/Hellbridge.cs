@@ -4,8 +4,16 @@ using Terraria.ID;
 
 namespace AutoTerraMod.Common.World;
 
-public sealed record Hellbridge(int CenterX, int Y)
+public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 {
+	const int DeckPlatformEvery = 8;
+
+	public int End(int direction) => direction > 0 ? RightEnd : LeftEnd;
+
+	public bool WantsPlatform(int x) => x % DeckPlatformEvery == 0;
+
+	public bool RequiresPlatform(int x) => false;
+
 	public const int HalfLength = 300;
 	const int LavaClearance = 8;
 

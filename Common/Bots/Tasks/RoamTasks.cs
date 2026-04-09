@@ -128,6 +128,9 @@ public sealed class HuntTask : BotTask
 			wanderTarget = null;
 			return;
 		}
+		if (wanderTarget == null && Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark.Dungeon } }
+			&& Grounds.PickSpot(Systems.BotWorldSystem.KnowledgeOf(Bot.Faction), Landmark.Dungeon, Bot.CenterTile) is Vector2 inside)
+			wanderTarget = inside;
 		if (wanderTarget == null)
 		{
 			int x = Bot.CenterTile.X + wanderDirection * WanderTiles;

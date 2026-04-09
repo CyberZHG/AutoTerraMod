@@ -31,7 +31,7 @@ public sealed class RecipeIndex : ModSystem
 
 	static List<Recipe> ForwardRecipes(List<Recipe> recipes, Dictionary<int, HashSet<int>> ingredientsByResult)
 	{
-		bool IsReverse(Recipe recipe) => recipe.requiredItem.Any(required =>
+		bool IsReverse(Recipe recipe) => recipe.createItem.stack <= 1 && recipe.requiredItem.Any(required =>
 			ingredientsByResult.TryGetValue(required.type, out var ingredients) && ingredients.Contains(recipe.createItem.type));
 		return recipes.Where(recipe => !IsReverse(recipe)).ToList();
 	}

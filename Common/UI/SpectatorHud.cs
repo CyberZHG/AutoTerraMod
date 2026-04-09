@@ -173,7 +173,9 @@ public sealed class SpectatorHud : ModSystem
 		SmashShrineStep => Text("Plans.Smash"),
 		SurveyStep => Text("Plans.Survey"),
 		TravelStep => Text("Plans.Travel"),
+		BuildBridgeStep { Bridge: World.Highway } => Text("Plans.BuildHighway"),
 		BuildBridgeStep => Text("Tasks.BuildBridge"),
+		HangRopeStep => Text("Plans.HangRope"),
 		_ => Text("Plans.Idle")
 	};
 

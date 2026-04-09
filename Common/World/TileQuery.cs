@@ -17,7 +17,7 @@ public static class TileQuery
 
 	public static bool IsSolid(Point tile) => IsSolid(tile.X, tile.Y);
 
-	const int OceanWidth = 380;
+	public const int OceanWidth = 380;
 
 	public static bool InOcean(int x, int y) => (x < OceanWidth || x > Main.maxTilesX - OceanWidth) && y < Main.rockLayer;
 

@@ -29,6 +29,8 @@ public static class Outpost
 
 	public static int Count(Player avatar, System.Func<Item, bool> kind) => Inventory.Items(avatar).Where(kind).Sum(item => item.stack);
 
+	public static int StoneBlocks(Player avatar) => Inventory.Count(avatar, ItemID.StoneBlock) + Inventory.Count(avatar, ItemID.GrayBrick);
+
 	public static bool CarriesKit(Player avatar) => Inventory.Count(avatar, ItemID.Bed) > 0 && Count(avatar, IsDoor) > 0 && Count(avatar, IsHouseWall) >= WallsNeeded;
 
 	public static bool IsDeep(Bot bot) => bot.CenterTile.Y > Main.rockLayer && bot.CenterTile.Y < Main.UnderworldLayer - 10;
@@ -50,7 +52,7 @@ public static class Outpost
 	const float ArenaBedReach = 16f * 80f;
 	const float ArenaFightReach = 16f * 300f;
 
-	static bool BedStands(Point bed) =>
+	public static bool BedStands(Point bed) =>
 		WorldGen.InWorld(bed.X, bed.Y, 10) && Main.tile[bed.X, bed.Y].HasTile && Main.tile[bed.X, bed.Y].TileType == TileID.Beds;
 
 	public static Point? ArenaBedFor(Factions.Faction faction)
@@ -172,7 +174,7 @@ public static class Outpost
 			foreach (var tile in Interior().Concat(Shell()))
 			{
 				var here = Main.tile[tile.X, tile.Y];
-				if (here.LiquidAmount > 0 || HouseInspector.IsProtected(tile.X, tile.Y))
+				if (here.LiquidAmount > 0 || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y))
 					return false;
 				if (here.HasTile && (TileID.Sets.BasicChest[here.TileType] || !WorldGen.CanKillTile(tile.X, tile.Y)))
 					return false;

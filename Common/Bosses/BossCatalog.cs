@@ -85,7 +85,7 @@ public sealed record BossChallenge(int BossType, int[] Parts, Func<bool> IsDefea
 
 	public Landmark? DistantArena => BossType switch
 	{
-		NPCID.SkeletronHead => Landmark.Dungeon,
+		NPCID.SkeletronHead when !NPC.downedBoss3 => Landmark.Dungeon,
 		NPCID.DukeFishron => Landmark.Ocean,
 		_ => null
 	};

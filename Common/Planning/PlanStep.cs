@@ -36,7 +36,9 @@ public sealed record SmashShrineStep(Microsoft.Xna.Framework.Point Shrine) : Pla
 
 public sealed record DigShaftStep(World.Hellevator Shaft) : PlanStep;
 
-public sealed record BuildBridgeStep(World.Hellbridge Bridge, int Direction) : PlanStep;
+public sealed record BuildBridgeStep(World.ICorridor Bridge, int Direction) : PlanStep;
+
+public sealed record HangRopeStep(int X, int Top, int Bottom) : PlanStep;
 
 public sealed record BuyStep(int ItemType, int Amount, int SellerType) : PlanStep;
 

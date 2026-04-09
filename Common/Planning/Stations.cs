@@ -115,10 +115,14 @@ public static class Stations
 			yield break;
 		if (Building.BaseStorage.IsStorageItem(item))
 		{
-			foreach (var slot in settlement.Storage.ChestSlots())
-				yield return slot;
+			foreach (var room in settlement.StorageRooms.Where(room => room == settlement.Storage || Building.HouseInspector.IsComplete(faction, room)))
+				foreach (var slot in room.ChestSlots())
+					yield return slot;
 			yield break;
 		}
+		if (item.type == ItemID.Mannequin && Building.HouseInspector.IsComplete(faction, settlement.Gallery))
+			foreach (var spot in settlement.Gallery.FloorSpotsNearCenter())
+				yield return spot;
 		foreach (var spot in settlement.Workshop.FloorSpotsNearCenter())
 			yield return spot;
 		foreach (var spot in settlement.Hall.FloorSpotsNearCenter())

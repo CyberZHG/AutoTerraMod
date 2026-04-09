@@ -30,7 +30,8 @@ public enum StructurePurpose
 	Storage,
 	Workshop,
 	Bedroom,
-	GuestRoom
+	GuestRoom,
+	Gallery
 }
 
 public readonly record struct BuildOperation(BuildAction Action, Point Tile, int Structure);

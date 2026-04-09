@@ -234,6 +234,50 @@ public static class Grounds
 		return best;
 	}
 
+	const int DungeonSearchTiles = 30000;
+	const int DungeonSearchRadius = 160;
+	const int DungeonMinDepth = 12;
+	const int DungeonDoorstep = 30;
+	const int NearestDungeonFloors = 60;
+
+	static System.Collections.Generic.List<Point> dungeonFloors;
+	static (int x, int y) dungeonFloorsFor;
+
+	static bool PassableInDungeon(int x, int y)
+	{
+		var tile = Main.tile[x, y];
+		return !TileQuery.IsSolid(x, y) || tile.TileType == Terraria.ID.TileID.ClosedDoor;
+	}
+
+	static System.Collections.Generic.List<Point> DungeonInterior()
+	{
+		if (Main.dungeonX <= 0)
+			return null;
+		if (dungeonFloors != null && dungeonFloorsFor == (Main.dungeonX, Main.dungeonY))
+			return dungeonFloors;
+		dungeonFloorsFor = (Main.dungeonX, Main.dungeonY);
+		dungeonFloors = new System.Collections.Generic.List<Point>();
+		var start = new Point(Main.dungeonX, Main.dungeonY);
+		var seen = new System.Collections.Generic.HashSet<Point> { start };
+		var frontier = new System.Collections.Generic.Queue<Point>();
+		frontier.Enqueue(start);
+		while (frontier.Count > 0 && seen.Count < DungeonSearchTiles)
+		{
+			var here = frontier.Dequeue();
+			if (here.Y > Main.dungeonY + DungeonMinDepth && Main.wallDungeon[Main.tile[here.X, here.Y].WallType]
+				&& TileQuery.IsSolid(here.X, here.Y + 1) && !TileQuery.IsSolid(here.X, here.Y - 1) && !TileQuery.IsSolid(here.X, here.Y - 2))
+				dungeonFloors.Add(here);
+			foreach (var next in new[] { new Point(here.X + 1, here.Y), new Point(here.X - 1, here.Y), new Point(here.X, here.Y + 1), new Point(here.X, here.Y - 1) })
+			{
+				if (!WorldGen.InWorld(next.X, next.Y, 10) || Math.Abs(next.X - start.X) > DungeonSearchRadius || Math.Abs(next.Y - start.Y) > DungeonSearchRadius
+					|| next.Y < Main.dungeonY - DungeonMinDepth || !PassableInDungeon(next.X, next.Y) || !seen.Add(next))
+					continue;
+				frontier.Enqueue(next);
+			}
+		}
+		return dungeonFloors;
+	}
+
 	public static Vector2? PickSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
 		if (knowledge.LandmarkOf(ground) is not Point anchor || knowledge.SpanOf(ground) is not var (minX, maxX))
@@ -243,7 +287,11 @@ public static class Grounds
 			case Landmark.Underworld:
 				return new Vector2(from.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
 			case Landmark.Dungeon:
-				return new Vector2((anchor.X + Main.rand.Next(-60, 61)) * 16f, (anchor.Y + Main.rand.Next(0, DungeonRange)) * 16f);
+				if (Main.dungeonX > 0 && Math.Abs(from.X - Main.dungeonX) + Math.Abs(from.Y - Main.dungeonY) > DungeonDoorstep)
+					return (StandingSpotNear(new Point(Main.dungeonX, Main.dungeonY)) ?? new Point(Main.dungeonX, Main.dungeonY)).ToWorldCoordinates(8f, 0f);
+				return DungeonInterior() is { Count: > 0 } floors
+					? floors[Main.rand.Next(Math.Min(floors.Count, NearestDungeonFloors))].ToWorldCoordinates(8f, 0f)
+					: new Vector2((anchor.X + Main.rand.Next(-60, 61)) * 16f, (anchor.Y + Main.rand.Next(0, DungeonRange)) * 16f);
 			default:
 				int x = DensestColumn(ground, minX, maxX);
 				return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);

@@ -251,7 +251,21 @@ public sealed class OutpostTask : BotTask
 		return false;
 	}
 
-	Item Find(System.Func<Item, bool> kind) => Inventory.Items(Avatar).FirstOrDefault(kind);
+	static readonly int[] StoneMaterials = { ItemID.StoneBlock, ItemID.GrayBrick, ItemID.StoneWall, ItemID.GrayBrickWall };
+
+	Item Find(System.Func<Item, bool> kind)
+	{
+		Item fallback = null;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (!kind(item))
+				continue;
+			if (StoneMaterials.Contains(item.type))
+				return item;
+			fallback ??= item;
+		}
+		return fallback;
+	}
 
 	Point? FindAnyBed()
 	{

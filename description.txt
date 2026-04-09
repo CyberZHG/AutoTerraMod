@@ -1,5 +1,6 @@
 Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spectate or play along.
 - Gather, craft, build bases and upgrade gear; melee, ranged, magic and summoner bots.
+- Builders lay flat highways, a rope shaft to the Underworld and small houses at distant boss arenas.
 - Fight every boss from King Slime to Moon Lord and chase end-game gear.
 - Use ammo, earn and spend money, share supplies with teammates.
 - Rescue and house town NPCs; hobbies like fishing, banners, mannequins, critter cages and faction-colored dyes.
@@ -8,6 +9,7 @@ Single-player only.
 
 最多 4 个 AI 阵营（每阵营 1-6 人）按原版规则游玩泰拉瑞亚，你可以观战或一起玩。
 - 采集、合成、建造基地、升级装备；近战、射手、法师、召唤师四种职业。
+- 建房者修建水平通道、直通地狱的绳索竖井，并在远处 Boss 场地建小屋。
 - 挑战从史莱姆王到月亮领主的所有 Boss，追求终局装备。
 - 使用弹药、赚钱花钱、与队友共享物资。
 - 解救并安置城镇 NPC；钓鱼、挂旗帜、摆人体模型、养小动物、穿阵营色染料等爱好。

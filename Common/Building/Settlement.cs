@@ -9,8 +9,9 @@ public sealed class Settlement
 {
 	const int StorageWidth = 16;
 	const int WorkshopWidth = 24;
+	const int AnnexWidth = 16;
 	const int RoomWidth = 10;
-	const int ApronWidth = 5;
+	public const int ApronWidth = 5;
 	const int HallHatchInset = 2;
 	const int HallHatchWidth = 2;
 	const int RoomInteriorHeight = 5;
@@ -55,6 +56,9 @@ public sealed class Settlement
 				GuestRooms.Add(below);
 			}
 		}
+		var yardKeeper = structures[^1];
+		Vault = Add(StructurePurpose.Storage, Workshop.Right, AnnexWidth, floor, Math.Max(MinimumStorageInteriorHeight, design.InteriorHeight), design.Roof);
+		Gallery = Add(StructurePurpose.Gallery, Vault.Right, AnnexWidth, floor, design.InteriorHeight, design.Roof);
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);
 		Top = structures.Min(structure => structure.Top);
@@ -62,12 +66,15 @@ public sealed class Settlement
 		AddApron(structures.Where(structure => structure.Floor == floor).MinBy(structure => structure.Left), Left - ApronWidth, Left - 1);
 		AddApron(structures.Where(structure => structure.Floor == floor).MaxBy(structure => structure.Right), Right + 1, Right + ApronWidth);
 		Hall.AddFloorPlatforms(Hall.Left + HallHatchInset, Hall.Left + HallHatchInset + HallHatchWidth - 1);
-		structures[^1].Yard = YardTiles;
+		yardKeeper.Yard = YardTiles;
 	}
 
 	public HouseBlueprint Hall { get; }
 	public HouseBlueprint Storage { get; }
 	public HouseBlueprint Workshop { get; }
+	public HouseBlueprint Vault { get; }
+	public HouseBlueprint Gallery { get; }
+	public IEnumerable<HouseBlueprint> StorageRooms => structures.Where(structure => structure.Purpose == StructurePurpose.Storage);
 	public List<HouseBlueprint> Bedrooms { get; } = new();
 	public List<HouseBlueprint> GuestRooms { get; } = new();
 	public IReadOnlyList<HouseBlueprint> Structures => structures;

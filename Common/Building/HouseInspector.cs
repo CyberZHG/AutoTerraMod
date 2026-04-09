@@ -52,7 +52,7 @@ public static class HouseInspector
 		var probe = structure.InsideProbe;
 		if (!WorldGen.StartRoomCheck(probe.X, probe.Y))
 			return false;
-		if (structure.Purpose is StructurePurpose.Storage or StructurePurpose.Workshop)
+		if (structure.Purpose is StructurePurpose.Storage or StructurePurpose.Workshop or StructurePurpose.Gallery)
 			return true;
 		if (!WorldGen.RoomNeeds(NPCID.Guide))
 			return false;
@@ -156,7 +156,7 @@ public static class HouseInspector
 
 	public static bool IsProtected(int x, int y)
 	{
-		if (InDungeonEntrance(x, y))
+		if (InDungeonEntrance(x, y) || World.Highway.ProtectsAnyDeck(x, y))
 			return true;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
@@ -274,6 +274,15 @@ public static class HouseMaterials
 				best = Inventory.Items(avatar).FirstOrDefault(item => item.type == type);
 		}
 		return best;
+	}
+
+	const int StoneForPlatforms = 10;
+
+	public static int PlatformToObtain(Bots.Bot bot)
+	{
+		int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock) + BaseStorage.Count(bot.Faction, ItemID.StoneBlock)
+			+ 2 * (Inventory.Count(bot.Avatar, ItemID.GrayBrick) + BaseStorage.Count(bot.Faction, ItemID.GrayBrick));
+		return stone >= StoneForPlatforms && Planning.Stations.BaseHas(bot.Faction, TileID.Furnaces) ? ItemID.StonePlatform : ItemID.WoodPlatform;
 	}
 
 	public static int WallToObtain(Bots.Bot bot, HouseDesign design)

@@ -44,8 +44,12 @@ public sealed class StationGoal : ProgressionGoal
 		this.stationItems = stationItems;
 	}
 
-	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType);
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanStation(bot, stationItems);
+	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType) || Placeable().Length == 0;
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanStation(bot, Placeable());
+
+	int[] Placeable() => tileType == TileID.TeleportationPylon
+		? stationItems.Where(item => !Terraria.Main.PylonSystem.Pylons.Any(pylon => (int)pylon.TypeOfPylon == Terraria.ID.ContentSamples.ItemsByType[item].placeStyle)).ToArray()
+		: stationItems;
 }
 
 public sealed class GearGoal : ProgressionGoal
@@ -74,7 +78,7 @@ public sealed class GearGoal : ProgressionGoal
 	public System.Func<Factions.Faction, bool> LeapWhen { get; set; }
 
 	public override bool IsMet(Bot bot) => Equipment.BestPower(bot.Avatar, kind) >= requiredPower || LeapWhen?.Invoke(bot.Faction) == true || Outgrown(bot);
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainGear(bot, options);
 
 	public List<GearGoal> Successors { get; } = new();
 
@@ -95,7 +99,7 @@ public sealed class GearGoal : ProgressionGoal
 	}
 
 	bool ReadyToMake(Bot bot) =>
-		Equipment.BestPower(bot.Avatar, kind) < requiredPower && ProgressionPlanner.ObtainAny(bot, options) is CraftStep or WithdrawStep or PlaceStationStep;
+		Equipment.BestPower(bot.Avatar, kind) < requiredPower && ProgressionPlanner.ObtainGear(bot, options) is CraftStep or WithdrawStep or PlaceStationStep;
 }
 
 public sealed class ReserveGoal : ProgressionGoal
@@ -293,7 +297,8 @@ public sealed class StorageGoal : ProgressionGoal
 		int chests = BaseStorage.ChestIndices(bot.Faction).Count;
 		if (chests < MinimumChests)
 			return false;
-		return BaseStorage.FreeSlots(bot.Faction) >= SpareSlots || chests >= bot.Faction.Settlement.Storage.ChestSlots().Count();
+		return BaseStorage.FreeSlots(bot.Faction) >= SpareSlots || chests >= bot.Faction.Settlement.StorageRooms
+			.Where(room => HouseInspector.IsComplete(bot.Faction, room)).Sum(room => room.ChestSlots().Count());
 	}
 
 	public override PlanStep Plan(Bot bot)
@@ -538,16 +543,20 @@ public sealed class BossSupportGoal : ProgressionGoal
 
 public sealed class RefightGoal : ProgressionGoal
 {
+	readonly bool gearOnly;
+
+	public RefightGoal(bool gearOnly) => this.gearOnly = gearOnly;
+
 	public override bool IsExpedition => true;
 
-	public override string Describe() => "Refight";
+	public override string Describe() => gearOnly ? "Refight(gear)" : "Refight";
 
 	public override bool AppliesTo(Bot bot) => bot.Faction.RefightWishes.Count > 0 && BossGoal.IsSummoner(bot);
 
 	public override bool IsMet(Bot bot) => !Wanted(bot).Any();
 
-	static IEnumerable<Bosses.BossChallenge> Wanted(Bot bot) =>
-		Bosses.BossCatalog.Challenges.Where(challenge => bot.Faction.WantsRefight(challenge.BossType) && Bosses.BossCredit.HasDefeated(bot.Faction, challenge));
+	IEnumerable<Bosses.BossChallenge> Wanted(Bot bot) =>
+		Bosses.BossCatalog.Challenges.Where(challenge => bot.Faction.WantsRefight(challenge.BossType, gearOnly) && Bosses.BossCredit.HasDefeated(bot.Faction, challenge));
 
 	public override PlanStep Plan(Bot bot)
 	{
@@ -701,7 +710,7 @@ public sealed class OutpostKitGoal : ProgressionGoal
 
 	public override string Describe() => "OutpostKit";
 
-	public override bool AppliesTo(Bot bot) => !Outpost.IsAfield(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar);
+	public override bool AppliesTo(Bot bot) => !Outpost.IsAfield(bot) && Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter);
 
 	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar);
 
@@ -719,6 +728,62 @@ public sealed class OutpostKitGoal : ProgressionGoal
 	}
 }
 
+public sealed class HighwayGoal : ProgressionGoal
+{
+	const int BlockRestock = 60;
+	const int PlatformRestock = 20;
+	const int RopeRestock = 50;
+	static readonly int[] Ropes = { ItemID.Rope };
+
+	public override string Describe() => "Highway";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && Building.HouseInspector.IsDesignatedBuilder(bot);
+
+	public override bool IsMet(Bot bot) => false;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
+		foreach (var highway in World.Highway.For(bot.Faction))
+		{
+			if (highway.IsComplete)
+			{
+				if (highway.LinkX is int linkX && highway.LinkRows is var (top, bottom) && highway.MissingLinkRow() != null
+					&& Hang(bot, linkX, top, bottom) is { } link)
+					return link;
+				continue;
+			}
+			int frontier = highway.Frontier(highway.Direction);
+			if (highway.BlockedAt(frontier, pick))
+				continue;
+			if (!bot.Hands.HasBridgeMaterial)
+				return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BlockRestock);
+			if (highway.RequiresPlatform(frontier) && !bot.Hands.HasPlatform)
+			{
+				var platforms = ProgressionPlanner.ObtainPlatforms(bot, PlatformRestock);
+				if (platforms is BlockedStep)
+					continue;
+				return platforms;
+			}
+			return new BuildBridgeStep(highway, highway.Direction);
+		}
+		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
+		if (!shaft.IsComplete && bot.CenterTile.Y < Terraria.Main.UnderworldLayer && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
+			return dig;
+		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) ?? PlanStep.Idle;
+	}
+
+	static PlanStep Hang(Bot bot, int x, int top, int bottom)
+	{
+		if (Bots.Tasks.RopeColumnTask.MissingRow(x, top, bottom) == null)
+			return null;
+		if (bot.Hands.HasRope)
+			return new HangRopeStep(x, top, bottom);
+		var ropes = ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RopeRestock);
+		return ropes is BlockedStep or IdleStep ? null : ropes;
+	}
+}
+
 public sealed class ArenaKitGoal : ProgressionGoal
 {
 	public override string Describe() => "ArenaKit";
@@ -727,13 +792,13 @@ public sealed class ArenaKitGoal : ProgressionGoal
 
 	public static bool Reserves(Bot bot) => BossGoal.IsSummoner(bot) && Outpost.ExpectsDistantArena(bot);
 
-	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.Count(bot.Avatar, Outpost.IsBlock) >= Outpost.BlocksNeeded;
+	public override bool IsMet(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.StoneBlocks(bot.Avatar) >= Outpost.BlocksNeeded;
 
 	public override PlanStep Plan(Bot bot)
 	{
 		var avatar = bot.Avatar;
 		if (Outpost.CarriesKit(avatar))
-			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - Outpost.Count(avatar, Outpost.IsBlock));
+			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - Outpost.StoneBlocks(avatar));
 		return OutpostKitGoal.PlanKit(bot);
 	}
 }
@@ -756,7 +821,7 @@ public sealed class OutpostGoal : ProgressionGoal
 {
 	public override string Describe() => "Outpost";
 
-	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Bots.Tasks.BotTask.CarriesRecall(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
+	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
 
 	public override bool IsMet(Bot bot) => false;
 
@@ -764,6 +829,9 @@ public sealed class OutpostGoal : ProgressionGoal
 	{
 		var avatar = bot.Avatar;
 		int blocks = Outpost.Count(avatar, Outpost.IsBlock);
+		if (Outpost.StoneBlocks(avatar) < Outpost.BlocksNeeded && ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - Outpost.StoneBlocks(avatar)) is var stone
+			and not BlockedStep and not IdleStep && (blocks < Outpost.BlocksNeeded || stone is not GatherStep))
+			return stone;
 		if (blocks < Outpost.BlocksNeeded)
 			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, Inventory.Count(avatar, ItemID.StoneBlock) + Outpost.BlocksNeeded - blocks);
 		return new BuildOutpostStep();
@@ -1181,6 +1249,7 @@ public static class ProgressionGoals
 	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0;
 
 	static readonly int[] Wood = { ItemID.Wood };
+	static readonly int[] Stone = { ItemID.StoneBlock };
 	static readonly int[] Torches = { ItemID.Torch };
 
 	public static ProgressionGoal[] Build()
@@ -1199,7 +1268,7 @@ public static class ProgressionGoals
 			new BossGoal(),
 			new BossSupportGoal(),
 			new ArenaOutpostGoal(),
-			new RefightGoal(),
+			new RefightGoal(gearOnly: true),
 			new HellevatorGoal(),
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
@@ -1220,10 +1289,12 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new OutpostKitGoal());
+		goals.Add(new HighwayGoal());
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
 		goals.Add(new AcornGoal());
 		goals.Add(new DyeGoal());
+		goals.Add(new StockpileGoal("Stone", 200, 500, bot => Stone));
 		goals.Add(new StockpileGoal("Wood", 150, 300, bot => World.TreeSupply.Plentiful(bot.Faction) ? Wood : System.Array.Empty<int>()));
 		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
 		goals.Add(new StockpileGoal("Arrows", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Arrow)));
@@ -1273,6 +1344,7 @@ public static class ProgressionGoals
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new OwnGoal(ItemID.BugNet, ItemID.GoldenBugNet)));
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new CageGoal()));
 		goals.Add(new AspirationGoal(Aspiration.Angler, new OwnGoal(ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher, ItemID.WoodFishingPole)));
+		goals.Add(new RefightGoal(gearOnly: false));
 		int hardmodeStart = goals.Count;
 		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon));
 		goals.Add(new SmashAltarsGoal());

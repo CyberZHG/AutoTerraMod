@@ -50,7 +50,7 @@ public static class BaseStorage
 			var chest = Main.chest[index];
 			if (chest == null || Chest.IsLocked(chest.x, chest.y))
 				continue;
-			if (settlement.Storage.IsInterior(chest.x, chest.y) || settlement.Hall.IsInterior(chest.x, chest.y))
+			if (settlement.Hall.IsInterior(chest.x, chest.y) || settlement.StorageRooms.Any(room => room.IsInterior(chest.x, chest.y)))
 				yield return index;
 		}
 	}
