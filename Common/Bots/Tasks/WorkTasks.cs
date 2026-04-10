@@ -288,6 +288,22 @@ public sealed class CraftTask : BotTask
 		return null;
 	}
 
+	const float DoorReach = 16f * 5f;
+
+	Point? DoorOnSpot(Item item)
+	{
+		foreach (var spot in Stations.PlacementSpots(Bot.Faction, item))
+		{
+			if (!OnGround(spot))
+				continue;
+			for (int dx = 0; dx <= 1; dx++)
+				for (int dy = -1; dy <= 0; dy++)
+					if (TileQuery.TypeAt(new Point(spot.X + dx, spot.Y + dy)) == TileID.OpenDoor)
+						return new Point(spot.X + dx, spot.Y + dy);
+		}
+		return null;
+	}
+
 	static bool OnGround(Point spot) =>
 		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType]
 		|| Main.tile[spot.X, spot.Y + 1].HasTile && Main.tileTable[Main.tile[spot.X, spot.Y + 1].TileType];
@@ -314,6 +330,20 @@ public sealed class CraftTask : BotTask
 			}
 			Bot.Motor.Stop();
 			if (Bot.Hands.Dig(grave) is ToolResult.Unbreakable or ToolResult.NoTool)
+				IsFinished = true;
+			return;
+		}
+		if (spot == null && DoorOnSpot(item) is Point door)
+		{
+			if (Vector2.Distance(Bot.Center, door.ToWorldCoordinates()) > DoorReach)
+			{
+				Bot.Motor.MoveTo(door.ToWorldCoordinates(), BaseArrivalRadius);
+				if (Bot.Motor.IsStuck)
+					IsFinished = true;
+				return;
+			}
+			Bot.Motor.Stop();
+			if (!WorldGen.CloseDoor(door.X, door.Y, true))
 				IsFinished = true;
 			return;
 		}
