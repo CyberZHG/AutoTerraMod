@@ -55,8 +55,9 @@ public sealed class OpportunisticMineTask : BotTask
 	{
 		if (Inventory.IsNearlyFull(Avatar) || Bot.StoreAfterDeath && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < StoreAfterDeathReach)
 			return 0f;
-		if (target is Point known && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
+		if (target is Point known && WithinReach(known) && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
 			return Priority;
+		target = null;
 		if (Main.GameUpdateCount - scannedAt < ScanIntervalTicks || Main.GameUpdateCount < pausedUntil)
 			return 0f;
 		if (Main.GameUpdateCount - unreachableSince > ForgetUnreachableTicks)
@@ -98,6 +99,12 @@ public sealed class OpportunisticMineTask : BotTask
 			}
 		}
 		return best ?? Systems.BotWorldSystem.KnowledgeOf(Bot.Faction).NearestKnown(here, Graves, unreachable, GraveReach);
+	}
+
+	bool WithinReach(Point tile)
+	{
+		int reach = Main.tile[tile.X, tile.Y].TileType == TileID.Tombstones ? GraveReach : ScanRadius * 2;
+		return System.Math.Abs(tile.X - Bot.CenterTile.X) <= reach && System.Math.Abs(tile.Y - Bot.CenterTile.Y) <= reach;
 	}
 
 	int PickPower() => Bot.Hands.BestPickaxe?.pick ?? 0;

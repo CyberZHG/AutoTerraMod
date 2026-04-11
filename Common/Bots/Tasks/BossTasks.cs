@@ -494,7 +494,7 @@ public sealed class RallyTask : BotTask
 			Bot.Faction.Rally = null;
 			return 0f;
 		}
-		if (!Bot.Faction.RallyAssembled && Bot.Brain.PoolingForChampion)
+		if (!Bot.Faction.RallyAssembled && Bot.Brain.PoolingForChampion && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < CampGatherRadius)
 			return 0f;
 		return RallyPriority;
 	}
