@@ -159,8 +159,13 @@ public static class BossRituals
 	static bool MaySetOut(Bot bot, BossChallenge challenge, Vector2 place) =>
 		bot.Faction.Rally != null && bot.Faction.RallyLeaderId == bot.Id && challenge.WindowStillOpen || challenge.CanSetOut(FarthestTeammateTiles(bot, place));
 
-	static float FarthestTeammateTiles(Bot bot, Vector2 place) =>
-		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Select(member => Vector2.Distance(member.Center, place) / 16f).DefaultIfEmpty(0f).Max();
+	static float FarthestTeammateTiles(Bot bot, Vector2 place)
+	{
+		float viaHome = Vector2.Distance(bot.Faction.BaseCenter, place) / 16f;
+		return BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive)
+			.Select(member => System.Math.Min(Vector2.Distance(member.Center, place) / 16f, Bots.Tasks.BotTask.CarriesRecall(member.Avatar) ? viaHome : float.MaxValue))
+			.DefaultIfEmpty(0f).Max();
+	}
 
 	static PlanStep PlanSmashOrbs(Bot bot, BossChallenge challenge, SmashOrbsTrigger trigger)
 	{

@@ -663,7 +663,7 @@ public sealed class BotHands
 		}
 		var hit = npc.CalculateHitInfo(Avatar.GetWeaponDamage(weapon), direction, crit, Avatar.GetWeaponKnockback(weapon), weapon.DamageType, true, Avatar.luck);
 		BannerCredit.RecordHit(npc, bot);
-		Bosses.BossCredit.RecordDamage(npc, bot.FactionId, npc.StrikeNPC(hit));
+		Bosses.BossCredit.RecordDamage(npc, bot.FactionId, bot.Id, npc.StrikeNPC(hit));
 	}
 
 	public int ShotsFired { get; set; }

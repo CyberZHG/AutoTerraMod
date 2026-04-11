@@ -469,6 +469,8 @@ public sealed class BossGoal : ProgressionGoal
 		{
 			if (Bosses.BossCatalog.IsBossAlive(challenge))
 				return PlanStep.Idle;
+			if (bot.Faction.Rally != null && bot.Faction.RallyBossType != challenge.BossType)
+				continue;
 			var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
 			LogReadiness(bot, challenge, report);
 			if (!report.IsReady)
@@ -483,8 +485,12 @@ public sealed class BossGoal : ProgressionGoal
 					return step;
 			}
 		}
+		if (preparation != null && GearRefight.AppliesTo(bot) && !GearRefight.IsMet(bot) && GearRefight.Plan(bot) is not (BlockedStep or IdleStep))
+			return PlanStep.Idle;
 		return preparation ?? PlanStep.Idle;
 	}
+
+	static readonly RefightGoal GearRefight = new(gearOnly: true);
 
 	static PlanStep Prepare(Bot bot, Bosses.BossChallenge challenge)
 	{
@@ -1261,6 +1267,12 @@ public static class ProgressionGoals
 	static readonly int[] Stone = { ItemID.StoneBlock };
 	static readonly int[] Torches = { ItemID.Torch };
 
+	const int CrowdedFreeSlots = 20;
+
+	static bool StorageCrowded(Settlement settlement) =>
+		BotWorldSystem.Factions.FirstOrDefault(faction => faction.Settlement == settlement) is { } owner
+		&& HouseInspector.IsComplete(owner, settlement.Storage) && BaseStorage.FreeSlots(owner) < CrowdedFreeSlots;
+
 	public static ProgressionGoal[] Build()
 	{
 		var goals = new List<ProgressionGoal>
@@ -1299,6 +1311,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new OutpostKitGoal());
 		goals.Add(new StorageGoal());
+		goals.Add(new StructureGoal(settlement => StorageCrowded(settlement) ? new[] { settlement.Vault } : System.Array.Empty<HouseBlueprint>()));
 		goals.Add(new RopeGoal());
 		goals.Add(new AcornGoal());
 		goals.Add(new DyeGoal());
@@ -1310,6 +1323,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
+		goals.Add(new StructureGoal(settlement => new[] { settlement.Vault, settlement.Gallery }));
 		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));

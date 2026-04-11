@@ -14,6 +14,30 @@ public static class BossDrops
 
 	public static BossChallenge SourceOf(int itemType) => (sourceByItem ??= Build()).GetValueOrDefault(itemType);
 
+	static Dictionary<int, int> bagByBoss;
+
+	public static int? BagOf(BossChallenge challenge)
+	{
+		bagByBoss ??= BuildBags();
+		return bagByBoss.TryGetValue(challenge.BossType, out int bag) ? bag : null;
+	}
+
+	static Dictionary<int, int> BuildBags()
+	{
+		var map = new Dictionary<int, int>();
+		var drops = new List<DropRateInfo>();
+		foreach (var challenge in BossCatalog.Challenges)
+		{
+			drops.Clear();
+			Report(Main.ItemDropsDB.GetRulesForNPCID(challenge.BossType, false), drops);
+			foreach (int part in challenge.Parts)
+				Report(Main.ItemDropsDB.GetRulesForNPCID(part, false), drops);
+			if (drops.FirstOrDefault(drop => ItemID.Sets.BossBag[drop.itemId]) is { itemId: > 0 } bag)
+				map[challenge.BossType] = bag.itemId;
+		}
+		return map;
+	}
+
 	static Dictionary<int, BossChallenge> Build()
 	{
 		var map = new Dictionary<int, BossChallenge>();

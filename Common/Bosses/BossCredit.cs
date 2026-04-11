@@ -17,17 +17,22 @@ public sealed class BossCredit : GlobalNPC
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId, int botId)> shots = new();
+	static readonly Dictionary<int, HashSet<int>> fightersByFight = new();
 
 	public static void Reset()
 	{
 		damageByFight.Clear();
+		fightersByFight.Clear();
 		shots.Clear();
 	}
 
 	public static void ForgetIfOver(BossChallenge challenge)
 	{
 		if (!BossCatalog.IsBossAlive(challenge))
+		{
 			damageByFight.Remove(challenge.BossType);
+			fightersByFight.Remove(challenge.BossType);
+		}
 	}
 
 	public static string DescribeFight(BossChallenge challenge) =>
@@ -51,7 +56,7 @@ public sealed class BossCredit : GlobalNPC
 	public static int? ShooterFaction(Projectile projectile) =>
 		shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity ? shot.factionId : null;
 
-	public static void RecordDamage(NPC target, int factionId, int damage)
+	public static void RecordDamage(NPC target, int factionId, int botId, int damage)
 	{
 		var challenge = BossCatalog.ChallengeOf(target.type);
 		if (challenge == null || damage <= 0)
@@ -59,6 +64,9 @@ public sealed class BossCredit : GlobalNPC
 		if (!damageByFight.TryGetValue(challenge.BossType, out var byFaction))
 			damageByFight[challenge.BossType] = byFaction = new Dictionary<int, long>();
 		byFaction[factionId] = byFaction.GetValueOrDefault(factionId) + damage;
+		if (!fightersByFight.TryGetValue(challenge.BossType, out var fighters))
+			fightersByFight[challenge.BossType] = fighters = new HashSet<int>();
+		fighters.Add(botId);
 	}
 
 	public static bool HasDefeated(Faction faction, BossChallenge challenge) =>
@@ -75,7 +83,7 @@ public sealed class BossCredit : GlobalNPC
 	public override void OnHitByProjectile(NPC npc, Projectile projectile, NPC.HitInfo hit, int damageDone)
 	{
 		if (shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity)
-			RecordDamage(npc, shot.factionId, damageDone);
+			RecordDamage(npc, shot.factionId, shot.botId, damageDone);
 	}
 
 	public override void OnKill(NPC npc)
@@ -83,6 +91,8 @@ public sealed class BossCredit : GlobalNPC
 		var challenge = BossCatalog.ChallengeOf(npc.type);
 		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.Remove(challenge.BossType, out var byFaction))
 			return;
+		if (fightersByFight.Remove(challenge.BossType, out var fighters))
+			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
 		long best = byFaction.Values.Max();
 		var credited = byFaction
@@ -100,6 +110,21 @@ public sealed class BossCredit : GlobalNPC
 		BotDiagnostics.LogWorld($"boss {challenge.Name} defeated; damage shares: {shares}; credited: {string.Join(", ", credited.Select(faction => faction.Name))}");
 		foreach (var faction in credited)
 			Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.BossCredited", faction.Name, challenge.Name, shares), faction.Color);
+	}
+
+	static void HandOutBags(BossChallenge challenge, HashSet<int> fighters)
+	{
+		if (!Main.expertMode || BossDrops.BagOf(challenge) is not int bag)
+			return;
+		foreach (int botId in fighters)
+		{
+			if (BotWorldSystem.FindBot(botId) is not Bot fighter)
+				continue;
+			var leftover = Inventory.Add(fighter.Avatar, new Item(bag));
+			if (!leftover.IsAir)
+				Item.NewItem(Entity.GetSource_None(), fighter.Center, bag);
+			BotDiagnostics.Log(fighter, $"received {Lang.GetItemNameValue(bag)}");
+		}
 	}
 
 	static bool OtherPartsAlive(BossChallenge challenge, NPC dying) =>

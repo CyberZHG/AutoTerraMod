@@ -404,7 +404,7 @@ public static class ProgressionPlanner
 		if (CanAffordEasily(context.Bot, itemType, amount - have))
 			return PlanPurchase(context.Bot, itemType, amount - have);
 		var source = ResourceSources.For(itemType);
-		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes)))
+		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes) || FarmedFromBoss(context.Bot, itemType)))
 		{
 			WishBossDrop(context.Bot, itemType);
 			return PlanStep.Blocked;
@@ -444,6 +444,9 @@ public static class ProgressionPlanner
 			gearPlanning--;
 		}
 	}
+
+	static bool FarmedFromBoss(Bot bot, int itemType) =>
+		Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss);
 
 	static void WishBossDrop(Bot bot, int itemType)
 	{
