@@ -37,7 +37,12 @@ public static class Outpost
 
 	const int AfieldTiles = 100;
 
-	public static bool IsAfield(Bot bot) => IsDeep(bot) || System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X) > AfieldTiles;
+	const int HighwayReach = 12;
+
+	public static bool IsAfield(Bot bot) => IsDeep(bot) || System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X) > AfieldTiles && !OnHighway(bot);
+
+	static bool OnHighway(Bot bot) =>
+		World.Highway.For(bot.Faction).Any(highway => highway.Spans(bot.CenterTile.X) && System.Math.Abs(bot.CenterTile.Y - highway.Y) < HighwayReach);
 
 	public static bool WantsNew(Bot bot)
 	{

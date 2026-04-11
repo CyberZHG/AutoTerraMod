@@ -87,7 +87,8 @@ public sealed class Bot
 			return;
 		sessionCheckedAt = Main.GameUpdateCount;
 		var here = CenterTile;
-		bool underground = here.Y > World.TileQuery.SurfaceY(here.X) + UndergroundDepth && Faction.Settlement?.Contains(here.X, here.Y) != true;
+		bool underground = here.Y > World.TileQuery.SurfaceY(here.X) + UndergroundDepth && Faction.Settlement?.Contains(here.X, here.Y) != true
+			&& Brain.Plan is not (Planning.BuildBridgeStep or Planning.HangRopeStep) && !World.Highway.InAnyClearance(here.X, here.Y);
 		if (!underground)
 			undergroundSince = 0;
 		else if (undergroundSince == 0)

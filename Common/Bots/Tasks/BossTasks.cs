@@ -702,7 +702,7 @@ public sealed class TravelTask : BotTask
 
 public sealed class BuildBridgeTask : BotTask
 {
-	const float StandTolerance = 16f * 3f;
+	const float StandTolerance = 16f * 2f;
 
 	BuildBridgeStep step;
 
@@ -732,7 +732,7 @@ public sealed class BuildBridgeTask : BotTask
 		var stand = new Vector2(PathFinder.CenterXOf(frontier - 2 * direction), (bridge.Y + 1) * 16f - 21f);
 		if (Vector2.Distance(Bot.Center, stand) > StandTolerance)
 		{
-			if (!TravelOrTunnel(stand, StandTolerance * 0.5f))
+			if (!TravelOrTunnel(stand, 12f))
 			{
 				BotDiagnostics.Log(Bot, $"cannot reach bridge frontier {frontier}; motor: {Bot.Motor.Describe()}{TerrainDump.Around(new Point(frontier, bridge.Y), 16, 8)}");
 				IsFinished = true;

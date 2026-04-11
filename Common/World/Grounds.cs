@@ -234,8 +234,8 @@ public static class Grounds
 		return best;
 	}
 
-	const int DungeonSearchTiles = 30000;
-	const int DungeonSearchRadius = 160;
+	const int DungeonSearchTiles = 150000;
+	const int DungeonSearchRadius = 320;
 	const int DungeonMinDepth = 12;
 	const int DungeonDoorstep = 30;
 	const int NearestDungeonFloors = 60;
@@ -264,7 +264,7 @@ public static class Grounds
 		while (frontier.Count > 0 && seen.Count < DungeonSearchTiles)
 		{
 			var here = frontier.Dequeue();
-			if (here.Y > Main.dungeonY + DungeonMinDepth && Main.wallDungeon[Main.tile[here.X, here.Y].WallType]
+			if (here.Y > Main.worldSurface + DungeonMinDepth && Main.wallDungeon[Main.tile[here.X, here.Y].WallType]
 				&& TileQuery.IsSolid(here.X, here.Y + 1) && !TileQuery.IsSolid(here.X, here.Y - 1) && !TileQuery.IsSolid(here.X, here.Y - 2))
 				dungeonFloors.Add(here);
 			foreach (var next in new[] { new Point(here.X + 1, here.Y), new Point(here.X - 1, here.Y), new Point(here.X, here.Y + 1), new Point(here.X, here.Y - 1) })

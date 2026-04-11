@@ -275,6 +275,7 @@ public sealed class RopeGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) => RopeCount(bot.Avatar) >= Minimum;
 
 	static readonly int[] Ropes = { ItemID.Rope };
+	static readonly HashSet<int> restocking = new();
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RestockTo);
 
@@ -734,6 +735,7 @@ public sealed class HighwayGoal : ProgressionGoal
 	const int PlatformRestock = 20;
 	const int RopeRestock = 50;
 	static readonly int[] Ropes = { ItemID.Rope };
+	static readonly HashSet<int> restocking = new();
 
 	public override string Describe() => "Highway";
 
@@ -758,12 +760,19 @@ public sealed class HighwayGoal : ProgressionGoal
 				continue;
 			if (!bot.Hands.HasBridgeMaterial)
 				return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BlockRestock);
-			if (highway.RequiresPlatform(frontier) && !bot.Hands.HasPlatform)
+			int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
+			if (carried == 0 && highway.RequiresPlatform(frontier))
+				restocking.Add(bot.Id);
+			if (carried >= PlatformRestock)
+				restocking.Remove(bot.Id);
+			if (restocking.Contains(bot.Id))
 			{
 				var platforms = ProgressionPlanner.ObtainPlatforms(bot, PlatformRestock);
-				if (platforms is BlockedStep)
+				if (platforms is not BlockedStep)
+					return platforms;
+				restocking.Remove(bot.Id);
+				if (carried == 0)
 					continue;
-				return platforms;
 			}
 			return new BuildBridgeStep(highway, highway.Direction);
 		}
@@ -1289,7 +1298,6 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Storage }));
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new OutpostKitGoal());
-		goals.Add(new HighwayGoal());
 		goals.Add(new StorageGoal());
 		goals.Add(new RopeGoal());
 		goals.Add(new AcornGoal());
@@ -1302,6 +1310,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
+		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		AddOreTier(goals,

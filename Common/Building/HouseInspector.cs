@@ -170,12 +170,17 @@ public static class HouseInspector
 	const uint BuilderShiftTicks = 60 * 60 * 60;
 
 	const uint BuilderCacheTicks = 60;
-	static readonly Dictionary<int, (uint at, int botId)> builders = new();
+	static readonly Dictionary<int, (uint at, uint shift, int botId)> builders = new();
 
 	public static bool IsDesignatedBuilder(Bot bot)
 	{
+		uint shift = Main.GameUpdateCount / BuilderShiftTicks;
 		if (!builders.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= BuilderCacheTicks)
-			builders[bot.FactionId] = cached = (Main.GameUpdateCount, PickBuilder(bot.FactionId));
+		{
+			bool keep = cached.shift == shift && BotWorldSystem.Bots.FirstOrDefault(member => member.Id == cached.botId) is { IsAlive: true, CommittedToMining: false } current
+				&& current.FactionId == bot.FactionId;
+			builders[bot.FactionId] = cached = (Main.GameUpdateCount, shift, keep ? cached.botId : PickBuilder(bot.FactionId));
+		}
 		return cached.botId == bot.Id;
 	}
 
