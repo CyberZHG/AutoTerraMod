@@ -36,7 +36,7 @@ public sealed class TidyCampTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > MaxTidyDistance)
+		if (Bot.Faction.Settlement is not { } settlement || !NearCamp(settlement))
 			return 0f;
 		if (!Building.HouseInspector.IsDesignatedBuilder(Bot))
 		{
@@ -53,7 +53,14 @@ public sealed class TidyCampTask : BotTask
 		return 42f + Traits.Building * 10f;
 	}
 
-	const float MaxTidyDistance = 16f * 120f;
+	const int TidySlack = 20;
+
+	bool NearCamp(Building.Settlement settlement)
+	{
+		var here = Bot.CenterTile;
+		return here.X >= settlement.Left - CampMargin - TidySlack && here.X <= settlement.Right + CampMargin + TidySlack
+			&& here.Y >= settlement.Top - CampRowsAbove - TidySlack && here.Y <= settlement.Floor + CampRowsBelow + TidySlack;
+	}
 	const uint TargetPatienceTicks = 300;
 	Point? workingOn;
 	uint workingSince;

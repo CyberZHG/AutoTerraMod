@@ -369,7 +369,7 @@ public static class ProgressionPlanner
 		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
 			return null;
-		int stored = context.Fresh && depth == 0 ? 0 : BaseStorage.Count(context.Bot.Faction, itemType);
+		int stored = context.Fresh && depth == 0 || !Inventory.HasRoomForType(context.Bot.Avatar, itemType) ? 0 : BaseStorage.Count(context.Bot.Faction, itemType);
 		bool awayFromBase = !Shops.WithinShoppingTrip(context.Bot, context.Bot.Faction.BaseCenter);
 		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));

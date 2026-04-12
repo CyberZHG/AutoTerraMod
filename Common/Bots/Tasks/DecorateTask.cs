@@ -13,6 +13,18 @@ public sealed class DecorateTask : BotTask
 	Item decor;
 	Point? spot;
 	bool hanging;
+	int failedPlacements;
+	const int PlacementAttempts = 30;
+	const uint FailedSpotTicks = 3600;
+	static readonly System.Collections.Generic.Dictionary<Point, uint> failedSpots = new();
+
+	static bool Usable(Point tile) => !failedSpots.TryGetValue(tile, out uint at) || Main.GameUpdateCount - at >= FailedSpotTicks;
+
+	public override void Start()
+	{
+		base.Start();
+		failedPlacements = 0;
+	}
 
 	public DecorateTask(Bot bot) : base(bot) { }
 
@@ -51,7 +63,7 @@ public sealed class DecorateTask : BotTask
 			for (int x = structure.Left + DoorSwing + 1; x < structure.Right - DoorSwing; x++)
 			{
 				var candidate = new Point(x, structure.Ceiling + 1);
-				if (World.TileQuery.IsSolid(x, structure.Ceiling) && Bot.Hands.CanPlaceAt(item, candidate))
+				if (World.TileQuery.IsSolid(x, structure.Ceiling) && Usable(candidate) && Bot.Hands.CanPlaceAt(item, candidate))
 					return candidate;
 			}
 		}
@@ -59,7 +71,7 @@ public sealed class DecorateTask : BotTask
 	}
 
 	Point? FloorSpot(Item item) =>
-		Planning.Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Bot.Hands.CanPlaceAt(item, candidate.Value));
+		Planning.Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 
 	public override void Tick()
 	{
@@ -80,6 +92,14 @@ public sealed class DecorateTask : BotTask
 		if (Bot.Hands.Place(decor, target))
 		{
 			BotDiagnostics.Log(Bot, $"put up {name} at {target}");
+			IsFinished = true;
+		}
+		else if (Bot.Hands.Ready && ++failedPlacements >= PlacementAttempts)
+		{
+			if (failedSpots.Count > 256)
+				failedSpots.Clear();
+			failedSpots[target] = Main.GameUpdateCount;
+			BotDiagnostics.Log(Bot, $"cannot put up {name} at {target}");
 			IsFinished = true;
 		}
 	}
