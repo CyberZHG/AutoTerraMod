@@ -164,8 +164,12 @@ public static class Stations
 					yield return slot;
 			yield break;
 		}
-		if (item.type == ItemID.Mannequin && Building.HouseInspector.IsComplete(faction, settlement.Gallery))
+		bool hobby = item.type == ItemID.Mannequin || Bots.Tasks.NaturalistTask.IsCage(item);
+		if (hobby && Building.HouseInspector.IsComplete(faction, settlement.Gallery))
 			foreach (var spot in settlement.Gallery.FloorSpotsNearCenter())
+				yield return spot;
+		if (hobby)
+			foreach (var spot in HighwaySpots(faction))
 				yield return spot;
 		foreach (var spot in settlement.Workshop.FloorSpotsNearCenter())
 			yield return spot;
@@ -189,7 +193,24 @@ public static class Stations
 		}
 	}
 
-	const int OutdoorPlacementRange = 30;
+	const int HighwayDisplayEvery = 8;
+	const int HighwayDisplayReach = 120;
+
+	static IEnumerable<Point> HighwaySpots(Faction faction)
+	{
+		foreach (var highway in World.Highway.For(faction))
+		{
+			for (int step = HighwayDisplayEvery; step <= HighwayDisplayReach; step += HighwayDisplayEvery)
+			{
+				int x = highway.StartX + highway.Direction * step;
+				if (!highway.Spans(x) || !highway.IsBuilt(x) || !highway.IsBuilt(x + 1) || !highway.IsBuilt(x - 1))
+					break;
+				yield return new Point(x, highway.Y);
+			}
+		}
+	}
+
+		const int OutdoorPlacementRange = 30;
 	const int OutdoorClearance = 2;
 
 	static IEnumerable<int> OutdoorColumns(Faction faction)

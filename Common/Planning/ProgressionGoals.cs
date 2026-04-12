@@ -477,7 +477,9 @@ public sealed class BossGoal : ProgressionGoal
 	public static bool IsSummoner(Bot bot) =>
 		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Combat) == bot;
 
-	public override PlanStep Plan(Bot bot)
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.WithGearPriority(() => PlanBoss(bot));
+
+	PlanStep PlanBoss(Bot bot)
 	{
 		if (Terraria.Main.GameUpdateCount < bot.Faction.RallyCooldownUntil)
 			return PlanStep.Idle;
@@ -1399,7 +1401,8 @@ public static class ProgressionGoals
 			swords: new int[] { ItemID.FieryGreatsword },
 			bows: new int[] { ItemID.MoltenFury },
 			staffs: new int[] { ItemID.Flamelash },
-			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) });
+			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) },
+			leapWhen: ReadyForWall);
 		goals.Add(new AspirationGoal(Aspiration.Collector, new OwnGoal(ItemID.Mannequin)));
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new OwnGoal(ItemID.BugNet, ItemID.GoldenBugNet)));
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new CageGoal()));
@@ -1534,6 +1537,21 @@ public static class ProgressionGoals
 
 	static bool BeatenEvilBoss(Factions.Faction faction) =>
 		Beaten(faction, NPCID.EyeofCthulhu) && (Beaten(faction, NPCID.EaterofWorldsHead) || Beaten(faction, NPCID.BrainofCthulhu));
+
+	const uint WallReadinessTicks = 600;
+	static readonly Dictionary<int, (uint at, bool ready)> wallReadiness = new();
+
+	static bool ReadyForWall(Factions.Faction faction)
+	{
+		if (Main.hardMode || Beaten(faction, NPCID.WallofFlesh))
+			return true;
+		if (wallReadiness.TryGetValue(faction.Id, out var cached) && Main.GameUpdateCount - cached.at < WallReadinessTicks)
+			return cached.ready;
+		var summoner = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).MaxBy(member => member.Personality.Combat);
+		bool ready = summoner != null && Bosses.BossCatalog.ChallengeOf(NPCID.WallofFlesh) is { } wall && Bosses.BossReadiness.Evaluate(faction, wall, summoner).IsReady;
+		wallReadiness[faction.Id] = (Main.GameUpdateCount, ready);
+		return ready;
+	}
 
 	static bool BeatenMechBoss(Factions.Faction faction) =>
 		Beaten(faction, NPCID.TheDestroyer) || Beaten(faction, NPCID.Retinazer) || Beaten(faction, NPCID.SkeletronPrime);

@@ -288,7 +288,20 @@ public sealed class CraftTask : BotTask
 		return null;
 	}
 
-	const float DoorReach = 16f * 5f;
+	const uint FailedSpotTicks = 7200;
+	static readonly Dictionary<Point, uint> failedSpots = new();
+
+	static bool Usable(Point spot) => !failedSpots.TryGetValue(spot, out uint at) || Main.GameUpdateCount - at >= FailedSpotTicks;
+
+	void ForgetSpot(Point spot, string itemName)
+	{
+		if (failedSpots.Count > 256)
+			failedSpots.Clear();
+		failedSpots[spot] = Main.GameUpdateCount;
+		BotDiagnostics.Log(Bot, $"cannot reach {spot} to place {itemName}; trying another spot");
+	}
+
+		const float DoorReach = 16f * 5f;
 
 	Point? DoorOnSpot(Item item)
 	{
@@ -317,9 +330,9 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
+		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 		if (spot == null && FlattenFloors(item))
-			spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
+			spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 		if (spot == null && GraveOnSpot(item) is Point grave)
 		{
 			if (!Bot.Hands.CanReach(Bot.Hands.BestPickaxe, grave))
@@ -358,7 +371,10 @@ public sealed class CraftTask : BotTask
 		{
 			Bot.Motor.MoveTo(target.ToWorldCoordinates(), BaseArrivalRadius);
 			if (Bot.Motor.IsStuck)
+			{
+				ForgetSpot(target, item.Name);
 				IsFinished = true;
+			}
 			return;
 		}
 		Bot.Motor.Stop();

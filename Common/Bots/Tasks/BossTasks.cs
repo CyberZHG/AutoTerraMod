@@ -23,7 +23,7 @@ public sealed class SummonTask : BotTask
 	const float BelowCampTolerance = 16f * 3f;
 	const float ArrivalRadius = 16f * 10f;
 	const float StuckAcceptRadius = 16f * 25f;
-	const float RecallHomeDistance = 16f * 80f;
+	const float CampRecallReach = 16f * 25f;
 	const float DistantArenaReach = 16f * 100f;
 	const int DistantRallyTicks = 5 * 3600;
 	const float OldManSearchRadius = 16f * 150f;
@@ -116,7 +116,7 @@ public sealed class SummonTask : BotTask
 		}
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
-		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > RecallHomeDistance && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > CampRecallReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
 			return false;
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
@@ -468,8 +468,19 @@ public sealed class RallyTask : BotTask
 	const float CampGatherRadius = 16f * 60f;
 	const uint OrphanGraceTicks = 300;
 
-	bool RecallShortensTrip(Vector2 target) =>
-		CarriesRecall(Avatar) && Vector2.Distance(Bot.Center, target) - Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) > RecallTripDistance;
+	const float CampRecallDistance = 16f * 25f;
+
+	bool RecallShortensTrip(Vector2 target)
+	{
+		if (!CarriesRecall(Avatar))
+			return false;
+		var tile = target.ToTileCoordinates();
+		var here = Bot.CenterTile;
+		var camp = Bot.Faction.Settlement;
+		if (camp != null && camp.Contains(tile.X, tile.Y) && !camp.Contains(here.X, here.Y) && Vector2.Distance(Bot.Center, target) > CampRecallDistance)
+			return true;
+		return Vector2.Distance(Bot.Center, target) - Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) > RecallTripDistance;
+	}
 
 	public static bool Joined(Bot member, Vector2 point, float radius) =>
 		member.IsAlive && member.Npc is NPC body && Vector2.Distance(body.Center, point) < radius

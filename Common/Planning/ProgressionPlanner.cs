@@ -460,6 +460,19 @@ public static class ProgressionPlanner
 
 	static int gearPlanning;
 
+	public static PlanStep WithGearPriority(System.Func<PlanStep> plan)
+	{
+		gearPlanning++;
+		try
+		{
+			return plan();
+		}
+		finally
+		{
+			gearPlanning--;
+		}
+	}
+
 	public static PlanStep ObtainGear(Bot bot, int[] options)
 	{
 		gearPlanning++;

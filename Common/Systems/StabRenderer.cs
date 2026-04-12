@@ -18,14 +18,14 @@ public static class StabRenderer
 
 	public static void Draw(IEnumerable<Bot> bots)
 	{
-		var stabbing = bots.Where(bot => IsStabbing(bot) || IsThrowingYoyo(bot)).ToList();
+		var stabbing = bots.Where(bot => IsStabbing(bot) || IsThrowing(bot)).ToList();
 		if (stabbing.Count == 0)
 			return;
 		var spriteBatch = Main.spriteBatch;
 		spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, Main.DefaultSamplerState, DepthStencilState.None, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
 		foreach (var bot in stabbing)
 		{
-			if (IsThrowingYoyo(bot))
+			if (IsThrowing(bot))
 				DrawYoyo(spriteBatch, bot);
 			else
 				DrawStab(spriteBatch, bot);
@@ -40,11 +40,12 @@ public static class StabRenderer
 		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.useStyle == ItemUseStyleID.Rapier;
 	}
 
-	static bool IsThrowingYoyo(Bot bot)
+	static bool IsThrowing(Bot bot)
 	{
 		var avatar = bot.Avatar;
 		var item = avatar.lastVisualizedSelectedItem;
-		return avatar.itemAnimation > 0 && item != null && !item.IsAir && BotHands.IsYoyo(item) && item.shoot > ProjectileID.None;
+		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.shoot > ProjectileID.None && item.useStyle != ItemUseStyleID.Rapier
+			&& (BotHands.IsYoyo(item) || item.noUseGraphic && item.DamageType.CountsAsClass(Terraria.ModLoader.DamageClass.Melee));
 	}
 
 	const float YoyoSpinTurns = 6f;
@@ -64,7 +65,8 @@ public static class StabRenderer
 		var position = Vector2.Lerp(hand, target, (float)Math.Sin(progress * MathHelper.Pi));
 		var line = position - hand;
 		var light = Lighting.GetColor(position.ToTileCoordinates());
-		spriteBatch.Draw(TextureAssets.MagicPixel.Value, hand - Main.screenPosition, new Rectangle(0, 0, 1, 1), YoyoString.MultiplyRGB(light), line.ToRotation(), Vector2.Zero, new Vector2(line.Length(), 1f), SpriteEffects.None, 0f);
+		if (BotHands.IsYoyo(item))
+			spriteBatch.Draw(TextureAssets.MagicPixel.Value, hand - Main.screenPosition, new Rectangle(0, 0, 1, 1), YoyoString.MultiplyRGB(light), line.ToRotation(), Vector2.Zero, new Vector2(line.Length(), 1f), SpriteEffects.None, 0f);
 		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, progress * MathHelper.TwoPi * YoyoSpinTurns, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
 	}
 
