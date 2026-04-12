@@ -355,7 +355,12 @@ public static class ProgressionPlanner
 			if (context.Count(item) > 0)
 				return new PlaceStationStep(item);
 		}
-		return ObtainAny(context, stationItems, depth, allowGrind: false);
+		if (Stations.TeammateFetching(context.Bot, stationItems))
+			return PlanStep.Blocked;
+		var step = ObtainAny(context, stationItems, depth, allowGrind: false);
+		if (step is GatherStep or ScoutStep)
+			Stations.ClaimFetch(context.Bot, stationItems);
+		return step;
 	}
 
 	static int resolveCalls;

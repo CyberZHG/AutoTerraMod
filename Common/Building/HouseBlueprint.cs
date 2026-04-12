@@ -146,7 +146,10 @@ public sealed class HouseBlueprint
 		if (Purpose != StructurePurpose.Storage)
 			yield break;
 		for (int x = Left + 1; x + ChestWidth - 1 < Right; x += ChestWidth)
-			yield return new Point(x, Floor - 1);
+		{
+			if (x > Left + 1 && x + ChestWidth - 1 < Right - 1)
+				yield return new Point(x, Floor - 1);
+		}
 		if (!HasShelf)
 			yield break;
 		for (int x = Left + 2; x + ChestWidth - 1 <= Right - 2; x += ChestWidth)
@@ -191,7 +194,7 @@ public sealed class HouseBlueprint
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))
 			yield return Operation(BuildAction.PlaceTorch, new Point(center, Ceiling + 1));
 		if (Purpose == StructurePurpose.Bedroom && !InteriorHas(new int[] { TileID.Beds }))
-			yield return Operation(BuildAction.PlaceBed, new Point(Left + 2, Floor - 1));
+			yield return Operation(BuildAction.PlaceBed, new Point(Left + 3, Floor - 1));
 		if (Purpose != StructurePurpose.Storage)
 		{
 			if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTable))
@@ -217,7 +220,7 @@ public sealed class HouseBlueprint
 	public IEnumerable<Point> FurnitureSpots(Point preferred)
 	{
 		yield return preferred;
-		for (int x = Left + 2; x < Right - 1; x++)
+		for (int x = Left + 3; x < Right - 2; x++)
 		{
 			if (x != preferred.X)
 				yield return new Point(x, Floor - 1);
@@ -230,7 +233,7 @@ public sealed class HouseBlueprint
 		{
 			foreach (int x in new[] { center + offset, center - offset })
 			{
-				if (x > Left + 1 && x < Right - 1 && !IsPlatformSpot(new Point(x, Floor)) && !NearHatch(x))
+				if (x > Left + 2 && x < Right - 2 && !IsPlatformSpot(new Point(x, Floor)) && !NearHatch(x))
 					yield return new Point(x, Floor - 1);
 			}
 		}
@@ -357,20 +360,8 @@ public sealed class HouseBlueprint
 
 	bool InteriorHas(int[] tileTypes) => InteriorTiles().Any(tile => HasTileOfSet(tile.X, tile.Y, tileTypes));
 
-	IEnumerable<Point> SwingToClear(int doorX)
-	{
-		if (Main.tile[doorX, Floor - 2].TileType != TileID.ClosedDoor)
-			return Enumerable.Empty<Point>();
-		var left = SwingBlockers(doorX - 1);
-		var right = SwingBlockers(doorX + 1);
-		if (left.Count == 0 || right.Count == 0)
-			return Enumerable.Empty<Point>();
-		bool leftPrecious = left.Any(IsPrecious);
-		bool rightPrecious = right.Any(IsPrecious);
-		if (leftPrecious && rightPrecious)
-			return Enumerable.Empty<Point>();
-		return leftPrecious || !rightPrecious && right.Count < left.Count ? right : left;
-	}
+	IEnumerable<Point> SwingToClear(int doorX) =>
+		SwingBlockers(doorX - 1).Concat(SwingBlockers(doorX + 1)).Where(tile => !IsPrecious(tile));
 
 	List<Point> SwingBlockers(int x)
 	{
@@ -387,7 +378,13 @@ public sealed class HouseBlueprint
 	bool IsPrecious(Point tile)
 	{
 		int type = Main.tile[tile.X, tile.Y].TileType;
-		return IsShell(tile.X, tile.Y) || TileID.Sets.BasicChest[type] || type == TileID.Beds || type == TileID.DemonAltar;
+		return IsShell(tile.X, tile.Y) || TileQuery.IsSolid(tile.X, tile.Y) || type == TileID.DemonAltar || TileID.Sets.BasicChest[type] && !IsEmptyChest(tile);
+	}
+
+	static bool IsEmptyChest(Point tile)
+	{
+		int index = Chest.FindChestByGuessing(tile.X, tile.Y);
+		return index >= 0 && Main.chest[index].item.All(item => item == null || item.IsAir);
 	}
 
 	static bool IsRealDoor(int x, int y) =>

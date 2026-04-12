@@ -620,6 +620,8 @@ public sealed class PickupTask : BotTask
 		Detail = item.Name;
 		if (item.type == ItemID.FallenStar)
 			return 58f;
+		if (Bosses.BossCredit.RecentLootPoint is Vector2 loot && Vector2.Distance(item.Center, loot) < BossLootRadius)
+			return BossLootPriority;
 		if ((item.timeSinceItemSpawned < FreshDropTicks || IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
 			return FreshDropPriority;
 		bool planned = Bot.Brain.Plan is GatherStep gather && gather.ItemType == item.type;
@@ -627,6 +629,8 @@ public sealed class PickupTask : BotTask
 	}
 
 	const float FreshDropRadius = 16f * 8f;
+	const float BossLootRadius = 16f * 50f;
+	const float BossLootPriority = 90f;
 	const float FreshDropPriority = 86f;
 	const int FreshDropTicks = 600;
 
@@ -641,7 +645,8 @@ public sealed class PickupTask : BotTask
 		if (fallenStar >= 0)
 			return fallenStar;
 		int nearest = -1;
-		float nearestDistance = SearchRadius;
+		var loot = Bosses.BossCredit.RecentLootPoint;
+		float nearestDistance = loot is Vector2 spot && Vector2.Distance(spot, Bot.Center) < BossLootRadius ? BossLootRadius * 2f : SearchRadius;
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];

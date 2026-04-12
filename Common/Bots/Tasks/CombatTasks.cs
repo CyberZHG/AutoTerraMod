@@ -29,7 +29,8 @@ public sealed class FleeTask : BotTask
 	const float BossFightRadius = 16f * 120f;
 
 	bool InBossFight() =>
-		Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossFightRadius) is NPC boss && !Bot.IsIgnoring(boss);
+		Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossFightRadius) is NPC boss && !Bot.IsIgnoring(boss)
+		&& (!Bosses.BossCredit.SummonedByOther(boss, Bot.FactionId) || Vector2.Distance(Bot.Center, boss.Center) <= 16f * 50f);
 
 	bool HoldingArena(NPC npc) =>
 		Bosses.BossCatalog.ChallengeOf(npc.type) is { Arena: World.Landmark arena } && Bosses.BossChallenge.InArena(Avatar, arena);
@@ -63,6 +64,7 @@ public sealed class FightTask : BotTask
 	public override bool IsUrgent => closeThreat;
 
 	const float BossEngagementRange = 16f * 400f;
+	const float ForeignBossReach = 16f * 50f;
 	const float BossApproachDistance = 16f * 60f;
 	const float BossPriority = 115f;
 	const float InterruptPriority = 95f;
@@ -75,6 +77,8 @@ public sealed class FightTask : BotTask
 	{
 		closeThreat = false;
 		var boss = Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossEngagementRange) ?? Bosses.BossCredit.EngagedBoss(Bot);
+		if (boss != null && Bosses.BossCredit.SummonedByOther(boss, Bot.FactionId) && Vector2.Distance(Bot.Center, boss.Center) > ForeignBossReach)
+			boss = null;
 		if (boss != null && !Bot.IsIgnoring(boss))
 		{
 			target = boss;

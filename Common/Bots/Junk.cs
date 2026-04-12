@@ -91,6 +91,8 @@ public static class Junk
 
 	static int Usefulness(Item item)
 	{
+		if (Planning.Stations.IsCraftingStation(item.createTile))
+			return 6;
 		if (item.createTile >= 0 && (TileID.Sets.Ore[item.createTile] || item.createTile == TileID.MetalBars))
 			return 5;
 		if (item.material)

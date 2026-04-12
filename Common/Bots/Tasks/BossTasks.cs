@@ -96,6 +96,7 @@ public sealed class SummonTask : BotTask
 		Bot.Faction.Rally = null;
 		Bot.Faction.ArenaPoint = step.Place;
 		Bot.Watchdog.RecordProgress();
+		BossCredit.RecordSummoner(step.Challenge, Bot.FactionId);
 		BotDiagnostics.Log(Bot, $"summoned {step.Challenge.Name} via {step.Trigger.GetType().Name}");
 		IsFinished = true;
 	}

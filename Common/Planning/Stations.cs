@@ -38,6 +38,39 @@ public static class Stations
 		itemsPlacingTile = null;
 	}
 
+	const uint FetchClaimTicks = 36000;
+	static readonly Dictionary<(int faction, int tile), (int botId, uint until)> fetchers = new();
+
+	public static void ClaimFetch(Bots.Bot bot, IEnumerable<int> stationItems)
+	{
+		foreach (int item in stationItems)
+			fetchers[(bot.FactionId, ContentSamples.ItemsByType[item].createTile)] = (bot.Id, Main.GameUpdateCount + FetchClaimTicks);
+	}
+
+	public static bool TeammateFetching(Bots.Bot bot, IEnumerable<int> stationItems)
+	{
+		foreach (var member in Systems.BotWorldSystem.Bots)
+		{
+			if (member != bot && member.FactionId == bot.FactionId && member.IsAlive && stationItems.Any(item => Bots.Inventory.Count(member.Avatar, item) > 0))
+				return true;
+		}
+		foreach (int item in stationItems)
+		{
+			if (fetchers.TryGetValue((bot.FactionId, ContentSamples.ItemsByType[item].createTile), out var claim) && claim.botId != bot.Id
+				&& Main.GameUpdateCount < claim.until && Systems.BotWorldSystem.FindBot(claim.botId) is { IsAlive: true })
+				return true;
+		}
+		return false;
+	}
+
+	static HashSet<int> craftingTiles;
+
+	public static bool IsCraftingStation(int tileType)
+	{
+		craftingTiles ??= Main.recipe.Take(Recipe.numRecipes).SelectMany(recipe => recipe.requiredTile).Where(required => required >= 0).ToHashSet();
+		return tileType >= 0 && craftingTiles.Contains(tileType);
+	}
+
 	public static bool BaseHas(Faction faction, int tileType) => StationsAtBase(faction).ContainsKey(tileType);
 
 	public static Point? Locate(Faction faction, int tileType) =>

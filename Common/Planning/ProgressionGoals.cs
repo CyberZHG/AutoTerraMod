@@ -47,7 +47,7 @@ public sealed class StationGoal : ProgressionGoal
 		this.stationItems = stationItems;
 	}
 
-	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType) || Placeable().Length == 0;
+	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType) || Placeable().Length == 0 || Stations.TeammateFetching(bot, stationItems);
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanStation(bot, Placeable());
 
 	int[] Placeable() => tileType == TileID.TeleportationPylon

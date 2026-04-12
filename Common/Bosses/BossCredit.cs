@@ -23,13 +23,22 @@ public sealed class BossCredit : GlobalNPC
 	{
 		damageByFight.Clear();
 		fightersByFight.Clear();
+		summoners.Clear();
 		shots.Clear();
 	}
+
+	static readonly Dictionary<int, int> summoners = new();
+
+	public static void RecordSummoner(BossChallenge challenge, int factionId) => summoners[challenge.BossType] = factionId;
+
+	public static bool SummonedByOther(NPC boss, int factionId) =>
+		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId;
 
 	public static void ForgetIfOver(BossChallenge challenge)
 	{
 		if (!BossCatalog.IsBossAlive(challenge))
 		{
+			summoners.Remove(challenge.BossType);
 			damageByFight.Remove(challenge.BossType);
 			fightersByFight.Remove(challenge.BossType);
 		}
@@ -86,8 +95,16 @@ public sealed class BossCredit : GlobalNPC
 			RecordDamage(npc, shot.factionId, shot.botId, damageDone);
 	}
 
+	const uint LootWindowTicks = 1800;
+	static (Microsoft.Xna.Framework.Vector2 at, uint tick)? lastBossDeath;
+
+	public static Microsoft.Xna.Framework.Vector2? RecentLootPoint =>
+		lastBossDeath is { } death && Main.GameUpdateCount - death.tick < LootWindowTicks ? death.at : null;
+
 	public override void OnKill(NPC npc)
 	{
+		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null)
+			lastBossDeath = (npc.Center, Main.GameUpdateCount);
 		var challenge = BossCatalog.ChallengeOf(npc.type);
 		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.Remove(challenge.BossType, out var byFaction))
 			return;
