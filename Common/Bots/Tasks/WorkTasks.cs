@@ -306,7 +306,8 @@ public sealed class CraftTask : BotTask
 
 	static bool OnGround(Point spot) =>
 		World.TileQuery.IsSolid(spot.X, spot.Y + 1) && !Main.tileFrameImportant[Main.tile[spot.X, spot.Y + 1].TileType]
-		|| Main.tile[spot.X, spot.Y + 1].HasTile && Main.tileTable[Main.tile[spot.X, spot.Y + 1].TileType];
+		|| Main.tile[spot.X, spot.Y + 1].HasTile && Main.tileTable[Main.tile[spot.X, spot.Y + 1].TileType]
+		|| World.TileQuery.IsPlatform(spot.X, spot.Y + 1);
 
 	void TickPlace(int itemType)
 	{
@@ -475,6 +476,8 @@ public sealed class GatherTask : BotTask
 		Bot.Motor.Stop();
 	}
 
+	const int KnownCandidates = 8;
+
 	Point? FindTarget()
 	{
 		var origin = Bot.CenterTile;
@@ -483,8 +486,16 @@ public sealed class GatherTask : BotTask
 		var visible = WorldScan.NearestVisibleTile(origin, Tiles.TileTypes, accept, unreachable, knowledge);
 		if (visible != null)
 			return visible;
-		var known = knowledge.NearestKnown(origin, Tiles.TileTypes, unreachable, KnowledgeSearchRadius);
-		return known is Point tile && accept(tile.X, tile.Y) ? known : null;
+		var rejected = new HashSet<Point>(unreachable);
+		for (int attempt = 0; attempt < KnownCandidates; attempt++)
+		{
+			if (knowledge.NearestKnown(origin, Tiles.TileTypes, rejected, KnowledgeSearchRadius) is not Point tile)
+				return null;
+			if (accept(tile.X, tile.Y))
+				return tile;
+			rejected.Add(tile);
+		}
+		return null;
 	}
 
 	void Prospect()
@@ -634,7 +645,7 @@ public sealed class PickupTask : BotTask
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsUnwanted(Bot, item))
+			if (!item.active || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsAbandoned(i) || Junk.IsUnwanted(Bot, item))
 				continue;
 			if (!Inventory.HasRoomFor(Avatar, item) && !Bot.Brain.PlannedItemTypes.Contains(item.type))
 				continue;

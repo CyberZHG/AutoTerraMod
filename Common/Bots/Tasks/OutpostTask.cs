@@ -92,7 +92,7 @@ public sealed class OutpostTask : BotTask
 		}
 		if (tool == null)
 		{
-			BotDiagnostics.Log(Bot, $"outpost is missing materials for {tile}: beds={Inventory.Count(Avatar, ItemID.Bed)} doors={Outpost.Count(Avatar, Outpost.IsDoor)} walls={Outpost.Count(Avatar, Outpost.IsHouseWall)} blocks={Outpost.Count(Avatar, Outpost.IsBlock)} bedInRoom={FindAnyBed()}");
+			BotDiagnostics.Log(Bot, $"outpost is missing materials for {tile}: beds={Outpost.Count(Avatar, Outpost.IsBed)} doors={Outpost.Count(Avatar, Outpost.IsDoor)} walls={Outpost.Count(Avatar, Outpost.IsHouseWall)} blocks={Outpost.Count(Avatar, Outpost.IsBlock)} bedInRoom={FindAnyBed()}");
 			RejectSite();
 			return;
 		}

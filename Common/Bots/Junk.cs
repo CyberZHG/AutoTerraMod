@@ -60,6 +60,48 @@ public static class Junk
 		TrashExcess(bot);
 		if (IsOverflowing(bot))
 			TrashOverflow(bot);
+		if (IsOverflowing(bot))
+			DropHardestToUse(bot);
+	}
+
+	const uint AbandonedTicks = 36000;
+	static readonly Dictionary<int, (int type, uint at)> abandoned = new();
+
+	public static bool IsAbandoned(int index) =>
+		abandoned.TryGetValue(index, out var drop) && Main.item[index].type == drop.type && Main.GameUpdateCount - drop.at < AbandonedTicks;
+
+	static void DropHardestToUse(Bot bot)
+	{
+		var victim = Kit.ItemsToStore(bot)
+			.Where(item => !IsBossSummon(item) && !DyeTaste.IsFavorite(bot.Faction, item))
+			.OrderBy(Usefulness)
+			.ThenBy(item => (long)item.value * item.stack)
+			.FirstOrDefault();
+		if (victim == null)
+			return;
+		string name = victim.Name;
+		int stack = victim.stack;
+		int index = Item.NewItem(bot.Avatar.GetSource_DropAsItem(), bot.Center, victim.type, stack, prefixGiven: victim.prefix);
+		victim.TurnToAir();
+		if (abandoned.Count > 400)
+			abandoned.Clear();
+		abandoned[index] = (Main.item[index].type, Main.GameUpdateCount);
+		BotDiagnostics.Log(bot, $"dropped {name} x{stack} on the ground (inventory and storage full)");
+	}
+
+	static int Usefulness(Item item)
+	{
+		if (item.createTile >= 0 && (TileID.Sets.Ore[item.createTile] || item.createTile == TileID.MetalBars))
+			return 5;
+		if (item.material)
+			return 4;
+		if (item.potion || item.ammo > 0 || item.accessory)
+			return 3;
+		if (item.damage > 0 || item.pick > 0 || item.axe > 0 || item.hammer > 0 || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
+			return 2;
+		if (item.createTile >= 0 || item.createWall > 0)
+			return 1;
+		return 0;
 	}
 
 	static void TrashOverflow(Bot bot)

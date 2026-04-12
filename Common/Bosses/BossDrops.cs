@@ -60,8 +60,16 @@ public static class BossDrops
 		return map;
 	}
 
-	static bool IsFurniture(int itemType) =>
-		ContentSamples.ItemsByType[itemType].createTile is int tile && tile >= 0 && Main.tileFrameImportant[tile];
+	static HashSet<int> craftingTiles;
+
+	static bool IsFurniture(int itemType)
+	{
+		int tile = ContentSamples.ItemsByType[itemType].createTile;
+		if (tile < 0 || !Main.tileFrameImportant[tile])
+			return false;
+		craftingTiles ??= Main.recipe.Take(Recipe.numRecipes).SelectMany(recipe => recipe.requiredTile).Where(required => required >= 0).ToHashSet();
+		return !craftingTiles.Contains(tile);
+	}
 
 	static void Report(List<IItemDropRule> rules, List<DropRateInfo> drops)
 	{

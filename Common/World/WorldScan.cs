@@ -73,7 +73,7 @@ public static class WorldScan
 
 	public static bool IsTreasure(int tileType) => TreasureTiles.Contains(tileType);
 
-	static readonly HashSet<int> LootableFurniture = new() { TileID.Hellforge };
+	public static readonly HashSet<int> LootableFurniture = new() { TileID.Hellforge };
 
 	public static bool IsBossShrine(int tileType) => tileType is TileID.DemonAltar or TileID.ShadowOrbs or TileID.Larva or TileID.PlanteraBulb or TileID.LihzahrdAltar;
 

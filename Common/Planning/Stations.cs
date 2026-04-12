@@ -28,6 +28,8 @@ public static class Stations
 	};
 
 	static readonly Dictionary<int, (uint tick, Dictionary<int, Point> locations)> baseCache = new();
+	const int NearCampStationTiles = 60;
+	static readonly HashSet<Point> NoExclusions = new();
 	static Dictionary<int, List<int>> itemsPlacingTile;
 
 	public static void Reset()
@@ -67,6 +69,15 @@ public static class Stations
 						locations[provided] = here;
 				}
 			}
+		}
+		var knowledge = Systems.BotWorldSystem.KnowledgeOf(faction);
+		int nearCamp = NearCampStationTiles + (settlement == null ? 0 : System.Math.Max(origin.X - settlement.Left, settlement.Right - origin.X));
+		foreach (int furniture in World.WorldScan.LootableFurniture)
+		{
+			if (locations.ContainsKey(furniture) || knowledge.NearestKnown(origin, new HashSet<int> { furniture }, NoExclusions, nearCamp) is not Point nearby)
+				continue;
+			foreach (int provided in ProvidedStations(furniture))
+				locations.TryAdd(provided, nearby);
 		}
 		baseCache[faction.Id] = (Main.GameUpdateCount, locations);
 		return locations;

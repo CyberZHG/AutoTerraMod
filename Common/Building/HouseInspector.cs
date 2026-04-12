@@ -60,8 +60,8 @@ public static class HouseInspector
 	}
 
 	public static bool HasSpareBed(Faction faction) =>
-		BaseStorage.Count(faction, ItemID.Bed) > 0
-		|| BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && IsDesignatedBuilder(bot) && Inventory.Count(bot.Avatar, ItemID.Bed) > 0);
+		HouseDesign.Beds.Any(bed => BaseStorage.Count(faction, bed) > 0)
+		|| BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && IsDesignatedBuilder(bot) && Outpost.Count(bot.Avatar, Outpost.IsBed) > 0);
 
 	public static bool MissesBed(HouseBlueprint structure) => structure.Purpose == StructurePurpose.Bedroom && structure.FindTileInside(TileID.Beds) == null;
 
@@ -318,6 +318,7 @@ public static class HouseMaterials
 		BuildAction.PlaceDoor => HouseDesign.Doors,
 		BuildAction.PlaceTable => HouseDesign.Tables,
 		BuildAction.PlaceChair => HouseDesign.Chairs,
+		BuildAction.PlaceBed => HouseDesign.Beds,
 		_ => new[] { DefaultItem(placement, design) }
 	};
 

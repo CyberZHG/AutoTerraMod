@@ -80,25 +80,56 @@ public sealed class HouseBlueprint
 	public bool IsShell(int x, int y) => shell.Contains(new Point(x, y));
 	bool IsPlatformSpot(Point tile) => platforms.Contains(tile);
 
-	public void AddHatchAbove()
+	readonly HashSet<int> hatchColumns = new();
+	const int ShelfMinimumHeight = 5;
+	const int ShelfRow = 3;
+
+	public bool HasShelf { get; private set; }
+
+	public void AddHatchAbove(int? at = null)
 	{
-		foreach (int x in new[] { center, center + 1 })
+		int start = at ?? center;
+		foreach (int x in new[] { start, start + 1 })
 		{
+			hatchColumns.Add(x);
 			platforms.Add(new Point(x, Ceiling));
-			platforms.Add(new Point(x, Floor - StepHeight));
+			var step = new Point(x, Floor - StepHeight);
+			if (!platforms.Contains(step))
+				platforms.Add(step);
 		}
 	}
 
-	public void AddHatchBelow()
+	public void AddHatchBelow(int? at = null)
 	{
-		foreach (int x in new[] { center, center + 1 })
+		int start = at ?? center;
+		foreach (int x in new[] { start, start + 1 })
+		{
+			hatchColumns.Add(x);
 			platforms.Add(new Point(x, Floor));
+		}
 	}
+
+	public void AddShelf()
+	{
+		if (Floor - 1 - Ceiling < ShelfMinimumHeight)
+			return;
+		HasShelf = true;
+		for (int x = Left + 2; x <= Right - 2; x++)
+		{
+			var shelf = new Point(x, Floor - ShelfRow);
+			if (!platforms.Contains(shelf))
+				platforms.Add(shelf);
+		}
+	}
+
+	bool NearHatch(int x) => hatchColumns.Any(column => System.Math.Abs(column - x) <= 2);
 	public void AddFloorPlatforms(int fromX, int toX)
 	{
 		for (int x = fromX; x <= toX; x++)
 			platforms.Add(new Point(x, Floor));
 	}
+
+	static bool IsFurniture(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] && !Main.tileRope[Main.tile[tile.X, tile.Y].TileType];
 
 	static bool HoldsFurniture(Point tile)
 	{
@@ -116,6 +147,15 @@ public sealed class HouseBlueprint
 			yield break;
 		for (int x = Left + 1; x + ChestWidth - 1 < Right; x += ChestWidth)
 			yield return new Point(x, Floor - 1);
+		if (!HasShelf)
+			yield break;
+		for (int x = Left + 2; x + ChestWidth - 1 <= Right - 2; x += ChestWidth)
+		{
+			if (hatchColumns.Contains(x) || hatchColumns.Contains(x + 1) || x == center || x + 1 == center)
+				continue;
+			if (TileQuery.IsPlatform(x, Floor - ShelfRow) && TileQuery.IsPlatform(x + 1, Floor - ShelfRow))
+				yield return new Point(x, Floor - ShelfRow - 1);
+		}
 	}
 
 	public IEnumerable<BuildOperation> PendingOperations(HouseDesign materials)
@@ -127,11 +167,11 @@ public sealed class HouseBlueprint
 		}
 		foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None))
 			yield return Operation(BuildAction.PlaceWall, tile);
-		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile)))
+		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
 		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile)))
 			yield return Operation(BuildAction.PlaceBlock, tile);
-		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile)))
+		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		foreach (int x in new[] { Left, Right })
 		{
@@ -190,7 +230,7 @@ public sealed class HouseBlueprint
 		{
 			foreach (int x in new[] { center + offset, center - offset })
 			{
-				if (x > Left + 1 && x < Right - 1 && !IsPlatformSpot(new Point(x, Floor)))
+				if (x > Left + 1 && x < Right - 1 && !IsPlatformSpot(new Point(x, Floor)) && !NearHatch(x))
 					yield return new Point(x, Floor - 1);
 			}
 		}

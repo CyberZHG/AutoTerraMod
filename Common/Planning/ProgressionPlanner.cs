@@ -142,7 +142,7 @@ public static class ProgressionPlanner
 	{
 		if (stuckPlans.TryGetValue((bot.Id, goal), out var stuck) && Main.GameUpdateCount < stuck.until)
 			return stuck.step;
-		var step = goal.Plan(bot);
+		var step = PlanGoal(bot, goal);
 		if (step is BlockedStep or IdleStep)
 			stuckPlans[(bot.Id, goal)] = (Main.GameUpdateCount + StuckRetryTicks + (uint)(bot.Id * 37 % 120), step);
 		else
@@ -172,7 +172,7 @@ public static class ProgressionPlanner
 	{
 		if (readyUpgrades.TryGetValue(bot.Id, out var cached) && cached.goal != null && Main.GameUpdateCount - cached.at < UpgradeScanTicks)
 		{
-			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(bot, cached.goal.Plan(bot)) is PlanStep again)
+			if (!isSuppressed(cached.goal) && !cached.goal.IsMet(bot) && IsHandsOn(bot, PlanGoal(bot, cached.goal)) is PlanStep again)
 			{
 				readyUpgrades[bot.Id] = (Main.GameUpdateCount, cached.goal);
 				return (cached.goal, again);
@@ -189,7 +189,7 @@ public static class ProgressionPlanner
 			using var probe = Probes.Measure(goal.ProbeLabel);
 			if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
 				continue;
-			if (IsHandsOn(bot, goal.Plan(bot)) is PlanStep step)
+			if (IsHandsOn(bot, PlanGoal(bot, goal)) is PlanStep step)
 			{
 				upgradeCursor[bot.Id] = (cursor + checkedGoals + 1) % upgradeGoals.Count;
 				readyUpgrades[bot.Id] = (Main.GameUpdateCount, goal);
@@ -251,7 +251,7 @@ public static class ProgressionPlanner
 			expeditions.Remove(bot.Id);
 			return null;
 		}
-		var step = goal.Plan(bot);
+		var step = PlanGoal(bot, goal);
 		if (step is BlockedStep or IdleStep)
 		{
 			expeditions.Remove(bot.Id);
@@ -359,6 +359,27 @@ public static class ProgressionPlanner
 	}
 
 	static int resolveCalls;
+	static bool woodAllowed = true;
+
+	static PlanStep PlanGoal(Bot bot, ProgressionGoal goal)
+	{
+		bool outer = woodAllowed;
+		try
+		{
+			woodAllowed = false;
+			var step = goal.Plan(bot);
+			if (step is not BlockedStep || !ProgressionGoals.Unwrap(goal).MayUseWood)
+				return step;
+			woodAllowed = true;
+			return goal.Plan(bot);
+		}
+		finally
+		{
+			woodAllowed = outer;
+		}
+	}
+
+	static bool UsesWood(Recipe recipe) => recipe.requiredItem.Any(required => ResourceSources.IsWood(required.type));
 
 	static PlanStep Resolve(Context context, int itemType, int amount, int depth)
 	{
@@ -369,6 +390,8 @@ public static class ProgressionPlanner
 		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
 		if (have >= amount)
 			return null;
+		if (!woodAllowed && ResourceSources.IsWood(itemType))
+			return PlanStep.Blocked;
 		int stored = context.Fresh && depth == 0 || !Inventory.HasRoomForType(context.Bot.Avatar, itemType) ? 0 : BaseStorage.Count(context.Bot.Faction, itemType);
 		bool awayFromBase = !Shops.WithinShoppingTrip(context.Bot, context.Bot.Faction.BaseCenter);
 		if (stored > 0 && !awayFromBase)
@@ -416,7 +439,7 @@ public static class ProgressionPlanner
 			return PlanStep.Blocked;
 		if (source != null)
 			return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
-		foreach (var recipe in RecipeIndex.For(itemType))
+		foreach (var recipe in RecipeIndex.For(itemType).OrderBy(UsesWood))
 		{
 			int crafts = (amount - have + recipe.createItem.stack - 1) / Math.Max(1, recipe.createItem.stack);
 			var step = PlanRecipe(context, recipe, depth, crafts);
@@ -478,7 +501,8 @@ public static class ProgressionPlanner
 			if (portable && stationItems.Any(item => context.Count(item) > 0))
 				continue;
 			if (deep && !Stations.IsWorldOnly(tile) && !BossPrep.IsSummonMaterial(context.Bot, recipe.createItem.type) && !StationNearby(context.Bot, tile))
-				return portable && stationItems.Count > 0 ? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
+				return portable && stationItems.Count > 0 && (stationItems.Any(item => RecipeIndex.For(item).Any()) || !Stations.BaseHas(context.Bot.Faction, tile))
+					? PlanStation(context, stationItems, depth + 1) : PlanStep.Blocked;
 			if (Stations.IsReachableStation(context.Bot.Faction, tile, context.Bot.CenterTile))
 				continue;
 			if (tile == Terraria.ID.TileID.DemonAltar)

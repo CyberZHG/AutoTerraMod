@@ -27,11 +27,13 @@ public static class Outpost
 
 	public static bool IsDoor(Item item) => item.createTile == TileID.ClosedDoor;
 
+	public static bool IsBed(Item item) => item.createTile == TileID.Beds;
+
 	public static int Count(Player avatar, System.Func<Item, bool> kind) => Inventory.Items(avatar).Where(kind).Sum(item => item.stack);
 
 	public static int StoneBlocks(Player avatar) => Inventory.Count(avatar, ItemID.StoneBlock) + Inventory.Count(avatar, ItemID.GrayBrick);
 
-	public static bool CarriesKit(Player avatar) => Inventory.Count(avatar, ItemID.Bed) > 0 && Count(avatar, IsDoor) > 0 && Count(avatar, IsHouseWall) >= WallsNeeded;
+	public static bool CarriesKit(Player avatar) => Count(avatar, IsBed) > 0 && Count(avatar, IsDoor) > 0 && Count(avatar, IsHouseWall) >= WallsNeeded;
 
 	public static bool IsDeep(Bot bot) => bot.CenterTile.Y > Main.rockLayer && bot.CenterTile.Y < Main.UnderworldLayer - 10;
 

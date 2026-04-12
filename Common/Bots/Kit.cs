@@ -44,7 +44,7 @@ public static class Kit
 				|| Tasks.BotTask.IsRecall(item)
 				|| Explosives.IsExplosive(item)
 				|| item.type == ItemID.Acorn
-				|| item.type == ItemID.Bed || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
+				|| Outpost.IsBed(item) || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
 				|| (Tasks.CollectorTask.CollectsArmor(bot) && (item.type == ItemID.Mannequin || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0)))

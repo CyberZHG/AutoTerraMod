@@ -9,7 +9,9 @@ public sealed class Settlement
 {
 	const int StorageWidth = 16;
 	const int WorkshopWidth = 24;
-	const int AnnexWidth = 16;
+	const int StorageStories = 4;
+	const int WorkshopStorageStories = 2;
+	const int WorkshopHatchInset = 3;
 	const int RoomWidth = 10;
 	public const int ApronWidth = 5;
 	const int HallHatchInset = 2;
@@ -57,8 +59,18 @@ public sealed class Settlement
 			}
 		}
 		var yardKeeper = structures[^1];
-		Vault = Add(StructurePurpose.Storage, Workshop.Right, AnnexWidth, floor, Math.Max(MinimumStorageInteriorHeight, design.InteriorHeight), design.Roof);
-		Gallery = Add(StructurePurpose.Gallery, Vault.Right, AnnexWidth, floor, design.InteriorHeight, design.Roof);
+		yardTop = structures.Min(structure => structure.Top);
+		Storage.AddShelf();
+		var stack = Storage;
+		for (int story = 1; story < StorageStories; story++)
+			stack = StackStorage(stack, StorageWidth, null);
+		stack.AddHatchAbove();
+		Gallery = Add(StructurePurpose.Gallery, stack.Left, StorageWidth, stack.Ceiling, RoomInteriorHeight, design.Roof);
+		Gallery.AddHatchBelow();
+		int workshopHatch = Workshop.Right - WorkshopHatchInset;
+		stack = Workshop;
+		for (int story = 0; story < WorkshopStorageStories; story++)
+			stack = StackStorage(stack, WorkshopWidth, workshopHatch);
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);
 		Top = structures.Min(structure => structure.Top);
@@ -72,8 +84,8 @@ public sealed class Settlement
 	public HouseBlueprint Hall { get; }
 	public HouseBlueprint Storage { get; }
 	public HouseBlueprint Workshop { get; }
-	public HouseBlueprint Vault { get; }
 	public HouseBlueprint Gallery { get; }
+	public List<HouseBlueprint> StorageAnnexes { get; } = new();
 	public IEnumerable<HouseBlueprint> StorageRooms => structures.Where(structure => structure.Purpose == StructurePurpose.Storage);
 	public List<HouseBlueprint> Bedrooms { get; } = new();
 	public List<HouseBlueprint> GuestRooms { get; } = new();
@@ -90,10 +102,21 @@ public sealed class Settlement
 	public HouseBlueprint StructureWithInterior(int x, int y) => structures.FirstOrDefault(structure => structure.IsInterior(x, y));
 
 	const int YardHeadroom = 3;
+	readonly int yardTop;
+
+	HouseBlueprint StackStorage(HouseBlueprint below, int width, int? hatch)
+	{
+		below.AddHatchAbove(hatch);
+		var room = Add(StructurePurpose.Storage, below.Left, width, below.Ceiling, RoomInteriorHeight, RoofStyle.Flat);
+		room.AddShelf();
+		room.AddHatchBelow(hatch);
+		StorageAnnexes.Add(room);
+		return room;
+	}
 
 	IEnumerable<Point> YardTiles()
 	{
-		for (int y = Top - YardHeadroom; y < Floor; y++)
+		for (int y = yardTop - YardHeadroom; y < Floor; y++)
 		{
 			for (int x = Left - ApronWidth; x <= Right + ApronWidth; x++)
 			{

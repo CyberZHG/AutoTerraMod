@@ -52,17 +52,30 @@ public sealed record HouseDesign(int Width, int InteriorHeight, RoofStyle Roof, 
 
 	public static readonly int[] Doors =
 	{
-		ItemID.WoodenDoor, ItemID.BorealWoodDoor, ItemID.PalmWoodDoor, ItemID.RichMahoganyDoor, ItemID.EbonwoodDoor, ItemID.ShadewoodDoor, ItemID.CactusDoor
+		ItemID.SlimeDoor, ItemID.GraniteDoor, ItemID.MarbleDoor, ItemID.GlassDoor, ItemID.CactusDoor, ItemID.BoneDoor,
+		ItemID.WoodenDoor, ItemID.BorealWoodDoor, ItemID.PalmWoodDoor, ItemID.RichMahoganyDoor, ItemID.EbonwoodDoor, ItemID.ShadewoodDoor
 	};
 
 	public static readonly int[] Tables =
 	{
+		ItemID.SlimeTable, ItemID.GraniteTable, ItemID.MarbleTable, ItemID.GlassTable, ItemID.CactusTable, ItemID.BoneTable,
 		ItemID.WoodenTable, ItemID.BorealWoodTable, ItemID.PalmWoodTable, ItemID.RichMahoganyTable, ItemID.EbonwoodTable, ItemID.ShadewoodTable
 	};
 
 	public static readonly int[] Chairs =
 	{
+		ItemID.SlimeChair, ItemID.GraniteChair, ItemID.MarbleChair, ItemID.GlassChair, ItemID.CactusChair, ItemID.BoneChair,
 		ItemID.WoodenChair, ItemID.BorealWoodChair, ItemID.PalmWoodChair, ItemID.RichMahoganyChair, ItemID.EbonwoodChair, ItemID.ShadewoodChair
+	};
+
+	public static readonly int[] Beds =
+	{
+		ItemID.SlimeBed, ItemID.GraniteBed, ItemID.MarbleBed, ItemID.GlassBed, ItemID.CactusBed, ItemID.BoneBed, ItemID.Bed
+	};
+
+	public static readonly int[] WorkBenches =
+	{
+		ItemID.SlimeWorkBench, ItemID.GraniteWorkBench, ItemID.MarbleWorkBench, ItemID.GlassWorkBench, ItemID.CactusWorkBench, ItemID.BoneWorkBench, ItemID.WorkBench
 	};
 
 	public int[] BlockItems => Taste == BuildingTaste.Rustic ? RusticBlocks : new[] { BlockItem };

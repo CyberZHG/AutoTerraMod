@@ -28,6 +28,7 @@ public abstract class ProgressionGoal
 	public abstract PlanStep Plan(Bot bot);
 	public virtual bool IsExpedition => false;
 	public virtual bool NeedsSurface => false;
+	public virtual bool MayUseWood => false;
 
 	string probeLabel;
 	public string ProbeLabel => probeLabel ??= "g:" + ProgressionGoals.Unwrap(this).GetType().Name;
@@ -35,6 +36,8 @@ public abstract class ProgressionGoal
 
 public sealed class StationGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	readonly int tileType;
 	readonly int[] stationItems;
 
@@ -104,6 +107,8 @@ public sealed class GearGoal : ProgressionGoal
 
 public sealed class ReserveGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	readonly int itemType;
 	readonly int minimum;
 	readonly int restockTo;
@@ -199,6 +204,8 @@ public sealed class CraftableUpgradeGoal : ProgressionGoal
 
 public sealed class WaterproofTorchGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public static readonly int[] Torches = { ItemID.CursedTorch, ItemID.IchorTorch };
 	const int Minimum = 20;
 	const int RestockTo = 50;
@@ -210,6 +217,8 @@ public sealed class WaterproofTorchGoal : ProgressionGoal
 
 public sealed class AmmoGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	const int Minimum = 100;
 	const int RestockTo = 300;
 
@@ -285,6 +294,8 @@ public sealed class RopeGoal : ProgressionGoal
 
 public sealed class StorageGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool NeedsSurface => true;
 
 	const int MinimumChests = 2;
@@ -336,6 +347,8 @@ public sealed class ManaCrystalGoal : ProgressionGoal
 
 public sealed class StructureGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool NeedsSurface => true;
 
 	readonly System.Func<Settlement, IEnumerable<HouseBlueprint>> select;
@@ -381,7 +394,7 @@ public sealed class StructureGoal : ProgressionGoal
 				: new BuildHouseStep(operation);
 		int batch = Math.Min(line.Amount, MaterialBatch);
 		if (HouseMaterials.Find(bot.Avatar, placement, materials) == null)
-			return placement is BuildAction.PlaceDoor or BuildAction.PlaceTable or BuildAction.PlaceChair
+			return placement is BuildAction.PlaceDoor or BuildAction.PlaceTable or BuildAction.PlaceChair or BuildAction.PlaceBed
 				? ProgressionPlanner.ObtainAny(bot, HouseMaterials.Options(placement, materials))
 				: ProgressionPlanner.Obtain(bot, line.ItemType, batch);
 		if (HouseMaterials.CountAvailable(bot.Avatar, placement, materials) < batch && ProgressionPlanner.Obtain(bot, line.ItemType, batch) is CraftStep craft)
@@ -392,6 +405,8 @@ public sealed class StructureGoal : ProgressionGoal
 
 public sealed class SupportConstructionGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool NeedsSurface => true;
 
 	const float MinimumCooperation = 0.4f;
@@ -447,6 +462,8 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 
 public sealed class BossGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool IsExpedition => true;
 
 	const int ReadinessLogIntervalTicks = 1800;
@@ -518,6 +535,8 @@ public sealed class BossGoal : ProgressionGoal
 
 public sealed class BossSupportGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	const float HelpRange = 16f * 400f;
 	const float HandOverRange = 16f * 30f;
 
@@ -550,6 +569,8 @@ public sealed class BossSupportGoal : ProgressionGoal
 
 public sealed class RefightGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	readonly bool gearOnly;
 
 	public RefightGoal(bool gearOnly) => this.gearOnly = gearOnly;
@@ -588,6 +609,8 @@ public sealed class RefightGoal : ProgressionGoal
 
 public sealed class HellevatorGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool IsExpedition => true;
 
 	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
@@ -599,6 +622,8 @@ public sealed class HellevatorGoal : ProgressionGoal
 
 public sealed class HellbridgeGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool IsExpedition => true;
 
 	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
@@ -699,6 +724,8 @@ public sealed class AspirationGoal : ProgressionGoal
 
 public sealed class FurnishBedroomsGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool NeedsSurface => true;
 
 	public override string Describe() => "FurnishBedrooms";
@@ -708,11 +735,13 @@ public sealed class FurnishBedroomsGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) =>
 		HouseInspector.HasSpareBed(bot.Faction) || !bot.Faction.Settlement.Bedrooms.Any(HouseInspector.MissesBed);
 
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, ItemID.Bed, 1);
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, HouseDesign.Beds);
 }
 
 public sealed class OutpostKitGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override bool NeedsSurface => true;
 
 	public override string Describe() => "OutpostKit";
@@ -726,8 +755,8 @@ public sealed class OutpostKitGoal : ProgressionGoal
 	public static PlanStep PlanKit(Bot bot)
 	{
 		var avatar = bot.Avatar;
-		if (Inventory.Count(avatar, ItemID.Bed) == 0)
-			return ProgressionPlanner.Obtain(bot, ItemID.Bed, 1);
+		if (Outpost.Count(avatar, Outpost.IsBed) == 0)
+			return ProgressionPlanner.ObtainAny(bot, HouseDesign.Beds);
 		if (Outpost.Count(avatar, Outpost.IsDoor) == 0)
 			return ProgressionPlanner.ObtainAny(bot, HouseDesign.Doors);
 		int walls = Outpost.Count(avatar, Outpost.IsHouseWall);
@@ -801,6 +830,8 @@ public sealed class HighwayGoal : ProgressionGoal
 
 public sealed class ArenaKitGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override string Describe() => "ArenaKit";
 
 	public override bool AppliesTo(Bot bot) => Reserves(bot);
@@ -820,6 +851,8 @@ public sealed class ArenaKitGoal : ProgressionGoal
 
 public sealed class ArenaOutpostGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override string Describe() => "ArenaOutpost";
 
 	static bool Assigned(Bot bot) =>
@@ -834,6 +867,8 @@ public sealed class ArenaOutpostGoal : ProgressionGoal
 
 public sealed class OutpostGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	public override string Describe() => "Outpost";
 
 	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
@@ -994,6 +1029,8 @@ public sealed class StockpileGoal : ProgressionGoal
 	readonly int target;
 	readonly System.Func<Bot, IReadOnlyList<int>> options;
 
+	public override bool MayUseWood => name == "Torch";
+
 	public StockpileGoal(string name, int floor, int target, System.Func<Bot, IReadOnlyList<int>> options)
 	{
 		this.name = name;
@@ -1115,6 +1152,8 @@ public sealed class ShareSuppliesGoal : ProgressionGoal
 
 public sealed class AcornGoal : ProgressionGoal
 {
+	public override bool MayUseWood => true;
+
 	const int Batch = 10;
 
 	public override bool NeedsSurface => true;
@@ -1263,7 +1302,6 @@ public static class ProgressionGoals
 
 	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0;
 
-	static readonly int[] Wood = { ItemID.Wood };
 	static readonly int[] Stone = { ItemID.StoneBlock };
 	static readonly int[] Torches = { ItemID.Torch };
 
@@ -1279,7 +1317,7 @@ public static class ProgressionGoals
 		{
 			new ClaimBoostersGoal(),
 			new ManaCrystalGoal(),
-			new StationGoal(TileID.WorkBenches, ItemID.WorkBench),
+			new StationGoal(TileID.WorkBenches, HouseDesign.WorkBenches),
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
@@ -1311,19 +1349,18 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => new[] { settlement.Workshop }));
 		goals.Add(new OutpostKitGoal());
 		goals.Add(new StorageGoal());
-		goals.Add(new StructureGoal(settlement => StorageCrowded(settlement) ? new[] { settlement.Vault } : System.Array.Empty<HouseBlueprint>()));
+		goals.Add(new StructureGoal(settlement => StorageCrowded(settlement) ? settlement.StorageAnnexes : System.Array.Empty<HouseBlueprint>()));
 		goals.Add(new RopeGoal());
 		goals.Add(new AcornGoal());
 		goals.Add(new DyeGoal());
 		goals.Add(new StockpileGoal("Stone", 200, 500, bot => Stone));
-		goals.Add(new StockpileGoal("Wood", 150, 300, bot => World.TreeSupply.Plentiful(bot.Faction) ? Wood : System.Array.Empty<int>()));
 		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
 		goals.Add(new StockpileGoal("Arrows", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Arrow)));
 		goals.Add(new StockpileGoal("Bullets", 200, 500, bot => StockpileGoal.FactionAmmo(bot, AmmoID.Bullet)));
 		goals.Add(new StructureGoal(settlement => settlement.Bedrooms));
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
-		goals.Add(new StructureGoal(settlement => new[] { settlement.Vault, settlement.Gallery }));
+		goals.Add(new StructureGoal(settlement => settlement.StorageAnnexes.Append(settlement.Gallery)));
 		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));

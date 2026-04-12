@@ -67,7 +67,7 @@ public sealed class OpportunisticMineTask : BotTask
 		}
 		scannedAt = Main.GameUpdateCount;
 		wantsMore.Clear();
-		wantsWood = Bot.Hands.HasAxe && Bot.CenterTile.Y > TileQuery.SurfaceY(Bot.CenterTile.X) + UndergroundMargin && WoodCarried() < EnoughWood;
+		wantsWood = Bot.Hands.HasAxe && WoodCarried() < EnoughWood;
 		target = Scan();
 		if (target is not Point found)
 			return 0f;
@@ -142,7 +142,6 @@ public sealed class OpportunisticMineTask : BotTask
 
 	const int EnoughOfOneKind = 100;
 	const int EnoughWood = 200;
-	const int UndergroundMargin = 20;
 
 	bool wantsWood;
 
