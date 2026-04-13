@@ -72,7 +72,9 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public bool Spans(int x) => Direction > 0 ? x >= StartX && x <= EndX : x <= StartX && x >= EndX;
 
-	public bool IsDeck(int x) => RequiresPlatform(x) ? TileQuery.IsPlatform(x, Y + 1) : TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1);
+	public bool IsDeck(int x) => IsFlat(x) && (RequiresPlatform(x) ? TileQuery.IsPlatform(x, Y + 1) : TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1));
+
+	bool IsFlat(int x) => !Main.tile[x, Y + 1].IsHalfBlock && Main.tile[x, Y + 1].Slope == SlopeType.Solid;
 
 	public bool HeadroomClear(int x)
 	{

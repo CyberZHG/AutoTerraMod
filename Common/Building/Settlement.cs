@@ -71,6 +71,7 @@ public sealed class Settlement
 		stack = Workshop;
 		for (int story = 0; story < WorkshopStorageStories; story++)
 			stack = StackStorage(stack, WorkshopWidth, workshopHatch);
+		AddBalconies(floor);
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);
 		Top = structures.Min(structure => structure.Top);
@@ -124,6 +125,29 @@ public sealed class Settlement
 					continue;
 				if (!structures.Any(structure => x >= structure.Left && x <= structure.Right && y >= structure.Top && y <= structure.Floor))
 					yield return new Point(x, y);
+			}
+		}
+	}
+
+	const int BalconyWidth = 5;
+
+	void AddBalconies(int groundFloor)
+	{
+		foreach (var room in structures.Where(structure => structure.Floor != groundFloor).ToList())
+		{
+			foreach (int side in new[] { -1, 1 })
+			{
+				int door = side < 0 ? room.Left : room.Right;
+				if (structures.Any(other => other != room && other.IsInterior(door + side, room.Floor - 2)))
+					continue;
+				for (int step = 1; step <= BalconyWidth; step++)
+				{
+					int x = door + side * step;
+					if (shell.Contains(new Point(x, room.Floor)) || structures.Any(other => x >= other.Left && x <= other.Right && room.Floor >= other.Top && room.Floor <= other.Floor))
+						continue;
+					room.AddFloorPlatforms(x, x);
+					shell.Add(new Point(x, room.Floor));
+				}
 			}
 		}
 	}

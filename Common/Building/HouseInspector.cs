@@ -163,9 +163,26 @@ public static class HouseInspector
 			var settlement = faction.Settlement;
 			if (settlement != null && settlement.IsShell(x, y))
 				return true;
+			if (faction.ArenaBed is Point arena && InOutpostShell(arena, x, y))
+				return true;
+		}
+		foreach (var bot in BotWorldSystem.Bots)
+		{
+			if (bot.OutpostBed is Point bed && InOutpostShell(bed, x, y))
+				return true;
 		}
 		return false;
 	}
+
+	static bool InOutpostShell(Point bed, int x, int y)
+	{
+		if (System.Math.Abs(x - bed.X) > Outpost.Width || y < bed.Y - Outpost.Height || y > bed.Y + 1 || !World.TileQuery.IsSolid(x, y))
+			return false;
+		return RoomWallAt(x - 1, y) || RoomWallAt(x + 1, y) || RoomWallAt(x, y - 1) || RoomWallAt(x, y + 1);
+	}
+
+	static bool RoomWallAt(int x, int y) =>
+		WorldGen.InWorld(x, y, 2) && !World.TileQuery.IsSolid(x, y) && Main.tile[x, y].WallType > WallID.None && Main.wallHouse[Main.tile[x, y].WallType];
 
 	const uint BuilderShiftTicks = 60 * 60 * 60;
 

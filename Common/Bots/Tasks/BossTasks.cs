@@ -768,9 +768,18 @@ public sealed class BuildBridgeTask : BotTask
 				}
 			}
 		}
+		var deck = new Point(frontier, bridge.Y + 1);
+		var deckTile = Main.tile[deck.X, deck.Y];
+		if (deckTile.HasTile && (deckTile.IsHalfBlock || deckTile.Slope != SlopeType.Solid) && (TileQuery.IsSolid(deck.X, deck.Y) || TileQuery.IsPlatform(deck.X, deck.Y)))
+		{
+			deckTile.IsHalfBlock = false;
+			deckTile.Slope = SlopeType.Solid;
+			WorldGen.SquareTileFrame(deck.X, deck.Y);
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
 		if (bridge.IsDeck(frontier))
 			return;
-		var deck = new Point(frontier, bridge.Y + 1);
 		if (TileQuery.HasTile(deck))
 		{
 			if (Main.tileCut[Main.tile[deck.X, deck.Y].TileType])
