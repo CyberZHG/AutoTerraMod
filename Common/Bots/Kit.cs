@@ -25,6 +25,7 @@ public static class Kit
 			Inventory.Items(avatar).Where(item => Equipment.PowerOf(item, GearKind.Hook) > 0).MaxBy(item => Equipment.PowerOf(item, GearKind.Hook))
 		};
 		var plannedTypes = bot.Brain.PlannedItemTypes;
+		bool bridgeKit = BridgeKitGoal.Gathering(bot);
 		int ammoType = Inventory.Items(avatar).Where(BotHands.IsRangedWeapon).Select(weapon => weapon.useAmmo).FirstOrDefault();
 		var keptByReserve = new Dictionary<int, int>();
 		int ammoKept = 0;
@@ -39,6 +40,7 @@ public static class Kit
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
+				|| bridgeKit && BridgeKitGoal.IsKitItem(item)
 				|| Tasks.CraftTask.IsPortableStation(item)
 				|| item.type == ItemID.TeleportationPotion
 				|| Tasks.BotTask.IsRecall(item)

@@ -622,6 +622,32 @@ public sealed class HellevatorGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => Bosses.BossRituals.PlanShaftWork(bot);
 }
 
+public sealed class BridgeKitGoal : ProgressionGoal
+{
+	const int KitStone = 200;
+	const int KitPlatforms = 40;
+
+	public override bool NeedsSurface => true;
+
+	public override string Describe() => "BridgeKit";
+
+	public override bool AppliesTo(Bot bot) =>
+		Bosses.BossRituals.PreparingForWall(bot.Faction) && bot.Faction.Hellevator?.IsComplete != true && bot.Faction.Hellbridge?.IsComplete != true;
+
+	public override bool IsMet(Bot bot) => Inventory.Count(bot.Avatar, ItemID.StoneBlock) >= KitStone && Platforms(bot) >= KitPlatforms;
+
+	static readonly BridgeKitGoal Instance = new();
+
+	public static bool Gathering(Bot bot) => Instance.AppliesTo(bot);
+
+	public static bool IsKitItem(Item item) => item.type == ItemID.StoneBlock || item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
+
+	static int Platforms(Bot bot) => Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
+
+	public override PlanStep Plan(Bot bot) =>
+		Platforms(bot) < KitPlatforms ? ProgressionPlanner.ObtainPlatforms(bot, KitPlatforms) : ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, KitStone);
+}
+
 public sealed class HellbridgeGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -1502,6 +1528,7 @@ public static class ProgressionGoals
 		}
 		if (UpgradeScenarios.Focus is int[] focus)
 			goals.Insert(0, new OwnGoal(focus));
+		goals.Add(new BridgeKitGoal());
 		if (HeadlessTestMode.BossFirst)
 		{
 			var boss = goals.OfType<BossGoal>().First();
