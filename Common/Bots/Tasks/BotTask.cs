@@ -72,6 +72,16 @@ public abstract class BotTask
 
 	protected float Aspire(float score) => Bosses.BossCredit.NextChallengeFor(Bot.Faction) == null ? score : System.Math.Min(score, AspirationCap);
 
+	const float BedsideReach = 16f * 4f;
+
+	protected void LeaveOutpostIfBedside()
+	{
+		if (Bot.OutpostBed is not Point bed || Vector2.Distance(Bot.Center, bed.ToWorldCoordinates()) > BedsideReach)
+			return;
+		Bot.OutpostBed = null;
+		BotDiagnostics.Log(Bot, $"cancelled the respawn point at the outpost bed {bed} on the way home");
+	}
+
 	protected bool RecallLandsAtBase()
 	{
 		var landing = BotWorldSystem.RespawnFeet(Bot).ToTileCoordinates();

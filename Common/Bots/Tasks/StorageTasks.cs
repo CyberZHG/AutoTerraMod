@@ -40,8 +40,7 @@ public abstract class ChestVisitTask : BotTask
 		{
 			if (Vector2.Distance(Bot.Center, tile.ToWorldCoordinates()) > RecallTripDistance && Bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true && RecallLandsAtBase() && TryRecallHome())
 				return;
-			Bot.Motor.MoveTo(tile.ToWorldCoordinates(16f, 16f), 24f);
-			if (Bot.Motor.IsStuck)
+			if (!TravelOrTunnel(tile.ToWorldCoordinates(16f, 16f), 24f))
 				IsFinished = true;
 			return;
 		}

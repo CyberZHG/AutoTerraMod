@@ -114,6 +114,7 @@ public sealed class SummonTask : BotTask
 			BotDiagnostics.Log(Bot, $"calling the team to {step.Place.ToTileCoordinates()} for {step.Challenge.Name}");
 			return true;
 		}
+		LeaveOutpostIfBedside();
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
 		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > CampRecallReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
@@ -121,12 +122,14 @@ public sealed class SummonTask : BotTask
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
-		int present = team.Count(member => RallyTask.Joined(member, Bot.Center, GatherRadius));
+		var gathered = team.Where(member => RallyTask.Joined(member, Bot.Center, GatherRadius)).ToList();
+		int present = gathered.Count;
 		headcount = $"{step.Challenge.Name} {present}/{team.Count}";
 		bool waiting = faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
-		if (present < team.Count && waiting)
+		bool strongEnough = present < team.Count && BossReadiness.Evaluate(faction, step.Challenge, Bot, gathered).IsReady;
+		if (present < team.Count && waiting && !strongEnough)
 			return false;
-		if (present * 2 < team.Count)
+		if (present * 2 < team.Count && !strongEnough)
 			return GiveUpRally(present, team.Count);
 		faction.RallyAssembled = true;
 		faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
@@ -477,7 +480,7 @@ public sealed class RallyTask : BotTask
 		var tile = target.ToTileCoordinates();
 		var here = Bot.CenterTile;
 		var camp = Bot.Faction.Settlement;
-		if (camp != null && camp.Contains(tile.X, tile.Y) && !camp.Contains(here.X, here.Y) && Vector2.Distance(Bot.Center, target) > CampRecallDistance)
+		if (camp != null && camp.Contains(tile.X, tile.Y) && !camp.Contains(here.X, here.Y) && Vector2.Distance(Bot.Center, target) > CampRecallDistance && RecallLandsAtBase())
 			return true;
 		return Vector2.Distance(Bot.Center, target) - Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) > RecallTripDistance;
 	}
@@ -526,6 +529,7 @@ public sealed class RallyTask : BotTask
 		if (goal is Vector2 kept && Vector2.Distance(kept, target) < LeaderDriftPixels)
 			target = kept;
 		goal = target;
+		LeaveOutpostIfBedside();
 		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
 		if (!inSight && RecallShortensTrip(target) && TryRecallHome())
 			return;

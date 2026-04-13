@@ -182,7 +182,11 @@ public sealed class ReturnHomeTask : BotTask
 		return Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) > FarFromBase ? score : score * 0.4f;
 	}
 
-	public override void Tick() => Bot.Motor.MoveTo(Bot.Faction.BaseCenter, 32f);
+	public override void Tick()
+	{
+		LeaveOutpostIfBedside();
+		Bot.Motor.MoveTo(Bot.Faction.BaseCenter, 32f);
+	}
 }
 
 public sealed class ExploreTask : BotTask

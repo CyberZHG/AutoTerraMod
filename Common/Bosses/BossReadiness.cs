@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Linq;
 using AutoTerraMod.Common.Bots;
@@ -27,9 +28,9 @@ public static class BossReadiness
 	const float DefenseHalving = 0.5f;
 	const float MaxConsideredFightSeconds = 600f;
 
-	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner)
+	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner, IEnumerable<Bot> present = null)
 	{
-		var fighters = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).ToList();
+		var fighters = (present ?? BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id)).ToList();
 		var sample = ContentSamples.NpcsByNetId[challenge.BossType];
 		var mode = Main.GameModeInfo;
 		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * mode.EnemyMaxLifeMultiplier;

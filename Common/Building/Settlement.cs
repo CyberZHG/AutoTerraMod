@@ -14,8 +14,6 @@ public sealed class Settlement
 	const int WorkshopHatchInset = 3;
 	const int RoomWidth = 10;
 	public const int ApronWidth = 5;
-	const int HallHatchInset = 2;
-	const int HallHatchWidth = 2;
 	const int RoomInteriorHeight = 5;
 	const int MinimumStorageInteriorHeight = 4;
 	public const int GuestRoomCount = 3;
@@ -78,7 +76,7 @@ public sealed class Settlement
 		Floor = floor;
 		AddApron(structures.Where(structure => structure.Floor == floor).MinBy(structure => structure.Left), Left - ApronWidth, Left - 1);
 		AddApron(structures.Where(structure => structure.Floor == floor).MaxBy(structure => structure.Right), Right + 1, Right + ApronWidth);
-		Hall.AddFloorPlatforms(Hall.Left + HallHatchInset, Hall.Left + HallHatchInset + HallHatchWidth - 1);
+		Hall.AddFloorPlatforms(Hall.Left + 1, Hall.Right - 1);
 		yardKeeper.Yard = YardTiles;
 	}
 
