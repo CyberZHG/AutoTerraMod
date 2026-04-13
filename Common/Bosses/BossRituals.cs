@@ -251,7 +251,23 @@ public static class BossRituals
 	public static int BridgeDirection(Bot bot) => bot.Id % 2 == 0 ? 1 : -1;
 
 	public static bool PreparingForWall(Factions.Faction faction) =>
-		BossCredit.NextChallengeFor(faction)?.BossType == NPCID.WallofFlesh && NPC.AnyNPCs(NPCID.Guide);
+		NPC.AnyNPCs(NPCID.Guide) && BossCatalog.ChallengeOf(NPCID.WallofFlesh) is { } wall && !BossCredit.HasDefeated(faction, wall)
+		&& (BossCredit.NextChallengeFor(faction)?.BossType == NPCID.WallofFlesh || ReadyForWall(faction));
+
+	const uint WallReadinessTicks = 600;
+	static readonly Dictionary<int, (uint at, bool ready)> wallReadiness = new();
+
+	public static bool ReadyForWall(Factions.Faction faction)
+	{
+		if (Main.hardMode)
+			return true;
+		if (wallReadiness.TryGetValue(faction.Id, out var cached) && Main.GameUpdateCount - cached.at < WallReadinessTicks)
+			return cached.ready;
+		var summoner = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).MaxBy(member => member.Personality.Combat);
+		bool ready = summoner != null && BossCatalog.ChallengeOf(NPCID.WallofFlesh) is { } wall && BossReadiness.Evaluate(faction, wall, summoner).IsReady;
+		wallReadiness[faction.Id] = (Main.GameUpdateCount, ready);
+		return ready;
+	}
 
 	public static PlanStep PlanShaftWork(Bot bot)
 	{

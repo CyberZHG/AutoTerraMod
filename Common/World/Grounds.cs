@@ -238,10 +238,20 @@ public static class Grounds
 	const int DungeonSearchRadius = 320;
 	const int DungeonMinDepth = 12;
 	const int DungeonDoorstep = 30;
-	const int NearestDungeonFloors = 60;
 
 	static System.Collections.Generic.List<Point> dungeonFloors;
 	static (int x, int y) dungeonFloorsFor;
+
+	const int DungeonRoamTiles = 40;
+	const int DungeonPickAttempts = 12;
+
+	static Point FarDungeonFloor(System.Collections.Generic.List<Point> floors, Point from)
+	{
+		var pick = floors[Main.rand.Next(floors.Count)];
+		for (int attempt = 0; attempt < DungeonPickAttempts && Math.Abs(pick.X - from.X) + Math.Abs(pick.Y - from.Y) < DungeonRoamTiles; attempt++)
+			pick = floors[Main.rand.Next(floors.Count)];
+		return pick;
+	}
 
 	static bool PassableInDungeon(int x, int y)
 	{
@@ -290,7 +300,7 @@ public static class Grounds
 				if (Main.dungeonX > 0 && Math.Abs(from.X - Main.dungeonX) + Math.Abs(from.Y - Main.dungeonY) > DungeonDoorstep)
 					return (StandingSpotNear(new Point(Main.dungeonX, Main.dungeonY)) ?? new Point(Main.dungeonX, Main.dungeonY)).ToWorldCoordinates(8f, 0f);
 				return DungeonInterior() is { Count: > 0 } floors
-					? floors[Main.rand.Next(Math.Min(floors.Count, NearestDungeonFloors))].ToWorldCoordinates(8f, 0f)
+					? FarDungeonFloor(floors, from).ToWorldCoordinates(8f, 0f)
 					: new Vector2((anchor.X + Main.rand.Next(-60, 61)) * 16f, (anchor.Y + Main.rand.Next(0, DungeonRange)) * 16f);
 			default:
 				int x = DensestColumn(ground, minX, maxX);
