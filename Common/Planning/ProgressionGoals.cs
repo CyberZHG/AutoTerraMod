@@ -768,11 +768,14 @@ public sealed class OutpostKitGoal : ProgressionGoal
 
 public sealed class HighwayGoal : ProgressionGoal
 {
-	const int BlockRestock = 60;
-	const int PlatformRestock = 20;
+	const int BlockRestock = 300;
+	const int BlockMinimumTrip = 60;
+	const int BlockLow = 10;
+	const int PlatformRestock = 60;
 	const int RopeRestock = 50;
 	static readonly int[] Ropes = { ItemID.Rope };
 	static readonly HashSet<int> restocking = new();
+	static readonly HashSet<int> restockingStone = new();
 
 	public override string Describe() => "Highway";
 
@@ -795,8 +798,22 @@ public sealed class HighwayGoal : ProgressionGoal
 			int frontier = highway.Frontier(highway.Direction);
 			if (highway.BlockedAt(frontier, pick))
 				continue;
-			if (!bot.Hands.HasBridgeMaterial)
-				return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BlockRestock);
+			int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock);
+			bool nearHome = Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter);
+			if (stone < BlockLow && (!bot.Hands.HasBridgeMaterial || nearHome))
+				restockingStone.Add(bot.Id);
+			int stoneTarget = nearHome ? System.Math.Max(BlockMinimumTrip, System.Math.Min(BlockRestock, stone + BaseStorage.Count(bot.Faction, ItemID.StoneBlock))) : BlockMinimumTrip;
+			if (stone >= stoneTarget)
+				restockingStone.Remove(bot.Id);
+			if (restockingStone.Contains(bot.Id))
+			{
+				var blocks = ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, stoneTarget);
+				if (blocks is not (BlockedStep or IdleStep))
+					return blocks;
+				restockingStone.Remove(bot.Id);
+				if (!bot.Hands.HasBridgeMaterial)
+					continue;
+			}
 			int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 			if (carried == 0 && highway.RequiresPlatform(frontier))
 				restocking.Add(bot.Id);
