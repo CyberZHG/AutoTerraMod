@@ -863,7 +863,11 @@ public sealed class DigShaftTask : BotTask
 			var cell = new Point(column, row);
 			if (TileQuery.IsSolid(cell.X, cell.Y) || (TileQuery.HasTile(cell) && !TileQuery.IsPlatform(cell.X, cell.Y)))
 			{
-				Bot.Hands.Dig(cell);
+				if (Bot.Hands.Dig(cell, clearSaplings: true) is ToolResult.Unbreakable or ToolResult.NoTool || !BossRituals.CanDigRow(Bot, shaft, row))
+				{
+					BotDiagnostics.Log(Bot, $"cannot dig the hellevator at {cell}: tile {TileQuery.TypeAt(cell)} (pick {Bot.Hands.BestPickaxe?.pick ?? 0}, protected {Building.HouseInspector.IsProtected(cell.X, cell.Y)})");
+					IsFinished = true;
+				}
 				return;
 			}
 		}

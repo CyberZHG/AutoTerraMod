@@ -272,7 +272,7 @@ public static class BossRituals
 	public static PlanStep PlanShaftWork(Bot bot)
 	{
 		var shaft = ShaftFor(bot.Faction);
-		if (shaft.IsComplete || bot.CenterTile.Y >= Main.UnderworldLayer || !IsChiefDigger(bot))
+		if (shaft.IsComplete || bot.CenterTile.Y >= Main.UnderworldLayer || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
 		return ShaftWork(bot, shaft);
 	}
@@ -280,8 +280,23 @@ public static class BossRituals
 	const int BombRestock = 3;
 	const int ShaftPlatformRestock = 20;
 
+	public static bool CanDigRow(Bot bot, Hellevator shaft, int row)
+	{
+		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
+		foreach (int column in new[] { shaft.X, shaft.X + 1 })
+		{
+			if (!TileQuery.IsSolid(column, row))
+				continue;
+			if (pick <= 0 || Navigation.PickRequirement.MinimumPick(Main.tile[column, row].TileType, column, row) > pick || Building.HouseInspector.IsProtected(column, row))
+				return false;
+		}
+		return true;
+	}
+
 	public static PlanStep ShaftWork(Bot bot, Hellevator shaft)
 	{
+		if (!CanDigRow(bot, shaft, shaft.FirstUnfinishedRow()))
+			return PlanStep.Blocked;
 		if (!bot.Hands.HasPlatform && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
 			return platforms;
 		if (!Hellevator.LavaBelow(shaft.X, shaft.FirstUnfinishedRow()))
@@ -291,8 +306,12 @@ public static class BossRituals
 		return bot.Hands.Explosives.Carries ? new DigShaftStep(shaft) : ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
 	}
 
-	static bool IsChiefDigger(Bot bot) =>
-		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Mining) == bot;
+	static bool IsChiefDigger(Bot bot, Hellevator shaft)
+	{
+		int row = shaft.FirstUnfinishedRow();
+		return BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && CanDigRow(member, shaft, row))
+			.MaxBy(member => member.Personality.Mining) == bot;
+	}
 
 	public static PlanStep PlanBridgeHelp(Bot bot)
 	{
