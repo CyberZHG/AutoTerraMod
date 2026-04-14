@@ -866,7 +866,12 @@ public sealed class DigShaftTask : BotTask
 				var dug = Bot.Hands.Dig(cell, clearSaplings: true);
 				if (dug == ToolResult.OutOfReach)
 				{
-					if (!TravelOrTunnel(workSpot, 8f))
+					if (Math.Abs(Bot.Center.X - workSpot.X) < 24f && Bot.Center.Y < workSpot.Y)
+					{
+						Bot.Motor.Stop();
+						Bot.Motor.DropThroughPlatform();
+					}
+					else if (!TravelOrTunnel(workSpot, 8f))
 						IsFinished = true;
 					return;
 				}

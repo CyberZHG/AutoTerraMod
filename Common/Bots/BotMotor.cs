@@ -66,6 +66,10 @@ public sealed class BotMotor
 
 	bool stuckReported;
 	public bool WantsToDropThroughPlatforms { get; private set; }
+
+	bool dropRequested;
+
+	public void DropThroughPlatform() => dropRequested = true;
 	public Point? TileToDig { get; private set; }
 
 	int stickyBreak;
@@ -285,6 +289,11 @@ public sealed class BotMotor
 		if (flightTicks > 0)
 			flightTicks--;
 		HoldRopeOverDrop(npc, wantsJump);
+		if (dropRequested)
+		{
+			WantsToDropThroughPlatforms = true;
+			dropRequested = false;
+		}
 		if (!WantsToDropThroughPlatforms)
 			Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
 		npc.spriteDirection = npc.direction;
