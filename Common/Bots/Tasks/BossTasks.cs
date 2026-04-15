@@ -804,7 +804,58 @@ public sealed class BuildBridgeTask : BotTask
 
 public sealed class DigShaftTask : BotTask
 {
-	const float WorkReach = 16f * 4f;
+	const float ShaftAlignment = 5f;
+	const int PlatformLookBack = 8;
+	const int ShaftEntryDepth = 3;
+
+	const float CellApproach = 16f * 2.5f;
+
+	void Approach(Hellevator shaft, Point cell, Vector2 workSpot)
+	{
+		var tile = Bot.CenterTile;
+		if (tile.X >= shaft.X && tile.X <= shaft.X + 1 && Bot.Center.Y < workSpot.Y)
+		{
+			Descend(shaft, workSpot);
+			return;
+		}
+		if (!viaMouth && TravelOrTunnel(cell.ToWorldCoordinates(), CellApproach))
+			return;
+		Descend(shaft, workSpot);
+	}
+
+	void Descend(Hellevator shaft, Vector2 workSpot)
+	{
+		float centerX = (shaft.X + 1) * 16f;
+		var tile = Bot.CenterTile;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - ShaftEntryDepth && Bot.Center.Y < workSpot.Y;
+		if (inShaft)
+		{
+			viaMouth = false;
+			if (Math.Abs(Bot.Center.X - centerX) >= ShaftAlignment)
+			{
+				Bot.Motor.MoveTo(new Vector2(centerX, Bot.Center.Y), 2f);
+				return;
+			}
+			Bot.Motor.Stop();
+			Bot.Motor.DropThroughPlatform();
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
+		if (!viaMouth && TravelOrTunnel(workSpot, 12f))
+			return;
+		viaMouth = true;
+		var mouth = new Vector2(centerX, shaft.TopY * 16f - 21f);
+		if (!TravelOrTunnel(mouth, 12f))
+			IsFinished = true;
+	}
+
+	bool viaMouth;
+
+	public override void Start()
+	{
+		base.Start();
+		viaMouth = false;
+	}
 
 	DigShaftStep step;
 
@@ -824,7 +875,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		var shaft = step.Shaft;
 		int row = shaft.FirstUnfinishedRow();
-		if (row >= Main.UnderworldLayer)
+		if (row >= Main.UnderworldLayer || shaft.IsComplete)
 		{
 			IsFinished = true;
 			return;
@@ -849,50 +900,34 @@ public sealed class DigShaftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var workSpot = new Vector2(PathFinder.CenterXOf(shaft.X), row * 16f - 21f);
-		bool withinReach = Math.Abs(Bot.Center.X - workSpot.X) < 24f && Math.Abs(workSpot.Y - Bot.Center.Y) < WorkReach;
-		if (!withinReach)
+		float centerX = (shaft.X + 1) * 16f;
+		var workSpot = new Vector2(centerX, row * 16f - 21f);
+		for (int above = row - 1; above >= row - PlatformLookBack && above > shaft.TopY; above--)
 		{
-			if (!TravelOrTunnel(workSpot, 12f))
-				IsFinished = true;
-			return;
-		}
-		Bot.Motor.Stop();
-		foreach (int column in new[] { shaft.X, shaft.X + 1 })
-		{
-			var cell = new Point(column, row);
-			if (TileQuery.IsSolid(cell.X, cell.Y) || (TileQuery.HasTile(cell) && !TileQuery.IsPlatform(cell.X, cell.Y)))
-			{
-				var dug = Bot.Hands.Dig(cell, clearSaplings: true);
-				if (dug == ToolResult.OutOfReach)
-				{
-					if (Math.Abs(Bot.Center.X - workSpot.X) < 24f && Bot.Center.Y < workSpot.Y)
-					{
-						Bot.Motor.Stop();
-						Bot.Motor.DropThroughPlatform();
-					}
-					else if (!TravelOrTunnel(workSpot, 8f))
-						IsFinished = true;
-					return;
-				}
-				if (dug is ToolResult.Unbreakable or ToolResult.NoTool || !BossRituals.CanDigRow(Bot, shaft, row))
-				{
-					BotDiagnostics.Log(Bot, $"cannot dig the hellevator at {cell}: tile {TileQuery.TypeAt(cell)} (pick {Bot.Hands.BestPickaxe?.pick ?? 0}, protected {Building.HouseInspector.IsProtected(cell.X, cell.Y)})");
-					IsFinished = true;
-				}
-				return;
-			}
-		}
-		if (shaft.NeedsPlatform(row) && !shaft.HasPlatform(row))
-		{
-			if (Bot.Hands.PlaceBridge(new Point(shaft.X, row)))
+			if (shaft.NeedsPlatform(above) && !shaft.HasPlatform(above) && Bot.Hands.PlaceBridge(new Point(shaft.X, above)))
 			{
 				Bot.Watchdog.RecordProgress();
 				return;
 			}
-			var anchor = new Point(shaft.X - 1, row);
-			if (!TileQuery.HasTile(anchor) && Bot.Hands.PlaceScaffold(anchor))
+		}
+		foreach (int column in new[] { shaft.X, shaft.X + 1 })
+		{
+			var cell = new Point(column, row);
+			if (!TileQuery.IsSolid(cell.X, cell.Y) && (!TileQuery.HasTile(cell) || TileQuery.IsPlatform(cell.X, cell.Y)))
+				continue;
+			var dug = Bot.Hands.Dig(cell, clearSaplings: true);
+			if (dug == ToolResult.OutOfReach)
+			{
+				Approach(shaft, cell, workSpot);
 				return;
+			}
+			Bot.Motor.Stop();
+			if (dug is ToolResult.Unbreakable or ToolResult.NoTool || !BossRituals.CanDigRow(Bot, shaft, row))
+			{
+				BotDiagnostics.Log(Bot, $"cannot dig the hellevator at {cell}: tile {TileQuery.TypeAt(cell)} (pick {Bot.Hands.BestPickaxe?.pick ?? 0}, protected {Building.HouseInspector.IsProtected(cell.X, cell.Y)})");
+				IsFinished = true;
+			}
+			return;
 		}
 		if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
 			BotDiagnostics.Log(Bot, $"shaft row {row} idle: needsPlatform={shaft.NeedsPlatform(row)} hasPlatform={shaft.HasPlatform(row)} material={Bot.Hands.HasBridgeMaterial} place0={Bot.Hands.DescribeBridgePlacement(new Point(shaft.X, row))} place1={Bot.Hands.DescribeBridgePlacement(new Point(shaft.X + 1, row))} botFeet={PathFinder.FeetOf(Bot.Npc)} cells={TileQuery.TypeAt(new Point(shaft.X, row))}/{TileQuery.TypeAt(new Point(shaft.X + 1, row))}{TerrainDump.Around(new Point(shaft.X, row), 6, 4)}");

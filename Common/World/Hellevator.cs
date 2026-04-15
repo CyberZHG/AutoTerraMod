@@ -36,7 +36,7 @@ public sealed record Hellevator(int X, int TopY)
 
 	public bool HasPlatform(int y) => TileQuery.IsPlatform(X, y) || TileQuery.IsPlatform(X + 1, y);
 
-	public bool RowDone(int y) => IsShaftRow(y) && (!NeedsPlatform(y) || HasPlatform(y));
+	public bool RowDone(int y) => IsShaftRow(y);
 
 	public int FirstUnfinishedRow()
 	{

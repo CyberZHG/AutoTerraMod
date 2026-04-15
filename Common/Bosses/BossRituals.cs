@@ -293,11 +293,18 @@ public static class BossRituals
 		return true;
 	}
 
+	static readonly HashSet<int> platformRestock = new();
+
 	public static PlanStep ShaftWork(Bot bot, Hellevator shaft)
 	{
 		if (!CanDigRow(bot, shaft, shaft.FirstUnfinishedRow()))
 			return PlanStep.Blocked;
-		if (!bot.Hands.HasPlatform && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
+		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
+		if (carried == 0)
+			platformRestock.Add(bot.Id);
+		else if (carried >= ShaftPlatformRestock)
+			platformRestock.Remove(bot.Id);
+		if (platformRestock.Contains(bot.Id) && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
 			return platforms;
 		if (!Hellevator.LavaBelow(shaft.X, shaft.FirstUnfinishedRow()))
 			return new DigShaftStep(shaft);
