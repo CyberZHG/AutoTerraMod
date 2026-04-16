@@ -242,16 +242,27 @@ public static class Grounds
 	static System.Collections.Generic.List<Point> dungeonFloors;
 	static (int x, int y) dungeonFloorsFor;
 
-	const int DungeonRoamTiles = 40;
-	const int DungeonPickAttempts = 12;
+	const int DungeonRoamMin = 30;
+	const int DungeonRoamMax = 90;
+	const int DungeonPickAttempts = 24;
 
 	static Point FarDungeonFloor(System.Collections.Generic.List<Point> floors, Point from)
 	{
-		var pick = floors[Main.rand.Next(floors.Count)];
-		for (int attempt = 0; attempt < DungeonPickAttempts && Math.Abs(pick.X - from.X) + Math.Abs(pick.Y - from.Y) < DungeonRoamTiles; attempt++)
-			pick = floors[Main.rand.Next(floors.Count)];
-		return pick;
+		Point? fallback = null;
+		for (int attempt = 0; attempt < DungeonPickAttempts; attempt++)
+		{
+			var pick = floors[Main.rand.Next(floors.Count)];
+			int distance = Math.Abs(pick.X - from.X) + Math.Abs(pick.Y - from.Y);
+			if (distance >= DungeonRoamMin && distance <= DungeonRoamMax)
+				return pick;
+			if (fallback is not Point best || distance < Math.Abs(best.X - from.X) + Math.Abs(best.Y - from.Y))
+				fallback = pick;
+		}
+		return fallback ?? floors[0];
 	}
+
+	public static bool InsideDungeon(Point tile) =>
+		WorldGen.InWorld(tile.X, tile.Y, 10) && Main.wallDungeon[Main.tile[tile.X, tile.Y].WallType];
 
 	static bool PassableInDungeon(int x, int y)
 	{
@@ -297,7 +308,7 @@ public static class Grounds
 			case Landmark.Underworld:
 				return new Vector2(from.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
 			case Landmark.Dungeon:
-				if (Main.dungeonX > 0 && Math.Abs(from.X - Main.dungeonX) + Math.Abs(from.Y - Main.dungeonY) > DungeonDoorstep)
+				if (Main.dungeonX > 0 && !InsideDungeon(from) && Math.Abs(from.X - Main.dungeonX) + Math.Abs(from.Y - Main.dungeonY) > DungeonDoorstep)
 					return (StandingSpotNear(new Point(Main.dungeonX, Main.dungeonY)) ?? new Point(Main.dungeonX, Main.dungeonY)).ToWorldCoordinates(8f, 0f);
 				return DungeonInterior() is { Count: > 0 } floors
 					? FarDungeonFloor(floors, from).ToWorldCoordinates(8f, 0f)

@@ -117,6 +117,13 @@ public sealed class HuntTask : BotTask
 		}
 		if (huntingGround is Vector2 ground)
 		{
+			if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Ground: Landmark.Dungeon } } && Grounds.InsideDungeon(Bot.CenterTile))
+			{
+				Bot.Motor.MoveTo(ground, 48f);
+				if (Bot.Motor.IsStuck || Bot.Motor.HasArrived)
+					huntingGround = null;
+				return;
+			}
 			if (!TravelOrTunnel(ground, 48f) || Bot.Motor.HasArrived)
 				huntingGround = null;
 			return;
