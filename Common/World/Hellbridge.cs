@@ -10,7 +10,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int End(int direction) => direction > 0 ? RightEnd : LeftEnd;
 
-	public bool WantsPlatform(int x) => x % DeckPlatformEvery == 0;
+	public bool WantsPlatform(int x) => x % DeckPlatformEvery == 0 || x == CenterX || x == CenterX + 1;
 
 	public bool RequiresPlatform(int x) => false;
 
@@ -29,11 +29,15 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 		{
 			if (StandsHere(anchor.X, y))
 				return new Hellbridge(anchor.X, y);
-			if (Main.tile[anchor.X, y].LiquidAmount > 0 && Main.tile[anchor.X, y].LiquidType == LiquidID.Lava)
+			if (IsLava(anchor.X, y))
 				return new Hellbridge(anchor.X, y - LavaClearance);
 		}
 		return new Hellbridge(anchor.X, Main.maxTilesY - 120);
 	}
+
+	static bool IsLava(int x, int y) => Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava;
+
+	public int BuiltLength => Frontier(1) - Frontier(-1);
 
 	static bool StandsHere(int x, int y) =>
 		TileQuery.CanStandOn(x, y + 1) && !TileQuery.IsSolid(x, y) && !TileQuery.IsSolid(x, y - 1) && !TileQuery.IsSolid(x, y - 2)

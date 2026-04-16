@@ -95,7 +95,7 @@ public static class TileQuery
 		if (!WorldGen.InWorld(x, y, 2))
 			return false;
 		var tile = Main.tile[x, y];
-		return tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava;
+		return tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava && !IsSolid(x, y);
 	}
 
 	public static bool TouchesLava(int x, int y) =>

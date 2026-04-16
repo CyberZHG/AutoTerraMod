@@ -30,6 +30,18 @@ public sealed record Hellevator(int X, int TopY)
 		return null;
 	}
 
+	public bool Contains(int x, int y) => x >= X && x <= X + 1 && y > TopY && y < Main.UnderworldLayer;
+
+	public static bool InAnyShaft(int x, int y)
+	{
+		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Hellevator is { } shaft && shaft.Contains(x, y))
+				return true;
+		}
+		return false;
+	}
+
 	public bool IsShaftRow(int y) => !TileQuery.IsSolid(X, y) && !TileQuery.IsSolid(X + 1, y);
 
 	public bool NeedsPlatform(int y) => y > TopY + PlatformSpacing && (y - TopY) % PlatformSpacing == 0;

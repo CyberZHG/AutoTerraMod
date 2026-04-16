@@ -326,13 +326,25 @@ public static class BossRituals
 		bool underworldReachable = bot.CenterTile.Y >= Main.UnderworldLayer || shaft?.IsComplete == true;
 		if (!underworldReachable)
 			return PlanStep.Idle;
-		if (KnownLandmark(bot, Landmark.Underworld) is not Point underworld)
+		Point anchor;
+		if (shaft?.IsComplete == true)
+		{
+			anchor = new Point(shaft.X, Main.UnderworldLayer);
+			if (bot.Faction.Hellbridge is { } planned && !planned.IsComplete && planned.BuiltLength < BridgeReplanLength
+				&& (System.Math.Abs(planned.CenterX - shaft.X) > BridgeShaftTolerance || Hellbridge.Plan(anchor).Y != planned.Y))
+				bot.Faction.Hellbridge = null;
+		}
+		else if (KnownLandmark(bot, Landmark.Underworld) is Point underworld)
+			anchor = underworld;
+		else
 			return new ScoutStep(Landmark.Underworld, true);
-		var bridge = bot.Faction.Hellbridge ??= Hellbridge.Plan(underworld);
+		var bridge = bot.Faction.Hellbridge ??= Hellbridge.Plan(anchor);
 		return bridge.IsComplete ? PlanStep.Idle : BridgeWork(bot, bridge);
 	}
 
-	const int BridgeMaterialRestock = 100;
+	const int BridgeShaftTolerance = 30;
+	const int BridgeReplanLength = 10;
+		const int BridgeMaterialRestock = 100;
 	const int BridgePlatformStone = 8;
 
 	static PlanStep BridgeWork(Bot bot, Hellbridge bridge)

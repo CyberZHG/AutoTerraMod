@@ -718,6 +718,35 @@ public sealed class TravelTask : BotTask
 
 public sealed class BuildBridgeTask : BotTask
 {
+	bool PlugLavaAround(Point tile)
+	{
+		foreach (var next in new[] { new Point(tile.X - 1, tile.Y), new Point(tile.X + 1, tile.Y), new Point(tile.X, tile.Y - 1), new Point(tile.X, tile.Y + 1) })
+		{
+			if (!TileQuery.IsDangerousLiquid(next.X, next.Y) || TileQuery.HasTile(next))
+				continue;
+			var plug = Inventory.Items(Avatar).Where(Building.Outpost.IsBlock).OrderBy(item => item.type == ItemID.StoneBlock ? 0 : 1).FirstOrDefault();
+			if (plug == null)
+				return false;
+			if (!Bot.Hands.CanReach(plug, next))
+			{
+				Bot.Motor.MoveTo(next.ToWorldCoordinates(), 24f);
+				return !Bot.Motor.IsStuck;
+			}
+			if (!Bot.Hands.Ready)
+				return true;
+			if (!Bot.Hands.Place(plug, next))
+			{
+				BotDiagnostics.Log(Bot, $"cannot plug lava at {next} with {plug.Name}");
+				return false;
+			}
+			Main.tile[next.X, next.Y].LiquidAmount = 0;
+			BotDiagnostics.Log(Bot, $"plugged lava at {next} to clear the corridor");
+			Bot.Watchdog.RecordProgress();
+			return true;
+		}
+		return false;
+	}
+
 	const float StandTolerance = 16f * 2f;
 
 	BuildBridgeStep step;
@@ -750,6 +779,11 @@ public sealed class BuildBridgeTask : BotTask
 		{
 			if (!TravelOrTunnel(stand, 12f))
 			{
+				if (bridge is Hellbridge && Bot.CenterTile.Y > bridge.Y + 1 && CarriesRecall(Avatar) && TryRecallHome())
+				{
+					BotDiagnostics.Log(Bot, $"below the Underworld bridge at {Bot.CenterTile}, recalling home to come back down the hellevator");
+					return;
+				}
 				BotDiagnostics.Log(Bot, $"cannot reach bridge frontier {frontier}; motor: {Bot.Motor.Describe()}{TerrainDump.Around(new Point(frontier, bridge.Y), 16, 8)}");
 				IsFinished = true;
 			}
@@ -763,8 +797,21 @@ public sealed class BuildBridgeTask : BotTask
 			{
 				if (TileQuery.IsSolid(column, y))
 				{
-					if (Bot.Hands.Dig(new Point(column, y), clearSaplings: true) is ToolResult.Unbreakable or ToolResult.NoTool)
+					var dug = Bot.Hands.Dig(new Point(column, y), clearSaplings: true);
+					if (dug == ToolResult.OutOfReach)
 					{
+						Bot.Motor.MoveTo(new Point(column, y).ToWorldCoordinates(), 24f);
+						if (Bot.Motor.IsStuck)
+						{
+							BotDiagnostics.Log(Bot, $"cannot get within reach of corridor tile {column},{y}");
+							IsFinished = true;
+						}
+						return;
+					}
+					if (dug is ToolResult.Unbreakable or ToolResult.NoTool)
+					{
+						if (PlugLavaAround(new Point(column, y)))
+							return;
 						BotDiagnostics.Log(Bot, $"corridor blocked by an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
 						IsFinished = true;
 					}
@@ -787,8 +834,18 @@ public sealed class BuildBridgeTask : BotTask
 		if (TileQuery.HasTile(deck))
 		{
 			if (Main.tileCut[Main.tile[deck.X, deck.Y].TileType])
+			{
 				Bot.Hands.Cut(deck);
-			else if (Bot.Hands.Dig(deck, clearSaplings: true) is ToolResult.Unbreakable or ToolResult.NoTool)
+				return;
+			}
+			var cleared = Bot.Hands.Dig(deck, clearSaplings: true);
+			if (cleared == ToolResult.OutOfReach)
+			{
+				Bot.Motor.MoveTo(deck.ToWorldCoordinates(), 24f);
+				if (Bot.Motor.IsStuck)
+					IsFinished = true;
+			}
+			else if (cleared is ToolResult.Unbreakable or ToolResult.NoTool && !PlugLavaAround(deck))
 			{
 				BotDiagnostics.Log(Bot, $"corridor deck {deck} is unbreakable {TileQuery.TypeAt(deck)}");
 				IsFinished = true;
@@ -797,6 +854,12 @@ public sealed class BuildBridgeTask : BotTask
 		}
 		if (Bot.Hands.PlaceBridge(deck, solidDeck: !bridge.WantsPlatform(frontier)) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
 			Bot.Watchdog.RecordProgress();
+		else if (!Bot.Hands.CanReach(null, deck))
+		{
+			Bot.Motor.MoveTo(deck.ToWorldCoordinates(), 24f);
+			if (Bot.Motor.IsStuck)
+				IsFinished = true;
+		}
 		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
 			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");
 	}
@@ -804,7 +867,6 @@ public sealed class BuildBridgeTask : BotTask
 
 public sealed class DigShaftTask : BotTask
 {
-	const float ShaftAlignment = 5f;
 	const int PlatformLookBack = 8;
 	const int ShaftEntryDepth = 3;
 
@@ -831,14 +893,7 @@ public sealed class DigShaftTask : BotTask
 		if (inShaft)
 		{
 			viaMouth = false;
-			if (Math.Abs(Bot.Center.X - centerX) >= ShaftAlignment)
-			{
-				Bot.Motor.MoveTo(new Vector2(centerX, Bot.Center.Y), 2f);
-				return;
-			}
-			Bot.Motor.Stop();
-			Bot.Motor.DropThroughPlatform();
-			Bot.Watchdog.RecordProgress();
+			CentreIn(shaft);
 			return;
 		}
 		if (!viaMouth && TravelOrTunnel(workSpot, 12f))

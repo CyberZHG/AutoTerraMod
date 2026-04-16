@@ -563,12 +563,30 @@ public sealed class HeadlessTestMode : ModSystem
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"gift: gave {bot.Name} {amount} x {Lang.GetItemNameValue(type)} (now {Bots.Inventory.Count(bot.Avatar, type)})");
 	}
 
+	static readonly int saveAfterSeconds = int.TryParse(Environment.GetEnvironmentVariable("AUTOTERRA_SAVE_AFTER"), out int seconds) ? seconds : -1;
+	static uint runStartedAt;
+	static bool savedOnce;
+
+	static void SaveWhenDue()
+	{
+		if (saveAfterSeconds < 0 || savedOnce)
+			return;
+		if (runStartedAt == 0)
+			runStartedAt = Math.Max(1u, Main.GameUpdateCount);
+		if (Main.GameUpdateCount - runStartedAt < saveAfterSeconds * 60u)
+			return;
+		savedOnce = true;
+		Terraria.IO.WorldFile.SaveWorld();
+		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless test saved the world after {saveAfterSeconds}s");
+	}
+
 	public override void PostUpdateWorld()
 	{
 		if (Enabled)
 		{
 			ApplyStartTime();
 			DeliverGift();
+			SaveWhenDue();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 			Mod.Logger.Info($"headless test running: {Main.GameUpdateCount / 60}s of game time");

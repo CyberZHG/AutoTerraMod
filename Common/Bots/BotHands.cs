@@ -300,7 +300,7 @@ public sealed class BotHands
 	{
 		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile))
 			return false;
-		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && World.Highway.InAnyClearance(tile.X, tile.Y))
+		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;
 		ClearReplaceableTile(tile);
 		if (!TryPlaceTile(item, tile))

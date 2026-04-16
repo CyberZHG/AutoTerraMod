@@ -124,11 +124,49 @@ public abstract class BotTask
 		return fromHere - fromHome > RecallSavesTiles;
 	}
 
+	const float ShaftDropMargin = 16f * 6f;
+	const float ShaftDropFinish = 16f;
+	const float ShaftCentring = 5f;
+	const int ShaftMouthReach = 20;
+
+	const float NudgePerTick = 1.5f;
+
+	protected void CentreIn(World.Hellevator shaft)
+	{
+		Bot.Motor.Stop();
+		float offset = (shaft.X + 1) * 16f - Bot.Center.X;
+		if (System.Math.Abs(offset) >= ShaftCentring && Bot.Npc is NPC body)
+			body.position.X += System.Math.Clamp(offset, -NudgePerTick, NudgePerTick);
+		else
+			Bot.Motor.DropThroughPlatform();
+		Bot.Watchdog.RecordProgress();
+	}
+
+	bool ShaftShortcut(Vector2 target)
+	{
+		if (Bot.Faction.Hellevator is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish)
+			return false;
+		float centerX = (shaft.X + 1) * 16f;
+		var tile = Bot.CenterTile;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - 3 && tile.Y < Main.UnderworldLayer;
+		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || Bot.Npc?.velocity.Y > 0f))
+		{
+			CentreIn(shaft);
+			return true;
+		}
+		if (!shaft.IsComplete || target.Y < Main.UnderworldLayer * 16f || tile.Y > shaft.TopY + ShaftMouthReach)
+			return false;
+		Bot.Motor.MoveTo(new Vector2(centerX, shaft.TopY * 16f - 21f), 8f);
+		return !Bot.Motor.IsStuck;
+	}
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		if (RecallBeatsLongTrip(target) && TryRecallHome())
+			return true;
+		if (ShaftShortcut(target))
 			return true;
 		campExit = null;
 		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)
