@@ -134,10 +134,14 @@ public abstract class BotTask
 	protected void CentreIn(World.Hellevator shaft)
 	{
 		Bot.Motor.Stop();
+		if (Bot.Npc is not NPC body)
+			return;
+		if (Bot.Grapple.IsAttached)
+			Bot.Grapple.Release(body, jump: false);
 		float offset = (shaft.X + 1) * 16f - Bot.Center.X;
-		if (System.Math.Abs(offset) >= ShaftCentring && Bot.Npc is NPC body)
+		if (System.Math.Abs(offset) >= ShaftCentring)
 			body.position.X += System.Math.Clamp(offset, -NudgePerTick, NudgePerTick);
-		else
+		else if (body.velocity.Y == 0f)
 			Bot.Motor.DropThroughPlatform();
 		Bot.Watchdog.RecordProgress();
 	}

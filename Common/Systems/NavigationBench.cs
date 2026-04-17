@@ -583,7 +583,24 @@ public sealed class NavigationBench : ModSystem
 			"#.....S..............#",
 			"######################"
 		}),
-		new("CloudFall", FallShaft(42)),
+		new("PickHookPlatformCeiling", new[]
+		{
+			"#####################",
+			"#...................#",
+			"#.........G.........#",
+			"#===================#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#...................#",
+			"#....S..............#",
+			"#####################"
+		}),
+				new("CloudFall", FallShaft(42)),
 		new("HookFall", FallShaft(70)),
 		new("HookTower", new[]
 		{
@@ -1538,6 +1555,7 @@ public sealed class NavigationBench : ModSystem
 	uint caseStartedAt;
 	Vector2 goal;
 	readonly List<string> results = new();
+	readonly List<Point> casePlatforms = new();
 
 	static bool Active => HeadlessTestMode.Scenario == "nav";
 	static readonly bool Trace = System.Environment.GetEnvironmentVariable("AUTOTERRA_NAV_TRACE") == "1";
@@ -1574,9 +1592,16 @@ public sealed class NavigationBench : ModSystem
 		if (elapsed < SettleTicks)
 			return;
 		bool arrived = Vector2.Distance(runner.Center, goal) < ArrivalDistance;
+		var dugPlatforms = casePlatforms.Where(tile => !World.TileQuery.IsPlatform(tile.X, tile.Y)).ToList();
+		if (arrived && dugPlatforms.Count > 0)
+		{
+			arrived = false;
+			elapsed = uint.MaxValue;
+		}
 		if (!arrived && elapsed < (Cases[caseIndex].InWorld || Cases[caseIndex].Name.StartsWith("Recycle") ? WorldTripTimeoutTicks : TimeoutTicks))
 			return;
-		string verdict = arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready} armor=[{string.Join(",", runner.Avatar.armor.Select(item => item.type))}] rocket={runner.Avatar.rocketBoots}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
+		string verdict = dugPlatforms.Count > 0 ? $"FAIL: dug platforms at {string.Join(" ", dugPlatforms)}"
+			: arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready} armor=[{string.Join(",", runner.Avatar.armor.Select(item => item.type))}] rocket={runner.Avatar.rocketBoots}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
 		BotDiagnostics.LogWorld($"nav bench {Cases[caseIndex].Name}: {verdict}");
 		if (caseIndex + 1 < Cases.Length)
@@ -1614,6 +1639,7 @@ public sealed class NavigationBench : ModSystem
 		int left = ArenaLeft + index % perRow * ArenaSpacing;
 		int top = ArenaTop + index / perRow * ArenaRowHeight;
 		Point start = bench.WorldStart, target = bench.WorldGoal;
+		casePlatforms.Clear();
 		for (int row = 0; !bench.InWorld && row < bench.Map.Length; row++)
 		{
 			for (int column = 0; column < bench.Map[row].Length; column++)
@@ -1622,6 +1648,8 @@ public sealed class NavigationBench : ModSystem
 				int y = top + row;
 				char glyph = bench.Map[row][column];
 				Build(x, y, glyph);
+				if (glyph == '=')
+					casePlatforms.Add(new Point(x, y));
 				if (glyph == 'S')
 					start = new Point(x, y);
 				if (glyph == 'G')
