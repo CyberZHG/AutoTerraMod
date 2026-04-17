@@ -1,5 +1,6 @@
 using System.Linq;
 using AutoTerraMod.Common.Systems;
+using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.Audio;
@@ -122,6 +123,46 @@ public abstract class BotTask
 			return false;
 		float fromHome = System.Math.Abs(BotWorldSystem.RespawnFeet(Bot).X - target.X) / 16f;
 		return fromHere - fromHome > RecallSavesTiles;
+	}
+
+	protected bool PlugLavaAround(Point tile)
+	{
+		if (Bot.Hands.Explosives.IsFused)
+		{
+			Bot.Motor.Stop();
+			return true;
+		}
+		if (TileQuery.TouchesLava(tile.X, tile.Y) && Bot.Hands.Explosives.Carries && Explosives.CanBlast(tile.X, tile.Y) && Bot.Hands.Explosives.Light(tile))
+		{
+			BotDiagnostics.Log(Bot, $"blasting {tile} next to lava");
+			Bot.Watchdog.RecordProgress();
+			return true;
+		}
+		foreach (var next in new[] { new Point(tile.X - 1, tile.Y), new Point(tile.X + 1, tile.Y), new Point(tile.X, tile.Y - 1), new Point(tile.X, tile.Y + 1) })
+		{
+			if (!TileQuery.IsDangerousLiquid(next.X, next.Y) || TileQuery.HasTile(next))
+				continue;
+			var plug = Inventory.Items(Avatar).Where(Building.Outpost.IsBlock).OrderBy(item => item.type == ItemID.StoneBlock ? 0 : 1).FirstOrDefault();
+			if (plug == null)
+				return false;
+			if (!Bot.Hands.CanReach(plug, next))
+			{
+				Bot.Motor.MoveTo(next.ToWorldCoordinates(), 24f);
+				return !Bot.Motor.IsStuck;
+			}
+			if (!Bot.Hands.Ready)
+				return true;
+			if (!Bot.Hands.Place(plug, next))
+			{
+				BotDiagnostics.Log(Bot, $"cannot plug lava at {next} with {plug.Name}");
+				return false;
+			}
+			Main.tile[next.X, next.Y].LiquidAmount = 0;
+			BotDiagnostics.Log(Bot, $"plugged lava at {next} to clear the corridor");
+			Bot.Watchdog.RecordProgress();
+			return true;
+		}
+		return false;
 	}
 
 	const float ShaftDropMargin = 16f * 6f;

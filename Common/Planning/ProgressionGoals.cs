@@ -617,7 +617,7 @@ public sealed class HellevatorGoal : ProgressionGoal
 
 	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
 
-	public override bool IsMet(Bot bot) => bot.Faction.Hellevator?.IsComplete == true;
+	public override bool IsMet(Bot bot) => Bosses.BossRituals.ShaftFor(bot.Faction).IsComplete;
 
 	public override PlanStep Plan(Bot bot) => Bosses.BossRituals.PlanShaftWork(bot);
 }

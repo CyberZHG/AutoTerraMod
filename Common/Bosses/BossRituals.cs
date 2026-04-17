@@ -237,7 +237,9 @@ public static class BossRituals
 	{
 		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && (shaft.X + 1 >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
 			faction.Hellevator = null;
-		return faction.Hellevator ??= PlanShaft(faction);
+		var planned = faction.Hellevator ??= PlanShaft(faction);
+		planned.LandingRow = faction.Hellbridge?.Y;
+		return planned;
 	}
 
 	static Hellevator PlanShaft(Factions.Faction faction)
@@ -331,7 +333,7 @@ public static class BossRituals
 		{
 			anchor = new Point(shaft.X, Main.UnderworldLayer);
 			if (bot.Faction.Hellbridge is { } planned && !planned.IsComplete && planned.BuiltLength < BridgeReplanLength
-				&& (System.Math.Abs(planned.CenterX - shaft.X) > BridgeShaftTolerance || Hellbridge.Plan(anchor).Y != planned.Y))
+				&& System.Math.Abs(planned.CenterX - shaft.X) > BridgeShaftTolerance)
 				bot.Faction.Hellbridge = null;
 		}
 		else if (KnownLandmark(bot, Landmark.Underworld) is Point underworld)
@@ -339,6 +341,8 @@ public static class BossRituals
 		else
 			return new ScoutStep(Landmark.Underworld, true);
 		var bridge = bot.Faction.Hellbridge ??= Hellbridge.Plan(anchor);
+		if (shaft != null)
+			shaft.LandingRow = bridge.Y;
 		return bridge.IsComplete ? PlanStep.Idle : BridgeWork(bot, bridge);
 	}
 

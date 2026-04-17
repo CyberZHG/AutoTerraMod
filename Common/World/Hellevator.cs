@@ -50,19 +50,24 @@ public sealed record Hellevator(int X, int TopY)
 
 	public bool RowDone(int y) => IsShaftRow(y);
 
+	public int? LandingRow { get; set; }
+
+	int BottomRow => LandingRow is int landing ? System.Math.Max(landing + 1, Main.UnderworldLayer - CompletionSlack) : Main.UnderworldLayer - CompletionSlack;
+
 	public int FirstUnfinishedRow()
 	{
-		for (int y = TopY; y < Main.UnderworldLayer; y++)
+		int end = System.Math.Max(Main.UnderworldLayer, BottomRow);
+		for (int y = TopY; y < end; y++)
 		{
 			if (!RowDone(y))
 				return y;
 		}
-		return Main.UnderworldLayer;
+		return end;
 	}
 
 	const int CompletionSlack = 6;
 
-	public bool IsComplete => FirstUnfinishedRow() >= Main.UnderworldLayer - CompletionSlack;
+	public bool IsComplete => FirstUnfinishedRow() >= BottomRow;
 
 	public static bool LavaBelow(int x, int y)
 	{

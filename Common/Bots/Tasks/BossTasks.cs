@@ -718,34 +718,6 @@ public sealed class TravelTask : BotTask
 
 public sealed class BuildBridgeTask : BotTask
 {
-	bool PlugLavaAround(Point tile)
-	{
-		foreach (var next in new[] { new Point(tile.X - 1, tile.Y), new Point(tile.X + 1, tile.Y), new Point(tile.X, tile.Y - 1), new Point(tile.X, tile.Y + 1) })
-		{
-			if (!TileQuery.IsDangerousLiquid(next.X, next.Y) || TileQuery.HasTile(next))
-				continue;
-			var plug = Inventory.Items(Avatar).Where(Building.Outpost.IsBlock).OrderBy(item => item.type == ItemID.StoneBlock ? 0 : 1).FirstOrDefault();
-			if (plug == null)
-				return false;
-			if (!Bot.Hands.CanReach(plug, next))
-			{
-				Bot.Motor.MoveTo(next.ToWorldCoordinates(), 24f);
-				return !Bot.Motor.IsStuck;
-			}
-			if (!Bot.Hands.Ready)
-				return true;
-			if (!Bot.Hands.Place(plug, next))
-			{
-				BotDiagnostics.Log(Bot, $"cannot plug lava at {next} with {plug.Name}");
-				return false;
-			}
-			Main.tile[next.X, next.Y].LiquidAmount = 0;
-			BotDiagnostics.Log(Bot, $"plugged lava at {next} to clear the corridor");
-			Bot.Watchdog.RecordProgress();
-			return true;
-		}
-		return false;
-	}
 
 	const float StandTolerance = 16f * 2f;
 
@@ -977,6 +949,8 @@ public sealed class DigShaftTask : BotTask
 				return;
 			}
 			Bot.Motor.Stop();
+			if (dug == ToolResult.Unbreakable && PlugLavaAround(cell))
+				return;
 			if (dug is ToolResult.Unbreakable or ToolResult.NoTool || !BossRituals.CanDigRow(Bot, shaft, row))
 			{
 				BotDiagnostics.Log(Bot, $"cannot dig the hellevator at {cell}: tile {TileQuery.TypeAt(cell)} (pick {Bot.Hands.BestPickaxe?.pick ?? 0}, protected {Building.HouseInspector.IsProtected(cell.X, cell.Y)})");
