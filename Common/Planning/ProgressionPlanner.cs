@@ -589,9 +589,14 @@ public static class ProgressionPlanner
 		return coins > 0 && Shops.Offer(bot, itemType) is var (seller, price) && Shops.WithinShoppingTrip(bot, seller.Center) && (long)price * amount * EasyPurchaseShare <= coins;
 	}
 
-	public static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
+	const float SurfaceShoppingReach = 16f * 250f;
+
+	static bool SurfaceShoppingTrip(Bot bot, NPC seller) =>
+		bot.CenterTile.Y < Main.worldSurface && seller.Center.Y < Main.worldSurface * 16f && Vector2.Distance(bot.Center, seller.Center) < SurfaceShoppingReach;
+
+		public static PlanStep PlanPurchase(Bot bot, int itemType, int amount)
 	{
-		if (Shops.Offer(bot, itemType) is not var (seller, price) || !Shops.WithinShoppingTrip(bot, seller.Center))
+		if (Shops.Offer(bot, itemType) is not var (seller, price) || !Shops.WithinShoppingTrip(bot, seller.Center) && !SurfaceShoppingTrip(bot, seller))
 			return PlanStep.Blocked;
 		long coins = Utils.CoinsCount(out _, bot.Avatar.inventory);
 		return coins >= (long)price * amount ? new BuyStep(itemType, amount, seller.type) : PlanStep.Blocked;

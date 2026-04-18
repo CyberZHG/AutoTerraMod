@@ -118,10 +118,10 @@ public abstract class BotTask
 	{
 		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar))
 			return false;
-		float fromHere = System.Math.Abs(Bot.Center.X - target.X) / 16f;
+		float fromHere = Vector2.Distance(Bot.Center, target) / 16f;
 		if (fromHere < LongTripTiles)
 			return false;
-		float fromHome = System.Math.Abs(BotWorldSystem.RespawnFeet(Bot).X - target.X) / 16f;
+		float fromHome = Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) / 16f;
 		return fromHere - fromHome > RecallSavesTiles;
 	}
 
@@ -199,7 +199,9 @@ public abstract class BotTask
 			CentreIn(shaft);
 			return true;
 		}
-		if (!shaft.IsComplete || target.Y < Main.UnderworldLayer * 16f || tile.Y > shaft.TopY + ShaftMouthReach)
+		var targetTile = target.ToTileCoordinates();
+		bool intoShaft = targetTile.X >= shaft.X - 1 && targetTile.X <= shaft.X + 2 && targetTile.Y > shaft.TopY;
+		if (!(intoShaft || shaft.IsComplete && target.Y >= Main.UnderworldLayer * 16f) || tile.Y > shaft.TopY + ShaftMouthReach)
 			return false;
 		Bot.Motor.MoveTo(new Vector2(centerX, shaft.TopY * 16f - 21f), 8f);
 		return !Bot.Motor.IsStuck;

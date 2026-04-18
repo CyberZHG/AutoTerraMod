@@ -283,7 +283,7 @@ public sealed class RopeGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => RopeCount(bot.Avatar) >= Minimum;
 
-	static readonly int[] Ropes = { ItemID.Rope };
+	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope, ItemID.VineRope, ItemID.SilkRope };
 	static readonly HashSet<int> restocking = new();
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RestockTo);
@@ -648,6 +648,37 @@ public sealed class BridgeKitGoal : ProgressionGoal
 		Platforms(bot) < KitPlatforms ? ProgressionPlanner.ObtainPlatforms(bot, KitPlatforms) : ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, KitStone);
 }
 
+public sealed class ShaftRopeGoal : ProgressionGoal
+{
+	const int RopeTrip = 200;
+	const int UndergroundMargin = 30;
+
+	public override bool IsExpedition => true;
+
+	public override string Describe() => "ShaftRope";
+
+	public override bool AppliesTo(Bot bot) =>
+		bot.Faction.Hellevator is { } shaft && shaft.IsComplete && IsRoper(bot);
+
+	static bool IsRoper(Bot bot) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Building) == bot;
+
+	public override bool IsMet(Bot bot)
+	{
+		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
+		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) == null;
+	}
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
+		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1, RopeTrip);
+		if (step == null && !bot.Hands.HasRope && bot.CenterTile.Y > Main.worldSurface + UndergroundMargin)
+			return new TravelStep(bot.Faction.BaseFeet);
+		return step ?? PlanStep.Idle;
+	}
+}
+
 public sealed class HellbridgeGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -799,7 +830,7 @@ public sealed class HighwayGoal : ProgressionGoal
 	const int BlockLow = 10;
 	const int PlatformRestock = 60;
 	const int RopeRestock = 50;
-	static readonly int[] Ropes = { ItemID.Rope };
+	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope, ItemID.VineRope, ItemID.SilkRope };
 	static readonly HashSet<int> restocking = new();
 	static readonly HashSet<int> restockingStone = new();
 
@@ -862,13 +893,13 @@ public sealed class HighwayGoal : ProgressionGoal
 		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) ?? PlanStep.Idle;
 	}
 
-	static PlanStep Hang(Bot bot, int x, int top, int bottom)
+	internal static PlanStep Hang(Bot bot, int x, int top, int bottom, int restock = RopeRestock)
 	{
 		if (Bots.Tasks.RopeColumnTask.MissingRow(x, top, bottom) == null)
 			return null;
 		if (bot.Hands.HasRope)
 			return new HangRopeStep(x, top, bottom);
-		var ropes = ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RopeRestock);
+		var ropes = ProgressionPlanner.ObtainAnyAmount(bot, Ropes, restock);
 		return ropes is BlockedStep or IdleStep ? null : ropes;
 	}
 }
@@ -1374,6 +1405,7 @@ public static class ProgressionGoals
 			new ArenaOutpostGoal(),
 			new RefightGoal(gearOnly: true),
 			new HellevatorGoal(),
+			new ShaftRopeGoal(),
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new AmmoGoal(),
