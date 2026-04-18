@@ -224,7 +224,13 @@ public sealed class CraftTask : BotTask
 	const uint StationStuckMemoryTicks = 1800;
 	uint stationStuckAt;
 
-	void WalkToStation(int stationTile)
+	bool MoveAndCheckStuck(Vector2 target)
+	{
+		Bot.Motor.MoveTo(target, StationStandRadius);
+		return Bot.Motor.IsStuck;
+	}
+
+		void WalkToStation(int stationTile)
 	{
 		var location = Stations.LocateAnywhere(Bot.Faction, stationTile, Bot.CenterTile);
 		if (location is not Point station)
@@ -237,8 +243,8 @@ public sealed class CraftTask : BotTask
 		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && RecallLandsAtBase() && TryRecallHome())
 			return;
 		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? Navigation.PathFinder.BodyCenterAt(feet) : station.ToWorldCoordinates();
-		Bot.Motor.MoveTo(standAt, StationStandRadius);
-		if (Bot.Motor.IsStuck)
+		bool remote = Bot.Faction.Settlement?.Contains(station.X, station.Y) != true;
+		if (remote ? !TravelOrTunnel(standAt, StationStandRadius) : MoveAndCheckStuck(standAt))
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to station tile {stationTile} at {station}; motor: {Bot.Motor.Describe()}{World.TerrainDump.Around(Bot.CenterTile, 30, 12)}");
 			stationStuckAt = Main.GameUpdateCount;

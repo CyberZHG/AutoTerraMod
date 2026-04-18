@@ -49,6 +49,18 @@ public abstract class BotTask
 
 	public static bool CarriesRecall(Player avatar) => Inventory.Items(avatar).Any(item => RecallItems.Contains(item.type));
 
+	protected bool TryRecallToCamp()
+	{
+		bool viaOutpost = Bot.OutpostBed != null && !RecallLandsAtBase();
+		if (!TryRecallHome())
+			return false;
+		if (viaOutpost)
+			LeaveOutpostIfBedside();
+		return true;
+	}
+
+	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
+
 	protected bool TryRecallHome()
 	{
 		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
@@ -172,6 +184,8 @@ public abstract class BotTask
 
 	const float NudgePerTick = 1.5f;
 	const float ShaftSlide = 2f;
+	const int ShaftCatchment = 80;
+	const int ShaftCatchmentDepth = 60;
 
 	protected void CentreIn(World.Hellevator shaft)
 	{
@@ -209,7 +223,8 @@ public abstract class BotTask
 			return true;
 		}
 		var targetTile = target.ToTileCoordinates();
-		bool intoShaft = targetTile.X >= shaft.X - 1 && targetTile.X <= shaft.X + 2 && targetTile.Y > shaft.TopY;
+		bool intoShaft = targetTile.X >= shaft.X - 1 && targetTile.X <= shaft.X + 2 && targetTile.Y > shaft.TopY
+			|| System.Math.Abs(targetTile.X - shaft.X) < ShaftCatchment && targetTile.Y > shaft.TopY + ShaftCatchmentDepth;
 		if (!(intoShaft || shaft.IsComplete && target.Y >= Main.UnderworldLayer * 16f) || tile.Y > shaft.TopY + ShaftMouthReach)
 			return false;
 		Bot.Motor.MoveTo(new Vector2(centerX, shaft.TopY * 16f - 21f), 8f);

@@ -197,7 +197,10 @@ public sealed class EscapeTask : BotTask
 		}
 		if (route.Nodes.Count == 0 || route.Nodes[^1].Feet.Y >= feet.Y)
 			return;
-		var leg = route.Nodes.Last(node => Math.Max(Math.Abs(node.Feet.X - feet.X), Math.Abs(node.Feet.Y - feet.Y)) <= ExitLegTiles).Feet;
+		int legIndex = route.Nodes.FindLastIndex(node => Math.Max(Math.Abs(node.Feet.X - feet.X), Math.Abs(node.Feet.Y - feet.Y)) <= ExitLegTiles);
+		if (legIndex < 0)
+			return;
+		var leg = route.Nodes[legIndex].Feet;
 		bool surfaceExit = route.ReachesGoal && leg == route.Nodes[^1].Feet;
 		if (Math.Max(Math.Abs(leg.X - feet.X), Math.Abs(leg.Y - feet.Y)) <= TrivialLegTiles)
 		{

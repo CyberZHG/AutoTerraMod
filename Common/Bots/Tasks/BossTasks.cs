@@ -117,7 +117,7 @@ public sealed class SummonTask : BotTask
 		LeaveOutpostIfBedside();
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
-		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > CampRecallReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > CampRecallReach && CarriesRecall(Avatar) && (RecallLandsAtBase() || Bot.OutpostBed != null) && TryRecallToCamp())
 			return false;
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
@@ -472,6 +472,9 @@ public sealed class RallyTask : BotTask
 	const uint OrphanGraceTicks = 300;
 
 	const float CampRecallDistance = 16f * 25f;
+	const float CloseEnough = 16f * 20f;
+	const uint ParkTicks = 300;
+	uint parkedUntil;
 
 	bool RecallShortensTrip(Vector2 target)
 	{
@@ -480,9 +483,10 @@ public sealed class RallyTask : BotTask
 		var tile = target.ToTileCoordinates();
 		var here = Bot.CenterTile;
 		var camp = Bot.Faction.Settlement;
-		if (camp != null && camp.Contains(tile.X, tile.Y) && !camp.Contains(here.X, here.Y) && Vector2.Distance(Bot.Center, target) > CampRecallDistance && RecallLandsAtBase())
+		bool reachesCamp = RecallLandsAtBase() || Bot.OutpostBed != null;
+		if (camp != null && camp.Contains(tile.X, tile.Y) && !camp.Contains(here.X, here.Y) && Vector2.Distance(Bot.Center, target) > CampRecallDistance && reachesCamp)
 			return true;
-		return Vector2.Distance(Bot.Center, target) - Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) > RecallTripDistance;
+		return Vector2.Distance(Bot.Center, target) - Vector2.Distance(CampLanding, target) > RecallTripDistance;
 	}
 
 	public static bool Joined(Bot member, Vector2 point, float radius) =>
@@ -530,8 +534,17 @@ public sealed class RallyTask : BotTask
 			target = kept;
 		goal = target;
 		LeaveOutpostIfBedside();
+		bool close = Vector2.Distance(Bot.Center, target) < CloseEnough;
+		if (close && (Bot.Motor.IsStalled || Bot.Motor.IsStuck))
+			parkedUntil = Main.GameUpdateCount + ParkTicks;
+		if (close && Main.GameUpdateCount < parkedUntil)
+		{
+			Bot.Motor.Stop();
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
 		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
-		if (!inSight && RecallShortensTrip(target) && TryRecallHome())
+		if (!inSight && RecallShortensTrip(target) && TryRecallToCamp())
 			return;
 		TravelOrTunnel(target, inSight ? ArrivalRadius : 16f);
 		if (Bot.Motor.HasArrived)
