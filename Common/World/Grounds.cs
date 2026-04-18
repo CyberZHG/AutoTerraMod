@@ -9,7 +9,7 @@ public static class Grounds
 {
 	const int DungeonRange = 120;
 	const int SurfaceBand = 60;
-	const int UnderworldDepth = 20;
+	public const int UnderworldDepth = 60;
 
 	public static bool IsInside(FactionKnowledge knowledge, Landmark ground, Point tile)
 	{

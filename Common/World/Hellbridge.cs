@@ -57,15 +57,24 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 		return true;
 	}
 
+	readonly uint[] frontierAt = new uint[2];
+	readonly int[] frontierCache = new int[2];
+	const uint FrontierRecheckTicks = 30;
+
 	public int Frontier(int direction)
 	{
+		int side = direction > 0 ? 1 : 0;
 		int end = direction > 0 ? RightEnd : LeftEnd;
-		for (int x = CenterX; x != end; x += direction)
+		bool fresh = Main.GameUpdateCount - frontierAt[side] < FrontierRecheckTicks;
+		int from = fresh ? frontierCache[side] : CenterX;
+		if (!fresh)
+			frontierAt[side] = Main.GameUpdateCount;
+		for (int x = from; x != end; x += direction)
 		{
 			if (!IsBuilt(x))
-				return x;
+				return frontierCache[side] = x;
 		}
-		return end;
+		return frontierCache[side] = end;
 	}
 
 	public bool SideComplete(int direction) => Frontier(direction) == (direction > 0 ? RightEnd : LeftEnd);

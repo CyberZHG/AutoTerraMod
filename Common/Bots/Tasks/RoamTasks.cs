@@ -164,6 +164,7 @@ public sealed class HuntTask : BotTask
 	{
 		Landmark.Snow => Avatar.ZoneSnow,
 		Landmark.Dungeon => Avatar.ZoneDungeon,
+		Landmark.Underworld => Bot.CenterTile.Y > Main.UnderworldLayer + Grounds.UnderworldDepth * 2 / 3,
 		_ => Bosses.BossChallenge.InArena(Avatar, ground)
 	};
 

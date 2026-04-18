@@ -1471,6 +1471,7 @@ public static class ProgressionGoals
 			armor: new (int, int, int)[] { (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves), (ItemID.CrimsonHelmet, ItemID.CrimsonScalemail, ItemID.CrimsonGreaves) });
 		goals.Add(new OwnGoal(ItemID.ObsidianSkull, ItemID.ObsidianHorseshoe, ItemID.ObsidianShield, ItemID.AnkhShield, ItemID.ObsidianSkullRose, ItemID.MoltenSkullRose, ItemID.LavaSkull, ItemID.MoltenCharm));
 		goals.Add(new StationGoal(TileID.Hellforge, ItemID.Hellforge));
+		int moltenStart = goals.Count;
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.MoltenPickaxe },
 			swords: new int[] { ItemID.FieryGreatsword },
@@ -1478,6 +1479,8 @@ public static class ProgressionGoals
 			staffs: new int[] { ItemID.Flamelash },
 			armor: new (int, int, int)[] { (ItemID.MoltenHelmet, ItemID.MoltenBreastplate, ItemID.MoltenGreaves) },
 			leapWhen: ReadyForWall);
+		foreach (var pickaxe in goals.Skip(moltenStart).Select(Unwrap).OfType<GearGoal>().Where(gear => gear.Kind == GearKind.Pickaxe))
+			pickaxe.LeapWhen = faction => !Main.hardMode && ReadyForWall(faction);
 		goals.Add(new AspirationGoal(Aspiration.Collector, new OwnGoal(ItemID.Mannequin)));
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new OwnGoal(ItemID.BugNet, ItemID.GoldenBugNet)));
 		goals.Add(new AspirationGoal(Aspiration.Naturalist, new CageGoal()));

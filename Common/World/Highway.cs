@@ -92,14 +92,22 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public bool RequiresPlatform(int x) => WantsPlatform(x);
 
+	uint frontierAt;
+	int frontierCache;
+	const uint FrontierRecheckTicks = 30;
+
 	public int Frontier(int direction)
 	{
-		for (int x = StartX; x != EndX; x += Direction)
+		bool fresh = Main.GameUpdateCount - frontierAt < FrontierRecheckTicks;
+		int from = fresh ? frontierCache : StartX;
+		if (!fresh)
+			frontierAt = Main.GameUpdateCount;
+		for (int x = from; x != EndX; x += Direction)
 		{
 			if (!IsBuilt(x))
-				return x;
+				return frontierCache = x;
 		}
-		return EndX;
+		return frontierCache = EndX;
 	}
 
 	public bool IsComplete => Frontier(Direction) == EndX && IsBuilt(EndX);

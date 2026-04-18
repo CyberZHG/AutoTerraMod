@@ -515,8 +515,17 @@ public sealed class RallyTask : BotTask
 		}
 		if (!Bot.Faction.RallyAssembled && Bot.Brain.PoolingForChampion && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < CampGatherRadius)
 			return 0f;
+		if (SkipsRefight(rally.point))
+			return 0f;
 		return RallyPriority;
 	}
+
+	const float RefightSkipDistance = 16f * 150f;
+
+	bool SkipsRefight(Vector2 point) =>
+		BossCatalog.ChallengeOf(Bot.Faction.RallyBossType) is { } challenge && BossCredit.HasDefeated(Bot.Faction, challenge)
+		&& Bot.Brain.Plan is GatherStep { Source: NpcSource { IsRare: true } }
+		&& Vector2.Distance(Bot.Center, point) > RefightSkipDistance;
 
 	public override void Tick()
 	{
