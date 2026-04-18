@@ -171,6 +171,7 @@ public abstract class BotTask
 	const int ShaftMouthReach = 20;
 
 	const float NudgePerTick = 1.5f;
+	const float ShaftSlide = 2f;
 
 	protected void CentreIn(World.Hellevator shaft)
 	{
@@ -183,7 +184,15 @@ public abstract class BotTask
 		if (System.Math.Abs(offset) >= ShaftCentring)
 			body.position.X += System.Math.Clamp(offset, -NudgePerTick, NudgePerTick);
 		else if (body.velocity.Y == 0f)
+		{
 			Bot.Motor.DropThroughPlatform();
+			int footRow = (int)((body.position.Y + body.height + ShaftSlide) / 16f);
+			if (!TileQuery.IsSolid(shaft.X, footRow) && !TileQuery.IsSolid(shaft.X + 1, footRow))
+			{
+				body.position.Y += ShaftSlide;
+				Bot.Vitals.Teleported(body);
+			}
+		}
 		Bot.Watchdog.RecordProgress();
 	}
 
