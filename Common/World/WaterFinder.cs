@@ -91,11 +91,11 @@ public static class WaterFinder
 		return seen.Count;
 	}
 
-	public static Point? NearestLavaSurface(Point center, int radius) => NearestLiquidSurface(center, radius, LiquidID.Lava);
+	public static Point? NearestLavaSurface(Point center, int radius, int minY = 0) => NearestLiquidSurface(center, radius, LiquidID.Lava, minY);
 
 	public static Point? NearestWaterSurface(Point center, int radius) => NearestLiquidSurface(center, radius, LiquidID.Water);
 
-	static Point? NearestLiquidSurface(Point center, int radius, int liquidType)
+	static Point? NearestLiquidSurface(Point center, int radius, int liquidType, int minY = 0)
 	{
 		Point? best = null;
 		long bestDistance = long.MaxValue;
@@ -103,7 +103,7 @@ public static class WaterFinder
 		{
 			for (int y = center.Y - radius; y <= center.Y + radius; y++)
 			{
-				if (!IsLiquid(x, y, liquidType) || IsLiquid(x, y - 1, liquidType) || TileQuery.IsSolid(x, y - 1))
+				if (y < minY || !IsLiquid(x, y, liquidType) || IsLiquid(x, y - 1, liquidType) || TileQuery.IsSolid(x, y - 1))
 					continue;
 				var surface = new Point(x, y);
 				long distance = WorldScan.DistanceSq(center, surface);

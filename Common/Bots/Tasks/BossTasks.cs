@@ -30,6 +30,7 @@ public sealed class SummonTask : BotTask
 	const float TalkRadius = 16f * 4f;
 	const float ThrowRadius = 16f * 8f;
 	const int LavaSearchRadius = 60;
+	const int WallSpawnDepth = 203;
 	const int DollGrabDelay = 300;
 	const int FirstAccessorySlot = 3;
 	const int AccessorySlots = 7;
@@ -215,7 +216,7 @@ public sealed class SummonTask : BotTask
 				var blade2 = Bot.Hands.BestWeapon();
 				return blade2 != null && (Bot.Hands.InMeleeReach(devotee, blade2) || MoveCloser(devotee.Center, 16f));
 			case VoodooDollTrigger:
-				var lava = WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius);
+				var lava = WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius, Main.maxTilesY - WallSpawnDepth);
 				if (lava is not Point surface)
 					return Abandon("no lava found nearby");
 				ritualTarget = surface.ToWorldCoordinates();
