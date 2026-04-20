@@ -37,6 +37,12 @@ public sealed class SummonTask : BotTask
 
 	SummonBossStep step;
 	int travelFailures;
+
+	const float WallGatherInset = 16f * 40f;
+
+	Vector2 GatherPoint => step.Trigger is VoodooDollTrigger
+		? step.Place + new Vector2(step.Place.X / 16f > Main.maxTilesX / 2 ? -WallGatherInset : WallGatherInset, 0f)
+		: step.Place;
 	string headcount;
 
 	public SummonTask(Bot bot) : base(bot) { }
@@ -57,11 +63,12 @@ public sealed class SummonTask : BotTask
 		base.Start();
 		travelFailures = 0;
 		lacewing = null;
+		extensions = 0;
 		headcount = null;
 		var faction = Bot.Faction;
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
-		faction.Rally = (step.Place, Main.GameUpdateCount + AssembleTicks);
+		faction.Rally = (GatherPoint, Main.GameUpdateCount + AssembleTicks);
 		faction.RallyBossType = step.Challenge.BossType;
 		faction.RallyLeaderId = Bot.Id;
 		faction.RallyLeaderSeenAt = Main.GameUpdateCount;
@@ -86,7 +93,7 @@ public sealed class SummonTask : BotTask
 		if (!step.Challenge.CanSummonNow)
 		{
 			Bot.Motor.Stop();
-			Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
+			Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyTicks);
 			Bot.Watchdog.RecordProgress();
 			return;
 		}
@@ -111,7 +118,7 @@ public sealed class SummonTask : BotTask
 		if (Vector2.Distance(step.Place, faction.BaseCenter) > DistantArenaReach)
 		{
 			faction.RallyAssembled = true;
-			faction.Rally = (step.Place, Main.GameUpdateCount + DistantRallyTicks);
+			faction.Rally = (GatherPoint, Main.GameUpdateCount + DistantRallyTicks);
 			BotDiagnostics.Log(Bot, $"calling the team to {step.Place.ToTileCoordinates()} for {step.Challenge.Name}");
 			return true;
 		}
@@ -133,7 +140,7 @@ public sealed class SummonTask : BotTask
 		if (present * 2 < team.Count && !strongEnough)
 			return GiveUpRally(present, team.Count);
 		faction.RallyAssembled = true;
-		faction.Rally = (step.Place, Main.GameUpdateCount + RallyTicks);
+		faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyTicks);
 		BotDiagnostics.Log(Bot, $"set out for {step.Challenge.Name} with {present}/{team.Count} teammates");
 		return true;
 	}
@@ -149,9 +156,10 @@ public sealed class SummonTask : BotTask
 	{
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		bool noWayCloser = Bot.Motor.IsStalled || Bot.Motor.Tunneling || Bot.Motor.HasNoRoute;
-		if (distance <= ArrivalRadius || noWayCloser && distance <= StuckAcceptRadius)
+		bool inUnderworld = Bot.CenterTile.Y >= Main.UnderworldLayer && step.Place.Y >= Main.UnderworldLayer * 16f;
+		if (distance <= ArrivalRadius || (noWayCloser || inUnderworld) && distance <= StuckAcceptRadius)
 			return true;
-		Bot.Faction.Rally = (step.Place, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
+		Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
 		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
 			return false;
 		if (++travelFailures >= TravelRetries)
@@ -216,7 +224,9 @@ public sealed class SummonTask : BotTask
 				var blade2 = Bot.Hands.BestWeapon();
 				return blade2 != null && (Bot.Hands.InMeleeReach(devotee, blade2) || MoveCloser(devotee.Center, 16f));
 			case VoodooDollTrigger:
-				var lava = WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius, Main.maxTilesY - WallSpawnDepth);
+				int outward = Bot.CenterTile.X > Main.maxTilesX / 2 ? 1 : -1;
+				var lava = WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius, Main.maxTilesY - WallSpawnDepth, tile => (tile.X - Bot.CenterTile.X) * outward >= 0)
+					?? WaterFinder.NearestLavaSurface(Bot.CenterTile, LavaSearchRadius, Main.maxTilesY - WallSpawnDepth);
 				if (lava is not Point surface)
 					return Abandon("no lava found nearby");
 				ritualTarget = surface.ToWorldCoordinates();
@@ -240,14 +250,26 @@ public sealed class SummonTask : BotTask
 		return false;
 	}
 
+	const int MaxRallyExtensions = 5;
+	const uint RallyExtensionTicks = 3600;
+	int extensions;
+
 	bool TeamGathered()
 	{
 		Bot.Motor.Stop();
 		var team = BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId).ToList();
-		int present = team.Count(member => RallyTask.Joined(member, step.Place, GatherRadius));
+		var gathered = team.Where(member => member == Bot || RallyTask.Joined(member, GatherPoint, GatherRadius)).ToList();
+		int present = gathered.Count;
 		bool stillWaiting = Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
-		if (present == team.Count)
+		if (present == team.Count || BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot, gathered).IsReady)
 			return true;
+		if (!stillWaiting && extensions < MaxRallyExtensions && team.Any(member => member.IsAlive && !gathered.Contains(member) && member.Brain.Current is RallyTask))
+		{
+			extensions++;
+			Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyExtensionTicks);
+			Bot.Watchdog.RecordProgress();
+			return false;
+		}
 		bool hostileGround = PathFinder.InsideMaze(step.Place.ToTileCoordinates());
 		if (stillWaiting && !(hostileGround && present * 2 >= team.Count))
 		{
@@ -863,7 +885,7 @@ public sealed class BuildBridgeTask : BotTask
 public sealed class DigShaftTask : BotTask
 {
 	const int PlatformLookBack = 8;
-	const int ShaftEntryDepth = 3;
+	const int ShaftEntryDepth = 6;
 
 	const float CellApproach = 16f * 2.5f;
 
@@ -925,7 +947,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		var shaft = step.Shaft;
 		int row = shaft.FirstUnfinishedRow();
-		if (row >= Main.UnderworldLayer || shaft.IsComplete)
+		if (shaft.IsComplete)
 		{
 			IsFinished = true;
 			return;

@@ -222,12 +222,12 @@ public static class BossRituals
 		if (!NPC.AnyNPCs(NPCID.Guide))
 			return PlanStep.Blocked;
 		var bridge = bot.Faction.Hellbridge;
-		if (bridge == null || !bridge.IsComplete)
+		if (bridge == null || !bridge.IsComplete && bridge.BuiltLength < Hellbridge.FightableLength * 3 / 4)
 			return PlanStep.Idle;
 		bool inUnderworld = bot.CenterTile.Y >= Main.UnderworldLayer;
 		if (Inventory.Count(bot.Avatar, ItemID.GuideVoodooDoll) == 0)
 			return inUnderworld ? ProgressionPlanner.Obtain(bot, ItemID.GuideVoodooDoll, 1) : new TravelStep(bridge.Center);
-		return new SummonBossStep(challenge, trigger, bridge.Center, null);
+		return new SummonBossStep(challenge, trigger, bridge.SummonPoint, null);
 	}
 
 	const int ShaftOffsetFromBase = 24;
@@ -274,7 +274,7 @@ public static class BossRituals
 	public static PlanStep PlanShaftWork(Bot bot)
 	{
 		var shaft = ShaftFor(bot.Faction);
-		if (shaft.IsComplete || bot.CenterTile.Y >= Main.UnderworldLayer || !IsChiefDigger(bot, shaft))
+		if (shaft.IsComplete || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
 		return ShaftWork(bot, shaft);
 	}
@@ -332,8 +332,8 @@ public static class BossRituals
 		if (shaft?.IsComplete == true)
 		{
 			anchor = new Point(shaft.X, Main.UnderworldLayer);
-			if (bot.Faction.Hellbridge is { } planned && !planned.IsComplete && planned.BuiltLength < BridgeReplanLength
-				&& System.Math.Abs(planned.CenterX - shaft.X) > BridgeShaftTolerance)
+			if (bot.Faction.Hellbridge is { } planned && (planned.Y < Hellbridge.FightRow - BridgeDepthTolerance
+				|| !planned.IsComplete && planned.BuiltLength < BridgeReplanLength && System.Math.Abs(planned.CenterX - shaft.X) > BridgeShaftTolerance))
 				bot.Faction.Hellbridge = null;
 		}
 		else if (KnownLandmark(bot, Landmark.Underworld) is Point underworld)
@@ -348,6 +348,7 @@ public static class BossRituals
 
 	const int BridgeShaftTolerance = 30;
 	const int BridgeReplanLength = 10;
+	const int BridgeDepthTolerance = 10;
 		const int BridgeMaterialRestock = 100;
 	const int BridgePlatformStone = 8;
 

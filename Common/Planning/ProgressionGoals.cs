@@ -888,7 +888,7 @@ public sealed class HighwayGoal : ProgressionGoal
 			return new BuildBridgeStep(highway, highway.Direction);
 		}
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		if (!shaft.IsComplete && bot.CenterTile.Y < Terraria.Main.UnderworldLayer && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
+		if (!shaft.IsComplete && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
 			return dig;
 		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) ?? PlanStep.Idle;
 	}

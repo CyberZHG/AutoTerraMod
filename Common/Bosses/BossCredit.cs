@@ -23,6 +23,7 @@ public sealed class BossCredit : GlobalNPC
 	{
 		damageByFight.Clear();
 		fightersByFight.Clear();
+		steeredWalls.Clear();
 		summoners.Clear();
 		shots.Clear();
 	}
@@ -89,6 +90,43 @@ public sealed class BossCredit : GlobalNPC
 	public static int DefeatedCount(Faction faction) =>
 		BossCatalog.Challenges.Count(challenge => BossCatalog.AppliesToThisWorld(challenge) && HasDefeated(faction, challenge));
 
+	static readonly HashSet<int> steeredWalls = new();
+
+	public override void PostAI(NPC npc)
+	{
+		if (npc.type != NPCID.WallofFlesh)
+			return;
+		KeepWallTarget(npc);
+		steeredWalls.RemoveWhere(index => !Main.npc[index].active || Main.npc[index].type != NPCID.WallofFlesh);
+		if (!steeredWalls.Add(npc.whoAmI))
+			return;
+		if (BossCatalog.ChallengeOf(npc.type) is not { } challenge || !summoners.TryGetValue(challenge.BossType, out int factionId)
+			|| FactionById(factionId)?.Hellbridge is not { } bridge)
+			return;
+		int toward = bridge.CenterX * 16f + 8f < npc.Center.X ? -1 : 1;
+		npc.direction = toward;
+		npc.velocity.X = toward * System.Math.Max(1f, System.Math.Abs(npc.velocity.X));
+	}
+
+	static void KeepWallTarget(NPC npc)
+	{
+		var current = npc.target >= 0 && npc.target < Main.maxPlayers ? Main.player[npc.target] : null;
+		if (current != null && current.active && !current.dead)
+			return;
+		var nearest = BotWorldSystem.Bots.Where(bot => bot.IsAlive && !bot.Avatar.dead).MinBy(bot => Microsoft.Xna.Framework.Vector2.DistanceSquared(bot.Center, npc.Center));
+		if (nearest == null)
+			return;
+		npc.target = nearest.Avatar.whoAmI;
+		nearest.Avatar.gross = true;
+	}
+
+	public override void OnKill(NPC npc)
+	{
+		if (npc.type == NPCID.WallofFlesh)
+			steeredWalls.Remove(npc.whoAmI);
+		OnBossKill(npc);
+	}
+
 	public override void OnHitByProjectile(NPC npc, Projectile projectile, NPC.HitInfo hit, int damageDone)
 	{
 		if (shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity)
@@ -101,7 +139,7 @@ public sealed class BossCredit : GlobalNPC
 	public static Microsoft.Xna.Framework.Vector2? RecentLootPoint =>
 		lastBossDeath is { } death && Main.GameUpdateCount - death.tick < LootWindowTicks ? death.at : null;
 
-	public override void OnKill(NPC npc)
+	static void OnBossKill(NPC npc)
 	{
 		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null)
 			lastBossDeath = (npc.Center, Main.GameUpdateCount);

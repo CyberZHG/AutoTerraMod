@@ -14,8 +14,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public bool RequiresPlatform(int x) => false;
 
-	public const int HalfLength = 300;
-	const int LavaClearance = 8;
+	public const int HalfLength = 900;
 
 	public int LeftEnd => System.Math.Max(WorldEdgeMargin, CenterX - HalfLength);
 	public int RightEnd => System.Math.Min(Main.maxTilesX - WorldEdgeMargin, CenterX + HalfLength);
@@ -23,25 +22,25 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public Vector2 Center => new(CenterX * 16f + 8f, Y * 16f);
 
-	public static Hellbridge Plan(Point anchor)
+	public const int DeckFromBottom = 150;
+
+	public static int FightRow => Main.maxTilesY - DeckFromBottom;
+
+	public static Hellbridge Plan(Point anchor) => new(anchor.X, FightRow);
+
+	const int SummonInset = 4;
+
+	public Vector2 SummonPoint
 	{
-		for (int y = System.Math.Max(anchor.Y, Main.UnderworldLayer); y < Main.maxTilesY - 10; y++)
+		get
 		{
-			if (StandsHere(anchor.X, y))
-				return new Hellbridge(anchor.X, y);
-			if (IsLava(anchor.X, y))
-				return new Hellbridge(anchor.X, y - LavaClearance);
+			int away = CenterX > Main.maxTilesX / 2 ? 1 : -1;
+			int edge = Frontier(away) - away * SummonInset;
+			return new Vector2(edge * 16f + 8f, Y * 16f);
 		}
-		return new Hellbridge(anchor.X, Main.maxTilesY - 120);
 	}
 
-	static bool IsLava(int x, int y) => Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava;
-
 	public int BuiltLength => Frontier(1) - Frontier(-1);
-
-	static bool StandsHere(int x, int y) =>
-		TileQuery.CanStandOn(x, y + 1) && !TileQuery.IsSolid(x, y) && !TileQuery.IsSolid(x, y - 1) && !TileQuery.IsSolid(x, y - 2)
-		&& Main.tile[x, y].LiquidAmount == 0;
 
 	public bool IsBuilt(int x) => IsDeck(x) && HeadroomClear(x);
 
@@ -79,7 +78,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public bool SideComplete(int direction) => Frontier(direction) == (direction > 0 ? RightEnd : LeftEnd);
 
-	public const int FightableLength = 400;
+	public const int FightableLength = 800;
 
 	public bool IsComplete => (SideComplete(1) && SideComplete(-1)) || Frontier(1) - Frontier(-1) >= FightableLength;
 }

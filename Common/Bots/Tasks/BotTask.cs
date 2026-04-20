@@ -184,6 +184,7 @@ public abstract class BotTask
 
 	const float NudgePerTick = 1.5f;
 	const float ShaftSlide = 2f;
+	const int ShaftMouthHeadroom = 6;
 	const int ShaftCatchment = 80;
 	const int ShaftCatchmentDepth = 60;
 
@@ -216,7 +217,7 @@ public abstract class BotTask
 			return false;
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
-		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - 3 && tile.Y < Main.UnderworldLayer;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < Main.maxTilesY - 10;
 		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || Bot.Npc?.velocity.Y > 0f))
 		{
 			CentreIn(shaft);
