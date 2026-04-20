@@ -97,6 +97,7 @@ public sealed class BossCredit : GlobalNPC
 		if (npc.type != NPCID.WallofFlesh)
 			return;
 		KeepWallTarget(npc);
+		KeepWallOnBridge(npc);
 		steeredWalls.RemoveWhere(index => !Main.npc[index].active || Main.npc[index].type != NPCID.WallofFlesh);
 		if (!steeredWalls.Add(npc.whoAmI))
 			return;
@@ -106,6 +107,21 @@ public sealed class BossCredit : GlobalNPC
 		int toward = bridge.CenterX * 16f + 8f < npc.Center.X ? -1 : 1;
 		npc.direction = toward;
 		npc.velocity.X = toward * System.Math.Max(1f, System.Math.Abs(npc.velocity.X));
+	}
+
+	const int BridgeTurnInset = 10;
+
+	static void KeepWallOnBridge(NPC npc)
+	{
+		if (BossCatalog.ChallengeOf(npc.type) is not { } challenge || !summoners.TryGetValue(challenge.BossType, out int factionId)
+			|| FactionById(factionId)?.Hellbridge is not { } bridge || npc.velocity.X == 0f)
+			return;
+		int heading = npc.velocity.X > 0f ? 1 : -1;
+		int turnAt = bridge.Frontier(heading) - heading * BridgeTurnInset;
+		if ((npc.Center.X / 16f - turnAt) * heading < 0f)
+			return;
+		npc.velocity.X = -npc.velocity.X;
+		npc.direction = -heading;
 	}
 
 	static void KeepWallTarget(NPC npc)
