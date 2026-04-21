@@ -121,6 +121,8 @@ public sealed class OpportunisticMineTask : BotTask
 			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
 		if (type == TileID.Tombstones)
 			return WorldGen.CanKillTile(x, y);
+		if (Salvage.Contains(type))
+			return WantsSalvage(type) && IsWildFurniture(x, y) && WorldGen.CanKillTile(x, y);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
 			return false;
 		int drop = GemDrops.TryGetValue(type, out int gem) ? gem : Planning.Stations.ItemsPlacing(type).Count > 0 ? Planning.Stations.ItemsPlacing(type)[0] : 0;
@@ -167,6 +169,55 @@ public sealed class OpportunisticMineTask : BotTask
 		wantsMore[tileType] = wanted;
 		return wanted;
 	}
+
+	static readonly HashSet<int> Salvage = new() { TileID.ClosedDoor, TileID.OpenDoor, TileID.Beds, TileID.Tables, TileID.Tables2, TileID.WorkBenches, TileID.Chairs };
+	const int SalvageCarried = 2;
+	const int SettlementMargin = 30;
+	const int OutpostMargin = 15;
+	const int TownHomeMargin = 30;
+
+	bool WantsSalvage(int type)
+	{
+		int placed = type == TileID.OpenDoor ? TileID.ClosedDoor : type;
+		int carried = 0;
+		foreach (var item in Inventory.Items(Avatar))
+		{
+			if (item.createTile == placed)
+				carried += item.stack;
+		}
+		return carried < SalvageCarried && Inventory.HasRoomFor(Avatar, new Item(ItemID.WoodenDoor));
+	}
+
+	static bool IsWildFurniture(int x, int y)
+	{
+		if (y < Main.worldSurface + 5)
+			return false;
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Settlement is { } camp && x > camp.Left - SettlementMargin && x < camp.Right + SettlementMargin && y > camp.Top - SettlementMargin && y < camp.Floor + SettlementMargin)
+				return false;
+			if (faction.ArenaBed is Point arena && Near(arena, x, y, OutpostMargin))
+				return false;
+			foreach (var bed in faction.Outposts)
+			{
+				if (Near(bed, x, y, OutpostMargin))
+					return false;
+			}
+		}
+		foreach (var bot in Systems.BotWorldSystem.Bots)
+		{
+			if (bot.OutpostBed is Point bed && Near(bed, x, y, OutpostMargin))
+				return false;
+		}
+		foreach (var npc in Main.npc)
+		{
+			if (npc.active && npc.townNPC && !npc.homeless && Near(new Point(npc.homeTileX, npc.homeTileY), x, y, TownHomeMargin))
+				return false;
+		}
+		return true;
+	}
+
+	static bool Near(Point anchor, int x, int y, int margin) => System.Math.Abs(anchor.X - x) <= margin && System.Math.Abs(anchor.Y - y) <= margin;
 
 	public override void Tick()
 	{

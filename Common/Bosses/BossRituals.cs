@@ -235,7 +235,7 @@ public static class BossRituals
 
 	public static Hellevator ShaftFor(Factions.Faction faction)
 	{
-		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && (shaft.X + 1 >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
+		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && (shaft.Right >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
 			faction.Hellevator = null;
 		var planned = faction.Hellevator ??= PlanShaft(faction);
 		planned.LandingRow = faction.Hellbridge?.Y;
@@ -274,7 +274,7 @@ public static class BossRituals
 	public static PlanStep PlanShaftWork(Bot bot)
 	{
 		var shaft = ShaftFor(bot.Faction);
-		if (shaft.IsComplete || !IsChiefDigger(bot, shaft))
+		if (shaft.IsFinished || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
 		return ShaftWork(bot, shaft);
 	}
@@ -285,7 +285,7 @@ public static class BossRituals
 	public static bool CanDigRow(Bot bot, Hellevator shaft, int row)
 	{
 		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
-		foreach (int column in new[] { shaft.X, shaft.X + 1 })
+		for (int column = shaft.X; column <= shaft.X + 1; column++)
 		{
 			if (!TileQuery.IsSolid(column, row))
 				continue;
@@ -302,9 +302,10 @@ public static class BossRituals
 		if (!CanDigRow(bot, shaft, shaft.FirstUnfinishedRow()))
 			return PlanStep.Blocked;
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
-		if (carried == 0)
+		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
+		if (carried == 0 && !roped)
 			platformRestock.Add(bot.Id);
-		else if (carried >= ShaftPlatformRestock)
+		else if (carried >= ShaftPlatformRestock || roped)
 			platformRestock.Remove(bot.Id);
 		if (platformRestock.Contains(bot.Id) && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
 			return platforms;

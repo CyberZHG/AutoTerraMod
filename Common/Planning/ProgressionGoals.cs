@@ -548,13 +548,24 @@ public sealed class BossSupportGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => Need(bot) == null;
 
+	static readonly Dictionary<int, (GatherStep gather, uint at)> recentNeeds = new();
+	const uint NeedMemoryTicks = 3600;
+
 	static (Bot summoner, GatherStep gather)? Need(Bot bot)
 	{
 		var summoner = BotWorldSystem.Bots.FirstOrDefault(member => member.FactionId == bot.FactionId && member.IsAlive && BossGoal.IsSummoner(member));
-		if (summoner == null || summoner == bot || !summoner.Brain.WorksOnBoss || summoner.Brain.Plan is not GatherStep gather
-			|| Microsoft.Xna.Framework.Vector2.Distance(bot.Center, summoner.Center) > HelpRange)
+		if (summoner == null || summoner == bot)
 			return null;
-		return (summoner, gather);
+		if (summoner.Brain.WorksOnBoss && summoner.Brain.Plan is GatherStep current)
+			recentNeeds[bot.FactionId] = (current, Main.GameUpdateCount);
+		if (!recentNeeds.TryGetValue(bot.FactionId, out var need) || Main.GameUpdateCount - need.at > NeedMemoryTicks)
+			return null;
+		if (summoner.Brain.Plan is not GatherStep && Inventory.Count(summoner.Avatar, need.gather.ItemType) >= need.gather.Amount)
+			return null;
+		bool committed = bot.Brain.Plan is GatherStep mine && mine.ItemType == need.gather.ItemType;
+		if (!committed && Microsoft.Xna.Framework.Vector2.Distance(bot.Center, summoner.Center) > HelpRange)
+			return null;
+		return (summoner, need.gather);
 	}
 
 	public override PlanStep Plan(Bot bot)
@@ -615,9 +626,9 @@ public sealed class HellevatorGoal : ProgressionGoal
 
 	public override bool IsExpedition => true;
 
-	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
+	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction) && !HouseInspector.BuildingDuty(bot);
 
-	public override bool IsMet(Bot bot) => Bosses.BossRituals.ShaftFor(bot.Faction).IsComplete;
+	public override bool IsMet(Bot bot) => Bosses.BossRituals.ShaftFor(bot.Faction).IsFinished;
 
 	public override PlanStep Plan(Bot bot) => Bosses.BossRituals.PlanShaftWork(bot);
 }
@@ -661,18 +672,18 @@ public sealed class ShaftRopeGoal : ProgressionGoal
 		bot.Faction.Hellevator is { } shaft && shaft.IsComplete && IsRoper(bot);
 
 	static bool IsRoper(Bot bot) =>
-		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Building) == bot;
+		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && !HouseInspector.BuildingDuty(member)).MaxBy(member => member.Personality.Building) == bot;
 
 	public override bool IsMet(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) == null;
+		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
 	}
 
 	public override PlanStep Plan(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1, RopeTrip);
+		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1, RopeTrip);
 		if (step == null && !bot.Hands.HasRope && bot.CenterTile.Y > Main.worldSurface + UndergroundMargin)
 			return new TravelStep(bot.Faction.BaseFeet);
 		return step ?? PlanStep.Idle;
@@ -685,7 +696,7 @@ public sealed class HellbridgeGoal : ProgressionGoal
 
 	public override bool IsExpedition => true;
 
-	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction);
+	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction) && !HouseInspector.BuildingDuty(bot);
 
 	public override bool IsMet(Bot bot) => bot.Faction.Hellbridge?.IsComplete == true;
 
@@ -888,9 +899,9 @@ public sealed class HighwayGoal : ProgressionGoal
 			return new BuildBridgeStep(highway, highway.Direction);
 		}
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		if (!shaft.IsComplete && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
+		if (!shaft.IsFinished && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
 			return dig;
-		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstUnfinishedRow() - 1) ?? PlanStep.Idle;
+		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) ?? PlanStep.Idle;
 	}
 
 	internal static PlanStep Hang(Bot bot, int x, int top, int bottom, int restock = RopeRestock)
@@ -939,6 +950,17 @@ public sealed class ArenaOutpostGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) => !IsUrgent(bot);
 
 	public override PlanStep Plan(Bot bot) => IsUrgent(bot) ? new BuildOutpostStep() : PlanStep.Idle;
+}
+
+public sealed class ClaimOutpostGoal : ProgressionGoal
+{
+	public override string Describe() => "ClaimOutpost";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Rally == null && Outpost.ClaimableBed(bot) != null;
+
+	public override bool IsMet(Bot bot) => false;
+
+	public override PlanStep Plan(Bot bot) => Outpost.ClaimableBed(bot) is Microsoft.Xna.Framework.Point bed ? new ClaimOutpostStep(bed) : PlanStep.Idle;
 }
 
 public sealed class OutpostGoal : ProgressionGoal
@@ -1398,6 +1420,7 @@ public static class ProgressionGoals
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
+			new ClaimOutpostGoal(),
 			new OutpostGoal(),
 			new ArenaKitGoal(),
 			new BossGoal(),

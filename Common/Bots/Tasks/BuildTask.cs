@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoTerraMod.Common.Building;
 using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.World;
@@ -97,6 +98,7 @@ public sealed class BuildTask : BotTask
 		}
 		else if (++failures >= FailuresBeforeSkipping)
 		{
+			BotDiagnostics.Log(Bot, $"{operation.Action} with {tool.Name} (tile {tool.createTile} style {tool.placeStyle}) keeps failing at {operation.Tile}{TerrainDump.Around(operation.Tile, 8, 4)}");
 			HouseInspector.Skip(Bot, operation);
 			Bot.Motor.Stop();
 		}
@@ -106,8 +108,29 @@ public sealed class BuildTask : BotTask
 	{
 		BuildAction.ChopTree => Bot.Hands.BestAxe,
 		BuildAction.ClearTile or BuildAction.RemoveScaffold => Bot.Hands.BestPickaxe ?? Avatar.inventory[Avatar.selectedItem],
+		BuildAction.PlaceTable when structure.Purpose == StructurePurpose.Bedroom && Inventory.Items(Avatar).FirstOrDefault(item => item.createTile == TileID.WorkBenches) is Item bench => bench,
 		_ => HouseMaterials.Find(Avatar, HouseMaterials.ReplacementFor(operation.Action), HouseInspector.MaterialsFor(Bot.Faction))
 	};
+
+	const int FailuresBeforeClearingRoom = 6;
+
+	bool ClearFurnitureForBed()
+	{
+		if (failures < FailuresBeforeClearingRoom || Bot.Hands.BestPickaxe is not Item pickaxe)
+			return false;
+		for (int x = structure.Left + 1; x < structure.Right; x++)
+		{
+			var spot = new Point(x, structure.Floor - 1);
+			int type = TileQuery.TypeAt(spot);
+			if (type < 0 || !TileID.Sets.RoomNeeds.CountsAsTable.Contains(type) && !TileID.Sets.RoomNeeds.CountsAsChair.Contains(type))
+				continue;
+			if (!Bot.Hands.CanReach(pickaxe, spot))
+				continue;
+			BotDiagnostics.Log(Bot, $"removing the {TileID.Search.GetName(type)} at {spot} to fit a bed");
+			return Bot.Hands.Dig(spot) == ToolResult.Working;
+		}
+		return false;
+	}
 
 	bool BodyOverlaps(BuildOperation operation)
 	{
@@ -214,7 +237,7 @@ public sealed class BuildTask : BotTask
 					if (Bot.Hands.CanReach(tool, spot) && Bot.Hands.Place(tool, spot))
 						return true;
 				}
-				return false;
+				return operation.Action == BuildAction.PlaceBed && ClearFurnitureForBed();
 			case BuildAction.PlaceDoor:
 				Flatten(tile.X, tile.Y - 2);
 				Flatten(tile.X, tile.Y + 2);

@@ -44,6 +44,8 @@ public sealed record BuyStep(int ItemType, int Amount, int SellerType) : PlanSte
 
 public sealed record BuildOutpostStep : PlanStep;
 
+public sealed record ClaimOutpostStep(Microsoft.Xna.Framework.Point Bed) : PlanStep;
+
 public sealed record TravelStep(Microsoft.Xna.Framework.Vector2 Place) : PlanStep;
 
 public abstract record ResourceSource;

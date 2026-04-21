@@ -47,6 +47,7 @@ public sealed class BotBrain
 			new DigShaftTask(bot),
 			new RopeColumnTask(bot),
 			new OutpostTask(bot),
+			new ClaimOutpostTask(bot),
 			new FleeTask(bot),
 			new FightTask(bot),
 			new PickupTask(bot),

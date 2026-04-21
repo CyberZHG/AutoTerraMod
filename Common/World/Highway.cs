@@ -8,7 +8,9 @@ namespace AutoTerraMod.Common.World;
 
 public sealed record Highway(int FactionId, int Direction, int StartX, int EndX, int Y, int? LinkX) : ICorridor
 {
-	public const int Headroom = 3;
+	public const int Clearance = 5;
+
+	public int Headroom => Clearance;
 	const int PlatformEvery = 20;
 	const int OceanMargin = 20;
 	const int EvilScanRows = 8;
@@ -72,7 +74,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public bool Spans(int x) => Direction > 0 ? x >= StartX && x <= EndX : x <= StartX && x >= EndX;
 
-	public bool IsDeck(int x) => IsFlat(x) && (RequiresPlatform(x) ? TileQuery.IsPlatform(x, Y + 1) : TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1));
+	public bool IsDeck(int x) => IsFlat(x) && !ICorridor.Scorches(x, Y + 1) && (RequiresPlatform(x) ? TileQuery.IsPlatform(x, Y + 1) : TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1));
 
 	bool IsFlat(int x) => !Main.tile[x, Y + 1].IsHalfBlock && Main.tile[x, Y + 1].Slope == SlopeType.Solid;
 
@@ -86,7 +88,15 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		return true;
 	}
 
-	public bool IsBuilt(int x) => IsDeck(x) && HeadroomClear(x);
+	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x);
+
+	readonly HashSet<int> skipped = new();
+
+	public void Skip(int x)
+	{
+		skipped.Add(x);
+		frontierAt = 0;
+	}
 
 	public bool WantsPlatform(int x) => x != StartX && (x - StartX) % PlatformEvery == 0 || !TileQuery.IsSolid(x, Y + 2);
 

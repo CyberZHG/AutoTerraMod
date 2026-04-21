@@ -217,14 +217,14 @@ public abstract class BotTask
 			return false;
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
-		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < Main.maxTilesY - 10;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < Main.maxTilesY - 10;
 		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || Bot.Npc?.velocity.Y > 0f))
 		{
 			CentreIn(shaft);
 			return true;
 		}
 		var targetTile = target.ToTileCoordinates();
-		bool intoShaft = targetTile.X >= shaft.X - 1 && targetTile.X <= shaft.X + 2 && targetTile.Y > shaft.TopY
+		bool intoShaft = targetTile.X >= shaft.X - 1 && targetTile.X <= shaft.Right + 1 && targetTile.Y > shaft.TopY
 			|| System.Math.Abs(targetTile.X - shaft.X) < ShaftCatchment && targetTile.Y > shaft.TopY + ShaftCatchmentDepth;
 		if (!(intoShaft || shaft.IsComplete && target.Y >= Main.UnderworldLayer * 16f) || tile.Y > shaft.TopY + ShaftMouthReach)
 			return false;
@@ -236,6 +236,9 @@ public abstract class BotTask
 	{
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
+		if (deepTunnel is Vector2 tunnel && Vector2.DistanceSquared(tunnel, target) < 32f * 32f && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
+			return true;
+		deepTunnel = null;
 		if (RecallBeatsLongTrip(target) && TryRecallHome())
 			return true;
 		if (ShaftShortcut(target))
@@ -248,6 +251,8 @@ public abstract class BotTask
 			return true;
 		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
 			return false;
+		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance && DeepDetour(target, radius))
+			return true;
 		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
 			Bot.Motor.Stop();
@@ -265,6 +270,40 @@ public abstract class BotTask
 		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
+	}
+
+	Vector2? deepTunnel;
+	const int DeepDetourRows = 60;
+	const int ShaftLevelRows = 3;
+
+	bool DeepDetour(Vector2 target, float radius)
+	{
+		if (Bot.Faction.Hellevator is not { } shaft)
+			return false;
+		var goal = target.ToTileCoordinates();
+		if (goal.Y < shaft.TopY + DeepDetourRows || goal.Y >= shaft.FirstImpassableRow())
+			return false;
+		var tile = Bot.CenterTile;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
+		if (inShaft && System.Math.Abs(tile.Y - goal.Y) <= ShaftLevelRows)
+		{
+			BotDiagnostics.Log(Bot, $"tunneling sideways from the hellevator at row {tile.Y} toward {goal}");
+			deepTunnel = target;
+			Bot.Motor.TunnelTo(target, radius);
+			return true;
+		}
+		var level = new Vector2((shaft.X + 1) * 16f, goal.Y * 16f);
+		if (ShaftShortcut(level))
+			return true;
+		if (inShaft)
+		{
+			Bot.Motor.MoveTo(level, 16f);
+			return !Bot.Motor.IsStuck;
+		}
+		if (tile.Y > shaft.TopY + ShaftMouthReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+			return true;
+		Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, shaft.TopY * 16f - 21f), 12f);
+		return !Bot.Motor.IsStuck;
 	}
 
 	const uint TunnelPathRetryTicks = 600;

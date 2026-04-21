@@ -165,6 +165,11 @@ public static class HouseInspector
 				return true;
 			if (faction.ArenaBed is Point arena && InOutpostShell(arena, x, y))
 				return true;
+			foreach (var outpost in faction.Outposts)
+			{
+				if (InOutpostShell(outpost, x, y))
+					return true;
+			}
 		}
 		foreach (var bot in BotWorldSystem.Bots)
 		{
@@ -199,6 +204,18 @@ public static class HouseInspector
 			builders[bot.FactionId] = cached = (Main.GameUpdateCount, shift, keep ? cached.botId : PickBuilder(bot.FactionId));
 		}
 		return cached.botId == bot.Id;
+	}
+
+	const uint UnfinishedCacheTicks = 300;
+	static readonly Dictionary<int, (uint at, bool unfinished)> unfinishedCache = new();
+
+	public static bool BuildingDuty(Bot bot)
+	{
+		if (!IsDesignatedBuilder(bot) || bot.Faction.Settlement is not { } settlement)
+			return false;
+		if (!unfinishedCache.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= UnfinishedCacheTicks)
+			unfinishedCache[bot.FactionId] = cached = (Main.GameUpdateCount, settlement.Structures.Any(structure => !IsFinished(bot.Faction, structure)));
+		return cached.unfinished;
 	}
 
 	static int PickBuilder(int factionId)

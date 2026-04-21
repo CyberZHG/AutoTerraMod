@@ -810,7 +810,7 @@ public sealed class BuildBridgeTask : BotTask
 		Bot.Motor.Face(new Vector2(frontier * 16f, bridge.Y * 16f));
 		foreach (int column in new[] { frontier, frontier + direction })
 		{
-			for (int y = bridge.Y - 2; y <= bridge.Y; y++)
+			for (int y = bridge.Y - bridge.Headroom + 1; y <= bridge.Y; y++)
 			{
 				if (TileQuery.IsSolid(column, y))
 				{
@@ -829,7 +829,12 @@ public sealed class BuildBridgeTask : BotTask
 					{
 						if (PlugLavaAround(new Point(column, y)))
 							return;
-						BotDiagnostics.Log(Bot, $"corridor blocked by an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
+						if (dug == ToolResult.Unbreakable)
+						{
+							BotDiagnostics.Log(Bot, $"corridor goes past an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
+							bridge.Skip(column);
+							return;
+						}
 						IsFinished = true;
 					}
 					return;
@@ -865,7 +870,10 @@ public sealed class BuildBridgeTask : BotTask
 			else if (cleared is ToolResult.Unbreakable or ToolResult.NoTool && !PlugLavaAround(deck))
 			{
 				BotDiagnostics.Log(Bot, $"corridor deck {deck} is unbreakable {TileQuery.TypeAt(deck)}");
-				IsFinished = true;
+				if (cleared == ToolResult.Unbreakable)
+					bridge.Skip(frontier);
+				else
+					IsFinished = true;
 			}
 			return;
 		}
@@ -892,7 +900,7 @@ public sealed class DigShaftTask : BotTask
 	void Approach(Hellevator shaft, Point cell, Vector2 workSpot)
 	{
 		var tile = Bot.CenterTile;
-		if (tile.X >= shaft.X && tile.X <= shaft.X + 1 && Bot.Center.Y < workSpot.Y)
+		if (tile.X >= shaft.X && tile.X <= shaft.Right && Bot.Center.Y < workSpot.Y)
 		{
 			Descend(shaft, workSpot);
 			return;
@@ -906,7 +914,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
-		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.X + 1 && tile.Y >= shaft.TopY - ShaftEntryDepth && Bot.Center.Y < workSpot.Y;
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftEntryDepth && Bot.Center.Y < workSpot.Y;
 		if (inShaft)
 		{
 			viaMouth = false;
@@ -947,7 +955,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		var shaft = step.Shaft;
 		int row = shaft.FirstUnfinishedRow();
-		if (shaft.IsComplete)
+		if (shaft.IsFinished)
 		{
 			IsFinished = true;
 			return;
@@ -982,12 +990,18 @@ public sealed class DigShaftTask : BotTask
 				return;
 			}
 		}
-		foreach (int column in new[] { shaft.X, shaft.X + 1 })
+		for (int column = shaft.X; column <= shaft.Right; column++)
 		{
 			var cell = new Point(column, row);
-			if (!TileQuery.IsSolid(cell.X, cell.Y) && (!TileQuery.HasTile(cell) || TileQuery.IsPlatform(cell.X, cell.Y)))
+			bool cleanup = shaft.NeedsCleanup(column, row);
+			if (!cleanup && !TileQuery.IsSolid(cell.X, cell.Y))
 				continue;
 			var dug = Bot.Hands.Dig(cell, clearSaplings: true);
+			if (column == shaft.Right && dug is ToolResult.Unbreakable or ToolResult.NoTool)
+			{
+				shaft.LeaveNarrow(row);
+				return;
+			}
 			if (dug == ToolResult.OutOfReach)
 			{
 				Approach(shaft, cell, workSpot);

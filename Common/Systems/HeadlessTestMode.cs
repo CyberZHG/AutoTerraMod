@@ -273,11 +273,11 @@ public sealed class HeadlessTestMode : ModSystem
 		var shaft = Bosses.BossRituals.ShaftFor(faction);
 		for (int y = shaft.TopY; y < Main.UnderworldLayer; y++)
 		{
-			for (int column = shaft.X; column <= shaft.X + 1; column++)
+			for (int column = shaft.X; column <= shaft.Right; column++)
 			{
 				if (Main.tile[column, y].HasTile && !World.TileQuery.IsPlatform(column, y))
 					WorldGen.KillTile(column, y, noItem: true);
-				if (shaft.NeedsPlatform(y) && !Main.tile[column, y].HasTile)
+				if (column == shaft.X && shaft.NeedsPlatform(y) && !Main.tile[column, y].HasTile)
 				{
 					var tile = Main.tile[column, y];
 					tile.HasTile = true;
@@ -589,6 +589,9 @@ public sealed class HeadlessTestMode : ModSystem
 			SaveWhenDue();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
-			Mod.Logger.Info($"headless test running: {Main.GameUpdateCount / 60}s of game time");
+		{
+			int dollDropperKills = Bosses.BossCredit.DollDroppers.Sum(type => Main.BestiaryTracker.Kills.GetKillCount(ContentSamples.NpcBestiaryCreditIdsByNpcNetIds[type]));
+			Mod.Logger.Info($"headless test running: {Main.GameUpdateCount / 60}s of game time; doll dropper kills in the world: {dollDropperKills}");
+		}
 	}
 }

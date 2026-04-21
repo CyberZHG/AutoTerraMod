@@ -35,20 +35,53 @@ public static class Outpost
 
 	public static bool CarriesKit(Player avatar) => Count(avatar, IsBed) > 0 && Count(avatar, IsDoor) > 0 && Count(avatar, IsHouseWall) >= WallsNeeded;
 
+	public static bool InUnderworld(Point bed) => bed.Y >= Main.UnderworldLayer - 10;
+
 	public static bool IsDeep(Bot bot) => bot.CenterTile.Y > Main.rockLayer && bot.CenterTile.Y < Main.UnderworldLayer - 10;
 
 	const int AfieldTiles = 100;
 
 	const int HighwayReach = 12;
+	const int HighwayAfieldTiles = 200;
 
-	public static bool IsAfield(Bot bot) => IsDeep(bot) || System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X) > AfieldTiles && !OnHighway(bot);
+	public static bool IsAfield(Bot bot)
+	{
+		int away = System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X);
+		return IsDeep(bot) || away > AfieldTiles && (away > HighwayAfieldTiles || !OnHighway(bot));
+	}
 
 	static bool OnHighway(Bot bot) =>
 		World.Highway.For(bot.Faction).Any(highway => highway.Spans(bot.CenterTile.X) && System.Math.Abs(bot.CenterTile.Y - highway.Y) < HighwayReach);
 
-	public static bool WantsNew(Bot bot)
+	public static List<Point> FactionBeds(Factions.Faction faction)
+	{
+		faction.Outposts.RemoveAll(bed => !BedStands(bed) || InUnderworld(bed));
+		foreach (var member in BotWorldSystem.Bots)
+		{
+			if (member.FactionId == faction.Id && member.OutpostBed is Point bed && BedStands(bed) && !InUnderworld(bed) && !faction.Outposts.Contains(bed))
+				faction.Outposts.Add(bed);
+		}
+		return faction.Outposts;
+	}
+
+	const float ClaimMargin = 16f * 40f;
+
+	public static Point? ClaimableBed(Bot bot)
 	{
 		if (!IsAfield(bot))
+			return null;
+		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed).ToList();
+		if (beds.Count == 0)
+			return null;
+		var nearest = beds.MinBy(bed => Vector2.DistanceSquared(bed.ToWorldCoordinates(), bot.Center));
+		float toBed = Vector2.Distance(bot.Center, nearest.ToWorldCoordinates());
+		float toSpawn = Vector2.Distance(bot.Center, BotWorldSystem.RespawnFeet(bot));
+		return toBed < RebuildDistance && toBed + ClaimMargin < toSpawn ? nearest : null;
+	}
+
+	public static bool WantsNew(Bot bot)
+	{
+		if (!IsAfield(bot) || FactionBeds(bot.Faction).Any(bed => Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
 			return false;
 		var anchor = bot.OutpostBed is Point bed ? bed.ToWorldCoordinates() : BotWorldSystem.RespawnFeet(bot);
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;

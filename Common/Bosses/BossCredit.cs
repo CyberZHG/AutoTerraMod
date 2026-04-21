@@ -23,7 +23,6 @@ public sealed class BossCredit : GlobalNPC
 	{
 		damageByFight.Clear();
 		fightersByFight.Clear();
-		steeredWalls.Clear();
 		summoners.Clear();
 		shots.Clear();
 	}
@@ -90,56 +89,57 @@ public sealed class BossCredit : GlobalNPC
 	public static int DefeatedCount(Faction faction) =>
 		BossCatalog.Challenges.Count(challenge => BossCatalog.AppliesToThisWorld(challenge) && HasDefeated(faction, challenge));
 
-	static readonly HashSet<int> steeredWalls = new();
+	public override bool PreAI(NPC npc)
+	{
+		if (npc.type == NPCID.WallofFlesh && npc.localAI[0] == 0f)
+			SpawnBehindBots(npc);
+		if (npc.type == NPCID.WallofFlesh && npc.velocity.X == 0f && NearestBot(npc) is { } nearest)
+		{
+			npc.target = nearest.Avatar.whoAmI;
+			npc.velocity.X = nearest.Center.X < npc.Center.X ? -1f : 1f;
+		}
+		return true;
+	}
 
 	public override void PostAI(NPC npc)
 	{
-		if (npc.type != NPCID.WallofFlesh)
-			return;
-		KeepWallTarget(npc);
-		KeepWallOnBridge(npc);
-		steeredWalls.RemoveWhere(index => !Main.npc[index].active || Main.npc[index].type != NPCID.WallofFlesh);
-		if (!steeredWalls.Add(npc.whoAmI))
-			return;
-		if (BossCatalog.ChallengeOf(npc.type) is not { } challenge || !summoners.TryGetValue(challenge.BossType, out int factionId)
-			|| FactionById(factionId)?.Hellbridge is not { } bridge)
-			return;
-		int toward = bridge.CenterX * 16f + 8f < npc.Center.X ? -1 : 1;
-		npc.direction = toward;
-		npc.velocity.X = toward * System.Math.Max(1f, System.Math.Abs(npc.velocity.X));
+		if (npc.type == NPCID.WallofFlesh)
+			KeepWallTarget(npc);
 	}
 
-	const int BridgeTurnInset = 10;
+	const float WallSpawnClearance = 1200f;
 
-	static void KeepWallOnBridge(NPC npc)
+	static void SpawnBehindBots(NPC npc)
 	{
-		if (BossCatalog.ChallengeOf(npc.type) is not { } challenge || !summoners.TryGetValue(challenge.BossType, out int factionId)
-			|| FactionById(factionId)?.Hellbridge is not { } bridge || npc.velocity.X == 0f)
-			return;
-		int heading = npc.velocity.X > 0f ? 1 : -1;
-		int turnAt = bridge.Frontier(heading) - heading * BridgeTurnInset;
-		if ((npc.Center.X / 16f - turnAt) * heading < 0f)
-			return;
-		npc.velocity.X = -npc.velocity.X;
-		npc.direction = -heading;
+		int outward = npc.Center.X / 16f > Main.maxTilesX / 2 ? 1 : -1;
+		float x = npc.Center.X;
+		var bots = BotWorldSystem.Bots.Where(bot => bot.IsAlive).Select(bot => bot.Center.X).ToList();
+		while (bots.Any(botX => botX > x - WallSpawnClearance && botX < x + WallSpawnClearance) && x / 16f > 20 && x / 16f < Main.maxTilesX - 20)
+			x += outward * 16f;
+		npc.position.X += x - npc.Center.X;
 	}
+
+	static Bot NearestBot(NPC npc) =>
+		BotWorldSystem.Bots.Where(bot => bot.IsAlive && !bot.Avatar.dead).MinBy(bot => Microsoft.Xna.Framework.Vector2.DistanceSquared(bot.Center, npc.Center));
 
 	static void KeepWallTarget(NPC npc)
 	{
 		var current = npc.target >= 0 && npc.target < Main.maxPlayers ? Main.player[npc.target] : null;
 		if (current != null && current.active && !current.dead)
 			return;
-		var nearest = BotWorldSystem.Bots.Where(bot => bot.IsAlive && !bot.Avatar.dead).MinBy(bot => Microsoft.Xna.Framework.Vector2.DistanceSquared(bot.Center, npc.Center));
+		var nearest = NearestBot(npc);
 		if (nearest == null)
 			return;
 		npc.target = nearest.Avatar.whoAmI;
 		nearest.Avatar.gross = true;
 	}
 
+	public static readonly HashSet<int> DollDroppers = new() { NPCID.AngryBones, NPCID.AngryBonesBig, NPCID.AngryBonesBigMuscle, NPCID.AngryBonesBigHelmet, NPCID.ShortBones };
+
 	public override void OnKill(NPC npc)
 	{
-		if (npc.type == NPCID.WallofFlesh)
-			steeredWalls.Remove(npc.whoAmI);
+		if (DollDroppers.Contains(npc.type) && BotWorldSystem.Bots.FirstOrDefault(bot => bot.Avatar.whoAmI == npc.lastInteraction) is { } killer)
+			BotDiagnostics.Log(killer, $"killed a doll dropper {npc.TypeName} at {npc.Center.ToTileCoordinates()}");
 		OnBossKill(npc);
 	}
 

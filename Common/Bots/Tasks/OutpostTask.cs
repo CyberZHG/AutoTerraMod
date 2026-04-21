@@ -292,10 +292,54 @@ public sealed class OutpostTask : BotTask
 		if (Outpost.NearArenaSite(Bot))
 			Bot.Faction.ArenaBed = bed;
 		else
+		{
 			Bot.OutpostBed = bed;
+			if (!Bot.Faction.Outposts.Contains(bed))
+				Bot.Faction.Outposts.Add(bed);
+		}
 		bool usable = Outpost.IsUsable(bed);
 		BotDiagnostics.Log(Bot, usable ? $"outpost ready, respawning at the bed {bed}" : $"outpost at {bed} is not a valid room: {WorldGen.roomCheckFailureReason}");
 		ReleaseSite();
+		IsFinished = true;
+	}
+}
+
+public sealed class ClaimOutpostTask : BotTask
+{
+	const float BedsideReach = 16f * 3f;
+
+	ClaimOutpostStep step;
+
+	public ClaimOutpostTask(Bot bot) : base(bot) { }
+
+	public override string NameKey => "Outpost";
+
+	public override float Evaluate()
+	{
+		if (Bot.Brain.Plan is not ClaimOutpostStep claim)
+			return 0f;
+		step = claim;
+		return 75f;
+	}
+
+	public override void Tick()
+	{
+		var bed = step.Bed;
+		if (!Outpost.BedStands(bed))
+		{
+			IsFinished = true;
+			return;
+		}
+		var spot = new Vector2(bed.X * 16f + 8f, bed.Y * 16f - 13f);
+		if (Vector2.Distance(Bot.Center, spot) > BedsideReach)
+		{
+			if (!TravelOrTunnel(spot, 16f))
+				IsFinished = true;
+			return;
+		}
+		Bot.OutpostBed = bed;
+		BotDiagnostics.Log(Bot, $"respawning at the faction outpost bed {bed}");
+		Bot.Watchdog.RecordProgress();
 		IsFinished = true;
 	}
 }

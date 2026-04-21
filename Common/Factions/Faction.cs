@@ -34,6 +34,8 @@ public sealed class Faction
 	public uint PoolUntil { get; set; }
 	public Vector2? ArenaPoint { get; set; }
 	public Point? ArenaBed { get; set; }
+
+	public List<Point> Outposts { get; } = new();
 	public Dictionary<int, (uint until, bool forGear)> RefightWishes { get; } = new();
 
 	const uint RefightWishTicks = 20 * 3600;
@@ -67,6 +69,7 @@ public sealed class Faction
 		if (HouseDesign != null)
 			tag["house"] = HouseDesign.Save();
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
+		tag["outposts"] = Outposts.Select(bed => new Vector2(bed.X, bed.Y)).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["knowledge"] = Knowledge.Save();
 		if (Hellevator != null)
@@ -92,6 +95,8 @@ public sealed class Faction
 		};
 		foreach (var tile in tag.GetList<Vector2>("scaffolding"))
 			faction.Scaffolding.Add(new Point((int)tile.X, (int)tile.Y));
+		foreach (var bed in tag.GetList<Vector2>("outposts"))
+			faction.Outposts.Add(new Point((int)bed.X, (int)bed.Y));
 		foreach (int boss in tag.GetList<int>("bosses"))
 			faction.DefeatedBosses.Add(boss);
 		if (tag.ContainsKey("knowledge"))
