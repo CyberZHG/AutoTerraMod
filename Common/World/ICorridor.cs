@@ -20,5 +20,15 @@ public interface ICorridor
 
 	void Skip(int x);
 
+	public static bool HoldsChest(int x, int top, int bottom)
+	{
+		for (int y = top; y <= bottom; y++)
+		{
+			if (Terraria.Main.tile[x, y].HasTile && Terraria.ID.TileID.Sets.BasicChest[Terraria.Main.tile[x, y].TileType])
+				return true;
+		}
+		return false;
+	}
+
 	public static bool Scorches(int x, int y) => Terraria.Main.tile[x, y].HasTile && Terraria.Main.tile[x, y].TileType is Terraria.ID.TileID.Hellstone or Terraria.ID.TileID.HellstoneBrick;
 }

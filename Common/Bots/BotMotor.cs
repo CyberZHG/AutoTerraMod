@@ -21,7 +21,31 @@ public sealed class BotMotor
 	const int StalledChecksBeforeStuck = 3;
 	const float MeaningfulProgress = 12f;
 	const float RopeClimbSpeed = 3f;
-	const float RopeDescendSpeed = 6f;
+	const float RopeClimbMax = 8f;
+	const float RopeDescendMax = 10f;
+	const uint RopeLeapCooldown = 30;
+	uint ropeLeapAt;
+
+	static float RopeVelocity(float current, int direction)
+	{
+		if (direction < 0)
+		{
+			if (current > 0f)
+				current *= 0.7f;
+			current -= current > -RopeClimbSpeed ? 0.2f : 0.02f;
+			return Math.Max(current, -RopeClimbMax);
+		}
+		if (current < 0f)
+			current *= 0.7f;
+		current += current < RopeClimbSpeed ? 0.2f : 0.1f;
+		return Math.Min(current, RopeDescendMax);
+	}
+
+	static bool RopeAtHead(NPC npc, int column)
+	{
+		int row = (int)((npc.position.Y - 16f) / 16f);
+		return IsRope(column, row) || IsRope(column + 1, row);
+	}
 	const float CreepSpeed = 1.2f;
 	const int FlightIntentTicks = 2;
 	const int SprintLookahead = 6;
@@ -909,7 +933,13 @@ public sealed class BotMotor
 				WantsToDropThroughPlatforms = true;
 				bot.Vitals.Teleported(npc);
 			}
-			npc.velocity = new Vector2(0f, intent.ClimbDirection > 0 ? RopeDescendSpeed : -RopeClimbSpeed);
+			npc.GravityMultiplier = MultipliableFloat.One * 0f;
+			if (intent.ClimbDirection < 0 && intent.ClimbColumn >= 0 && !RopeAtHead(npc, intent.ClimbColumn))
+			{
+				npc.velocity = Vector2.Zero;
+				return;
+			}
+			npc.velocity = new Vector2(0f, RopeVelocity(npc.velocity.Y, intent.ClimbDirection));
 		}
 	}
 
@@ -1096,10 +1126,15 @@ public sealed class BotMotor
 			bool ropeEndsHere = !IsRope(centerX, body.Top - 1) && !MayPlaceRope;
 			if (ropeEndsHere)
 			{
-				npc.velocity.Y = -RopeLeapSpeed;
+				if (Main.GameUpdateCount - ropeLeapAt > RopeLeapCooldown)
+				{
+					ropeLeapAt = Main.GameUpdateCount;
+					npc.velocity.Y = -RopeLeapSpeed;
+				}
 				return false;
 			}
-			npc.velocity = new Vector2(0f, -RopeClimbSpeed);
+			npc.GravityMultiplier = MultipliableFloat.One * 0f;
+			npc.velocity = new Vector2(0f, RopeVelocity(npc.velocity.Y, -1));
 			if (MayPlaceRope && !Main.tile[centerX, body.Top - 1].HasTile)
 				RopeTile = new Point(centerX, body.Top - 1);
 			return true;

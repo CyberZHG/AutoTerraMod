@@ -126,6 +126,8 @@ public abstract class BotTask
 	const float RecallSavesTiles = 100f;
 	const int UndergroundTiles = 30;
 
+	static float Walk(Vector2 from, Vector2 to) => (System.Math.Abs(from.X - to.X) + System.Math.Abs(from.Y - to.Y)) / 16f;
+
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
 		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar))
@@ -133,7 +135,8 @@ public abstract class BotTask
 		float fromHere = Vector2.Distance(Bot.Center, target) / 16f;
 		if (fromHere < LongTripTiles)
 			return false;
-		float fromHome = Vector2.Distance(BotWorldSystem.RespawnFeet(Bot), target) / 16f;
+		fromHere = Walk(Bot.Center, target);
+		float fromHome = Walk(BotWorldSystem.RespawnFeet(Bot), target);
 		return fromHere - fromHome > RecallSavesTiles;
 	}
 

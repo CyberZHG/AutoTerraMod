@@ -44,7 +44,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int BuiltLength => Frontier(1) - Frontier(-1);
 
-	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x);
+	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x) || ICorridor.HoldsChest(x, Y - Headroom + 1, Y + 1);
 
 	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1)) && !ICorridor.Scorches(x, Y + 1);
 

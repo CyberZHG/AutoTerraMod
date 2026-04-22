@@ -88,7 +88,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		return true;
 	}
 
-	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x);
+	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x) || ICorridor.HoldsChest(x, Y - Headroom + 1, Y + 1);
 
 	readonly HashSet<int> skipped = new();
 
