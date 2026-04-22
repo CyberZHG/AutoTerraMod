@@ -24,7 +24,7 @@ public sealed class RopeColumnTask : BotTask
 		return 65f + Traits.Building * 20f;
 	}
 
-	const float SlideSpeed = 2f;
+	const float SlideSpeed = 6f;
 
 	bool SlideDown(Vector2 spot)
 	{

@@ -289,15 +289,17 @@ public sealed class OutpostTask : BotTask
 	void Finish()
 	{
 		var bed = FindBed().Value;
+		bool usable = Outpost.IsUsable(bed);
 		if (Outpost.NearArenaSite(Bot))
 			Bot.Faction.ArenaBed = bed;
-		else
+		else if (usable)
 		{
 			Bot.OutpostBed = bed;
 			if (!Bot.Faction.Outposts.Contains(bed))
 				Bot.Faction.Outposts.Add(bed);
+			Bot.Faction.OutpostFrames[bed] = new Point(site.Left, site.Floor);
 		}
-		bool usable = Outpost.IsUsable(bed);
+		Outpost.Invalidate();
 		BotDiagnostics.Log(Bot, usable ? $"outpost ready, respawning at the bed {bed}" : $"outpost at {bed} is not a valid room: {WorldGen.roomCheckFailureReason}");
 		ReleaseSite();
 		IsFinished = true;

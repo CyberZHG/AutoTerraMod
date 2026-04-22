@@ -36,6 +36,8 @@ public sealed class Faction
 	public Point? ArenaBed { get; set; }
 
 	public List<Point> Outposts { get; } = new();
+
+	public Dictionary<Point, Point> OutpostFrames { get; } = new();
 	public Dictionary<int, (uint until, bool forGear)> RefightWishes { get; } = new();
 
 	const uint RefightWishTicks = 20 * 3600;
@@ -70,6 +72,7 @@ public sealed class Faction
 			tag["house"] = HouseDesign.Save();
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
 		tag["outposts"] = Outposts.Select(bed => new Vector2(bed.X, bed.Y)).ToList();
+		tag["outpostFrames"] = OutpostFrames.SelectMany(entry => new[] { entry.Key.X, entry.Key.Y, entry.Value.X, entry.Value.Y }).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["knowledge"] = Knowledge.Save();
 		if (Hellevator != null)
@@ -97,6 +100,9 @@ public sealed class Faction
 			faction.Scaffolding.Add(new Point((int)tile.X, (int)tile.Y));
 		foreach (var bed in tag.GetList<Vector2>("outposts"))
 			faction.Outposts.Add(new Point((int)bed.X, (int)bed.Y));
+		var frames = tag.GetList<int>("outpostFrames");
+		for (int i = 0; i + 3 < frames.Count; i += 4)
+			faction.OutpostFrames[new Point(frames[i], frames[i + 1])] = new Point(frames[i + 2], frames[i + 3]);
 		foreach (int boss in tag.GetList<int>("bosses"))
 			faction.DefeatedBosses.Add(boss);
 		if (tag.ContainsKey("knowledge"))

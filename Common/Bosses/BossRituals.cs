@@ -350,7 +350,7 @@ public static class BossRituals
 	const int BridgeShaftTolerance = 30;
 	const int BridgeReplanLength = 10;
 	const int BridgeDepthTolerance = 10;
-		const int BridgeMaterialRestock = 100;
+	const int BridgeMaterialRestock = 300;
 	const int BridgePlatformStone = 8;
 
 	static PlanStep BridgeWork(Bot bot, Hellbridge bridge)
@@ -358,7 +358,7 @@ public static class BossRituals
 		if (!bot.Hands.HasBridgeMaterial)
 			return ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, BridgeMaterialRestock);
 		if (Inventory.Count(bot.Avatar, ItemID.StonePlatform) == 0 && Inventory.Count(bot.Avatar, ItemID.StoneBlock) >= BridgePlatformStone
-			&& ProgressionPlanner.ObtainPlatforms(bot, BridgePlatformStone * 2) is CraftStep craft)
+			&& ProgressionPlanner.ObtainPlatforms(bot, BridgePlatformStone * 8) is CraftStep craft)
 			return craft;
 		int preferred = BridgeDirection(bot);
 		int direction = bridge.SideComplete(preferred) ? -preferred : preferred;

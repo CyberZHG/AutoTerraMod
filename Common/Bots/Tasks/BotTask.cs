@@ -183,7 +183,7 @@ public abstract class BotTask
 	const int ShaftMouthReach = 20;
 
 	const float NudgePerTick = 1.5f;
-	const float ShaftSlide = 2f;
+	const float ShaftSlide = 8f;
 	const int ShaftMouthHeadroom = 6;
 	const int ShaftCatchment = 80;
 	const int ShaftCatchmentDepth = 60;

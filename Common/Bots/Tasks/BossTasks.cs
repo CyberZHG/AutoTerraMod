@@ -765,10 +765,19 @@ public sealed class BuildBridgeTask : BotTask
 {
 
 	const float StandTolerance = 16f * 2f;
+	const uint FrontierPatienceTicks = 600;
+	int stuckFrontier = int.MinValue;
+	uint stuckSince;
 
 	BuildBridgeStep step;
 
 	public BuildBridgeTask(Bot bot) : base(bot) { }
+
+	public override void Start()
+	{
+		base.Start();
+		stuckFrontier = int.MinValue;
+	}
 
 	public override string NameKey => step?.Bridge is World.Highway ? "BuildHighway" : "BuildBridge";
 
@@ -789,6 +798,18 @@ public sealed class BuildBridgeTask : BotTask
 		{
 			BotDiagnostics.Log(Bot, $"corridor work at {frontier} ends: built={bridge.IsBuilt(frontier)} needsPlatform={bridge.RequiresPlatform(frontier)} hasPlatform={Bot.Hands.HasPlatform}");
 			IsFinished = true;
+			return;
+		}
+		if (frontier != stuckFrontier)
+		{
+			stuckFrontier = frontier;
+			stuckSince = Main.GameUpdateCount;
+		}
+		else if (Main.GameUpdateCount - stuckSince > FrontierPatienceTicks && Vector2.Distance(Bot.Center, new Vector2(frontier * 16f, bridge.Y * 16f)) < 16f * 8f)
+		{
+			BotDiagnostics.Log(Bot, $"corridor frontier {frontier} would not budge ({TileQuery.TypeAt(new Point(frontier, bridge.Y + 1))}), going past it{TerrainDump.Around(new Point(frontier, bridge.Y), 6, 4)}");
+			bridge.Skip(frontier);
+			stuckSince = Main.GameUpdateCount;
 			return;
 		}
 		var stand = new Vector2(PathFinder.CenterXOf(frontier - 2 * direction), (bridge.Y + 1) * 16f - 21f);

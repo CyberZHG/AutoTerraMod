@@ -836,10 +836,11 @@ public sealed class OutpostKitGoal : ProgressionGoal
 
 public sealed class HighwayGoal : ProgressionGoal
 {
-	const int BlockRestock = 300;
+	const int BlockRestock = 500;
 	const int BlockMinimumTrip = 60;
 	const int BlockLow = 10;
-	const int PlatformRestock = 60;
+	const int PlatformRestock = 200;
+	const int PlatformLow = 20;
 	const int RopeRestock = 50;
 	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope, ItemID.VineRope, ItemID.SilkRope };
 	static readonly HashSet<int> restocking = new();
@@ -868,9 +869,9 @@ public sealed class HighwayGoal : ProgressionGoal
 				continue;
 			int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock);
 			bool nearHome = Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter);
-			if (stone < BlockLow && (!bot.Hands.HasBridgeMaterial || nearHome))
+			if ((stone < BlockLow || nearHome && stone < BlockRestock / 2) && (!bot.Hands.HasBridgeMaterial || nearHome))
 				restockingStone.Add(bot.Id);
-			int stoneTarget = nearHome ? System.Math.Max(BlockMinimumTrip, System.Math.Min(BlockRestock, stone + BaseStorage.Count(bot.Faction, ItemID.StoneBlock))) : BlockMinimumTrip;
+			int stoneTarget = nearHome ? BlockRestock : BlockMinimumTrip;
 			if (stone >= stoneTarget)
 				restockingStone.Remove(bot.Id);
 			if (restockingStone.Contains(bot.Id))
@@ -883,7 +884,7 @@ public sealed class HighwayGoal : ProgressionGoal
 					continue;
 			}
 			int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
-			if (carried == 0 && highway.RequiresPlatform(frontier))
+			if (carried == 0 && highway.RequiresPlatform(frontier) || nearHome && carried < PlatformLow)
 				restocking.Add(bot.Id);
 			if (carried >= PlatformRestock)
 				restocking.Remove(bot.Id);

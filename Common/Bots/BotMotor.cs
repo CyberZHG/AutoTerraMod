@@ -21,6 +21,7 @@ public sealed class BotMotor
 	const int StalledChecksBeforeStuck = 3;
 	const float MeaningfulProgress = 12f;
 	const float RopeClimbSpeed = 3f;
+	const float RopeDescendSpeed = 6f;
 	const float CreepSpeed = 1.2f;
 	const int FlightIntentTicks = 2;
 	const int SprintLookahead = 6;
@@ -904,8 +905,11 @@ public sealed class BotMotor
 				return;
 			}
 			if (intent.ClimbDirection > 0)
+			{
 				WantsToDropThroughPlatforms = true;
-			npc.velocity = new Vector2(0f, intent.ClimbDirection * RopeClimbSpeed);
+				bot.Vitals.Teleported(npc);
+			}
+			npc.velocity = new Vector2(0f, intent.ClimbDirection > 0 ? RopeDescendSpeed : -RopeClimbSpeed);
 		}
 	}
 

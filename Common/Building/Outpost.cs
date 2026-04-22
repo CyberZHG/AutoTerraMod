@@ -13,7 +13,7 @@ public static class Outpost
 	public const int Width = 11;
 	public const int Height = 6;
 	public const int BlocksNeeded = 30;
-	public const int WallsNeeded = Height - 2;
+	public const int WallsNeeded = (Width - 2) * (Height - 2);
 	const float RebuildDistance = 16f * 150f;
 
 	public static bool IsBlock(Item item)
@@ -44,18 +44,70 @@ public static class Outpost
 	const int HighwayReach = 12;
 	const int HighwayAfieldTiles = 200;
 
+	const float DeepAfieldDistance = 16f * 250f;
+
 	public static bool IsAfield(Bot bot)
 	{
 		int away = System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X);
-		return IsDeep(bot) || away > AfieldTiles && (away > HighwayAfieldTiles || !OnHighway(bot));
+		return IsDeep(bot) && Vector2.Distance(bot.Center, bot.Faction.BaseCenter) > DeepAfieldDistance || away > AfieldTiles && (away > HighwayAfieldTiles || !OnHighway(bot));
 	}
 
 	static bool OnHighway(Bot bot) =>
 		World.Highway.For(bot.Faction).Any(highway => highway.Spans(bot.CenterTile.X) && System.Math.Abs(bot.CenterTile.Y - highway.Y) < HighwayReach);
 
+	const uint ValidationTicks = 600;
+	static uint validatedAt = uint.MaxValue;
+	static readonly List<(Point bed, Point? frame)> guarded = new();
+
+	public static void Invalidate() => validatedAt = uint.MaxValue;
+
+	public static IReadOnlyList<(Point bed, Point? frame)> Guarded()
+	{
+		if (validatedAt != uint.MaxValue && Main.GameUpdateCount - validatedAt < ValidationTicks)
+			return guarded;
+		validatedAt = Main.GameUpdateCount;
+		guarded.Clear();
+		var verdicts = new Dictionary<Point, bool>();
+		bool Valid(Point bed)
+		{
+			if (!verdicts.TryGetValue(bed, out bool valid))
+				verdicts[bed] = valid = !InUnderworld(bed) && IsUsable(bed);
+			return valid;
+		}
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			faction.Outposts.RemoveAll(bed => !Valid(bed));
+			foreach (var stale in faction.OutpostFrames.Keys.Where(bed => !faction.Outposts.Contains(bed)).ToList())
+				faction.OutpostFrames.Remove(stale);
+			foreach (var bed in faction.Outposts)
+				guarded.Add((bed, faction.OutpostFrames.TryGetValue(bed, out var frame) ? frame : null));
+			if (faction.ArenaBed is Point arena && Valid(arena))
+				guarded.Add((arena, null));
+		}
+		foreach (var bot in BotWorldSystem.Bots)
+		{
+			if (bot.OutpostBed is not Point bed)
+				continue;
+			if (Valid(bed))
+				guarded.Add((bed, null));
+			else
+			{
+				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room, respawning at home again");
+				bot.OutpostBed = null;
+			}
+		}
+		return guarded;
+	}
+
+	public static bool InFrame(Point frame, int x, int y)
+	{
+		int left = frame.X, right = frame.X + Width - 1, floor = frame.Y, ceiling = frame.Y - Height + 1;
+		return x >= left && x <= right && y >= ceiling && y <= floor && (x == left || x == right || y == floor || y == ceiling);
+	}
+
 	public static List<Point> FactionBeds(Factions.Faction faction)
 	{
-		faction.Outposts.RemoveAll(bed => !BedStands(bed) || InUnderworld(bed));
+		Guarded();
 		foreach (var member in BotWorldSystem.Bots)
 		{
 			if (member.FactionId == faction.Id && member.OutpostBed is Point bed && BedStands(bed) && !InUnderworld(bed) && !faction.Outposts.Contains(bed))
@@ -81,7 +133,7 @@ public static class Outpost
 
 	public static bool WantsNew(Bot bot)
 	{
-		if (!IsAfield(bot) || FactionBeds(bot.Faction).Any(bed => Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
+		if (!IsAfield(bot) || bot.CenterTile.Y >= Main.UnderworldLayer - 10 || FactionBeds(bot.Faction).Any(bed => Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
 			return false;
 		var anchor = bot.OutpostBed is Point bed ? bed.ToWorldCoordinates() : BotWorldSystem.RespawnFeet(bot);
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;
@@ -176,11 +228,7 @@ public static class Outpost
 				yield return new Point(Right, y);
 		}
 
-		public IEnumerable<Point> WallSpots()
-		{
-			for (int y = Ceiling + 1; y < Floor; y++)
-				yield return new Point(WallColumn, y);
-		}
+		public IEnumerable<Point> WallSpots() => Interior();
 
 		const int Spacing = 3;
 

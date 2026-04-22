@@ -23,7 +23,7 @@ public sealed record Hellevator(int X, int TopY)
 
 	public bool HasRope(int y) => Main.tile[RopeX, y].HasTile && Main.tileRope[Main.tile[RopeX, y].TileType];
 
-	public bool NeedsCleanup(int x, int y) => x != RopeX && TileQuery.IsPlatform(x, y) && HasRope(y);
+	public bool NeedsCleanup(int x, int y) => x != RopeX && (TileQuery.IsPlatform(x, y) && HasRope(y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]);
 
 	public Microsoft.Xna.Framework.Point? LavaFloor(int row)
 	{
@@ -39,6 +39,16 @@ public sealed record Hellevator(int X, int TopY)
 	}
 
 	public bool Contains(int x, int y) => x >= X && x <= Right && y > TopY && y < Main.UnderworldLayer;
+
+	public static bool OffRopeColumn(int x, int y)
+	{
+		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Hellevator is { } shaft && shaft.Contains(x, y) && x != shaft.RopeX)
+				return true;
+		}
+		return false;
+	}
 
 	public static bool InAnyShaft(int x, int y)
 	{

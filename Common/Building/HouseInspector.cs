@@ -163,17 +163,10 @@ public static class HouseInspector
 			var settlement = faction.Settlement;
 			if (settlement != null && settlement.IsShell(x, y))
 				return true;
-			if (faction.ArenaBed is Point arena && InOutpostShell(arena, x, y))
-				return true;
-			foreach (var outpost in faction.Outposts)
-			{
-				if (InOutpostShell(outpost, x, y))
-					return true;
-			}
 		}
-		foreach (var bot in BotWorldSystem.Bots)
+		foreach (var (bed, frame) in Outpost.Guarded())
 		{
-			if (bot.OutpostBed is Point bed && InOutpostShell(bed, x, y))
+			if (frame is Point known ? Outpost.InFrame(known, x, y) : InOutpostShell(bed, x, y))
 				return true;
 		}
 		return false;
