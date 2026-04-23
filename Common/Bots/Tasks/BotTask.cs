@@ -278,6 +278,7 @@ public abstract class BotTask
 	Vector2? deepTunnel;
 	const int DeepDetourRows = 60;
 	const int ShaftLevelRows = 3;
+	const int DeepDetourRise = 40;
 
 	bool DeepDetour(Vector2 target, float radius)
 	{
@@ -288,6 +289,8 @@ public abstract class BotTask
 			return false;
 		var tile = Bot.CenterTile;
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
+		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
+			return false;
 		if (inShaft && System.Math.Abs(tile.Y - goal.Y) <= ShaftLevelRows)
 		{
 			BotDiagnostics.Log(Bot, $"tunneling sideways from the hellevator at row {tile.Y} toward {goal}");

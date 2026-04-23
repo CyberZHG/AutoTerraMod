@@ -111,6 +111,8 @@ public sealed class Faction
 			faction.Hellevator = new World.Hellevator(tag.GetInt("shaftX"), tag.GetInt("shaftY"));
 		if (tag.ContainsKey("bridgeX"))
 			faction.Hellbridge = new World.Hellbridge(tag.GetInt("bridgeX"), tag.GetInt("bridgeY"));
+		if (faction.Hellevator != null && faction.Hellbridge != null)
+			faction.Hellevator.LandingRow = faction.Hellbridge.Y;
 		return faction;
 	}
 }

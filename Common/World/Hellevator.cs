@@ -38,7 +38,7 @@ public sealed record Hellevator(int X, int TopY)
 		return null;
 	}
 
-	public bool Contains(int x, int y) => x >= X && x <= Right && y > TopY && y < Main.UnderworldLayer;
+	public bool Contains(int x, int y) => x >= X && x <= Right && y > TopY && y <= (LandingRow ?? Main.UnderworldLayer - 1);
 
 	public static bool OffRopeColumn(int x, int y)
 	{

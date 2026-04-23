@@ -14,6 +14,8 @@ public sealed class HeadlessTestMode : ModSystem
 
 	public static bool Enabled => Main.dedServ && headlessRequested;
 	public static string Scenario => Enabled ? requestedScenario : null;
+
+	public static bool WeakBosses => Enabled && Environment.GetEnvironmentVariable("AUTOTERRA_WEAK_BOSS") == "1";
 	public static Config.FactionRelation? RelationOverride =>
 		Enabled && Enum.TryParse<Config.FactionRelation>(Environment.GetEnvironmentVariable("AUTOTERRA_RELATION"), out var relation) ? relation : null;
 

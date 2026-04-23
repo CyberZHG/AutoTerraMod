@@ -318,7 +318,17 @@ public static class Engagement
 			bot.Motor.Stop();
 	}
 
+	const int BridgeEndMargin = 3;
+
+	static void KiteTo(Bot bot, float x)
+	{
+		if (bot.Faction.Hellbridge is { } bridge && bot.CenterTile.Y >= Main.UnderworldLayer)
+			x = Math.Clamp(x, (bridge.Frontier(-1) + BridgeEndMargin) * 16f, (bridge.Frontier(1) - BridgeEndMargin) * 16f);
+		bot.Motor.MoveTo(new Vector2(x, bot.Center.Y), 16f);
+	}
+
 	const float HungryThreat = 16f * 12f;
+	const float WallKiteMargin = 16f * 32f;
 
 	static float HungryReach(NPC mouth) =>
 		mouth.life < mouth.lifeMax * 0.5f ? 700f : mouth.life < mouth.lifeMax * 0.75f ? 500f : 300f;
@@ -334,19 +344,23 @@ public static class Engagement
 		int away = offset >= 0f ? 1 : -1;
 		float distance = Math.Abs(offset);
 		bool hurt = bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
-		float reach = HungryReach(mouth) + (hurt ? 160f : 0f);
-		if (distance < reach || distance > reach + 16f * 16f)
-			bot.Motor.MoveTo(new Vector2(mouth.Center.X + away * (reach + 16f * 6f), body.Center.Y), 16f);
+		float keep = HungryReach(mouth) + (hurt ? 160f : 0f) + WallKiteMargin;
+		if (distance < keep)
+			KiteTo(bot, mouth.Center.X + away * (keep + 16f * 8f));
+		else if (distance > keep + 16f * 16f)
+			KiteTo(bot, mouth.Center.X + away * (keep + 16f * 4f));
 		else
 			bot.Motor.Stop();
 		var hungry = Main.npc
 			.Where(npc => npc.active && npc.type == NPCID.TheHungry && Vector2.Distance(npc.Center, body.Center) < HungryThreat)
 			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
 			.FirstOrDefault();
-		var targetPart = hungry ?? Main.npc
+		var parts = Main.npc
 			.Where(npc => npc.active && npc.type is NPCID.WallofFlesh or NPCID.WallofFleshEye)
-			.OrderBy(npc => Vector2.Distance(npc.Center, body.Center))
-			.FirstOrDefault() ?? part;
+			.OrderBy(npc => npc.type == NPCID.WallofFlesh ? 0 : 1)
+			.ThenBy(npc => Vector2.Distance(npc.Center, body.Center))
+			.ToList();
+		var targetPart = hungry ?? parts.FirstOrDefault(npc => Collision.CanHitLine(body.position, body.width, body.height, npc.position, npc.width, npc.height)) ?? parts.FirstOrDefault() ?? part;
 		bot.Motor.Face(targetPart.Center);
 		var ranged = bot.Hands.BestProjectileWeapon();
 		if (ranged != null && Collision.CanHitLine(body.position, body.width, body.height, targetPart.position, targetPart.width, targetPart.height))

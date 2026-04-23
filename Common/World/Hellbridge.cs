@@ -16,8 +16,9 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public const int HalfLength = 900;
 
-	public int LeftEnd => System.Math.Max(WorldEdgeMargin, CenterX - HalfLength);
-	public int RightEnd => System.Math.Min(Main.maxTilesX - WorldEdgeMargin, CenterX + HalfLength);
+	int Away => CenterX > Main.maxTilesX / 2 ? 1 : -1;
+	public int LeftEnd => Away < 0 ? System.Math.Max(WorldEdgeMargin, CenterX - HalfLength) : WorldEdgeMargin;
+	public int RightEnd => Away > 0 ? System.Math.Min(Main.maxTilesX - WorldEdgeMargin, CenterX + HalfLength) : Main.maxTilesX - WorldEdgeMargin;
 	const int WorldEdgeMargin = 45;
 
 	public Vector2 Center => new(CenterX * 16f + 8f, Y * 16f);
@@ -30,14 +31,18 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	const int SummonInset = 4;
 	const int SummonReach = 400;
+	int? summonEdge;
 
 	public Vector2 SummonPoint
 	{
 		get
 		{
-			int away = CenterX > Main.maxTilesX / 2 ? 1 : -1;
+			int away = Away;
 			int built = Frontier(away) - away * SummonInset;
-			int edge = away > 0 ? System.Math.Min(built, CenterX + SummonReach) : System.Math.Max(built, CenterX - SummonReach);
+			int edge = SideComplete(away) ? built : away > 0 ? System.Math.Min(built, CenterX + SummonReach) : System.Math.Max(built, CenterX - SummonReach);
+			if (summonEdge is int chosen && (Frontier(away) - chosen) * away > 0 && (chosen - edge) * away > 0)
+				edge = chosen;
+			summonEdge = edge;
 			return new Vector2(edge * 16f + 8f, Y * 16f);
 		}
 	}

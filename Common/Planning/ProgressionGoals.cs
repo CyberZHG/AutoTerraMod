@@ -1465,6 +1465,7 @@ public static class ProgressionGoals
 		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },
 			swords: new int[] { ItemID.IronBroadsword, ItemID.LeadBroadsword },
@@ -1658,8 +1659,8 @@ public static class ProgressionGoals
 	static void AddOreTierGoals(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor)
 	{
 		goals.Add(new GearGoal(GearKind.Pickaxe, pickaxes));
-		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, swords), CombatStyle.Melee));
-		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, swords), CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged, CombatStyle.Melee));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, staffs), CombatStyle.Magic));
 		goals.Add(new GearGoal(GearKind.Body, armor.Select(set => set.body).ToArray()));
 		if (armor.Length % HeadStyles.Length == 0 && armor.Length > HeadStyles.Length - 1)

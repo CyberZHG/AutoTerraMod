@@ -160,6 +160,11 @@ public static class HouseInspector
 			return true;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
+			if (faction.Hellbridge is { } bridge && y == bridge.Y + 1 && x >= bridge.LeftEnd && x <= bridge.RightEnd && bridge.IsDeck(x))
+				return true;
+		}
+		foreach (var faction in BotWorldSystem.Factions)
+		{
 			var settlement = faction.Settlement;
 			if (settlement != null && settlement.IsShell(x, y))
 				return true;

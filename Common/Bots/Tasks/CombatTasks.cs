@@ -95,6 +95,8 @@ public sealed class FightTask : BotTask
 			return HealthFraction < Traits.FleeHealthFraction ? InterruptPriority * 0.3f : InterruptPriority;
 		}
 		float aggroRadius = Traits.Combat >= BrawlerThreshold ? 16f * (8f + Traits.Combat * 22f) : CloseThreatDistance;
+		if (GuardingRally())
+			aggroRadius = System.Math.Max(aggroRadius, RallyGuardRadius);
 		target = Engagement.NearestHostile(Bot, aggroRadius, true);
 		float score;
 		if (target != null)
@@ -110,9 +112,17 @@ public sealed class FightTask : BotTask
 		{
 			return 0f;
 		}
+		if (GuardingRally() && Vector2.Distance(Bot.Center, target.Center) < RallyGuardRadius)
+			score = System.Math.Max(score, RallyGuardPriority);
 		Detail = target.GivenOrTypeName;
 		return HealthFraction < Traits.FleeHealthFraction ? score * 0.3f : score;
 	}
+
+	const float RallyGuardPriority = 94f;
+	const float RallyGuardRadius = 16f * 25f;
+	const float RallyGuardReach = 16f * 40f;
+
+	bool GuardingRally() => Bot.Faction.Rally is { } rally && Vector2.Distance(Bot.Center, rally.point) < RallyGuardReach;
 
 	NPC Interferer()
 	{

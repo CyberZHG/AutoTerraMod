@@ -766,6 +766,18 @@ public sealed class BuildBridgeTask : BotTask
 
 	const float StandTolerance = 16f * 2f;
 	const uint FrontierPatienceTicks = 600;
+
+	static bool Obstructed(World.ICorridor bridge, int x)
+	{
+		if (TileQuery.HasTile(new Point(x, bridge.Y + 1)) && !bridge.IsDeck(x))
+			return true;
+		for (int y = bridge.Y - bridge.Headroom + 1; y <= bridge.Y; y++)
+		{
+			if (TileQuery.IsSolid(x, y))
+				return true;
+		}
+		return false;
+	}
 	int stuckFrontier = int.MinValue;
 	uint stuckSince;
 
@@ -805,7 +817,7 @@ public sealed class BuildBridgeTask : BotTask
 			stuckFrontier = frontier;
 			stuckSince = Main.GameUpdateCount;
 		}
-		else if (Main.GameUpdateCount - stuckSince > FrontierPatienceTicks && Vector2.Distance(Bot.Center, new Vector2(frontier * 16f, bridge.Y * 16f)) < 16f * 8f)
+		else if (Main.GameUpdateCount - stuckSince > FrontierPatienceTicks && Vector2.Distance(Bot.Center, new Vector2(frontier * 16f, bridge.Y * 16f)) < 16f * 8f && Obstructed(bridge, frontier))
 		{
 			BotDiagnostics.Log(Bot, $"corridor frontier {frontier} would not budge ({TileQuery.TypeAt(new Point(frontier, bridge.Y + 1))}), going past it{TerrainDump.Around(new Point(frontier, bridge.Y), 6, 4)}");
 			bridge.Skip(frontier);

@@ -92,7 +92,11 @@ public sealed class BossCredit : GlobalNPC
 	public override bool PreAI(NPC npc)
 	{
 		if (npc.type == NPCID.WallofFlesh && npc.localAI[0] == 0f)
+		{
 			SpawnBehindBots(npc);
+			if (HeadlessTestMode.WeakBosses)
+				npc.life = npc.lifeMax / 10;
+		}
 		if (npc.type == NPCID.WallofFlesh && npc.velocity.X == 0f && NearestBot(npc) is { } nearest)
 		{
 			npc.target = nearest.Avatar.whoAmI;
