@@ -32,7 +32,7 @@ public sealed class BotWorldSystem : ModSystem
 	static bool initialized;
 	static int nextBotId;
 
-	public static bool IsRunning => initialized && Main.netMode != NetmodeID.MultiplayerClient;
+	public static bool IsRunning => initialized && Main.netMode != NetmodeID.MultiplayerClient && Settings?.BotsEnabled != false;
 
 	public static Bot FindBot(int id)
 	{
@@ -123,10 +123,28 @@ public sealed class BotWorldSystem : ModSystem
 
 	public static void ChangeSettings(WorldFactionSettings settings)
 	{
+		bool wasEnabled = Settings?.BotsEnabled != false;
 		Settings = settings;
 		Relation = HeadlessTestMode.RelationOverride ?? settings.Relation;
 		if (!initialized)
 			return;
+		if (!settings.BotsEnabled)
+		{
+			foreach (var bot in Bots.Where(bot => bot.Npc != null))
+			{
+				bot.SavedFeetPosition = bot.Npc.Bottom;
+				Hide(bot);
+			}
+			return;
+		}
+		if (!wasEnabled)
+		{
+			foreach (var bot in Bots)
+			{
+				Spawn(bot, bot.SavedFeetPosition ?? bot.Faction.BaseFeet);
+				bot.SavedFeetPosition = null;
+			}
+		}
 		var wasActive = Bots.ToHashSet();
 		foreach (var bot in Bots)
 			bot.SavedFeetPosition = bot.Npc?.Bottom;
@@ -183,7 +201,10 @@ public sealed class BotWorldSystem : ModSystem
 
 	public override void PreUpdateWorld()
 	{
-		if (Main.netMode != NetmodeID.MultiplayerClient && !initialized)
+		if (Main.netMode == NetmodeID.MultiplayerClient || initialized)
+			return;
+		Settings ??= WorldFactionSettings.FromConfig(ModContent.GetInstance<AutoTerraConfig>());
+		if (Settings.BotsEnabled)
 			Initialize();
 	}
 

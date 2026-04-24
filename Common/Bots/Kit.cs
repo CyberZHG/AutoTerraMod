@@ -22,6 +22,9 @@ public static class Kit
 			bot.Hands.BestAxe,
 			bot.Hands.BestWeapon(),
 			BackupMelee(bot),
+			BestOfKind(bot, GearKind.RangedWeapon),
+			BestOfKind(bot, GearKind.MagicWeapon),
+			BestOfKind(bot, GearKind.SummonWeapon),
 			Inventory.Items(avatar).Where(item => Equipment.PowerOf(item, GearKind.Hook) > 0).MaxBy(item => Equipment.PowerOf(item, GearKind.Hook))
 		};
 		var plannedTypes = bot.Brain.PlannedItemTypes;
@@ -59,8 +62,10 @@ public static class Kit
 
 	const int HotbarSlots = 10;
 
-	static Item BackupMelee(Bot bot) =>
-		Inventory.Items(bot.Avatar).Where(item => Equipment.PowerOf(item, GearKind.MeleeWeapon) > 0).MaxBy(item => Equipment.PowerOf(item, GearKind.MeleeWeapon));
+	static Item BackupMelee(Bot bot) => BestOfKind(bot, GearKind.MeleeWeapon);
+
+	static Item BestOfKind(Bot bot, GearKind kind) =>
+		Inventory.Items(bot.Avatar).Where(item => Equipment.PowerOf(item, kind) > 0).MaxBy(item => Equipment.PowerOf(item, kind));
 
 	public static void ArrangeHotbar(Bot bot)
 	{

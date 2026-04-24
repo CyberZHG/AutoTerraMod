@@ -9,7 +9,7 @@ public sealed class AutoTerraCommand : ModCommand
 {
 	public override CommandType Type => CommandType.World;
 	public override string Command => "autoterra";
-	public override string Usage => "/autoterra [factions <1-4> | bots <1-6> | relation <race|cooperate|war>]";
+	public override string Usage => "/autoterra [enabled <on|off> | factions <1-4> | bots <1-6> | relation <race|cooperate|war> | materials <1|5|10|20|50>]";
 	public override string Description => Text("Description");
 
 	static string Text(string key, params object[] args) => Language.GetTextValue($"Mods.AutoTerraMod.Commands.{key}", args);
@@ -46,11 +46,16 @@ public sealed class AutoTerraCommand : ModCommand
 				return current with { BotsPerFaction = bots };
 			case "relation" when Enum.TryParse<FactionRelation>(value, true, out var relation) && Enum.IsDefined(relation):
 				return current with { Relation = relation };
+			case "enabled" when value.ToLowerInvariant() is "on" or "off":
+				return current with { BotsEnabled = value.ToLowerInvariant() == "on" };
+			case "materials" when int.TryParse(value, out int factor) && Array.IndexOf(WorldFactionSettings.MaterialMultipliers, factor) >= 0:
+				return current with { MaterialMultiplier = factor };
 			default:
 				return null;
 		}
 	}
 
 	static string Describe(WorldFactionSettings settings) =>
-		Text("Current", settings.FactionCount, settings.BotsPerFaction, Language.GetTextValue($"Mods.AutoTerraMod.Configs.FactionRelation.{settings.Relation}.Label"));
+		Text("Current", settings.FactionCount, settings.BotsPerFaction, Language.GetTextValue($"Mods.AutoTerraMod.Configs.FactionRelation.{settings.Relation}.Label"),
+			Text(settings.BotsEnabled ? "On" : "Off"), settings.MaterialMultiplier);
 }

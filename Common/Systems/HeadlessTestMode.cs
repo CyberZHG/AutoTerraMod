@@ -544,12 +544,39 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static void DeliverGift()
 	{
-		if (giftDelivered || requestedGift == null || BotWorldSystem.Bots.Count == 0)
+		bool armMelee = Environment.GetEnvironmentVariable("AUTOTERRA_ARM_MELEE") == "1";
+		if (giftDelivered || requestedGift == null && !armMelee || BotWorldSystem.Bots.Count == 0)
 			return;
 		giftDelivered = true;
-		foreach (string gift in requestedGift.Split(','))
-			DeliverGift(gift.Split(':'));
+		if (requestedGift != null)
+		{
+			foreach (string gift in requestedGift.Split(','))
+				DeliverGift(gift.Split(':'));
+		}
+		if (armMelee)
+			ArmMeleeBots();
 		Terraria.IO.WorldFile.SaveWorld();
+	}
+
+	static void ArmMeleeBots()
+	{
+		var best = BotWorldSystem.Bots.SelectMany(bot => Bots.Inventory.Items(bot.Avatar)).Where(Bots.BotHands.IsRangedWeapon).MaxBy(item => item.damage);
+		if (best == null)
+		{
+			ModContent.GetInstance<AutoTerraMod>().Logger.Warn("arm melee: no bot owns a ranged weapon");
+			return;
+		}
+		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Personality.Style == Bots.CombatStyle.Melee))
+		{
+			if (Bots.Inventory.Items(bot.Avatar).Any(item => Bots.BotHands.IsRangedWeapon(item) && item.damage >= best.damage))
+				continue;
+			var copy = best.Clone();
+			copy.stack = 1;
+			var leftover = Bots.Inventory.Add(bot.Avatar, copy);
+			if (!leftover.IsAir)
+				Item.NewItem(new EntitySource_WorldEvent(), bot.Center, leftover);
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"arm melee: gave {bot.Name} ({bot.Faction.Name}, {bot.Personality.Style}) {best.Name} dmg {best.damage}{(leftover.IsAir ? "" : " - inventory full")}");
+		}
 	}
 
 	static void DeliverGift(string[] parts)

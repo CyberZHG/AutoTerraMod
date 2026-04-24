@@ -33,6 +33,9 @@ public sealed class BotStatusReport : ModSystem
 		Mod.Logger.Info(report.ToString());
 	}
 
+	static string Column(World.Hellbridge bridge, int x) =>
+		string.Join(",", Enumerable.Range(bridge.Y - 2, 4).Select(y => $"{World.TileQuery.TypeAt(new Microsoft.Xna.Framework.Point(x, y))}{(Main.tile[x, y].LiquidAmount > 0 ? "~" : "")}"));
+
 	static string DescribeBridge(Factions.Faction faction)
 	{
 		var shaft = faction.Hellevator;
@@ -40,7 +43,7 @@ public sealed class BotStatusReport : ModSystem
 		foreach (var highway in World.Highway.For(faction))
 			shaftText += $"\n    highway {(highway.Direction > 0 ? "east" : "west")} y={highway.Y} {highway.StartX}->{highway.EndX}: frontier {highway.Frontier(highway.Direction)}{(highway.BlockReason is string reason ? " blocked by " + reason : "")}, link row missing {highway.MissingLinkRow()?.ToString() ?? "none"}";
 		var bridge = faction.Hellbridge;
-		return shaftText + (bridge == null ? "" : $"\n    hellbridge y={bridge.Y}: built {bridge.Frontier(-1)}..{bridge.Frontier(1)} of {bridge.LeftEnd}..{bridge.RightEnd}");
+		return shaftText + (bridge == null ? "" : $"\n    hellbridge y={bridge.Y}: built {bridge.Frontier(-1)}..{bridge.Frontier(1)} of {bridge.LeftEnd}..{bridge.RightEnd} ends [{Column(bridge, bridge.Frontier(-1))}] [{Column(bridge, bridge.Frontier(1))}]");
 	}
 
 	static string DescribeBossReadiness(Factions.Faction faction)

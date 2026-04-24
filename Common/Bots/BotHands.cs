@@ -557,6 +557,9 @@ public sealed class BotHands
 
 	const int MinionBuffTicks = 18000;
 
+	public Item BestMagicWeapon() =>
+		Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsMagicWeapon(item) && Avatar.statMana >= Avatar.GetManaCost(item)).MaxBy(item => item.damage);
+
 	public Item BestProjectileWeapon() => Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsProjectileWeapon(item)).MaxBy(item => item.damage);
 
 	bool IsUsableWeapon(Item item)

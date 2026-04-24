@@ -528,7 +528,7 @@ public sealed class GatherTask : BotTask
 			prospectTarget = destination;
 			Bot.Motor.Stop();
 		}
-		bool moving = DeepOre() ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
+		bool moving = DeepOre() || Tiles.Ground == Landmark.Underworld ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
 		if (moving)
 			return;
 		prospectDirection = -prospectDirection;

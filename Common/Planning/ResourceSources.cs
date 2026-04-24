@@ -121,8 +121,14 @@ public static class ResourceSources
 		Add(ItemID.Cobweb, TileID.Cobweb);
 		Add(ItemID.DirtBlock, TileID.Grass);
 		Add(ItemID.MudBlock, TileID.JungleGrass);
-		return tilesByItem.ToDictionary(entry => entry.Key, entry => new TileSource(entry.Value, false));
+		return tilesByItem.ToDictionary(entry => entry.Key, entry => new TileSource(entry.Value, false, Ground: TileGrounds.TryGetValue(entry.Key, out var ground) ? ground : null));
 	}
+
+	static readonly Dictionary<int, Landmark> TileGrounds = new()
+	{
+		[ItemID.Hellstone] = Landmark.Underworld,
+		[ItemID.AshBlock] = Landmark.Underworld
+	};
 
 	static bool IsCraftedFromMaterials(int itemType) =>
 		RecipeIndex.AnyFor(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));

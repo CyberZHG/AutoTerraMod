@@ -218,6 +218,7 @@ public static class Engagement
 			bot.Motor.MoveTo(approach, 24f);
 			return;
 		}
+		weapon = PreferredAgainst(bot, target, weapon);
 		var body = bot.Npc;
 		float distance = Vector2.Distance(body.Center, target.Center);
 		if (BotHands.IsProjectileWeapon(weapon))
@@ -260,6 +261,17 @@ public static class Engagement
 	}
 
 	const float MinMeleeGap = 6f;
+	const float RangedThreatDistance = 16f * 10f;
+
+	static Item PreferredAgainst(Bot bot, NPC target, Item weapon)
+	{
+		if (BotHands.IsProjectileWeapon(weapon) || bot.Personality.Style is not (CombatStyle.Melee or CombatStyle.Summon))
+			return weapon;
+		bool rangedThreat = target.noGravity || Vector2.Distance(bot.Center, target.Center) > RangedThreatDistance;
+		if (!rangedThreat)
+			return weapon;
+		return bot.Hands.BestMagicWeapon() ?? bot.Hands.BestProjectileWeapon() ?? weapon;
+	}
 	const float MeleeStandoff = 0.6f;
 	const float BackOffStep = 48f;
 

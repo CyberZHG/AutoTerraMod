@@ -156,7 +156,8 @@ public sealed class SpectatorHud : ModSystem
 		var held = avatar.inventory[avatar.selectedItem];
 		var weapon = bot.Hands.BestWeapon();
 		lines.Add((Text("UI.Gear", bot.Hands.BestPickaxe?.Name ?? "-", weapon?.Name ?? "-", held.IsAir ? "-" : held.Name), Color.White));
-		lines.Add((Text("UI.Aspiration", Text($"Aspirations.{traits.Aspiration}")), Color.LightGray));
+		if (Bosses.BossCredit.NextChallengeFor(bot.Faction) == null)
+			lines.Add((Text("UI.Aspiration", Text($"Aspirations.{traits.Aspiration}")), Color.LightGray));
 	}
 
 	static string DescribePlan(PlanStep plan) => plan switch

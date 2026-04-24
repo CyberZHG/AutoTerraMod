@@ -10,9 +10,21 @@ public enum FactionRelation
 	War
 }
 
+public enum MaterialDrop
+{
+	X1 = 1,
+	X5 = 5,
+	X10 = 10,
+	X20 = 20,
+	X50 = 50
+}
+
 public sealed class AutoTerraConfig : ModConfig
 {
 	public override ConfigScope Mode => ConfigScope.ServerSide;
+
+	[DefaultValue(true)]
+	public bool BotsEnabled;
 
 	[Range(1, 4)]
 	[DefaultValue(2)]
@@ -36,12 +48,15 @@ public sealed class AutoTerraConfig : ModConfig
 	[DefaultValue(false)]
 	public bool DiagnosticLogging;
 
+	[DefaultValue(MaterialDrop.X1)]
+	public MaterialDrop MaterialMultiplier;
+
 	public override void OnChanged()
 	{
 		var current = Systems.BotWorldSystem.Settings;
-		if (current == null || !Systems.BotWorldSystem.IsRunning)
+		if (current == null)
 			return;
-		var wanted = current with { FactionCount = FactionCount, BotsPerFaction = BotsPerFaction, Relation = Relation };
+		var wanted = current with { FactionCount = FactionCount, BotsPerFaction = BotsPerFaction, Relation = Relation, BotsEnabled = BotsEnabled, MaterialMultiplier = (int)MaterialMultiplier };
 		if (wanted != current)
 			Systems.BotWorldSystem.ChangeSettings(wanted);
 	}

@@ -285,20 +285,21 @@ public abstract class BotTask
 		if (Bot.Faction.Hellevator is not { } shaft)
 			return false;
 		var goal = target.ToTileCoordinates();
-		if (goal.Y < shaft.TopY + DeepDetourRows || goal.Y >= shaft.FirstImpassableRow())
+		if (goal.Y < shaft.TopY + DeepDetourRows)
 			return false;
+		int levelRow = System.Math.Min(goal.Y, shaft.FirstImpassableRow() - 2);
 		var tile = Bot.CenterTile;
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
 		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
 			return false;
-		if (inShaft && System.Math.Abs(tile.Y - goal.Y) <= ShaftLevelRows)
+		if (inShaft && System.Math.Abs(tile.Y - levelRow) <= ShaftLevelRows)
 		{
 			BotDiagnostics.Log(Bot, $"tunneling sideways from the hellevator at row {tile.Y} toward {goal}");
 			deepTunnel = target;
 			Bot.Motor.TunnelTo(target, radius);
 			return true;
 		}
-		var level = new Vector2((shaft.X + 1) * 16f, goal.Y * 16f);
+		var level = new Vector2((shaft.X + 1) * 16f, levelRow * 16f);
 		if (ShaftShortcut(level))
 			return true;
 		if (inShaft)

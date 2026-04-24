@@ -122,7 +122,7 @@ public sealed class BotBrain
 			QuickHeal();
 		using (Probes.Measure("Summon"))
 		{
-			if (bot.Personality.Style == CombatStyle.Summon && bot.Hands.BestSummonWeapon() is Item staff)
+			if (bot.Hands.BestSummonWeapon() is Item staff)
 				bot.Hands.Summon(staff);
 		}
 		using (Probes.Measure("Watchdog"))

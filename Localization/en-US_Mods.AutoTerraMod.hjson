@@ -2,6 +2,11 @@ Configs: {
 	AutoTerraConfig: {
 		DisplayName: Auto Terra Factions
 
+		BotsEnabled: {
+			Label: Enable bots
+			Tooltip: Turns the AI factions on or off for this world. Turning them off hides every bot and keeps them in the save; turning them back on brings them back where they were. Also /autoterra enabled on|off.
+		}
+
 		FactionCount: {
 			Label: Faction count
 			Tooltip: Number of AI factions used when a new world starts (1-4). Afterwards each world keeps its own settings; changing it while in a world applies to that world, and lowering it hides the extra bots while keeping them in the save.
@@ -31,6 +36,40 @@ Configs: {
 			Label: Diagnostic logging
 			Tooltip: Writes each bot's task and plan changes to client.log.
 		}
+
+		MaterialMultiplier: {
+			Label: Basic material drops
+			Tooltip: Multiplies stackable items dropped by mined or chopped tiles (blocks, ores, wood, plants, gems) and by killed monsters, for everyone in this world. Coins and treasure bags are not multiplied. Saved per world; also /autoterra materials 1|5|10|20|50.
+		}
+	}
+
+	MaterialDrop: {
+		X1: {
+			Label: 1x
+			Tooltip: ""
+		}
+
+		X5: {
+			Label: 5x
+			Tooltip: ""
+		}
+
+		X10: {
+			Label: 10x
+			Tooltip: ""
+		}
+
+		X20: {
+			Label: 20x
+			Tooltip: ""
+		}
+
+		X50: {
+			Label: 50x
+			Tooltip: ""
+		}
+
+		Tooltip: ""
 	}
 
 	FactionRelation: {
@@ -57,7 +96,9 @@ Commands: {
 	Description: Shows or changes this world's faction settings (lowering a count hides bots, keeping them in the save)
 	NotStarted: Factions have not started in this world yet.
 	Usage: Usage: {0}
-	Current: This world: {0} factions, {1} bots each, relation: {2}
+	Current: This world: bots {3}, {0} factions, {1} bots each, relation: {2}, material drops {4}x
+	On: on
+	Off: off
 }
 
 Keybinds: {

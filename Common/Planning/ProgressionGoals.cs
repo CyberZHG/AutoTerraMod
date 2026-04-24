@@ -273,7 +273,14 @@ public sealed class AmmoGoal : ProgressionGoal
 		return supply;
 	}
 
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, OptionsFor(AmmoClass(bot)), RestockTo);
+	public override PlanStep Plan(Bot bot)
+	{
+		int ammoClass = AmmoClass(bot);
+		int missing = System.Math.Max(1, RestockTo - System.Math.Min(RestockTo, Supply(bot)));
+		if (ammoClass == AmmoID.Arrow && ProgressionPlanner.PlanPurchase(bot, ItemID.WoodenArrow, missing) is BuyStep buy)
+			return buy;
+		return ProgressionPlanner.ObtainAnyAmount(bot, OptionsFor(ammoClass), RestockTo);
+	}
 }
 
 public sealed class RopeGoal : ProgressionGoal
@@ -1465,7 +1472,7 @@ public static class ProgressionGoals
 		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
-		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee, CombatStyle.Magic));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },
 			swords: new int[] { ItemID.IronBroadsword, ItemID.LeadBroadsword },
@@ -1512,7 +1519,7 @@ public static class ProgressionGoals
 		goals.Add(new AspirationGoal(Aspiration.Angler, new OwnGoal(ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher, ItemID.WoodFishingPole)));
 		goals.Add(new RefightGoal(gearOnly: false));
 		int hardmodeStart = goals.Count;
-		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.ImpStaff), CombatStyle.Summon, CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
 		goals.Add(new SmashAltarsGoal());
 		goals.Add(new WaterproofTorchGoal());
 		AddOreTier(goals,
@@ -1525,7 +1532,7 @@ public static class ProgressionGoals
 				(ItemID.CobaltHelmet, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltMask, ItemID.CobaltBreastplate, ItemID.CobaltLeggings), (ItemID.CobaltHat, ItemID.CobaltBreastplate, ItemID.CobaltLeggings),
 				(ItemID.PalladiumMask, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHelmet, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings), (ItemID.PalladiumHeadgear, ItemID.PalladiumBreastplate, ItemID.PalladiumLeggings)
 			});
-		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.SpiderStaff), CombatStyle.Summon));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.SpiderStaff), CombatStyle.Summon, CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
 		goals.Add(new StationGoal(TileID.MythrilAnvil, ItemID.MythrilAnvil, ItemID.OrichalcumAnvil));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.MythrilPickaxe, ItemID.OrichalcumPickaxe },
@@ -1554,7 +1561,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.HallowedRepeater },
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.HallowedMask, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHelmet, ItemID.HallowedPlateMail, ItemID.HallowedGreaves), (ItemID.HallowedHeadgear, ItemID.HallowedPlateMail, ItemID.HallowedGreaves) });
-		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.OpticStaff), CombatStyle.Summon));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, ItemID.OpticStaff), CombatStyle.Summon, CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.ChlorophytePickaxe },
 			swords: new int[] { ItemID.ChlorophyteClaymore, ItemID.ChlorophyteSaber },
@@ -1660,8 +1667,8 @@ public static class ProgressionGoals
 	{
 		goals.Add(new GearGoal(GearKind.Pickaxe, pickaxes));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, swords), CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
-		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged, CombatStyle.Melee));
-		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, staffs), CombatStyle.Magic));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, bows), CombatStyle.Ranged, CombatStyle.Melee, CombatStyle.Magic));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, staffs), CombatStyle.Magic, CombatStyle.Melee, CombatStyle.Ranged));
 		goals.Add(new GearGoal(GearKind.Body, armor.Select(set => set.body).ToArray()));
 		if (armor.Length % HeadStyles.Length == 0 && armor.Length > HeadStyles.Length - 1)
 		{
