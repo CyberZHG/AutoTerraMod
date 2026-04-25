@@ -10,7 +10,6 @@ namespace AutoTerraMod.Common.Bots;
 
 public sealed class Explosives
 {
-	const int FuseTicks = 60;
 	const int MaxExplodablePick = 65;
 	public const float SafeDistance = 16f * 7f;
 
@@ -21,9 +20,8 @@ public sealed class Explosives
 	};
 
 	readonly Bot bot;
-	Point? fused;
-	int radius;
-	int fuse;
+	int projectileIndex = -1;
+	int projectileIdentity;
 
 	public Explosives(Bot bot) => this.bot = bot;
 
@@ -31,9 +29,11 @@ public sealed class Explosives
 
 	public bool Carries => Inventory.Items(bot.Avatar).Any(IsExplosive);
 
-	public bool IsFused => fused != null;
+	Projectile Fused => projectileIndex >= 0 && Main.projectile[projectileIndex] is { active: true } projectile && projectile.identity == projectileIdentity ? projectile : null;
 
-	public Vector2? BlastCenter => fused?.ToWorldCoordinates();
+	public bool IsFused => Fused != null;
+
+	public Vector2? BlastCenter => Fused?.Center;
 
 	public static bool CanBlast(int x, int y)
 	{
@@ -46,40 +46,45 @@ public sealed class Explosives
 			&& !Building.HouseInspector.IsProtected(x, y);
 	}
 
+	static bool SpareProtected(Point center, int radius)
+	{
+		for (int x = center.X - radius; x <= center.X + radius; x++)
+		{
+			for (int y = center.Y - radius; y <= center.Y + radius; y++)
+			{
+				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].HasTile && Building.HouseInspector.IsProtected(x, y))
+					return false;
+			}
+		}
+		return true;
+	}
+
 	public bool Light(Point tile)
 	{
-		if (fused != null || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
+		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
 			return false;
 		var charge = Charges.FirstOrDefault(candidate => Inventory.Count(bot.Avatar, candidate.item) > 0);
-		if (charge.item == 0)
+		if (charge.item == 0 || !SpareProtected(tile, charge.radius))
 			return false;
 		var item = Inventory.Items(bot.Avatar).First(candidate => candidate.type == charge.item);
 		string name = item.Name;
+		int index;
+		using (Systems.AvatarPresence.Enter())
+			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), tile.ToWorldCoordinates(), Vector2.Zero, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
 		Inventory.ConsumeOne(bot.Avatar, item);
-		fused = tile;
-		radius = charge.radius;
-		fuse = FuseTicks;
+		projectileIndex = index;
+		projectileIdentity = Main.projectile[index].identity;
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
-		BotDiagnostics.Log(bot, $"lit {name} at {tile} to blast through");
+		BotDiagnostics.Log(bot, $"threw {name} at {tile} to blast through");
 		return true;
 	}
 
 	public void Tick()
 	{
-		if (fused is not Point center || --fuse > 0)
-			return;
-		fused = null;
-		SoundEngine.PlaySound(SoundID.Item14, center.ToWorldCoordinates());
-		for (int i = 0; i < 20; i++)
-			Dust.NewDust(center.ToWorldCoordinates() - new Vector2(radius * 8f), radius * 16, radius * 16, DustID.Smoke);
-		for (int x = center.X - radius; x <= center.X + radius; x++)
+		if (projectileIndex >= 0 && Fused == null)
 		{
-			for (int y = center.Y - radius; y <= center.Y + radius; y++)
-			{
-				if ((x - center.X) * (x - center.X) + (y - center.Y) * (y - center.Y) <= radius * radius && CanBlast(x, y))
-					WorldGen.KillTile(x, y);
-			}
+			projectileIndex = -1;
+			bot.Watchdog.RecordProgress();
 		}
-		bot.Watchdog.RecordProgress();
 	}
 }

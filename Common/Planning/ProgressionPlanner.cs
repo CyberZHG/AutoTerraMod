@@ -502,6 +502,8 @@ public static class ProgressionPlanner
 		{
 			if (Navigation.PickRequirement.MinimumPick(tile, 0, Main.maxTilesY) <= pick)
 				return true;
+			if (tile == Terraria.ID.TileID.Hellstone && Main.hardMode && bot.Hands.Explosives.Carries)
+				return true;
 		}
 		return false;
 	}

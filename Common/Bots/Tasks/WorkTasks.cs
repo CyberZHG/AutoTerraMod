@@ -475,7 +475,7 @@ public sealed class GatherTask : BotTask
 			var result = chopping ? Bot.Hands.Chop(tile)
 				: Main.tileCut[tileType] ? Bot.Hands.Cut(tile)
 				: Bot.Hands.Dig(tile);
-			if (result is ToolResult.Unbreakable or ToolResult.NoTool)
+			if (result is ToolResult.Unbreakable or ToolResult.NoTool && !Blast(tile))
 				Abandon(tile);
 			return;
 		}
@@ -483,6 +483,8 @@ public sealed class GatherTask : BotTask
 		if (Bot.Motor.IsStuck)
 			Abandon(tile);
 	}
+
+	bool Blast(Point tile) => Main.hardMode && TileQuery.TypeAt(tile) == TileID.Hellstone && (Bot.Hands.Explosives.IsFused || Bot.Hands.Explosives.Light(tile));
 
 	bool TargetStillValid()
 	{
