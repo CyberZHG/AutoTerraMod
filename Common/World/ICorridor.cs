@@ -24,6 +24,10 @@ public interface ICorridor
 
 	void Dip(int x, int rows) { }
 
+	void Tolerate(int x, int y);
+
+	public const int BodyRows = 3;
+
 	public static bool HoldsChest(int x, int top, int bottom)
 	{
 		for (int y = top; y <= bottom; y++)

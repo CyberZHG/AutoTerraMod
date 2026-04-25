@@ -54,6 +54,13 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
 
 	readonly System.Collections.Generic.Dictionary<int, int> dips = new();
+	readonly System.Collections.Generic.HashSet<Point> tolerated = new();
+
+	public void Tolerate(int x, int y)
+	{
+		tolerated.Add(new Point(x, y));
+		frontierAt[0] = frontierAt[1] = 0;
+	}
 
 	public int FeetRow(int x) => Y + (dips.TryGetValue(x, out int dip) ? dip : 0);
 
@@ -63,7 +70,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 		frontierAt[0] = frontierAt[1] = 0;
 	}
 
-	public int Headroom => 3;
+	public int Headroom => 5;
 
 	readonly System.Collections.Generic.HashSet<int> skipped = new();
 
@@ -77,7 +84,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	{
 		for (int y = FeetRow(x) - Headroom + 1; y <= FeetRow(x); y++)
 		{
-			if (TileQuery.IsSolid(x, y))
+			if (TileQuery.IsSolid(x, y) && !tolerated.Contains(new Point(x, y)))
 				return false;
 		}
 		return true;

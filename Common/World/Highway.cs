@@ -82,7 +82,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	{
 		for (int y = Y - Headroom + 1; y <= Y; y++)
 		{
-			if (TileQuery.IsSolid(x, y))
+			if (TileQuery.IsSolid(x, y) && !tolerated.Contains((x, y)))
 				return false;
 		}
 		return true;
@@ -91,6 +91,13 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, Y + 1, Y + 1)) && HeadroomClear(x);
 
 	readonly HashSet<int> skipped = new();
+	readonly HashSet<(int, int)> tolerated = new();
+
+	public void Tolerate(int x, int y)
+	{
+		tolerated.Add((x, y));
+		frontierAt = 0;
+	}
 
 	public void Skip(int x)
 	{

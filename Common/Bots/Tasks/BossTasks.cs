@@ -919,7 +919,13 @@ public sealed class BuildBridgeTask : BotTask
 							return;
 						if (dug == ToolResult.Unbreakable && !NeedsBlast(new Point(column, y)))
 						{
-							int rows = y - (feet - bridge.Headroom + 1) + 1;
+							int rows = y - (feet - ICorridor.BodyRows + 1) + 1;
+							if (rows <= 0)
+							{
+								BotDiagnostics.Log(Bot, $"corridor leaves an unbreakable {TileQuery.TypeAt(new Point(column, y))} above head height at {column},{y}");
+								bridge.Tolerate(column, y);
+								return;
+							}
 							if (bridge is Hellbridge && rows <= MaxDip)
 							{
 								BotDiagnostics.Log(Bot, $"corridor dips {rows} rows under an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
