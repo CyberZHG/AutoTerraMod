@@ -767,11 +767,65 @@ public sealed class BuildBridgeTask : BotTask
 	const float StandTolerance = 16f * 2f;
 	const uint FrontierPatienceTicks = 600;
 
+	const int MaxDip = 2;
+
+	bool ClearChestOn(Point tile)
+	{
+		for (int x = tile.X - 1; x <= tile.X + 1; x++)
+		{
+			for (int y = tile.Y - 2; y < tile.Y; y++)
+			{
+				if (!WorldGen.InWorld(x, y, 2) || !Main.tile[x, y].HasTile || !TileID.Sets.BasicChest[Main.tile[x, y].TileType])
+					continue;
+				if (Chest.IsLocked(x, y))
+					return false;
+				int index = Chest.FindChestByGuessing(x, y);
+				if (index >= 0)
+				{
+					var chest = Main.chest[index];
+					for (int slot = 0; slot < chest.item.Length; slot++)
+					{
+						if (chest.item[slot] is not { IsAir: false } item)
+							continue;
+						var leftover = Inventory.Add(Avatar, item.Clone());
+						if (!leftover.IsAir)
+							Item.NewItem(new EntitySource_TileBreak(x, y), Bot.Center, leftover);
+						chest.item[slot] = new Item();
+					}
+				}
+				BotDiagnostics.Log(Bot, $"emptied and removing the {TileQuery.TypeAt(new Point(x, y))} chest resting on corridor tile {tile}");
+				Bot.Hands.Dig(new Point(x, y));
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool NeedsBlast(Point tile)
+	{
+		if (!TileQuery.IsSolid(tile) || !Explosives.CanBlast(tile.X, tile.Y) || !WorldGen.CanKillTile(tile.X, tile.Y))
+			return false;
+		if (!Bot.Hands.Explosives.IsFused && Bot.Hands.Explosives.Light(tile, spareProtected: false))
+			BotDiagnostics.Log(Bot, $"bombing corridor tile {TileQuery.TypeAt(tile)} at {tile}");
+		return true;
+	}
+
+	public static bool BlocksWithoutBombs(Bot bot, World.ICorridor bridge, int x)
+	{
+		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
+		for (int y = bridge.FeetRow(x) - bridge.Headroom + 1; y <= bridge.FeetRow(x) + 1; y++)
+		{
+			if (TileQuery.IsSolid(x, y) && Navigation.PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) > pick && Explosives.CanBlast(x, y))
+				return true;
+		}
+		return false;
+	}
+
 	static bool Obstructed(World.ICorridor bridge, int x)
 	{
-		if (TileQuery.HasTile(new Point(x, bridge.Y + 1)) && !bridge.IsDeck(x))
+		if (TileQuery.HasTile(new Point(x, bridge.FeetRow(x) + 1)) && !bridge.IsDeck(x))
 			return true;
-		for (int y = bridge.Y - bridge.Headroom + 1; y <= bridge.Y; y++)
+		for (int y = bridge.FeetRow(x) - bridge.Headroom + 1; y <= bridge.FeetRow(x); y++)
 		{
 			if (TileQuery.IsSolid(x, y))
 				return true;
@@ -817,19 +871,19 @@ public sealed class BuildBridgeTask : BotTask
 			stuckFrontier = frontier;
 			stuckSince = Main.GameUpdateCount;
 		}
-		else if (Main.GameUpdateCount - stuckSince > FrontierPatienceTicks && Vector2.Distance(Bot.Center, new Vector2(frontier * 16f, bridge.Y * 16f)) < 16f * 8f && Obstructed(bridge, frontier))
+		else if (Main.GameUpdateCount - stuckSince > FrontierPatienceTicks && Vector2.Distance(Bot.Center, new Vector2(frontier * 16f, bridge.Y * 16f)) < 16f * 8f && Obstructed(bridge, frontier) && !BlocksWithoutBombs(Bot, bridge, frontier))
 		{
 			BotDiagnostics.Log(Bot, $"corridor frontier {frontier} would not budge ({TileQuery.TypeAt(new Point(frontier, bridge.Y + 1))}), going past it{TerrainDump.Around(new Point(frontier, bridge.Y), 6, 4)}");
 			bridge.Skip(frontier);
 			stuckSince = Main.GameUpdateCount;
 			return;
 		}
-		var stand = new Vector2(PathFinder.CenterXOf(frontier - 2 * direction), (bridge.Y + 1) * 16f - 21f);
+		var stand = new Vector2(PathFinder.CenterXOf(frontier - 2 * direction), (bridge.FeetRow(frontier - 2 * direction) + 1) * 16f - 21f);
 		if (Vector2.Distance(Bot.Center, stand) > StandTolerance)
 		{
 			if (!TravelOrTunnel(stand, 12f))
 			{
-				if (bridge is Hellbridge && Bot.CenterTile.Y > bridge.Y + 1 && CarriesRecall(Avatar) && TryRecallHome())
+				if (bridge is Hellbridge && Bot.CenterTile.Y > bridge.FeetRow(Bot.CenterTile.X) + 1 && CarriesRecall(Avatar) && TryRecallHome())
 				{
 					BotDiagnostics.Log(Bot, $"below the Underworld bridge at {Bot.CenterTile}, recalling home to come back down the hellevator");
 					return;
@@ -843,7 +897,8 @@ public sealed class BuildBridgeTask : BotTask
 		Bot.Motor.Face(new Vector2(frontier * 16f, bridge.Y * 16f));
 		foreach (int column in new[] { frontier, frontier + direction })
 		{
-			for (int y = bridge.Y - bridge.Headroom + 1; y <= bridge.Y; y++)
+			int feet = bridge.FeetRow(column);
+			for (int y = feet - bridge.Headroom + 1; y <= feet; y++)
 			{
 				if (TileQuery.IsSolid(column, y))
 				{
@@ -860,21 +915,30 @@ public sealed class BuildBridgeTask : BotTask
 					}
 					if (dug is ToolResult.Unbreakable or ToolResult.NoTool)
 					{
-						if (PlugLavaAround(new Point(column, y)))
+						if (PlugLavaAround(new Point(column, y)) || ClearChestOn(new Point(column, y)))
 							return;
-						if (dug == ToolResult.Unbreakable)
+						if (dug == ToolResult.Unbreakable && !NeedsBlast(new Point(column, y)))
 						{
+							int rows = y - (feet - bridge.Headroom + 1) + 1;
+							if (bridge is Hellbridge && rows <= MaxDip)
+							{
+								BotDiagnostics.Log(Bot, $"corridor dips {rows} rows under an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
+								bridge.Dip(column, rows);
+								return;
+							}
 							BotDiagnostics.Log(Bot, $"corridor goes past an unbreakable {TileQuery.TypeAt(new Point(column, y))} at {column},{y}");
 							bridge.Skip(column);
 							return;
 						}
+						if (Bot.Hands.Explosives.IsFused)
+							return;
 						IsFinished = true;
 					}
 					return;
 				}
 			}
 		}
-		var deck = new Point(frontier, bridge.Y + 1);
+		var deck = new Point(frontier, bridge.FeetRow(frontier) + 1);
 		var deckTile = Main.tile[deck.X, deck.Y];
 		if (deckTile.HasTile && (deckTile.IsHalfBlock || deckTile.Slope != SlopeType.Solid) && (TileQuery.IsSolid(deck.X, deck.Y) || TileQuery.IsPlatform(deck.X, deck.Y)))
 		{
@@ -903,9 +967,9 @@ public sealed class BuildBridgeTask : BotTask
 			else if (cleared is ToolResult.Unbreakable or ToolResult.NoTool && !PlugLavaAround(deck))
 			{
 				BotDiagnostics.Log(Bot, $"corridor deck {deck} is unbreakable {TileQuery.TypeAt(deck)}");
-				if (cleared == ToolResult.Unbreakable)
+				if (cleared == ToolResult.Unbreakable && !NeedsBlast(deck))
 					bridge.Skip(frontier);
-				else
+				else if (!Bot.Hands.Explosives.IsFused)
 					IsFinished = true;
 			}
 			return;

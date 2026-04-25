@@ -20,6 +20,10 @@ public interface ICorridor
 
 	void Skip(int x);
 
+	int FeetRow(int x) => Y;
+
+	void Dip(int x, int rows) { }
+
 	public static bool HoldsChest(int x, int top, int bottom)
 	{
 		for (int y = top; y <= bottom; y++)

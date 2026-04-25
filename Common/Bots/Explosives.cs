@@ -22,8 +22,12 @@ public sealed class Explosives
 	readonly Bot bot;
 	int projectileIndex = -1;
 	int projectileIdentity;
+	Point target;
 
 	public Explosives(Bot bot) => this.bot = bot;
+
+	const int FuseTicks = 180;
+	const float ThrowTicks = 10f;
 
 	public static bool IsExplosive(Item item) => Charges.Any(charge => charge.item == item.type);
 
@@ -59,21 +63,27 @@ public sealed class Explosives
 		return true;
 	}
 
-	public bool Light(Point tile)
+	public bool Light(Point tile, bool spareProtected = true)
 	{
 		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
 			return false;
 		var charge = Charges.FirstOrDefault(candidate => Inventory.Count(bot.Avatar, candidate.item) > 0);
-		if (charge.item == 0 || !SpareProtected(tile, charge.radius))
+		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius))
 			return false;
 		var item = Inventory.Items(bot.Avatar).First(candidate => candidate.type == charge.item);
 		string name = item.Name;
+		var from = bot.Center;
+		var aim = tile.ToWorldCoordinates() - from;
+		var velocity = aim == Vector2.Zero ? Vector2.Zero : Vector2.Normalize(aim) * System.Math.Min(item.shootSpeed, aim.Length() / ThrowTicks);
 		int index;
 		using (Systems.AvatarPresence.Enter())
-			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), tile.ToWorldCoordinates(), Vector2.Zero, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
+			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
+		if (Main.projectile[index].timeLeft > FuseTicks)
+			Main.projectile[index].timeLeft = FuseTicks;
 		Inventory.ConsumeOne(bot.Avatar, item);
 		projectileIndex = index;
 		projectileIdentity = Main.projectile[index].identity;
+		target = tile;
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
 		BotDiagnostics.Log(bot, $"threw {name} at {tile} to blast through");
 		return true;
@@ -84,6 +94,7 @@ public sealed class Explosives
 		if (projectileIndex >= 0 && Fused == null)
 		{
 			projectileIndex = -1;
+			BotDiagnostics.Log(bot, $"bomb at {target} went off; the tile there is now {TileQuery.TypeAt(target)}");
 			bot.Watchdog.RecordProgress();
 		}
 	}

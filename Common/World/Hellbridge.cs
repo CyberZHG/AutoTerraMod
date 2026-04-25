@@ -49,9 +49,19 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int BuiltLength => Frontier(1) - Frontier(-1);
 
-	public bool IsBuilt(int x) => skipped.Contains(x) || IsDeck(x) && HeadroomClear(x) || ICorridor.HoldsChest(x, Y - Headroom + 1, Y + 1);
+	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, FeetRow(x) + 1, FeetRow(x) + 1)) && HeadroomClear(x);
 
-	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, Y + 1) || TileQuery.IsSolid(x, Y + 1)) && !ICorridor.Scorches(x, Y + 1);
+	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
+
+	readonly System.Collections.Generic.Dictionary<int, int> dips = new();
+
+	public int FeetRow(int x) => Y + (dips.TryGetValue(x, out int dip) ? dip : 0);
+
+	public void Dip(int x, int rows)
+	{
+		dips[x] = System.Math.Max(rows, dips.TryGetValue(x, out int dip) ? dip : 0);
+		frontierAt[0] = frontierAt[1] = 0;
+	}
 
 	public int Headroom => 3;
 
@@ -65,7 +75,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public bool HeadroomClear(int x)
 	{
-		for (int y = Y - Headroom + 1; y <= Y; y++)
+		for (int y = FeetRow(x) - Headroom + 1; y <= FeetRow(x); y++)
 		{
 			if (TileQuery.IsSolid(x, y))
 				return false;

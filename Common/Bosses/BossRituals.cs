@@ -362,6 +362,13 @@ public static class BossRituals
 			return craft;
 		int preferred = BridgeDirection(bot);
 		int direction = bridge.SideComplete(preferred) ? -preferred : preferred;
+		if (!bot.Hands.Explosives.Carries && Bots.Tasks.BuildBridgeTask.BlocksWithoutBombs(bot, bridge, bridge.Frontier(direction)))
+		{
+			if (!bridge.SideComplete(-direction) && !Bots.Tasks.BuildBridgeTask.BlocksWithoutBombs(bot, bridge, bridge.Frontier(-direction)))
+				direction = -direction;
+			else
+				return ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
+		}
 		return new BuildBridgeStep(bridge, direction);
 	}
 }
