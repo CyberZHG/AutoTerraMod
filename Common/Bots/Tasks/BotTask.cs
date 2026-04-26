@@ -246,6 +246,8 @@ public abstract class BotTask
 			return true;
 		if (ShaftShortcut(target))
 			return true;
+		if (BridgeLeg(target) is Vector2 leg)
+			target = leg;
 		campExit = null;
 		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)
 			Bot.Motor.Stop();
@@ -273,6 +275,40 @@ public abstract class BotTask
 		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
+	}
+
+	const int BridgeRowSlack = 4;
+	const int BridgeLegTiles = 100;
+	const int BridgeLegThreshold = 120;
+	const int BridgeLegGrid = 50;
+
+	Vector2? BridgeLeg(Vector2 target)
+	{
+		var here = Bot.CenterTile;
+		var goal = target.ToTileCoordinates();
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (faction.Hellbridge is { } bridge && Along(bridge.Y, here, goal))
+				return Leg(here, goal, x => bridge.FeetRow(x));
+			foreach (var highway in World.Highway.For(faction))
+			{
+				if (Along(highway.Y, here, goal) && highway.Spans(here.X) && highway.Spans(goal.X))
+					return Leg(here, goal, _ => highway.Y);
+			}
+		}
+		return null;
+	}
+
+	static bool Along(int row, Point here, Point goal) => System.Math.Abs(here.Y - row) <= BridgeRowSlack && System.Math.Abs(goal.Y - row) <= BridgeRowSlack;
+
+	Vector2? Leg(Point here, Point goal, System.Func<int, int> feetRow)
+	{
+		Bot.Motor.NoteAlongCorridor();
+		int dx = goal.X - here.X;
+		if (System.Math.Abs(dx) <= BridgeLegThreshold)
+			return null;
+		int x = here.X / BridgeLegGrid * BridgeLegGrid + System.Math.Sign(dx) * BridgeLegTiles;
+		return new Vector2(x * 16f + 8f, (feetRow(x) + 1) * 16f - 21f);
 	}
 
 	Vector2? deepTunnel;

@@ -280,6 +280,9 @@ public sealed class BotBrain
 	void AnimateAvatar(NPC body)
 	{
 		BotVitals.SyncAvatar(body, bot.Avatar);
+		bot.Avatar.pulley = bot.Motor.HoldsRope;
+		if (bot.Avatar.pulley)
+			bot.Avatar.pulleyDir = 1;
 		try
 		{
 			bot.Avatar.PlayerFrame();

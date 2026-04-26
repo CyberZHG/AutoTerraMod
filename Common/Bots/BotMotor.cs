@@ -803,6 +803,13 @@ public sealed class BotMotor
 
 	public void RefreshGear() => gearCheckedAt = 0;
 
+	const uint CorridorMemoryTicks = 30;
+	uint alongCorridorAt;
+
+	public void NoteAlongCorridor() => alongCorridorAt = Math.Max(1u, Main.GameUpdateCount);
+
+	bool AlongCorridor => alongCorridorAt != 0 && Main.GameUpdateCount - alongCorridorAt < CorridorMemoryTicks;
+
 	public NavigationAbilities Abilities()
 	{
 		if (gearCheckedAt == 0 || Main.GameUpdateCount - gearCheckedAt >= GearRefreshTicks)
@@ -819,6 +826,7 @@ public sealed class BotMotor
 		return gear with
 		{
 			CanRope = canRope,
+			HookReach = AlongCorridor ? 0 : gear.HookReach,
 			CanBridge = gear.CanBridge && !PlacementForbidden,
 			CanPillar = gear.CanBridge && !PlacementForbidden && (ScaffoldingAllowed || !canRope),
 			MaxFall = gear.FlyRise > 0 ? WingedSafeFall : AffordableFall
@@ -897,6 +905,7 @@ public sealed class BotMotor
 		}
 		if (intent.HoldRope)
 		{
+			ropeHeldAt = Main.GameUpdateCount;
 			npc.velocity.Y = 0f;
 			npc.GravityMultiplier = MultipliableFloat.One * 0f;
 		}
@@ -1123,6 +1132,7 @@ public sealed class BotMotor
 			onRope |= IsRope(centerX, y);
 		if (onRope)
 		{
+			climbingRopeAt = Main.GameUpdateCount;
 			bool ropeEndsHere = !IsRope(centerX, body.Top - 1) && !MayPlaceRope;
 			if (ropeEndsHere)
 			{
@@ -1146,6 +1156,9 @@ public sealed class BotMotor
 	}
 
 	uint climbingRopeAt;
+	uint ropeHeldAt;
+
+	public bool HoldsRope => (climbingRopeAt == Main.GameUpdateCount || ropeHeldAt == Main.GameUpdateCount) && bot.Npc is NPC body && OnRope(body);
 
 	void HoldRopeOverDrop(NPC npc, bool wantsJump)
 	{
@@ -1154,6 +1167,7 @@ public sealed class BotMotor
 		var body = BodyTiles.Of(npc);
 		if (Math.Min(DropDepth(body.Left, body.Bottom), DropDepth(body.Right, body.Bottom)) <= AffordableFall)
 			return;
+		ropeHeldAt = Main.GameUpdateCount;
 		npc.velocity.Y = 0f;
 		npc.GravityMultiplier = MultipliableFloat.One * 0f;
 	}
