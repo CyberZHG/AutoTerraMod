@@ -121,6 +121,8 @@ public sealed class OpportunisticMineTask : BotTask
 			return WorldGen.CanCutTile(x, y, Terraria.Enums.TileCuttingContext.AttackMelee);
 		if (type == TileID.Tombstones)
 			return WorldGen.CanKillTile(x, y);
+		if (Hazards.Contains(type))
+			return PickRequirement.MinimumPick(type, x, y) <= power && WorldGen.CanKillTile(x, y);
 		if (Salvage.Contains(type))
 			return WantsSalvage(type) && IsWildFurniture(x, y) && WorldGen.CanKillTile(x, y);
 		if (!OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
@@ -169,6 +171,8 @@ public sealed class OpportunisticMineTask : BotTask
 		wantsMore[tileType] = wanted;
 		return wanted;
 	}
+
+	static readonly HashSet<int> Hazards = new() { TileID.Spikes, TileID.WoodenSpikes, TileID.JungleThorns };
 
 	static readonly HashSet<int> Salvage = new() { TileID.ClosedDoor, TileID.OpenDoor, TileID.Beds, TileID.Tables, TileID.Tables2, TileID.WorkBenches, TileID.Chairs };
 	const int SalvageCarried = 2;

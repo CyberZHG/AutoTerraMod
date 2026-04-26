@@ -1,4 +1,5 @@
 using System.Linq;
+using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
@@ -36,11 +37,72 @@ public sealed class DecorateTask : BotTask
 		bot.Brain.Plan is Planning.IdleStep || !Main.dayTime || Vector2.Distance(bot.Center, bot.Faction.BaseCenter) < NearBase;
 
 	public static bool IsWantedDecor(Bot bot, Item item) =>
-		(bot.Personality.Aspiration == Aspiration.MonsterHunter && item.createTile == TileID.Banners)
-		|| (NaturalistTask.StudiesCritters(bot) && NaturalistTask.IsCage(item));
+		((bot.Personality.Aspiration == Aspiration.MonsterHunter && item.createTile == TileID.Banners)
+		|| (NaturalistTask.StudiesCritters(bot) && NaturalistTask.IsCage(item)))
+		&& !Displayed(bot.Faction).Contains(item.type);
+
+	const uint DisplayScanTicks = 600;
+	static readonly System.Collections.Generic.Dictionary<int, (uint at, System.Collections.Generic.HashSet<int> items, System.Collections.Generic.List<Point> duplicates)> displayed = new();
+
+	public static System.Collections.Generic.HashSet<int> Displayed(Factions.Faction faction) => Survey(faction).items;
+
+	static (uint at, System.Collections.Generic.HashSet<int> items, System.Collections.Generic.List<Point> duplicates) Survey(Factions.Faction faction)
+	{
+		if (displayed.TryGetValue(faction.Id, out var cached) && Main.GameUpdateCount - cached.at < DisplayScanTicks)
+			return cached;
+		var items = new System.Collections.Generic.HashSet<int>();
+		var duplicates = new System.Collections.Generic.List<Point>();
+		var bannerSeen = new System.Collections.Generic.HashSet<int>();
+		void Scan(int left, int right, int top, int bottom)
+		{
+			for (int x = System.Math.Max(left, 1); x <= System.Math.Min(right, Main.maxTilesX - 2); x++)
+			{
+				for (int y = System.Math.Max(top, 1); y <= System.Math.Min(bottom, Main.maxTilesY - 2); y++)
+				{
+					var tile = Main.tile[x, y];
+					if (!tile.HasTile || tile.TileType != TileID.Banners && TileID.Sets.CritterCageLidStyle[tile.TileType] == -1)
+						continue;
+					int item = Terraria.ModLoader.TileLoader.GetItemDropFromTypeAndStyle(tile.TileType, Terraria.ObjectData.TileObjectData.GetTileStyle(tile));
+					if (item <= 0)
+						continue;
+					items.Add(item);
+					if (tile.TileType == TileID.Banners && tile.TileFrameY % BannerFrameHeight == 0 && !bannerSeen.Add(item))
+						duplicates.Add(new Point(x, y));
+				}
+			}
+		}
+		if (faction.Settlement is { } camp)
+			Scan(camp.Left, camp.Right, camp.Top, camp.Floor);
+		foreach (var highway in World.Highway.For(faction))
+			Scan(System.Math.Min(highway.StartX, highway.EndX), System.Math.Max(highway.StartX, highway.EndX), highway.Y - highway.Headroom, highway.Y + 1);
+		return displayed[faction.Id] = (Main.GameUpdateCount, items, duplicates);
+	}
+
+	const int BannerFrameHeight = 54;
+	Point? duplicate;
+
+	bool DiscardDuplicates()
+	{
+		foreach (var item in Inventory.Items(Avatar).ToList())
+		{
+			if ((item.createTile == TileID.Banners || NaturalistTask.IsCage(item)) && Displayed(Bot.Faction).Contains(item.type))
+			{
+				BotDiagnostics.Log(Bot, $"threw away a duplicate {item.Name}");
+				item.TurnToAir();
+			}
+		}
+		duplicate = Survey(Bot.Faction).duplicates.Cast<Point?>().FirstOrDefault(tile => TileQuery.TypeAt(tile.Value) == TileID.Banners);
+		return duplicate != null;
+	}
 
 	public override float Evaluate()
 	{
+		if (DiscardDuplicates() && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase)
+		{
+			Detail = "duplicate banner";
+			return Aspire(65f);
+		}
+		duplicate = null;
 		decor = Inventory.Items(Avatar).FirstOrDefault(item => IsWantedDecor(Bot, item));
 		if (decor == null || !Leisure(Bot))
 			return 0f;
@@ -75,6 +137,27 @@ public sealed class DecorateTask : BotTask
 
 	public override void Tick()
 	{
+		if (duplicate is Point extra)
+		{
+			if (TileQuery.TypeAt(extra) != TileID.Banners)
+			{
+				duplicate = null;
+				displayed.Remove(Bot.Faction.Id);
+				IsFinished = true;
+				return;
+			}
+			var reachSpot = new Vector2(extra.X * 16f + 8f, (extra.Y + 3) * 16f);
+			if (Vector2.Distance(Bot.Center, reachSpot) > PlaceReach)
+			{
+				if (!TravelOrTunnel(reachSpot, PlaceReach * 0.5f))
+					IsFinished = true;
+				return;
+			}
+			Bot.Motor.Stop();
+			WorldGen.KillTile(extra.X, extra.Y, noItem: true);
+			BotDiagnostics.Log(Bot, $"took down a duplicate banner at {extra}");
+			return;
+		}
 		if (spot is not Point target || decor == null || decor.IsAir)
 		{
 			IsFinished = true;

@@ -633,7 +633,8 @@ public sealed class HellevatorGoal : ProgressionGoal
 
 	public override bool IsExpedition => true;
 
-	public override bool AppliesTo(Bot bot) => Bosses.BossRituals.PreparingForWall(bot.Faction) && !HouseInspector.BuildingDuty(bot);
+	public override bool AppliesTo(Bot bot) =>
+		(Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Faction.Hellevator is { IsComplete: true, IsFinished: false }) && !HouseInspector.BuildingDuty(bot);
 
 	public override bool IsMet(Bot bot) => Bosses.BossRituals.ShaftFor(bot.Faction).IsFinished;
 

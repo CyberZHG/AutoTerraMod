@@ -10,9 +10,9 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int End(int direction) => direction > 0 ? RightEnd : LeftEnd;
 
-	public bool WantsPlatform(int x) => x % DeckPlatformEvery == 0 || x == CenterX || x == CenterX + 1;
+	public bool WantsPlatform(int x) => x % DeckPlatformEvery <= 1 || x == CenterX || x == CenterX + 1;
 
-	public bool RequiresPlatform(int x) => false;
+	public bool RequiresPlatform(int x) => x % DeckPlatformEvery <= 1;
 
 	public const int HalfLength = 900;
 
@@ -51,7 +51,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, FeetRow(x) + 1, FeetRow(x) + 1)) && HeadroomClear(x);
 
-	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
+	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || !RequiresPlatform(x) && TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
 
 	readonly System.Collections.Generic.Dictionary<int, int> dips = new();
 	readonly System.Collections.Generic.HashSet<Point> tolerated = new();
