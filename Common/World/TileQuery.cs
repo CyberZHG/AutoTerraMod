@@ -43,6 +43,19 @@ public static class TileQuery
 		return tile.HasTile && !tile.IsActuated && Main.tileSolidTop[tile.TileType];
 	}
 
+	public static bool SupportsBoulder(int x, int y)
+	{
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			for (int dy = -2; dy <= -1; dy++)
+			{
+				if (WorldGen.InWorld(x + dx, y + dy, 2) && Main.tile[x + dx, y + dy].HasTile && Main.tile[x + dx, y + dy].TileType is TileID.Boulder or TileID.RollingCactus)
+					return true;
+			}
+		}
+		return false;
+	}
+
 	public static bool SupportsShrine(int x, int y)
 	{
 		for (int dx = -1; dx <= 1; dx++)

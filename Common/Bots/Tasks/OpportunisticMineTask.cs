@@ -172,7 +172,7 @@ public sealed class OpportunisticMineTask : BotTask
 		return wanted;
 	}
 
-	static readonly HashSet<int> Hazards = new() { TileID.Spikes, TileID.WoodenSpikes, TileID.JungleThorns };
+	static readonly HashSet<int> Hazards = new() { TileID.Spikes, TileID.WoodenSpikes, TileID.JungleThorns, TileID.PressurePlates, TileID.WeightedPressurePlate, TileID.Traps, TileID.Boulder, TileID.RollingCactus };
 
 	static readonly HashSet<int> Salvage = new() { TileID.ClosedDoor, TileID.OpenDoor, TileID.Beds, TileID.Tables, TileID.Tables2, TileID.WorkBenches, TileID.Chairs };
 	const int SalvageCarried = 2;

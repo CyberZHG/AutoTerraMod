@@ -634,6 +634,7 @@ public sealed class PathSearch
 		return !Main.tileFrameImportant[tileType]
 			&& !HouseInspector.IsProtected(x, y)
 			&& !TileQuery.SupportsShrine(x, y)
+			&& !TileQuery.SupportsBoulder(x, y)
 			&& PickRequirement.MinimumPick(tileType, x, y) <= abilities.PickPower
 			&& (WorldGen.CanKillTile(x, y) || PathFinder.RemovableBlockerOnTop(x, y, abilities.CanChop) != null);
 	}
