@@ -815,7 +815,7 @@ public sealed class BuildBridgeTask : BotTask
 		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
 		for (int y = bridge.FeetRow(x) - bridge.Headroom + 1; y <= bridge.FeetRow(x) + 1; y++)
 		{
-			if (TileQuery.IsSolid(x, y) && Navigation.PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) > pick && Explosives.CanBlast(x, y))
+			if (TileQuery.IsSolid(x, y) && !bridge.IsTolerated(x, y) && Navigation.PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) > pick && Explosives.CanBlast(x, y))
 				return true;
 		}
 		return false;
@@ -827,7 +827,7 @@ public sealed class BuildBridgeTask : BotTask
 			return true;
 		for (int y = bridge.FeetRow(x) - bridge.Headroom + 1; y <= bridge.FeetRow(x); y++)
 		{
-			if (TileQuery.IsSolid(x, y))
+			if (TileQuery.IsSolid(x, y) && !bridge.IsTolerated(x, y))
 				return true;
 		}
 		return false;
@@ -900,7 +900,7 @@ public sealed class BuildBridgeTask : BotTask
 			int feet = bridge.FeetRow(column);
 			for (int y = feet - bridge.Headroom + 1; y <= feet; y++)
 			{
-				if (TileQuery.IsSolid(column, y))
+				if (TileQuery.IsSolid(column, y) && !bridge.IsTolerated(column, y))
 				{
 					var dug = Bot.Hands.Dig(new Point(column, y), clearSaplings: true);
 					if (dug == ToolResult.OutOfReach)

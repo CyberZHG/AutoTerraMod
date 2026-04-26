@@ -728,6 +728,23 @@ public sealed class BotHands
 		return Vector2.Normalize(direction) * speed;
 	}
 
+	const int GravityGraceTicks = 46;
+	const int StraightFlightTicks = 90;
+
+	public float EffectiveRange(Item weapon)
+	{
+		float speed = weapon.shootSpeed;
+		int projectile = weapon.shoot;
+		if (IsRangedWeapon(weapon) && FindAmmo(weapon.useAmmo) is Item ammo)
+		{
+			speed += ammo.shootSpeed;
+			if (ammo.shoot > ProjectileID.None)
+				projectile = ammo.shoot;
+		}
+		bool falls = ContentSamples.ProjectilesByType.TryGetValue(projectile, out var sample) && sample.aiStyle == ProjAIStyleID.Arrow;
+		return speed * (falls ? GravityGraceTicks : StraightFlightTicks);
+	}
+
 	Item FindAmmo(int ammoType) => Inventory.Items(Avatar).FirstOrDefault(item => item.ammo == ammoType && item.ammo > 0);
 
 	public void DrinkObsidianSkinIfInHell()

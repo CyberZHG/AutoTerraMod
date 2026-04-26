@@ -81,6 +81,13 @@ public sealed class FightTask : BotTask
 			boss = null;
 		if (boss != null && !Bot.IsIgnoring(boss))
 		{
+			if (BossFightPest() is NPC pest)
+			{
+				target = pest;
+				closeThreat = true;
+				Detail = pest.GivenOrTypeName;
+				return BossPriority;
+			}
 			target = boss;
 			closeThreat = true;
 			Detail = boss.GivenOrTypeName;
@@ -123,6 +130,18 @@ public sealed class FightTask : BotTask
 	const float RallyGuardReach = 16f * 40f;
 
 	bool GuardingRally() => Bot.Faction.Rally is { } rally && Vector2.Distance(Bot.Center, rally.point) < RallyGuardReach;
+
+	const float PestRadius = 16f * 6f;
+
+	NPC BossFightPest()
+	{
+		var attacker = Bot.Vitals.RecentAttacker;
+		if (attacker != null && attacker.active && !Bosses.BossCatalog.IsBossPart(attacker) && Engagement.IsHostileTo(Bot, attacker) && !Bot.IsIgnoring(attacker)
+			&& Vector2.Distance(Bot.Center, attacker.Center) < AmbushRadius)
+			return attacker;
+		var near = Engagement.NearestHostile(Bot, PestRadius, true);
+		return near != null && !Bosses.BossCatalog.IsBossPart(near) ? near : null;
+	}
 
 	NPC Interferer()
 	{

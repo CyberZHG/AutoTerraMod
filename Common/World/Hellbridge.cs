@@ -56,6 +56,8 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	readonly System.Collections.Generic.Dictionary<int, int> dips = new();
 	readonly System.Collections.Generic.HashSet<Point> tolerated = new();
 
+	public bool IsTolerated(int x, int y) => tolerated.Contains(new Point(x, y));
+
 	public void Tolerate(int x, int y)
 	{
 		tolerated.Add(new Point(x, y));

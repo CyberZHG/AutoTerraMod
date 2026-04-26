@@ -93,6 +93,8 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	readonly HashSet<int> skipped = new();
 	readonly HashSet<(int, int)> tolerated = new();
 
+	public bool IsTolerated(int x, int y) => tolerated.Contains((x, y));
+
 	public void Tolerate(int x, int y)
 	{
 		tolerated.Add((x, y));

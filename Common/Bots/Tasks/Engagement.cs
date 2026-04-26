@@ -341,6 +341,8 @@ public static class Engagement
 
 	const float HungryThreat = 16f * 12f;
 	const float WallKiteMargin = 16f * 32f;
+	const float WallSafetyMin = 16f * 4f;
+	const float WallRangeSlack = 16f * 3f;
 
 	static float HungryReach(NPC mouth) =>
 		mouth.life < mouth.lifeMax * 0.5f ? 700f : mouth.life < mouth.lifeMax * 0.75f ? 500f : 300f;
@@ -356,7 +358,10 @@ public static class Engagement
 		int away = offset >= 0f ? 1 : -1;
 		float distance = Math.Abs(offset);
 		bool hurt = bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
-		float keep = HungryReach(mouth) + (hurt ? 160f : 0f) + WallKiteMargin;
+		float safe = HungryReach(mouth) + (hurt ? 160f : 0f);
+		float keep = safe + WallKiteMargin;
+		if (bot.Hands.BestProjectileWeapon() is Item shooter)
+			keep = Math.Max(safe + WallSafetyMin, Math.Min(keep, bot.Hands.EffectiveRange(shooter) - WallRangeSlack));
 		if (distance < keep)
 			KiteTo(bot, mouth.Center.X + away * (keep + 16f * 8f));
 		else if (distance > keep + 16f * 16f)

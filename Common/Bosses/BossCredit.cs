@@ -107,8 +107,35 @@ public sealed class BossCredit : GlobalNPC
 
 	public override void PostAI(NPC npc)
 	{
-		if (npc.type == NPCID.WallofFlesh)
-			KeepWallTarget(npc);
+		if (npc.type != NPCID.WallofFlesh)
+			return;
+		KeepWallTarget(npc);
+		SweepBots(npc);
+	}
+
+	const float WallStripOffset = 40f;
+	const float WallStripWidth = 140f;
+	const float WallStripBackShift = 96f;
+	const float WallGrossDepth = 250;
+
+	static void SweepBots(NPC wall)
+	{
+		float strip = wall.position.X + WallStripOffset - (wall.direction > 0 ? WallStripBackShift : 0f);
+		float centre = wall.position.X + wall.width / 2f;
+		foreach (var bot in BotWorldSystem.Bots)
+		{
+			if (!bot.IsAlive || bot.Npc is not NPC body || body.position.Y < (Main.maxTilesY - WallGrossDepth) * 16f)
+				continue;
+			bool behind = wall.direction < 0 ? body.Center.X > centre + WallStripOffset : body.Center.X < centre - WallStripOffset;
+			if (behind)
+			{
+				body.position.X = wall.direction > 0 ? strip + WallStripWidth : strip - body.width;
+				body.velocity.X = wall.direction * 4f;
+				bot.Vitals.Teleported(body);
+			}
+			if (body.position.X + body.width > strip && body.position.X < strip + WallStripWidth || behind)
+				bot.Vitals.Hurt(wall.GetAttackDamage_ScaledByStrength(50f), wall.direction, source: wall.GivenOrTypeName);
+		}
 	}
 
 	const float WallSpawnClearance = 1200f;

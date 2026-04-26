@@ -26,6 +26,8 @@ public interface ICorridor
 
 	void Tolerate(int x, int y);
 
+	bool IsTolerated(int x, int y);
+
 	public const int BodyRows = 3;
 
 	public static bool HoldsChest(int x, int top, int bottom)
