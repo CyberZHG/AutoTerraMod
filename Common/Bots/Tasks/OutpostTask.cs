@@ -63,6 +63,13 @@ public sealed class OutpostTask : BotTask
 			IsFinished = true;
 			return;
 		}
+		if (Outpost.NearArenaSite(Bot) && Outpost.ArenaBedFor(Bot.Faction) is Point built && FindBed() != built)
+		{
+			BotDiagnostics.Log(Bot, $"another arena outpost is ready at {built}, leaving the one at {site.Left},{site.Floor}");
+			ReleaseSite();
+			IsFinished = true;
+			return;
+		}
 		if (failures >= FailuresBeforeGivingUp || Vector2.Distance(Bot.Center, Navigation.PathFinder.BodyCenterAt(site.StandingNear(new Point(site.WallColumn, site.Floor)))) > AbandonDistance)
 		{
 			BotDiagnostics.Log(Bot, $"gave up the outpost at {site.Left},{site.Floor} (failures={failures}, at {Navigation.PathFinder.FeetOf(Bot.Npc)})");

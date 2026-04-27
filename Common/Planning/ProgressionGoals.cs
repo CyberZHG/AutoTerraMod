@@ -975,10 +975,7 @@ public sealed class ArenaOutpostGoal : ProgressionGoal
 
 	public override string Describe() => "ArenaOutpost";
 
-	static bool Assigned(Bot bot) =>
-		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && Outpost.WantsArenaOutpost(member)).MinBy(member => member.Id) == bot;
-
-	public override bool IsUrgent(Bot bot) => Outpost.WantsArenaOutpost(bot) && Assigned(bot);
+	public override bool IsUrgent(Bot bot) => Outpost.WantsArenaOutpost(bot);
 
 	public override bool IsMet(Bot bot) => !IsUrgent(bot);
 
