@@ -154,7 +154,7 @@ public static class Outpost
 	}
 
 	const float ArenaOutpostDistance = 16f * 300f;
-	const float ArenaSiteReach = 16f * 40f;
+	const float ArenaSiteReach = 16f * 80f;
 	const float ArenaBedReach = 16f * 80f;
 	const float ArenaFightReach = 16f * 300f;
 
@@ -175,7 +175,13 @@ public static class Outpost
 
 	public static bool WantsArenaOutpost(Bot bot) =>
 		NearArenaSite(bot) && bot.Faction.Rally is { } rally && Vector2.Distance(rally.point, bot.Faction.BaseCenter) > ArenaOutpostDistance
-		&& ArenaBedFor(bot.Faction) == null && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded;
+		&& ArenaBedFor(bot.Faction) == null && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
+		&& (!OnUnderworldBridge(bot.Faction, rally.point) || Count(bot.Avatar, item => item.createTile >= 0 && Main.tileRope[item.createTile]) >= BridgeAccessRopes);
+
+	const int BridgeAccessRopes = 8;
+
+	static bool OnUnderworldBridge(Factions.Faction faction, Vector2 point) =>
+		faction.Hellbridge is { } bridge && System.Math.Abs(point.ToTileCoordinates().Y - bridge.Y) <= 4;
 
 	public static bool ExpectsDistantArena(Bot bot)
 	{

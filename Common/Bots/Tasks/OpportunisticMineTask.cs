@@ -51,8 +51,27 @@ public sealed class OpportunisticMineTask : BotTask
 
 	public override string NameKey => "Mine";
 
+	(Point tile, uint at)? cover;
+	const uint CoverTicks = 60;
+
+	bool CoverSpikes()
+	{
+		if (cover is not var (tile, at))
+			return false;
+		if (Main.GameUpdateCount - at > CoverTicks || TileQuery.HasTile(tile) && !(Main.tile[tile.X, tile.Y].TileType is TileID.Spikes or TileID.WoodenSpikes))
+		{
+			cover = null;
+			return false;
+		}
+		if (!TileQuery.HasTile(tile) && Bot.Hands.PlaceBridge(tile, solidDeck: true))
+			cover = null;
+		return true;
+	}
+
 	public override float Evaluate()
 	{
+		if (cover != null)
+			return Priority;
 		if (Inventory.IsNearlyFull(Avatar) || Bot.StoreAfterDeath && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < StoreAfterDeathReach)
 			return 0f;
 		if (target is Point known && WithinReach(known) && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
@@ -82,6 +101,15 @@ public sealed class OpportunisticMineTask : BotTask
 			return null;
 		int tier = PickTier(power);
 		var here = Bot.CenterTile;
+		if (Bot.Npc is NPC body)
+		{
+			var feet = Navigation.PathFinder.FeetOf(body);
+			for (int x = feet.X; x <= feet.X + 1; x++)
+			{
+				if (Main.tile[x, feet.Y + 1].HasTile && Main.tile[x, feet.Y + 1].TileType is TileID.Spikes or TileID.WoodenSpikes && Worthwhile(x, feet.Y + 1, power, tier))
+					return new Point(x, feet.Y + 1);
+			}
+		}
 		Point? best = null;
 		int bestDistance = int.MaxValue;
 		for (int x = here.X - ScanRadius; x <= here.X + ScanRadius; x++)
@@ -227,6 +255,8 @@ public sealed class OpportunisticMineTask : BotTask
 
 	public override void Tick()
 	{
+		if (CoverSpikes())
+			return;
 		if (target is not Point tile || !Worthwhile(tile.X, tile.Y, PickPower(), PickTier(PickPower())))
 		{
 			target = null;
@@ -241,7 +271,10 @@ public sealed class OpportunisticMineTask : BotTask
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.Face(tile.ToWorldCoordinates());
+			bool spikes = type is TileID.Spikes or TileID.WoodenSpikes;
 			var result = pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : Bot.Hands.Dig(tile);
+			if (spikes)
+				cover = (tile, Main.GameUpdateCount);
 			if (result is ToolResult.Unbreakable or ToolResult.NoTool)
 				GiveUp(tile);
 			else if (result is ToolResult.Done or ToolResult.Working)

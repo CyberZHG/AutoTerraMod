@@ -11,7 +11,7 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class OutpostTask : BotTask
 {
 	const float Priority = 75f;
-	const float ArenaPriority = 94f;
+	const float ArenaPriority = 110f;
 	const float StandRadius = 12f;
 	const int FailuresBeforeGivingUp = 40;
 	const uint SiteRetryTicks = 600;

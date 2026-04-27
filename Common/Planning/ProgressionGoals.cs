@@ -932,7 +932,7 @@ public sealed class HighwayGoal : ProgressionGoal
 			return new BuildBridgeStep(highway, highway.Direction);
 		}
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		if (!shaft.IsFinished && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
+		if (!shaft.IsFinished && (Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Hands.Explosives.Carries) && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
 			return dig;
 		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) ?? PlanStep.Idle;
 	}
@@ -1492,7 +1492,6 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
 		goals.Add(new StructureGoal(settlement => settlement.StorageAnnexes.Append(settlement.Gallery)));
-		goals.Add(new HighwayGoal());
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee, CombatStyle.Magic));
@@ -1618,6 +1617,7 @@ public static class ProgressionGoals
 		}
 		if (UpgradeScenarios.Focus is int[] focus)
 			goals.Insert(0, new OwnGoal(focus));
+		goals.Add(new HighwayGoal());
 		goals.Add(new BridgeKitGoal());
 		foreach (int staff in new[] { ItemID.ImpStaff, ItemID.SpiderStaff, ItemID.OpticStaff })
 			goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, staff), CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
