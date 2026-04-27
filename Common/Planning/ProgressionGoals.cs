@@ -128,6 +128,30 @@ public sealed class ReserveGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, itemType, restockTo);
 }
 
+public sealed class HealingPotionGoal : ProgressionGoal
+{
+	static readonly int[] Potions = { ItemID.HealingPotion, ItemID.LesserHealingPotion };
+	const int Minimum = 4;
+	const int RestockTo = 10;
+
+	public override string Describe() => "Potions";
+
+	static int Held(Bot bot) => Inventory.Items(bot.Avatar).Where(item => item.potion && item.healLife > 0).Sum(item => item.stack);
+
+	public override bool IsMet(Bot bot) => Held(bot) >= Minimum;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		int missing = RestockTo - Held(bot);
+		foreach (int potion in Potions)
+		{
+			if (ProgressionPlanner.PlanPurchase(bot, potion, missing) is BuyStep buy)
+				return buy;
+		}
+		return PlanStep.Idle;
+	}
+}
+
 public sealed class CraftableUpgradeGoal : ProgressionGoal
 {
 	const uint CacheTicks = 600;
@@ -1426,6 +1450,7 @@ public static class ProgressionGoals
 			new ManaCrystalGoal(),
 			new StationGoal(TileID.WorkBenches, HouseDesign.WorkBenches),
 			new ReserveGoal(ItemID.Torch, 3, 10),
+			new HealingPotionGoal(),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),

@@ -172,6 +172,8 @@ public sealed class OpportunisticMineTask : BotTask
 		return wanted;
 	}
 
+	const float HazardStandoff = 16f * 3f;
+
 	static readonly HashSet<int> Hazards = new() { TileID.Spikes, TileID.WoodenSpikes, TileID.JungleThorns, TileID.PressurePlates, TileID.WeightedPressurePlate, TileID.Traps, TileID.Boulder, TileID.RollingCactus };
 
 	static readonly HashSet<int> Salvage = new() { TileID.ClosedDoor, TileID.OpenDoor, TileID.Beds, TileID.Tables, TileID.Tables2, TileID.WorkBenches, TileID.Chairs };
@@ -246,7 +248,7 @@ public sealed class OpportunisticMineTask : BotTask
 				Accomplished = true;
 			return;
 		}
-		Bot.Motor.MoveTo(tile.ToWorldCoordinates(), 24f);
+		Bot.Motor.MoveTo(tile.ToWorldCoordinates(), Hazards.Contains(type) ? HazardStandoff : 24f);
 		if (Bot.Motor.IsStalled)
 			GiveUp(tile);
 	}

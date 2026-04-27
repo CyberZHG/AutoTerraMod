@@ -37,6 +37,16 @@ public static class Outpost
 
 	public static bool InUnderworld(Point bed) => bed.Y >= Main.UnderworldLayer - 10;
 
+	static bool InBridgeClearance(int x, int y)
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (faction.Hellbridge is { } bridge && x >= bridge.LeftEnd && x <= bridge.RightEnd && y > bridge.FeetRow(x) - bridge.Headroom && y <= bridge.FeetRow(x) + 1)
+				return true;
+		}
+		return false;
+	}
+
 	public static bool IsDeep(Bot bot) => bot.CenterTile.Y > Main.rockLayer && bot.CenterTile.Y < Main.UnderworldLayer - 10;
 
 	const int AfieldTiles = 100;
@@ -81,7 +91,7 @@ public static class Outpost
 				faction.OutpostFrames.Remove(stale);
 			foreach (var bed in faction.Outposts)
 				guarded.Add((bed, faction.OutpostFrames.TryGetValue(bed, out var frame) ? frame : null));
-			if (faction.ArenaBed is Point arena && Valid(arena))
+			if (faction.ArenaBed is Point arena && BedStands(arena) && IsUsable(arena))
 				guarded.Add((arena, null));
 		}
 		foreach (var bot in BotWorldSystem.Bots)
@@ -266,7 +276,7 @@ public static class Outpost
 			foreach (var tile in Interior().Concat(Shell()))
 			{
 				var here = Main.tile[tile.X, tile.Y];
-				if (here.LiquidAmount > 0 || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y))
+				if (here.LiquidAmount > 0 || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y) || InBridgeClearance(tile.X, tile.Y))
 					return false;
 				if (here.HasTile && (TileID.Sets.BasicChest[here.TileType] || !WorldGen.CanKillTile(tile.X, tile.Y)))
 					return false;

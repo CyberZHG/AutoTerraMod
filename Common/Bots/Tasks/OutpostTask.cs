@@ -75,7 +75,15 @@ public sealed class OutpostTask : BotTask
 			return;
 		}
 		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
-		if (feet.Y >= site.Floor || feet.Y <= site.Ceiling || feet.X < site.Left || feet.X > site.Right)
+		bool fromBridge = bridgeFeet is int deckFeet && tile.Y >= site.Floor;
+		if (fromBridge && !Bot.Hands.CanReach(tool, tile))
+		{
+			Bot.Motor.MoveTo(new Vector2(tile.X * 16f + 8f, (bridgeFeet.Value + 1) * 16f - 21f), StandRadius);
+			if (Bot.Motor.IsStuck)
+				NoteStuck();
+			return;
+		}
+		if (!fromBridge && (feet.Y >= site.Floor || feet.Y <= site.Ceiling || feet.X < site.Left || feet.X > site.Right))
 		{
 			Bot.Motor.MoveTo(Navigation.PathFinder.BodyCenterAt(site.StandingNear(tile)), StandRadius);
 			if (Bot.Motor.IsStuck || Bot.Motor.HasArrived)
@@ -120,17 +128,24 @@ public sealed class OutpostTask : BotTask
 		Bot.Motor.Stop();
 	}
 
+	const int BridgeSiteSlack = 4;
+
 	bool ChooseSite()
 	{
 		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
+		var bridge = Outpost.NearArenaSite(Bot) ? Bot.Faction.Hellbridge : null;
+		bool aboveBridge = bridge != null && System.Math.Abs(feet.Y - bridge.Y) <= BridgeSiteSlack;
+		bridgeFeet = aboveBridge ? bridge.Y : null;
+		if (aboveBridge)
+			feet = new Point(feet.X, bridge.Y - bridge.Headroom - 1);
 		Outpost.Site found = null;
 		foreach (var (dx, dy) in SiteOffsets())
 		{
-			var spot = new Point(feet.X + dx, feet.Y + dy);
-			if (!StandableGround(spot))
+			var spot = new Point(feet.X + dx, feet.Y + (aboveBridge ? 0 : dy));
+			if (!aboveBridge && !StandableGround(spot))
 				continue;
 			var candidate = new Outpost.Site(spot);
-			if (!ActiveSites.Any(other => other.Overlaps(candidate)) && candidate.Buildable() && candidate.HasGround() && !candidate.NearBed())
+			if (!ActiveSites.Any(other => other.Overlaps(candidate)) && candidate.Buildable() && (aboveBridge || candidate.HasGround()) && !candidate.NearBed())
 			{
 				found = candidate;
 				break;
@@ -153,6 +168,7 @@ public sealed class OutpostTask : BotTask
 
 	void ReleaseSite()
 	{
+		bridgeFeet = null;
 		ActiveSites.Remove(site);
 		site = null;
 	}
@@ -171,6 +187,8 @@ public sealed class OutpostTask : BotTask
 			if (ShellJob(tile) is { } floorJob)
 				return floorJob;
 		}
+		if (bridgeFeet is int bridgeRow && AccessJob(bridgeRow) is { } access)
+			return access;
 		foreach (var tile in site.Interior().Concat(site.Doorway()))
 		{
 			if (TileQuery.HasTile(tile) && !IsRope(tile) && !IsFurnishing(tile))
@@ -200,6 +218,29 @@ public sealed class OutpostTask : BotTask
 		{
 			var spot = new Point(site.Left + 2, site.Floor - 1);
 			return (spot, Find(item => item.createTile == TileID.Beds), PlaceBed);
+		}
+		return null;
+	}
+
+	int? bridgeFeet;
+
+	(Point, Item, System.Func<bool>)? AccessJob(int bridgeRow)
+	{
+		foreach (int x in new[] { site.Right + 1, site.Right + 2 })
+		{
+			var porch = new Point(x, site.Floor);
+			if (!TileQuery.HasTile(porch))
+				return (porch, Find(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]) ?? Find(SafeBlock), () => Bot.Hands.PlaceBridge(porch));
+		}
+		var ropeItem = Find(item => item.createTile >= 0 && Main.tileRope[item.createTile]);
+		for (int y = site.Floor + 1; y <= bridgeRow; y++)
+		{
+			var cell = new Point(site.Right + 2, y);
+			if (IsRope(cell))
+				continue;
+			if (TileQuery.HasTile(cell))
+				return (cell, Bot.Hands.BestPickaxe, () => Clear(cell));
+			return (cell, ropeItem, () => Bot.Hands.PlaceRope(cell));
 		}
 		return null;
 	}
