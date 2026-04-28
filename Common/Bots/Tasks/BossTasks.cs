@@ -152,12 +152,14 @@ public sealed class SummonTask : BotTask
 		return Abandon($"only {present}/{teamSize} teammates made it to the rally");
 	}
 
+	const float UnderworldAcceptRadius = 16f * 60f;
+
 	bool ReachedPlace()
 	{
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		bool noWayCloser = Bot.Motor.IsStalled || Bot.Motor.Tunneling || Bot.Motor.HasNoRoute;
 		bool inUnderworld = Bot.CenterTile.Y >= Main.UnderworldLayer && step.Place.Y >= Main.UnderworldLayer * 16f;
-		if (distance <= ArrivalRadius || (noWayCloser || inUnderworld) && distance <= StuckAcceptRadius)
+		if (distance <= ArrivalRadius || noWayCloser && distance <= StuckAcceptRadius || inUnderworld && distance <= UnderworldAcceptRadius)
 			return true;
 		Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
 		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
