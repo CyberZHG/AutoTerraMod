@@ -155,7 +155,7 @@ public static class Outpost
 
 	const float ArenaOutpostDistance = 16f * 300f;
 	const float ArenaSiteReach = 16f * 80f;
-	const float ArenaBedReach = 16f * 80f;
+	const float ArenaBedReach = 16f * 160f;
 	const float ArenaFightReach = 16f * 300f;
 
 	public static bool BedStands(Point bed) =>

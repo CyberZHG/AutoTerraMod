@@ -72,6 +72,8 @@ public sealed class Faction
 			tag["house"] = HouseDesign.Save();
 		tag["scaffolding"] = Scaffolding.Select(tile => new Vector2(tile.X, tile.Y)).ToList();
 		tag["outposts"] = Outposts.Select(bed => new Vector2(bed.X, bed.Y)).ToList();
+		if (ArenaBed is Point arena)
+			tag["arenaBed"] = new Vector2(arena.X, arena.Y);
 		tag["outpostFrames"] = OutpostFrames.SelectMany(entry => new[] { entry.Key.X, entry.Key.Y, entry.Value.X, entry.Value.Y }).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["knowledge"] = Knowledge.Save();
@@ -98,6 +100,11 @@ public sealed class Faction
 		};
 		foreach (var tile in tag.GetList<Vector2>("scaffolding"))
 			faction.Scaffolding.Add(new Point((int)tile.X, (int)tile.Y));
+		if (tag.ContainsKey("arenaBed"))
+		{
+			var arena = tag.Get<Vector2>("arenaBed");
+			faction.ArenaBed = new Point((int)arena.X, (int)arena.Y);
+		}
 		foreach (var bed in tag.GetList<Vector2>("outposts"))
 			faction.Outposts.Add(new Point((int)bed.X, (int)bed.Y));
 		var frames = tag.GetList<int>("outpostFrames");

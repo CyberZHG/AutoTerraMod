@@ -140,7 +140,8 @@ public sealed class OutpostTask : BotTask
 	bool ChooseSite()
 	{
 		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
-		var bridge = Outpost.NearArenaSite(Bot) ? Bot.Faction.Hellbridge : null;
+		arenaSite = Outpost.NearArenaSite(Bot);
+		var bridge = arenaSite ? Bot.Faction.Hellbridge : null;
 		bool aboveBridge = bridge != null && System.Math.Abs(feet.Y - bridge.Y) <= BridgeSiteSlack;
 		bridgeFeet = aboveBridge ? bridge.Y : null;
 		if (aboveBridge)
@@ -230,6 +231,7 @@ public sealed class OutpostTask : BotTask
 	}
 
 	int? bridgeFeet;
+	bool arenaSite;
 
 	(Point, Item, System.Func<bool>)? AccessJob(int bridgeRow)
 	{
@@ -338,7 +340,7 @@ public sealed class OutpostTask : BotTask
 	{
 		var bed = FindBed().Value;
 		bool usable = Outpost.IsUsable(bed);
-		if (Outpost.NearArenaSite(Bot))
+		if (arenaSite)
 			Bot.Faction.ArenaBed = bed;
 		else if (usable)
 		{
