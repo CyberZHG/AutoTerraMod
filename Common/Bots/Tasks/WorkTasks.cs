@@ -721,9 +721,22 @@ public sealed class PickupTask : BotTask
 			return;
 		}
 		Bot.Motor.MoveTo(Main.item[itemIndex].Center, 8f);
-		if (!Bot.Motor.IsStuck)
+		if (Bot.Motor.HasArrived)
+			arrivedTicks++;
+		else
+			arrivedTicks = 0;
+		if (!Bot.Motor.IsStuck && arrivedTicks < ArrivedGraceTicks)
 			return;
 		unreachable.Add(itemIndex);
 		IsFinished = true;
+	}
+
+	const int ArrivedGraceTicks = 60;
+	int arrivedTicks;
+
+	public override void Start()
+	{
+		base.Start();
+		arrivedTicks = 0;
 	}
 }

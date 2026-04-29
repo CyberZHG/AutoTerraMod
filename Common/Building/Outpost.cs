@@ -81,7 +81,7 @@ public static class Outpost
 		bool Valid(Point bed)
 		{
 			if (!verdicts.TryGetValue(bed, out bool valid))
-				verdicts[bed] = valid = !InUnderworld(bed) && IsUsable(bed);
+				verdicts[bed] = valid = (!InUnderworld(bed) || BotWorldSystem.Factions.Any(faction => faction.ArenaBed == bed)) && IsUsable(bed);
 			return valid;
 		}
 		foreach (var faction in BotWorldSystem.Factions)

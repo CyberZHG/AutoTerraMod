@@ -136,7 +136,9 @@ public sealed class HealingPotionGoal : ProgressionGoal
 
 	public override string Describe() => "Potions";
 
-	static int Held(Bot bot) => Inventory.Items(bot.Avatar).Where(item => item.potion && item.healLife > 0).Sum(item => item.stack);
+	const int RealPotionHeal = 50;
+
+	static int Held(Bot bot) => Inventory.Items(bot.Avatar).Where(item => item.potion && item.healLife >= RealPotionHeal).Sum(item => item.stack);
 
 	public override bool IsMet(Bot bot) => Held(bot) >= Minimum;
 

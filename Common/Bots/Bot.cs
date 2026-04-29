@@ -190,7 +190,7 @@ public sealed class Bot
 			AvatarStorage.Load(tag.GetCompound("avatar")));
 		if (tag.ContainsKey("feet"))
 			bot.SavedFeetPosition = tag.Get<Vector2>("feet");
-		if (tag.ContainsKey("outpostX") && !Building.Outpost.InUnderworld(new Point(tag.GetInt("outpostX"), tag.GetInt("outpostY"))))
+		if (tag.ContainsKey("outpostX"))
 			bot.OutpostBed = new Point(tag.GetInt("outpostX"), tag.GetInt("outpostY"));
 		return bot;
 	}

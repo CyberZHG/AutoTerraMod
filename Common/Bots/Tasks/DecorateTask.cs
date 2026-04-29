@@ -80,7 +80,7 @@ public sealed class DecorateTask : BotTask
 		return displayed[faction.Id] = (Main.GameUpdateCount, items, duplicates);
 	}
 
-	const float DuplicatePriority = 55f;
+	const float DuplicatePriority = 30f;
 	const float DuplicateReach = 16f * 80f;
 	const int BannerFrameHeight = 54;
 	const int BannerStylesPerRow = 111;
@@ -129,7 +129,7 @@ public sealed class DecorateTask : BotTask
 		if (spot == null)
 			return 0f;
 		Detail = decor.Name;
-		return Aspire(65f);
+		return Aspire(40f);
 	}
 
 	Point? CeilingSpot(Item item)

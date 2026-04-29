@@ -402,8 +402,6 @@ public sealed class BotWorldSystem : ModSystem
 
 	public static Vector2 RespawnFeet(Bot bot)
 	{
-		if (Building.Outpost.ArenaBedFor(bot.Faction) is Point arena)
-			return new Vector2(arena.X * 16f + 8f, (arena.Y + 1) * 16f);
 		if (bot.OutpostBed is Point outpost && Building.Outpost.BedStands(outpost))
 			return new Vector2(outpost.X * 16f + 8f, (outpost.Y + 1) * 16f);
 		var settlement = bot.Faction.Settlement;

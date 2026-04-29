@@ -41,6 +41,17 @@ public sealed class BotMotor
 		return Math.Min(current, RopeDescendMax);
 	}
 
+	float ropeSpeed;
+	uint ropeSpeedAt;
+
+	float NextRopeSpeed(int direction)
+	{
+		if (Main.GameUpdateCount - ropeSpeedAt > 2)
+			ropeSpeed = 0f;
+		ropeSpeedAt = Main.GameUpdateCount;
+		return ropeSpeed = RopeVelocity(ropeSpeed, direction);
+	}
+
 	static bool RopeAtHead(NPC npc, int column)
 	{
 		int row = (int)((npc.position.Y - 16f) / 16f);
@@ -948,7 +959,7 @@ public sealed class BotMotor
 				npc.velocity = Vector2.Zero;
 				return;
 			}
-			npc.velocity = new Vector2(0f, RopeVelocity(npc.velocity.Y, intent.ClimbDirection));
+			npc.velocity = new Vector2(0f, NextRopeSpeed(intent.ClimbDirection));
 		}
 	}
 
@@ -992,7 +1003,10 @@ public sealed class BotMotor
 		for (int y = body.Bottom; y >= body.Top - 1; y--)
 		{
 			if (!IsRope(column, y) && !IsRope(column + 1, y))
-				return MayPlaceRope && !Main.tile[column, y].HasTile ? new Point(column, y) : null;
+			{
+				int place = World.Hellevator.OffRopeColumn(column, y) ? column + 1 : column;
+				return MayPlaceRope && !Main.tile[place, y].HasTile && !World.Hellevator.OffRopeColumn(place, y) ? new Point(place, y) : null;
+			}
 		}
 		return null;
 	}
@@ -1144,7 +1158,7 @@ public sealed class BotMotor
 				return false;
 			}
 			npc.GravityMultiplier = MultipliableFloat.One * 0f;
-			npc.velocity = new Vector2(0f, RopeVelocity(npc.velocity.Y, -1));
+			npc.velocity = new Vector2(0f, NextRopeSpeed(-1));
 			if (MayPlaceRope && !Main.tile[centerX, body.Top - 1].HasTile)
 				RopeTile = new Point(centerX, body.Top - 1);
 			return true;

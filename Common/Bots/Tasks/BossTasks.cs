@@ -489,6 +489,7 @@ public sealed class RallyTask : BotTask
 	Vector2? goal;
 	public const float SelfDefenseRadius = 16f * 10f;
 	const float RallyPriority = 93f;
+	const float ArenaBedsideReach = 16f * 3f;
 
 	public RallyTask(Bot bot) : base(bot) { }
 
@@ -568,6 +569,17 @@ public sealed class RallyTask : BotTask
 			target = kept;
 		goal = target;
 		LeaveOutpostIfBedside();
+		if (Building.Outpost.ArenaBedFor(Bot.Faction) is Point arena && Bot.OutpostBed != arena)
+		{
+			var bedside = new Vector2(arena.X * 16f + 8f, (arena.Y + 1) * 16f - 21f);
+			if (Vector2.Distance(Bot.Center, bedside) <= ArenaBedsideReach)
+			{
+				Bot.OutpostBed = arena;
+				BotDiagnostics.Log(Bot, $"set the respawn point at the arena outpost bed {arena}");
+			}
+			else if (TravelOrTunnel(bedside, ArenaBedsideReach * 0.5f))
+				return;
+		}
 		bool close = Vector2.Distance(Bot.Center, target) < CloseEnough;
 		if (close && (Bot.Motor.IsStalled || Bot.Motor.IsStuck))
 			parkedUntil = Main.GameUpdateCount + ParkTicks;

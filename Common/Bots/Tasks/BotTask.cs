@@ -89,7 +89,7 @@ public abstract class BotTask
 
 	protected void LeaveOutpostIfBedside()
 	{
-		if (Bot.OutpostBed is not Point bed || Vector2.Distance(Bot.Center, bed.ToWorldCoordinates()) > BedsideReach)
+		if (Bot.OutpostBed is not Point bed || bed == Bot.Faction.ArenaBed && Bot.Faction.Rally != null || Vector2.Distance(Bot.Center, bed.ToWorldCoordinates()) > BedsideReach)
 			return;
 		Bot.OutpostBed = null;
 		BotDiagnostics.Log(Bot, $"cancelled the respawn point at the outpost bed {bed} on the way home");
