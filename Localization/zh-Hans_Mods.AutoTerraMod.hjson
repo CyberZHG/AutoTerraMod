@@ -4,7 +4,7 @@ Configs: {
 
 		BotsEnabled: {
 			Label: 开启 AI 角色
-			Tooltip: 在当前世界开启或关闭 AI 阵营。关闭时所有角色隐藏但保留在存档中，重新开启后回到原来的位置。也可用 /autoterra enabled on|off。
+			Tooltip: 在当前世界开启或关闭 AI 阵营，新世界默认关闭。关闭时所有角色隐藏但保留在存档中，重新开启后回到原来的位置。也可用 /autoterra enabled on|off。
 		}
 
 		FactionCount: {
@@ -37,40 +37,8 @@ Configs: {
 			Tooltip: 把每个角色的任务和计划变化写入 client.log。
 		}
 
-		MaterialMultiplier: {
-			Label: 基础材料掉落倍数
-			Tooltip: 挖掘或砍伐方块（砖块、矿石、木头、植物、宝石等）以及击杀怪物掉落的可堆叠物品按倍数掉落，对世界里所有人生效；钱币和宝藏袋不翻倍。随世界保存；也可用 /autoterra materials 1|5|10|20|50。
-		}
 	}
 
-	MaterialDrop: {
-		X1: {
-			Label: 1 倍
-			// Tooltip: ""
-		}
-
-		X5: {
-			Label: 5 倍
-			// Tooltip: ""
-		}
-
-		X10: {
-			Label: 10 倍
-			// Tooltip: ""
-		}
-
-		X20: {
-			Label: 20 倍
-			// Tooltip: ""
-		}
-
-		X50: {
-			Label: 50 倍
-			// Tooltip: ""
-		}
-
-		// Tooltip: ""
-	}
 
 	FactionRelation: {
 		Race: {

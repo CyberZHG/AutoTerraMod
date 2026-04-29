@@ -203,7 +203,7 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		if (Main.netMode == NetmodeID.MultiplayerClient || initialized)
 			return;
-		Settings ??= WorldFactionSettings.FromConfig(ModContent.GetInstance<AutoTerraConfig>());
+		Settings ??= WorldFactionSettings.ForNewWorld(ModContent.GetInstance<AutoTerraConfig>());
 		if (Settings.BotsEnabled)
 			Initialize();
 	}
@@ -240,7 +240,7 @@ public sealed class BotWorldSystem : ModSystem
 
 	static void GrowToConfig()
 	{
-		Settings ??= WorldFactionSettings.FromConfig(ModContent.GetInstance<AutoTerraConfig>());
+		Settings ??= WorldFactionSettings.ForNewWorld(ModContent.GetInstance<AutoTerraConfig>());
 		Relation = HeadlessTestMode.RelationOverride ?? Settings.Relation;
 		int botsPerFaction = HeadlessTestMode.BotsPerFactionOverride ?? Settings.BotsPerFaction;
 		ApplyLimits(botsPerFaction);

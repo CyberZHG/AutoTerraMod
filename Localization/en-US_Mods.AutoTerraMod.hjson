@@ -4,7 +4,7 @@ Configs: {
 
 		BotsEnabled: {
 			Label: Enable bots
-			Tooltip: Turns the AI factions on or off for this world. Turning them off hides every bot and keeps them in the save; turning them back on brings them back where they were. Also /autoterra enabled on|off.
+			Tooltip: Turns the AI factions on or off for the current world. New worlds start with them off. Turning them off hides every bot and keeps them in the save; turning them back on brings them back where they were. Also /autoterra enabled on|off.
 		}
 
 		FactionCount: {
@@ -37,40 +37,8 @@ Configs: {
 			Tooltip: Writes each bot's task and plan changes to client.log.
 		}
 
-		MaterialMultiplier: {
-			Label: Basic material drops
-			Tooltip: Multiplies stackable items dropped by mined or chopped tiles (blocks, ores, wood, plants, gems) and by killed monsters, for everyone in this world. Coins and treasure bags are not multiplied. Saved per world; also /autoterra materials 1|5|10|20|50.
-		}
 	}
 
-	MaterialDrop: {
-		X1: {
-			Label: 1x
-			Tooltip: ""
-		}
-
-		X5: {
-			Label: 5x
-			Tooltip: ""
-		}
-
-		X10: {
-			Label: 10x
-			Tooltip: ""
-		}
-
-		X20: {
-			Label: 20x
-			Tooltip: ""
-		}
-
-		X50: {
-			Label: 50x
-			Tooltip: ""
-		}
-
-		Tooltip: ""
-	}
 
 	FactionRelation: {
 		Race: {

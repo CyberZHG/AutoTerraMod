@@ -9,8 +9,8 @@ public sealed record WorldFactionSettings(int FactionCount, int BotsPerFaction, 
 
 	public static readonly int[] MaterialMultipliers = { 1, 5, 10, 20, 50 };
 
-	public static WorldFactionSettings FromConfig(AutoTerraConfig config) =>
-		new(config.FactionCount, config.BotsPerFaction, config.Relation, config.BotsEnabled, (int)config.MaterialMultiplier);
+	public static WorldFactionSettings ForNewWorld(AutoTerraConfig config) =>
+		new(config.FactionCount, config.BotsPerFaction, config.Relation, Systems.HeadlessTestMode.Enabled);
 
 	public TagCompound Save() => new()
 	{
