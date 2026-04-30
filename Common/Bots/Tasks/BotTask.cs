@@ -251,12 +251,14 @@ public abstract class BotTask
 		campExit = null;
 		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)
 			Bot.Motor.Stop();
+		if (InOwnShaft() && LeavesShaft(target) && System.Math.Abs(target.ToTileCoordinates().Y - Bot.CenterTile.Y) > ShaftLevelRows && DeepDetour(target, radius))
+			return true;
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
 		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
 			return false;
-		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance && DeepDetour(target, radius))
+		if ((Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance || InOwnShaft()) && DeepDetour(target, radius))
 			return true;
 		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
@@ -315,6 +317,13 @@ public abstract class BotTask
 	const int DeepDetourRows = 60;
 	const int ShaftLevelRows = 3;
 	const int DeepDetourRise = 40;
+
+	const int ShaftExitMargin = 3;
+
+	bool LeavesShaft(Vector2 target) =>
+		Bot.Faction.Hellevator is { } shaft && target.ToTileCoordinates() is var goal && (goal.X < shaft.X - ShaftExitMargin || goal.X > shaft.Right + ShaftExitMargin);
+
+	bool InOwnShaft() => Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y);
 
 	bool DeepDetour(Vector2 target, float radius)
 	{

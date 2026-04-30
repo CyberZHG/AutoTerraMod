@@ -169,6 +169,8 @@ public static class HouseInspector
 			if (settlement != null && settlement.IsShell(x, y))
 				return true;
 		}
+		if (Bots.Tasks.OutpostTask.InActiveFrame(x, y))
+			return true;
 		foreach (var (bed, frame) in Outpost.Guarded())
 		{
 			if (frame is Point known ? Outpost.InFrame(known, x, y) : InOutpostShell(bed, x, y))

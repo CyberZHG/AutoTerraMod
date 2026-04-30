@@ -36,9 +36,7 @@ Configs: {
 			Label: 诊断日志
 			Tooltip: 把每个角色的任务和计划变化写入 client.log。
 		}
-
 	}
-
 
 	FactionRelation: {
 		Race: {

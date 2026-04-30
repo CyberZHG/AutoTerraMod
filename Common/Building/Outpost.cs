@@ -175,7 +175,7 @@ public static class Outpost
 
 	public static bool WantsArenaOutpost(Bot bot) =>
 		NearArenaSite(bot) && bot.Faction.Rally is { } rally && Vector2.Distance(rally.point, bot.Faction.BaseCenter) > ArenaOutpostDistance
-		&& ArenaBedFor(bot.Faction) == null && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
+		&& ArenaBedFor(bot.Faction) == null && !Bots.Tasks.OutpostTask.ArenaTakenByOther(bot) && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
 		&& (!OnUnderworldBridge(bot.Faction, rally.point) || Count(bot.Avatar, item => item.createTile >= 0 && Main.tileRope[item.createTile]) >= BridgeAccessRopes);
 
 	const int BridgeAccessRopes = 8;

@@ -36,9 +36,7 @@ Configs: {
 			Label: Diagnostic logging
 			Tooltip: Writes each bot's task and plan changes to client.log.
 		}
-
 	}
-
 
 	FactionRelation: {
 		Race: {

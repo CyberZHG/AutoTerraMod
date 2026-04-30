@@ -93,8 +93,12 @@ public sealed class OutpostTask : BotTask
 		if (!fromBridge && (feet.Y >= site.Floor || feet.Y <= site.Ceiling || feet.X < site.Left || feet.X > site.Right))
 		{
 			Bot.Motor.MoveTo(Navigation.PathFinder.BodyCenterAt(site.StandingNear(tile)), StandRadius);
-			if (Bot.Motor.IsStuck || Bot.Motor.HasArrived)
+			arrivedOutside = Bot.Motor.HasArrived ? arrivedOutside + 1 : 0;
+			if (Bot.Motor.IsStuck || arrivedOutside >= ArrivedOutsideTicks)
+			{
+				arrivedOutside = 0;
 				NoteStuck();
+			}
 			return;
 		}
 		if (Bot.Npc.Hitbox.Intersects(new Rectangle(tile.X * 16, tile.Y * 16, 16, 16)))
@@ -128,6 +132,8 @@ public sealed class OutpostTask : BotTask
 	}
 
 	const int StuckPenalty = 10;
+	const int ArrivedOutsideTicks = 60;
+	int arrivedOutside;
 
 	void NoteStuck()
 	{
@@ -167,15 +173,25 @@ public sealed class OutpostTask : BotTask
 		}
 		site = found;
 		ActiveSites.Add(site);
+		if (arenaSite)
+			arenaBuilders[Bot.FactionId] = Bot.Id;
 		failures = 0;
 		BotDiagnostics.Log(Bot, $"building an outpost at {site.Left},{site.Floor}");
 		return true;
 	}
 
 	static readonly System.Collections.Generic.List<Outpost.Site> ActiveSites = new();
+	static readonly System.Collections.Generic.Dictionary<int, int> arenaBuilders = new();
+
+	public static bool InActiveFrame(int x, int y) => ActiveSites.Any(site => Outpost.InFrame(new Point(site.Left, site.Floor), x, y));
+
+	public static bool ArenaTakenByOther(Bot bot) =>
+		arenaBuilders.TryGetValue(bot.FactionId, out int builder) && builder != bot.Id && Systems.BotWorldSystem.FindBot(builder) is { IsAlive: true };
 
 	void ReleaseSite()
 	{
+		if (arenaBuilders.TryGetValue(Bot.FactionId, out int builder) && builder == Bot.Id)
+			arenaBuilders.Remove(Bot.FactionId);
 		bridgeFeet = null;
 		ActiveSites.Remove(site);
 		site = null;
