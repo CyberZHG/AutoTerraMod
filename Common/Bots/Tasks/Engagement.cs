@@ -186,13 +186,14 @@ public static class Engagement
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon();
 		if (Bosses.BossCatalog.IsBossPart(target) && Bosses.BossCatalog.ChallengeOf(target.type) is { Arena: World.Landmark arena }
-			&& !Bosses.BossChallenge.InArena(bot.Avatar, arena) && bot.Faction.ArenaPoint is Vector2 arenaPoint)
+			&& !Bosses.BossChallenge.InArena(bot.Avatar, arena) && bot.Faction.ArenaPoint is Vector2 arenaPoint
+			&& Vector2.Distance(bot.Center, arenaPoint) > ArenaReturnRadius * ArenaSettledFactor)
 		{
-			if (CanShootFromHere(bot, target))
-			{
-				bot.Motor.Face(target.Center);
+			bot.Motor.Face(target.Center);
+			if (weapon != null && !BotHands.IsProjectileWeapon(weapon) && bot.Hands.InMeleeReach(target, weapon))
+				bot.Hands.Strike(target, weapon);
+			else if (CanShootFromHere(bot, target))
 				bot.Hands.Fire(target, weapon);
-			}
 			bot.Motor.MoveTo(arenaPoint, ArenaReturnRadius);
 			return;
 		}
@@ -261,6 +262,7 @@ public static class Engagement
 	}
 
 	const float MinMeleeGap = 6f;
+	const float ArenaSettledFactor = 1.5f;
 	const float RangedThreatDistance = 16f * 10f;
 
 	static Item PreferredAgainst(Bot bot, NPC target, Item weapon)
