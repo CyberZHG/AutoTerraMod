@@ -53,7 +53,12 @@ public static class BossRituals
 	public static bool CanMineEvilStone(Bot bot) =>
 		(bot.Hands.BestPickaxe?.pick ?? 0) >= Navigation.PickRequirement.MinimumPick(WorldGen.crimson ? TileID.Crimstone : TileID.Ebonstone, 0, 0);
 
-	public static PlanStep Plan(Bot bot, BossChallenge challenge, BossTrigger trigger) => trigger switch
+	public static PlanStep Plan(Bot bot, BossChallenge challenge, BossTrigger trigger) =>
+		bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until && bot.Faction.RallyBossType != challenge.BossType
+			? PlanStep.Blocked
+			: PlanFor(bot, challenge, trigger);
+
+	static PlanStep PlanFor(Bot bot, BossChallenge challenge, BossTrigger trigger) => trigger switch
 	{
 		SummonItemTrigger item => PlanSummonItem(bot, challenge, item),
 		SmashOrbsTrigger orbs => PlanSmashOrbs(bot, challenge, orbs),
