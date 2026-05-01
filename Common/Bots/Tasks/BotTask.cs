@@ -337,25 +337,48 @@ public abstract class BotTask
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
 		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
 			return false;
-		if (inShaft && System.Math.Abs(tile.Y - levelRow) <= ShaftLevelRows)
+		var feet = Bot.Npc is NPC body ? Navigation.PathFinder.FeetOf(body) : tile;
+		if (inShaft && System.Math.Abs(feet.Y - levelRow) <= 1)
 		{
-			BotDiagnostics.Log(Bot, $"tunneling sideways from the hellevator at row {tile.Y} toward {goal}");
+			int mouthX = goal.X < shaft.X ? shaft.X - 1 : shaft.Right + 1;
+			if (OpenShaftMouth(mouthX, feet.Y))
+				return true;
+			BotDiagnostics.Log(Bot, $"tunneling sideways from the hellevator at row {feet.Y} toward {goal}");
 			deepTunnel = target;
 			Bot.Motor.TunnelTo(target, radius);
 			return true;
 		}
-		var level = new Vector2((shaft.X + 1) * 16f, levelRow * 16f);
+		var level = Navigation.PathFinder.BodyCenterAt(new Point(shaft.X, levelRow));
 		if (ShaftShortcut(level))
 			return true;
 		if (inShaft)
 		{
-			Bot.Motor.MoveTo(level, 16f);
+			Bot.Motor.MoveTo(level, 8f);
 			return !Bot.Motor.IsStuck;
 		}
 		if (tile.Y > shaft.TopY + ShaftMouthReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
 			return true;
 		Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, shaft.TopY * 16f - 21f), 12f);
 		return !Bot.Motor.IsStuck;
+	}
+
+	bool OpenShaftMouth(int x, int feetRow)
+	{
+		for (int y = feetRow - 2; y <= feetRow; y++)
+		{
+			if (!TileQuery.IsSolid(x, y))
+				continue;
+			Bot.Motor.Stop();
+			Bot.Hands.Dig(new Point(x, y));
+			return true;
+		}
+		if (!TileQuery.IsSolid(x, feetRow + 1) && !TileQuery.IsPlatform(x, feetRow + 1))
+		{
+			Bot.Motor.Stop();
+			Bot.Hands.PlaceBridge(new Point(x, feetRow + 1), solidDeck: true);
+			return true;
+		}
+		return false;
 	}
 
 	const uint TunnelPathRetryTicks = 600;

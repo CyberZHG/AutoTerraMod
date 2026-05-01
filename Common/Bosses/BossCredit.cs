@@ -81,8 +81,15 @@ public sealed class BossCredit : GlobalNPC
 	public static bool HasDefeated(Faction faction, BossChallenge challenge) =>
 		BotWorldSystem.Relation == FactionRelation.Cooperate ? challenge.IsDefeated() : faction.DefeatedBosses.Contains(challenge.BossType);
 
-	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction) =>
-		BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge) && challenge.IsUnlocked);
+	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction)
+	{
+		var open = BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge) && challenge.IsUnlocked).ToList();
+		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)));
+	}
+
+	static bool Deferred(Faction faction, BossChallenge challenge) =>
+		challenge.BossType == NPCID.SkeletronHead && !NPC.AnyNPCs(NPCID.OldMan)
+		&& !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0);
 
 	public static BossChallenge NextChallengeFor(Faction faction) => OpenChallengesFor(faction).FirstOrDefault();
 

@@ -41,12 +41,13 @@ public sealed class BotMotor
 		return Math.Min(current, RopeDescendMax);
 	}
 
+	const uint RopeSpeedMemoryTicks = 20;
 	float ropeSpeed;
 	uint ropeSpeedAt;
 
 	float NextRopeSpeed(int direction)
 	{
-		if (Main.GameUpdateCount - ropeSpeedAt > 2)
+		if (Main.GameUpdateCount - ropeSpeedAt > RopeSpeedMemoryTicks)
 			ropeSpeed = 0f;
 		ropeSpeedAt = Main.GameUpdateCount;
 		return ropeSpeed = RopeVelocity(ropeSpeed, direction);
