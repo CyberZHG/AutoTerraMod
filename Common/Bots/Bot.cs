@@ -66,6 +66,8 @@ public sealed class Bot
 	public Vector2? SavedFeetPosition { get; set; }
 	public Point? OutpostBed { get; set; }
 
+	public uint LastRecallAt { get; set; }
+
 	const uint MiningCommitmentTicks = 20 * 60 * 60;
 	const int UndergroundDepth = 20;
 	const uint SessionCheckTicks = 60;

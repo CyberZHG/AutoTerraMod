@@ -19,10 +19,18 @@ public sealed class VanillaHooks : ModSystem
 		On_Main.DrawPlayers_AfterProjectiles += DrawBotAvatars;
 		On_Main.UpdateTime_SpawnTownNPCs += LetBotsAttractTownNpcs;
 		On_Projectile.Update += UpdateAvatarProjectiles;
+		On_Player.KillMe += KeepAvatarsOutOfDeath;
 	}
 
 	const int FirstAvatarSlot = 200;
 	const int MinionKeepAliveTicks = 10;
+
+	static void KeepAvatarsOutOfDeath(On_Player.orig_KillMe orig, Player self, Terraria.DataStructures.PlayerDeathReason damageSource, double dmg, int hitDirection, bool pvp)
+	{
+		if (self.whoAmI >= FirstAvatarSlot && self.whoAmI < Main.maxPlayers)
+			return;
+		orig(self, damageSource, dmg, hitDirection, pvp);
+	}
 
 	static void UpdateAvatarProjectiles(On_Projectile.orig_Update orig, Projectile self, int i)
 	{

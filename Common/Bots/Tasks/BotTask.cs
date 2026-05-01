@@ -72,6 +72,7 @@ public abstract class BotTask
 			Inventory.ConsumeOne(Avatar, recall);
 		SoundEngine.PlaySound(SoundID.Item6, body.Center);
 		var home = BotWorldSystem.RespawnFeet(Bot);
+		Bot.LastRecallAt = Main.GameUpdateCount;
 		body.position = home - new Vector2(body.width / 2f, body.height);
 		body.velocity = Vector2.Zero;
 		Bot.Vitals.Teleported(body);
@@ -128,9 +129,11 @@ public abstract class BotTask
 
 	static float Walk(Vector2 from, Vector2 to) => (System.Math.Abs(from.X - to.X) + System.Math.Abs(from.Y - to.Y)) / 16f;
 
+	const uint RecallCooldownTicks = 1800;
+
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
-		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar))
+		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
 			return false;
 		float fromHere = Vector2.Distance(Bot.Center, target) / 16f;
 		if (fromHere < LongTripTiles)

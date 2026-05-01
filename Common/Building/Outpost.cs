@@ -56,8 +56,12 @@ public static class Outpost
 
 	const float DeepAfieldDistance = 16f * 250f;
 
+	const int ShaftVicinity = 15;
+
 	public static bool IsAfield(Bot bot)
 	{
+		if (bot.Faction.Hellevator is { } shaft && System.Math.Abs(bot.CenterTile.X - shaft.RopeX) <= ShaftVicinity && bot.CenterTile.Y > shaft.TopY)
+			return false;
 		int away = System.Math.Abs(bot.CenterTile.X - bot.Faction.BaseTile.X);
 		return IsDeep(bot) && Vector2.Distance(bot.Center, bot.Faction.BaseCenter) > DeepAfieldDistance || away > AfieldTiles && (away > HighwayAfieldTiles || !OnHighway(bot));
 	}
