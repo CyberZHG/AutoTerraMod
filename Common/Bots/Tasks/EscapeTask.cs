@@ -102,6 +102,16 @@ public sealed class EscapeTask : BotTask
 	public override void Tick()
 	{
 		Bot.Motor.ScaffoldingAllowed = true;
+		if (Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y))
+		{
+			if (!TryRecallHome())
+				Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, shaft.TopY * 16f - 21f), 16f);
+			else
+				Finish();
+			if (Bot.Motor.HasArrived)
+				Finish();
+			return;
+		}
 		if (campExit is Vector2 exit)
 		{
 			TunnelOutFromUnderCamp(exit);
