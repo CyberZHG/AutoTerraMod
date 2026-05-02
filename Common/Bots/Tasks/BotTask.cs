@@ -130,10 +130,14 @@ public abstract class BotTask
 	static float Walk(Vector2 from, Vector2 to) => (System.Math.Abs(from.X - to.X) + System.Math.Abs(from.Y - to.Y)) / 16f;
 
 	const uint RecallCooldownTicks = 1800;
+	const uint SameTripTicks = 18000;
+	const float SameTripReach = 16f * 32f;
 
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
 		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
+			return false;
+		if (Bot.LastRecallTarget is Vector2 earlier && Vector2.Distance(earlier, target) < SameTripReach && Main.GameUpdateCount - Bot.LastRecallAt < SameTripTicks)
 			return false;
 		float fromHere = Vector2.Distance(Bot.Center, target) / 16f;
 		if (fromHere < LongTripTiles)
@@ -246,7 +250,10 @@ public abstract class BotTask
 			return true;
 		deepTunnel = null;
 		if (RecallBeatsLongTrip(target) && TryRecallHome())
+		{
+			Bot.LastRecallTarget = target;
 			return true;
+		}
 		if (ShaftShortcut(target))
 			return true;
 		if (BridgeLeg(target) is Vector2 leg)

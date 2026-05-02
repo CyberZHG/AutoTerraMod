@@ -68,6 +68,8 @@ public sealed class Bot
 
 	public uint LastRecallAt { get; set; }
 
+	public Vector2? LastRecallTarget { get; set; }
+
 	const uint MiningCommitmentTicks = 20 * 60 * 60;
 	const int UndergroundDepth = 20;
 	const uint SessionCheckTicks = 60;
