@@ -263,6 +263,8 @@ public abstract class BotTask
 			Bot.Motor.Stop();
 		if (InOwnShaft() && LeavesShaft(target) && System.Math.Abs(target.ToTileCoordinates().Y - Bot.CenterTile.Y) > ShaftLevelRows && DeepDetour(target, radius))
 			return true;
+		if (target.Y >= Main.UnderworldLayer * 16f && Bot.CenterTile.Y < Main.UnderworldLayer && !InOwnShaft() && Bot.Faction.Hellevator is { IsComplete: true } && DeepDetour(target, radius))
+			return true;
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
