@@ -369,6 +369,8 @@ public static class ProgressionPlanner
 	static PlanStep PlanGoal(Bot bot, ProgressionGoal goal)
 	{
 		bool outer = woodAllowed;
+		var outerGoal = planning;
+		planning = goal;
 		try
 		{
 			woodAllowed = false;
@@ -381,7 +383,26 @@ public static class ProgressionPlanner
 		finally
 		{
 			woodAllowed = outer;
+			planning = outerGoal;
 		}
+	}
+
+	static ProgressionGoal planning;
+
+	const int HardmodePickPower = 100;
+	static readonly System.Collections.Generic.Dictionary<int, (uint at, bool lacking)> pickaxeLack = new();
+
+	static bool ReservedForPickaxe(Bot bot, int itemType)
+	{
+		if (!Main.hardMode || itemType is not (Terraria.ID.ItemID.HellstoneBar or Terraria.ID.ItemID.Hellstone))
+			return false;
+		if (ProgressionGoals.Unwrap(planning) is GearGoal { Kind: GearKind.Pickaxe })
+			return false;
+		if (pickaxeLack.TryGetValue(bot.FactionId, out var cached) && cached.at == Main.GameUpdateCount)
+			return cached.lacking;
+		bool lacking = !Systems.BotWorldSystem.Bots.Any(member => member.FactionId == bot.FactionId && Equipment.BestPower(member.Avatar, GearKind.Pickaxe) >= HardmodePickPower);
+		pickaxeLack[bot.FactionId] = (Main.GameUpdateCount, lacking);
+		return lacking;
 	}
 
 	static bool UsesWood(Recipe recipe) => recipe.requiredItem.Any(required => ResourceSources.IsWood(required.type));
@@ -390,6 +411,8 @@ public static class ProgressionPlanner
 	{
 		resolveCalls++;
 		if (context.Resolves > ResolveBudget)
+			return PlanStep.Blocked;
+		if (ReservedForPickaxe(context.Bot, itemType))
 			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
 		int have = context.Count(itemType) + Equipment.WornCount(avatar, itemType);
