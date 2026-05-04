@@ -125,7 +125,7 @@ public sealed class SummonTask : BotTask
 		LeaveOutpostIfBedside();
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
-		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > CampRecallReach && CarriesRecall(Avatar) && (RecallLandsAtBase() || Bot.OutpostBed != null) && TryRecallToCamp())
+		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > Vector2.Distance(CampLanding, faction.BaseCenter) + CampRecallReach && Main.GameUpdateCount - Bot.LastRecallAt > RecallCooldownTicks && CarriesRecall(Avatar) && (RecallLandsAtBase() || Bot.OutpostBed != null) && TryRecallToCamp())
 			return false;
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();

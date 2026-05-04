@@ -129,7 +129,7 @@ public abstract class BotTask
 
 	static float Walk(Vector2 from, Vector2 to) => (System.Math.Abs(from.X - to.X) + System.Math.Abs(from.Y - to.Y)) / 16f;
 
-	const uint RecallCooldownTicks = 1800;
+	protected const uint RecallCooldownTicks = 1800;
 	const uint SameTripTicks = 18000;
 	const float SameTripReach = 16f * 32f;
 
@@ -349,6 +349,8 @@ public abstract class BotTask
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
 		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
 			return false;
+		if (!inShaft && goal.Y < Main.UnderworldLayer && System.Math.Abs(goal.X - shaft.X) > System.Math.Abs(goal.X - tile.X) + DeepDetourRise)
+			return false;
 		var feet = Bot.Npc is NPC body ? Navigation.PathFinder.FeetOf(body) : tile;
 		if (inShaft && System.Math.Abs(feet.Y - levelRow) <= 1)
 		{
@@ -368,8 +370,12 @@ public abstract class BotTask
 			Bot.Motor.MoveTo(level, 8f);
 			return !Bot.Motor.IsStuck;
 		}
-		if (tile.Y > shaft.TopY + ShaftMouthReach && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+		bool sameTrip = Bot.LastRecallTarget is Vector2 earlier && Vector2.Distance(earlier, target) < SameTripReach && Main.GameUpdateCount - Bot.LastRecallAt < SameTripTicks;
+		if (tile.Y > shaft.TopY + ShaftMouthReach && !sameTrip && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+		{
+			Bot.LastRecallTarget = target;
 			return true;
+		}
 		Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, shaft.TopY * 16f - 21f), 12f);
 		return !Bot.Motor.IsStuck;
 	}
