@@ -515,7 +515,11 @@ public static class ProgressionPlanner
 	static void WishBossDrop(Bot bot, int itemType)
 	{
 		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss))
+		{
+			if (!bot.Faction.WantsRefight(boss.BossType))
+				BotDiagnostics.Log(bot, $"wants to refight {boss.Name} for {Lang.GetItemNameValue(itemType)} (goal {ProgressionGoals.Unwrap(planning)?.Describe()})");
 			bot.Faction.WishRefight(boss.BossType, gearPlanning > 0);
+		}
 	}
 
 	static bool CanMineAny(Bot bot, TileSource tiles)

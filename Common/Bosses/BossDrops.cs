@@ -12,7 +12,25 @@ public static class BossDrops
 
 	static Dictionary<int, BossChallenge> sourceByItem;
 
-	public static BossChallenge SourceOf(int itemType) => (sourceByItem ??= Build()).GetValueOrDefault(itemType);
+	static bool builtForCrimson;
+
+	public static BossChallenge SourceOf(int itemType)
+	{
+		if (sourceByItem == null || builtForCrimson != WorldGen.crimson)
+		{
+			builtForCrimson = WorldGen.crimson;
+			sourceByItem = Build();
+		}
+		return sourceByItem.GetValueOrDefault(itemType);
+	}
+
+	static bool DropsInThisWorld(DropRateInfo drop)
+	{
+		if (drop.conditions == null)
+			return true;
+		var info = new DropAttemptInfo { IsExpertMode = Main.expertMode, IsMasterMode = Main.masterMode };
+		return drop.conditions.All(condition => condition is not (Conditions.IsCrimson or Conditions.IsCorruption or Conditions.IsCrimsonAndNotExpert or Conditions.IsCorruptionAndNotExpert) || condition.CanDrop(info));
+	}
 
 	static Dictionary<int, int> bagByBoss;
 
@@ -53,7 +71,7 @@ public static class BossDrops
 				int item = drops[i].itemId;
 				if (ItemID.Sets.BossBag[item])
 					Report(Main.ItemDropsDB.GetRulesForItemID(item), drops);
-				else if (drops[i].dropRate >= ReliableDropRate && !Planning.RecipeIndex.For(item).Any() && !IsFurniture(item))
+				else if (drops[i].dropRate >= ReliableDropRate && DropsInThisWorld(drops[i]) && !Planning.RecipeIndex.For(item).Any() && !IsFurniture(item))
 					map.TryAdd(item, challenge);
 			}
 		}
