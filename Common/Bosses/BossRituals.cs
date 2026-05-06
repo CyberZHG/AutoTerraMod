@@ -88,7 +88,7 @@ public static class BossRituals
 	{
 		if (KnownTile(bot, BulbTiles) is Point bulb)
 			return new SummonBossStep(challenge, trigger, bulb.ToWorldCoordinates(), bulb);
-		return new ScoutStep(Landmark.Jungle, true);
+		return new ScoutStep(Landmark.Jungle, true, TileID.PlanteraBulb);
 	}
 
 	public static bool IsFishingPole(Item item) => item.fishingPole > 0;

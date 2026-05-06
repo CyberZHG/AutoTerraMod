@@ -642,10 +642,18 @@ public sealed class ScoutTask : BotTask
 		return 50f + Traits.Exploring * 30f;
 	}
 
+	ScoutStep destinationFor;
+	uint destinationChosenAt;
+	const uint KeepDestinationTicks = 3 * 3600;
+
 	public override void Start()
 	{
 		base.Start();
+		if (step == destinationFor && Main.GameUpdateCount - destinationChosenAt < KeepDestinationTicks && Vector2.Distance(Bot.Center, destination) > 48f)
+			return;
 		destination = ChooseDestination();
+		destinationFor = step;
+		destinationChosenAt = Main.GameUpdateCount;
 		BotDiagnostics.Log(Bot, $"scouting for {step.Landmark} toward {destination.ToTileCoordinates()}");
 	}
 
@@ -659,8 +667,9 @@ public sealed class ScoutTask : BotTask
 		{
 			int column = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
 			int surface = TileQuery.SurfaceY(column);
-			int deepest = Math.Min(Math.Max(surface + MaxShrineDepth, (int)Main.rockLayer + ShrineDepthBelowRock), Main.UnderworldLayer - UnderworldMargin);
-			var spot = OpenTileNear(new Point(column, Main.rand.Next(surface + MinShrineDepth, deepest)));
+			int deepest = step.SeekTile == TileID.PlanteraBulb ? Main.UnderworldLayer - UnderworldMargin : Math.Min(Math.Max(surface + MaxShrineDepth, (int)Main.rockLayer + ShrineDepthBelowRock), Main.UnderworldLayer - UnderworldMargin);
+			int shallowest = step.SeekTile == TileID.PlanteraBulb ? Math.Max(surface + MinShrineDepth, (int)Main.rockLayer) : surface + MinShrineDepth;
+			var spot = OpenTileNear(new Point(column, Main.rand.Next(shallowest, deepest)));
 			return new Vector2(spot.X * 16f + 8f, spot.Y * 16f);
 		}
 		if (step.Landmark == Landmark.Dungeon && knowledge.LandmarkOf(Landmark.Jungle) is Point jungle)
@@ -686,6 +695,7 @@ public sealed class ScoutTask : BotTask
 		bool moving = TravelOrTunnel(destination, 48f);
 		if (moving && !Bot.Motor.HasArrived)
 			return;
+		destinationFor = null;
 		if (SearchingShrines)
 			BotWorldSystem.KnowledgeOf(Bot.Faction).FruitlessShrineSearches++;
 		IsFinished = true;
