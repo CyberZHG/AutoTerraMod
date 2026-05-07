@@ -663,6 +663,8 @@ public sealed class ScoutTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (step.Landmark == Landmark.Underworld)
 			return new Vector2(here.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
+		if (step.SeekTile == TileID.PlanteraBulb && knowledge.SpanOf(step.Landmark) is var (bulbMinX, bulbMaxX) && CavernJungleSpot(knowledge, bulbMinX, bulbMaxX) is Point cavern)
+			return new Vector2(cavern.X * 16f + 8f, cavern.Y * 16f);
 		if (step.Underground && knowledge.SpanOf(step.Landmark) is var (minX, maxX))
 		{
 			int column = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
@@ -681,6 +683,41 @@ public sealed class ScoutTask : BotTask
 			x = Utils.Clamp(x, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
 		}
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+	}
+
+	const int CavernSpotTries = 80;
+	const int JungleProbe = 4;
+	const int BulbFloorMargin = 4;
+
+	static Point? CavernJungleSpot(Factions.FactionKnowledge knowledge, int minX, int maxX)
+	{
+		Point? fallback = null;
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		for (int attempt = 0; attempt < CavernSpotTries; attempt++)
+		{
+			int x = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
+			int y = Main.rand.Next((int)Main.rockLayer, Main.UnderworldLayer - BulbFloorMargin);
+			if (!NearJungleGrass(x, y))
+				continue;
+			var spot = OpenTileNear(new Point(x, y));
+			if (!knowledge.IsExplored(spot.X / cell, spot.Y / cell))
+				return spot;
+			fallback ??= spot;
+		}
+		return fallback;
+	}
+
+	static bool NearJungleGrass(int x, int y)
+	{
+		for (int dx = -JungleProbe; dx <= JungleProbe; dx++)
+		{
+			for (int dy = -JungleProbe; dy <= JungleProbe; dy++)
+			{
+				if (WorldGen.InWorld(x + dx, y + dy, 2) && Main.tile[x + dx, y + dy].HasTile && Main.tile[x + dx, y + dy].TileType == TileID.JungleGrass)
+					return true;
+			}
+		}
+		return false;
 	}
 
 	public override void Tick()
