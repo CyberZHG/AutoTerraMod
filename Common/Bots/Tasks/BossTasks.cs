@@ -685,6 +685,22 @@ public sealed class ScoutTask : BotTask
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
 	}
 
+	const int SurfaceFirstSpan = 150;
+	const int SurfaceFirstDepth = 60;
+	const int AboveDestinationReach = 30;
+
+	Vector2? SurfaceWaypoint()
+	{
+		var goal = destination.ToTileCoordinates();
+		var here = Bot.CenterTile;
+		int surface = TileQuery.SurfaceY(goal.X);
+		if (goal.Y < surface + SurfaceFirstDepth || Math.Abs(goal.X - here.X) <= SurfaceFirstSpan && here.Y > surface)
+			return null;
+		if (Math.Abs(goal.X - here.X) <= AboveDestinationReach)
+			return null;
+		return new Vector2(goal.X * 16f + 8f, (surface - 2) * 16f);
+	}
+
 	const int CavernSpotTries = 80;
 	const int JungleProbe = 4;
 	const int BulbFloorMargin = 4;
@@ -727,6 +743,12 @@ public sealed class ScoutTask : BotTask
 			BotDiagnostics.Log(Bot, $"discovered {step.Landmark}{(step.Underground ? " shrine" : "")}");
 			Bot.Watchdog.RecordProgress();
 			IsFinished = true;
+			return;
+		}
+		if (SurfaceWaypoint() is Vector2 waypoint)
+		{
+			if (!TravelOrTunnel(waypoint, 48f))
+				IsFinished = true;
 			return;
 		}
 		bool moving = TravelOrTunnel(destination, 48f);

@@ -62,6 +62,8 @@ public sealed class StoreTask : ChestVisitTask
 	const int FullishSlots = 40;
 	const int PurgeBelowFreeSlots = 20;
 	const int OpportunisticSlots = 30;
+	const int MinimumStoreBatch = 8;
+	const int CrampedSlots = 3;
 	const float NearBase = 16f * 12f;
 	const float SurplusTreasurePriority = 45f;
 	const float StoreAfterDeathPriority = 82f;
@@ -88,7 +90,7 @@ public sealed class StoreTask : ChestVisitTask
 			return StoreAfterDeathPriority;
 		if (used < OpportunisticSlots || !hasItemsToStore || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
 			return score;
-		if (used >= FullishSlots)
+		if (used >= FullishSlots && (used >= Inventory.MainSlotCount - CrampedSlots || Kit.ItemsToStore(Bot).Count() >= MinimumStoreBatch))
 			return Math.Max(score, 60f + (used - FullishSlots) * 3f);
 		return Math.Max(score, atBase ? 40f : 0f);
 	}
