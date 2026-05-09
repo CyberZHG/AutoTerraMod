@@ -29,7 +29,41 @@ public sealed class BossCredit : GlobalNPC
 
 	static readonly Dictionary<int, int> summoners = new();
 
-	public static void RecordSummoner(BossChallenge challenge, int factionId) => summoners[challenge.BossType] = factionId;
+	public static void RecordSummoner(BossChallenge challenge, int factionId, float expectedDps)
+	{
+		summoners[challenge.BossType] = factionId;
+		expectations[challenge.BossType] = (factionId, expectedDps, Main.GameUpdateCount);
+	}
+
+	static readonly Dictionary<int, (int factionId, float dps, uint since)> expectations = new();
+
+	const float CalibrationAfterSeconds = 30f;
+	const float MinCalibration = 0.05f;
+	const float MaxCalibration = 1.5f;
+	const float CalibrationBlend = 0.6f;
+
+	public static void CheckCalibration(BossChallenge challenge, bool over)
+	{
+		if (!expectations.TryGetValue(challenge.BossType, out var expected) || FactionById(expected.factionId) is not { } faction)
+			return;
+		float seconds = (Main.GameUpdateCount - expected.since) / 60f;
+		if (seconds < CalibrationAfterSeconds || expected.dps <= 0f)
+		{
+			if (over)
+				expectations.Remove(challenge.BossType);
+			return;
+		}
+		long dealt = damageByFight.TryGetValue(challenge.BossType, out var byFaction) ? byFaction.GetValueOrDefault(expected.factionId) : 0;
+		float ratio = Microsoft.Xna.Framework.MathHelper.Clamp(dealt / seconds / expected.dps, MinCalibration, MaxCalibration);
+		float old = faction.BossDpsCalibration.GetValueOrDefault(challenge.BossType, 1f);
+		float updated = over ? Microsoft.Xna.Framework.MathHelper.Lerp(old, ratio * old, CalibrationBlend) : System.Math.Min(old, ratio * old);
+		if (over)
+			expectations.Remove(challenge.BossType);
+		else
+			expectations[challenge.BossType] = (expected.factionId, expected.dps * updated / old, expected.since);
+		faction.BossDpsCalibration[challenge.BossType] = updated;
+		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} against {expected.dps:0} expected; damage estimate now x{updated:0.00}");
+	}
 
 	public static bool SummonedByOther(NPC boss, int factionId) =>
 		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId;
@@ -38,6 +72,7 @@ public sealed class BossCredit : GlobalNPC
 	{
 		if (!BossCatalog.IsBossAlive(challenge))
 		{
+			CheckCalibration(challenge, over: true);
 			summoners.Remove(challenge.BossType);
 			damageByFight.Remove(challenge.BossType);
 			fightersByFight.Remove(challenge.BossType);
@@ -198,8 +233,10 @@ public sealed class BossCredit : GlobalNPC
 		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null)
 			lastBossDeath = (npc.Center, Main.GameUpdateCount);
 		var challenge = BossCatalog.ChallengeOf(npc.type);
-		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.Remove(challenge.BossType, out var byFaction))
+		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.ContainsKey(challenge.BossType))
 			return;
+		CheckCalibration(challenge, over: true);
+		damageByFight.Remove(challenge.BossType, out var byFaction);
 		if (fightersByFight.Remove(challenge.BossType, out var fighters))
 			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
