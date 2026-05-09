@@ -47,6 +47,7 @@ public sealed class BotNPC : ModNPC
 			return;
 		}
 		using (Perf.Measure(PerfSection.BotAi))
+		using (Common.World.ShrineGuard.BotActing())
 			bot.Brain.Tick(NPC);
 	}
 

@@ -108,6 +108,8 @@ public sealed class BossCredit : GlobalNPC
 		if (!damageByFight.TryGetValue(challenge.BossType, out var byFaction))
 			damageByFight[challenge.BossType] = byFaction = new Dictionary<int, long>();
 		byFaction[factionId] = byFaction.GetValueOrDefault(factionId) + damage;
+		if (!expectations.ContainsKey(challenge.BossType) && BotWorldSystem.FindBot(botId) is { } striker)
+			expectations[challenge.BossType] = (factionId, BossReadiness.Evaluate(striker.Faction, challenge, striker).TeamDps, Main.GameUpdateCount);
 		if (!fightersByFight.TryGetValue(challenge.BossType, out var fighters))
 			fightersByFight[challenge.BossType] = fighters = new HashSet<int>();
 		fighters.Add(botId);

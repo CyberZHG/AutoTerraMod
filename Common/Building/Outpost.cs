@@ -281,14 +281,17 @@ public static class Outpost
 			return solid * 2 >= Width;
 		}
 
-		public bool Buildable()
+		public bool Buildable(bool wetShell = false)
 		{
 			if (!WorldGen.InWorld(Left, Ceiling, 20) || !WorldGen.InWorld(Right, Floor, 20))
 				return false;
-			foreach (var tile in Interior().Concat(Shell()))
+			var interior = Interior().ToHashSet();
+			foreach (var tile in interior.Concat(Shell()))
 			{
 				var here = Main.tile[tile.X, tile.Y];
-				if (here.LiquidAmount > 0 || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y) || InBridgeClearance(tile.X, tile.Y))
+				if (here.LiquidAmount > 0 && (!wetShell || interior.Contains(tile)))
+					return false;
+				if (World.TileQuery.SupportsShrine(tile.X, tile.Y) || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y) || InBridgeClearance(tile.X, tile.Y))
 					return false;
 				if (here.HasTile && (TileID.Sets.BasicChest[here.TileType] || !WorldGen.CanKillTile(tile.X, tile.Y)))
 					return false;

@@ -19,11 +19,14 @@ public sealed class OutpostTask : BotTask
 	const int SiteShiftX = 8;
 	const int SiteShiftY = 4;
 
-	static System.Collections.Generic.IEnumerable<(int, int)> SiteOffsets()
+	const int ArenaShiftX = 20;
+	const int ArenaShiftY = 10;
+
+	static System.Collections.Generic.IEnumerable<(int, int)> SiteOffsets(int shiftX, int shiftY)
 	{
-		for (int distance = 0; distance <= SiteShiftX + SiteShiftY; distance++)
-			for (int dy = -SiteShiftY; dy <= SiteShiftY; dy++)
-				for (int dx = -SiteShiftX; dx <= SiteShiftX; dx++)
+		for (int distance = 0; distance <= shiftX + shiftY; distance++)
+			for (int dy = -shiftY; dy <= shiftY; dy++)
+				for (int dx = -shiftX; dx <= shiftX; dx++)
 					if (System.Math.Abs(dx) + System.Math.Abs(dy) == distance)
 						yield return (dx, dy);
 	}
@@ -152,19 +155,9 @@ public sealed class OutpostTask : BotTask
 		bridgeFeet = aboveBridge ? bridge.Y : null;
 		if (aboveBridge)
 			feet = new Point(feet.X, bridge.Y - bridge.Headroom - 1);
-		Outpost.Site found = null;
-		foreach (var (dx, dy) in SiteOffsets())
-		{
-			var spot = new Point(feet.X + dx, feet.Y + (aboveBridge ? 0 : dy));
-			if (!aboveBridge && !StandableGround(spot))
-				continue;
-			var candidate = new Outpost.Site(spot);
-			if (!ActiveSites.Any(other => other.Overlaps(candidate)) && candidate.Buildable() && (aboveBridge || candidate.HasGround()) && !candidate.NearBed())
-			{
-				found = candidate;
-				break;
-			}
-		}
+		var found = FindSite(feet, aboveBridge, SiteShiftX, SiteShiftY, embedded: false);
+		if (found == null && arenaSite && !aboveBridge)
+			found = FindSite(feet, false, ArenaShiftX, ArenaShiftY, embedded: true);
 		if (found == null)
 		{
 			BotDiagnostics.Log(Bot, $"no room for an outpost near {feet}");
@@ -178,6 +171,20 @@ public sealed class OutpostTask : BotTask
 		failures = 0;
 		BotDiagnostics.Log(Bot, $"building an outpost at {site.Left},{site.Floor}");
 		return true;
+	}
+
+	static Outpost.Site FindSite(Point feet, bool aboveBridge, int shiftX, int shiftY, bool embedded)
+	{
+		foreach (var (dx, dy) in SiteOffsets(shiftX, shiftY))
+		{
+			var spot = new Point(feet.X + dx, feet.Y + (aboveBridge ? 0 : dy));
+			if (!aboveBridge && !embedded && !StandableGround(spot))
+				continue;
+			var candidate = new Outpost.Site(spot);
+			if (!ActiveSites.Any(other => other.Overlaps(candidate)) && candidate.Buildable(wetShell: embedded) && (aboveBridge || candidate.HasGround()) && !candidate.NearBed())
+				return candidate;
+		}
+		return null;
 	}
 
 	static readonly System.Collections.Generic.List<Outpost.Site> ActiveSites = new();

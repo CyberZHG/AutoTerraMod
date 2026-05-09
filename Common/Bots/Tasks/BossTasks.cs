@@ -459,6 +459,7 @@ public sealed class SummonTask : BotTask
 				Bot.Motor.Face(ritualTarget);
 				ToolResult dug;
 				using (AvatarPresence.Enter())
+				using (ShrineGuard.AllowBulb())
 					dug = Bot.Hands.Dig(bulbTile);
 				if (dug is ToolResult.Unbreakable or ToolResult.NoTool)
 					return Abandon($"cannot break the bulb at {bulbTile}: {dug}");
