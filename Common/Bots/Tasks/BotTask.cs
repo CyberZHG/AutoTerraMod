@@ -84,7 +84,7 @@ public abstract class BotTask
 
 	const float AspirationCap = 25f;
 
-	protected float Aspire(float score) => Bosses.BossCredit.NextChallengeFor(Bot.Faction) == null ? score : System.Math.Min(score, AspirationCap);
+	protected float Aspire(float score) => Bosses.BossCredit.MainLineDone(Bot.Faction) ? score : System.Math.Min(score, AspirationCap);
 
 	const float BedsideReach = 16f * 4f;
 
@@ -258,6 +258,8 @@ public abstract class BotTask
 			return true;
 		if (BridgeLeg(target) is Vector2 leg)
 			target = leg;
+		else if (SurfaceFirst(target) is Vector2 overland)
+			target = overland;
 		campExit = null;
 		if (Bot.Motor.Tunneling && Main.GameUpdateCount - tunnelingSince > TunnelPathRetryTicks)
 			Bot.Motor.Stop();
@@ -311,6 +313,33 @@ public abstract class BotTask
 			}
 		}
 		return null;
+	}
+
+	const int SurfaceFirstSpan = 150;
+	const int SurfaceFirstDepth = 60;
+
+	Vector2? SurfaceFirst(Vector2 target)
+	{
+		var goal = target.ToTileCoordinates();
+		var here = Bot.CenterTile;
+		if (goal.Y >= Main.UnderworldLayer || System.Math.Abs(goal.X - here.X) <= SurfaceFirstSpan || OnCorridorRow(goal))
+			return null;
+		int surface = TileQuery.SurfaceY(goal.X);
+		if (goal.Y < surface + SurfaceFirstDepth)
+			return null;
+		return new Vector2(goal.X * 16f + 8f, (surface - 2) * 16f);
+	}
+
+	static bool OnCorridorRow(Point goal)
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (faction.Hellbridge is { } bridge && System.Math.Abs(goal.Y - bridge.Y) <= BridgeRowSlack)
+				return true;
+			if (World.Highway.For(faction).Any(highway => System.Math.Abs(goal.Y - highway.Y) <= BridgeRowSlack && highway.Spans(goal.X)))
+				return true;
+		}
+		return false;
 	}
 
 	static bool Along(int row, Point here, Point goal) => System.Math.Abs(here.Y - row) <= BridgeRowSlack && System.Math.Abs(goal.Y - row) <= BridgeRowSlack;

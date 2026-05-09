@@ -37,19 +37,87 @@ public static class BossReadiness
 		if (Main.expertMode)
 			bossLife *= 1f + ExpertScalingPerExtraPlayer * Math.Max(0, fighters.Count - 1);
 		float bossDamage = sample.damage * mode.EnemyDamageMultiplier * challenge.ThreatMultiplier;
-		float teamDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense)) * challenge.Exposure * faction.BossDpsCalibration.GetValueOrDefault(challenge.BossType, 1f);
-		float killSeconds = teamDps > 0 ? bossLife / teamDps : float.MaxValue;
 		float requiredRatio = MathHelper.Lerp(CautiousRatio, BraveRatio, summoner.Personality.Courage);
+		float burstDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense)) * challenge.Exposure;
+		float expectedSeconds = burstDps > 0 ? Math.Min(bossLife / burstDps, MaxConsideredFightSeconds) : MaxConsideredFightSeconds;
+		float rawDps = fighters.Sum(bot => SustainedDamagePerSecond(bot, sample.defense, expectedSeconds)) * challenge.Exposure;
+		var raw = Report(fighters, rawDps, bossLife, bossDamage, requiredRatio);
+		float calibration = Calibration(faction, challenge.BossType);
+		var calibrated = Report(fighters, rawDps * calibration, bossLife, bossDamage, requiredRatio);
+		if (present == null)
+			NotePlateau(faction, challenge.BossType, raw.KillSeconds <= 0 ? 0f : raw.SurviveSeconds / (raw.KillSeconds * raw.RequiredRatio));
+		if (!calibrated.IsReady && raw.IsReady && GearPlateaued(faction, challenge.BossType))
+			return raw;
+		return calibrated;
+	}
+
+	static ReadinessReport Report(List<Bot> fighters, float teamDps, float bossLife, float bossDamage, float requiredRatio)
+	{
+		float killSeconds = teamDps > 0 ? bossLife / teamDps : float.MaxValue;
 		float fightSeconds = Math.Min(killSeconds * requiredRatio, MaxConsideredFightSeconds);
 		float surviveSeconds = fighters.Sum(bot => SurvivalSeconds(bot, bossDamage, fightSeconds));
 		return new ReadinessReport(fighters.Count, teamDps, bossLife, killSeconds, surviveSeconds, requiredRatio);
 	}
 
-	public static float DamagePerSecond(Bot bot, int bossDefense)
+	const float UnfoughtPrior = 0.6f;
+
+	public static float Calibration(Faction faction, int bossType)
+	{
+		if (faction.BossDpsCalibration.TryGetValue(bossType, out float learned))
+			return learned;
+		if (faction.BossDpsCalibration.Count == 0)
+			return UnfoughtPrior;
+		return (float)Math.Exp(faction.BossDpsCalibration.Values.Average(value => Math.Log(Math.Max(value, 0.01f))));
+	}
+
+	const uint PlateauTicks = 20 * 3600;
+	const float PlateauGain = 0.02f;
+	static readonly Dictionary<(int faction, int boss), (float best, uint improvedAt)> plateaus = new();
+
+	static void NotePlateau(Faction faction, int bossType, float confidence)
+	{
+		var key = (faction.Id, bossType);
+		if (!plateaus.TryGetValue(key, out var entry) || confidence > entry.best * (1f + PlateauGain))
+			plateaus[key] = (Math.Max(confidence, entry.best), Main.GameUpdateCount);
+	}
+
+	static bool GearPlateaued(Faction faction, int bossType) =>
+		plateaus.TryGetValue((faction.Id, bossType), out var entry) && Main.GameUpdateCount - entry.improvedAt > PlateauTicks;
+
+	const float ManaRegenShare = 0.08f;
+
+	public static float SustainedDamagePerSecond(Bot bot, int bossDefense, float fightSeconds)
 	{
 		var weapon = bot.Hands.BestWeapon();
 		if (weapon == null)
 			return 0f;
+		float burst = DamagePerSecond(bot, bossDefense, weapon);
+		float usesPerSecond = 60f / Math.Max(1, CombinedHooks.TotalAnimationTime(weapon.useAnimation, bot.Avatar, weapon));
+		float lasting = fightSeconds;
+		if (BotHands.IsRangedWeapon(weapon))
+			lasting = Math.Min(fightSeconds, AmmoFor(bot.Avatar, weapon) / usesPerSecond);
+		else if (BotHands.IsMagicWeapon(weapon))
+		{
+			var avatar = bot.Avatar;
+			float cost = Math.Max(1, avatar.GetManaCost(weapon));
+			float potions = Inventory.Items(avatar).Where(item => item.healMana > 0).Sum(item => (float)item.healMana * item.stack);
+			float mana = avatar.statMana + potions + avatar.statManaMax2 * ManaRegenShare * fightSeconds;
+			lasting = Math.Min(fightSeconds, mana / cost / usesPerSecond);
+		}
+		if (lasting >= fightSeconds)
+			return burst;
+		var fallback = bot.Hands.BestFallbackWeapon();
+		float fallbackDps = fallback == null ? 0f : DamagePerSecond(bot, bossDefense, fallback);
+		return (burst * lasting + fallbackDps * (fightSeconds - lasting)) / fightSeconds;
+	}
+
+	static float AmmoFor(Player avatar, Item weapon) =>
+		Inventory.Items(avatar).Where(item => item.ammo == weapon.useAmmo).Sum(item => item.consumable ? (float)item.stack : float.MaxValue / 4f);
+
+	public static float DamagePerSecond(Bot bot, int bossDefense) => bot.Hands.BestWeapon() is Item weapon ? DamagePerSecond(bot, bossDefense, weapon) : 0f;
+
+	static float DamagePerSecond(Bot bot, int bossDefense, Item weapon)
+	{
 		var avatar = bot.Avatar;
 		float perHit = Math.Max(1f, avatar.GetWeaponDamage(weapon) * (1f + avatar.GetWeaponCrit(weapon) / 100f) - bossDefense * DefenseHalving);
 		float hitsPerSecond = 60f / Math.Max(1, CombinedHooks.TotalAnimationTime(weapon.useAnimation, avatar, weapon));

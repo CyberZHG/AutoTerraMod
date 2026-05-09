@@ -99,6 +99,8 @@ public sealed class SummonTask : BotTask
 		}
 		if (!TeamGathered())
 			return;
+		if (AwaitingArenaOutpost())
+			return;
 		if (!Perform(ritualTarget))
 			return;
 		Bot.Faction.Rally = null;
@@ -107,6 +109,27 @@ public sealed class SummonTask : BotTask
 		BossCredit.RecordSummoner(step.Challenge, Bot.FactionId, BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot).TeamDps);
 		BotDiagnostics.Log(Bot, $"summoned {step.Challenge.Name} via {step.Trigger.GetType().Name}");
 		IsFinished = true;
+	}
+
+	const uint ArenaOutpostWaitTicks = 5 * 3600;
+	uint arenaWaitStarted;
+
+	bool AwaitingArenaOutpost()
+	{
+		var faction = Bot.Faction;
+		if (!Building.Outpost.IsDistantArena(faction, step.Place) || Building.Outpost.ArenaBedFor(faction) != null)
+			return false;
+		if (arenaWaitStarted == 0 || Main.GameUpdateCount - arenaWaitStarted > ArenaOutpostWaitTicks * 2)
+		{
+			arenaWaitStarted = Main.GameUpdateCount;
+			BotDiagnostics.Log(Bot, $"waiting for an arena outpost before summoning {step.Challenge.Name}");
+		}
+		if (Main.GameUpdateCount - arenaWaitStarted > ArenaOutpostWaitTicks)
+			return false;
+		Bot.Motor.Stop();
+		faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyTicks);
+		Bot.Watchdog.RecordProgress();
+		return true;
 	}
 
 	bool Assembled()
@@ -685,22 +708,6 @@ public sealed class ScoutTask : BotTask
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
 	}
 
-	const int SurfaceFirstSpan = 150;
-	const int SurfaceFirstDepth = 60;
-	const int AboveDestinationReach = 30;
-
-	Vector2? SurfaceWaypoint()
-	{
-		var goal = destination.ToTileCoordinates();
-		var here = Bot.CenterTile;
-		int surface = TileQuery.SurfaceY(goal.X);
-		if (goal.Y < surface + SurfaceFirstDepth || Math.Abs(goal.X - here.X) <= SurfaceFirstSpan && here.Y > surface)
-			return null;
-		if (Math.Abs(goal.X - here.X) <= AboveDestinationReach)
-			return null;
-		return new Vector2(goal.X * 16f + 8f, (surface - 2) * 16f);
-	}
-
 	const int CavernSpotTries = 80;
 	const int JungleProbe = 4;
 	const int BulbFloorMargin = 4;
@@ -743,12 +750,6 @@ public sealed class ScoutTask : BotTask
 			BotDiagnostics.Log(Bot, $"discovered {step.Landmark}{(step.Underground ? " shrine" : "")}");
 			Bot.Watchdog.RecordProgress();
 			IsFinished = true;
-			return;
-		}
-		if (SurfaceWaypoint() is Vector2 waypoint)
-		{
-			if (!TravelOrTunnel(waypoint, 48f))
-				IsFinished = true;
 			return;
 		}
 		bool moving = TravelOrTunnel(destination, 48f);

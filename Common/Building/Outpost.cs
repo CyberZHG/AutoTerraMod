@@ -174,6 +174,8 @@ public static class Outpost
 		return serving && BedStands(bed) ? bed : null;
 	}
 
+	public static bool IsDistantArena(Factions.Faction faction, Vector2 point) => Vector2.Distance(point, faction.BaseCenter) > ArenaOutpostDistance;
+
 	public static bool NearArenaSite(Bot bot) =>
 		bot.Faction.Rally is { } rally && Vector2.Distance(bot.Center, rally.point) < ArenaSiteReach;
 

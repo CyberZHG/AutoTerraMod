@@ -122,11 +122,17 @@ public sealed class BossCredit : GlobalNPC
 		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)));
 	}
 
-	static bool Deferred(Faction faction, BossChallenge challenge) =>
+	static readonly HashSet<int> OptionalBosses = new() { NPCID.DukeFishron, NPCID.HallowBoss };
+
+	public static bool IsOptional(BossChallenge challenge) => OptionalBosses.Contains(challenge.BossType);
+
+	static bool Deferred(Faction faction, BossChallenge challenge) => IsOptional(challenge) ||
 		challenge.BossType == NPCID.SkeletronHead && !NPC.AnyNPCs(NPCID.OldMan)
 		&& !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0);
 
 	public static BossChallenge NextChallengeFor(Faction faction) => OpenChallengesFor(faction).FirstOrDefault();
+
+	public static bool MainLineDone(Faction faction) => OpenChallengesFor(faction).All(IsOptional);
 
 	public static int DefeatedCount(Faction faction) =>
 		BossCatalog.Challenges.Count(challenge => BossCatalog.AppliesToThisWorld(challenge) && HasDefeated(faction, challenge));
