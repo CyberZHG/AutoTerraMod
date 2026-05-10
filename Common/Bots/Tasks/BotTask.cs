@@ -272,9 +272,10 @@ public abstract class BotTask
 			return true;
 		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
 			return false;
-		if ((Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance || InOwnShaft()) && DeepDetour(target, radius))
+		bool beneath = BelowWithinReach(target);
+		if (!beneath && (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance || InOwnShaft()) && DeepDetour(target, radius))
 			return true;
-		if (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
+		if (!beneath && Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.MoveTo(target, radius);
@@ -316,6 +317,13 @@ public abstract class BotTask
 	}
 
 	const int SurfaceFirstSpan = 150;
+
+	bool BelowWithinReach(Vector2 target)
+	{
+		var goal = target.ToTileCoordinates();
+		var here = Bot.CenterTile;
+		return goal.Y < Main.UnderworldLayer && goal.Y - here.Y > System.Math.Abs(goal.X - here.X) && System.Math.Abs(goal.X - here.X) <= SurfaceFirstSpan && !InOwnShaft();
+	}
 	const int SurfaceFirstDepth = 60;
 
 	Vector2? SurfaceFirst(Vector2 target)
