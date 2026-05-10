@@ -157,7 +157,7 @@ public static class Kit
 
 	public static HashSet<int> ComputePlannedItemTypes(Bot bot)
 	{
-		var types = new HashSet<int>();
+		var types = new HashSet<int>(ProgressionPlanner.ChainItems);
 		switch (bot.Brain.Plan)
 		{
 			case GatherStep gather:

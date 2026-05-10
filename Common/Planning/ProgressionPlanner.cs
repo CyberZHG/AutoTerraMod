@@ -31,10 +31,15 @@ public static class ProgressionPlanner
 
 	const double SlowPlanMilliseconds = 10.0;
 
+	static readonly HashSet<int> chainItems = new();
+
+	public static IReadOnlyCollection<int> ChainItems => chainItems;
+
 	public static PlanStep NextStep(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{
 		long began = System.Diagnostics.Stopwatch.GetTimestamp();
 		resolveCalls = 0;
+		chainItems.Clear();
 		var result = NextStepInner(bot, isSuppressed, out source);
 		double total = (System.Diagnostics.Stopwatch.GetTimestamp() - began) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 		if (total > SlowPlanMilliseconds)
@@ -568,6 +573,9 @@ public static class ProgressionPlanner
 			var ingredient = ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
 			if (have >= required.stack && ingredient is BlockedStep)
 				continue;
+			if (ingredient is not BlockedStep)
+				foreach (var part in recipe.requiredItem)
+					chainItems.UnionWith(RecipeIndex.AcceptedTypes(recipe, part));
 			return ingredient;
 		}
 		return new CraftStep(recipe);
