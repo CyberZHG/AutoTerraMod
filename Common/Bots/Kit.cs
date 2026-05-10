@@ -43,6 +43,7 @@ public static class Kit
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
+				|| bot.RecentlyWithdrew(item.type)
 				|| bridgeKit && BridgeKitGoal.IsKitItem(item)
 				|| Tasks.CraftTask.IsPortableStation(item)
 				|| item.type == ItemID.TeleportationPotion

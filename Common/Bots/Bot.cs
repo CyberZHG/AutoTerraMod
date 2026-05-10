@@ -70,6 +70,13 @@ public sealed class Bot
 
 	public Vector2? LastRecallTarget { get; set; }
 
+	public System.Collections.Generic.Dictionary<int, uint> WithdrawnAt { get; } = new();
+
+	const uint WithdrawnKeepTicks = 5 * 60 * 60;
+
+	public bool RecentlyWithdrew(int itemType) =>
+		WithdrawnAt.TryGetValue(itemType, out uint at) && Main.GameUpdateCount - at < WithdrawnKeepTicks;
+
 	const uint MiningCommitmentTicks = 20 * 60 * 60;
 	const int UndergroundDepth = 20;
 	const uint SessionCheckTicks = 60;

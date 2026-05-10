@@ -363,7 +363,7 @@ public sealed class OutpostTask : BotTask
 	{
 		var bed = FindBed().Value;
 		bool usable = Outpost.IsUsable(bed);
-		if (arenaSite)
+		if (arenaSite && usable)
 			Bot.Faction.ArenaBed = bed;
 		else if (usable)
 		{

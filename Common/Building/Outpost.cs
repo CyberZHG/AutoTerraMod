@@ -106,7 +106,7 @@ public static class Outpost
 				guarded.Add((bed, null));
 			else
 			{
-				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room, respawning at home again");
+				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room ({WorldGen.roomCheckFailureReason}), respawning at home again");
 				bot.OutpostBed = null;
 			}
 		}
@@ -171,7 +171,18 @@ public static class Outpost
 			return null;
 		var at = bed.ToWorldCoordinates();
 		bool serving = faction.Rally is { } rally ? Vector2.Distance(rally.point, at) < ArenaBedReach : Bosses.BossCatalog.NearestActiveBoss(at, ArenaFightReach) != null;
-		return serving && BedStands(bed) ? bed : null;
+		return serving && UsableCached(bed) ? bed : null;
+	}
+
+	static readonly Dictionary<Point, (uint at, bool usable)> usableCache = new();
+
+	static bool UsableCached(Point bed)
+	{
+		if (usableCache.TryGetValue(bed, out var known) && Main.GameUpdateCount - known.at < ValidationTicks)
+			return known.usable;
+		bool usable = IsUsable(bed);
+		usableCache[bed] = (Main.GameUpdateCount, usable);
+		return usable;
 	}
 
 	public static bool IsDistantArena(Factions.Faction faction, Vector2 point) => Vector2.Distance(point, faction.BaseCenter) > ArenaOutpostDistance;
@@ -265,7 +276,7 @@ public static class Outpost
 		{
 			for (int x = Left - Width; x <= Right + Width; x++)
 				for (int y = Ceiling - Height; y <= Floor + Height; y++)
-					if (World.TileQuery.TypeAt(new Point(x, y)) == TileID.Beds)
+					if (World.TileQuery.TypeAt(new Point(x, y)) == TileID.Beds && UsableCached(new Point(x, y)))
 						return true;
 			return false;
 		}

@@ -155,6 +155,8 @@ public sealed class WithdrawTask : ChestVisitTask
 	protected override void UseChest(Chest chest)
 	{
 		int taken = BaseStorage.Withdraw(Avatar, chest, step.ItemType, step.Amount);
+		if (taken > 0)
+			Bot.WithdrawnAt[step.ItemType] = Main.GameUpdateCount;
 		BotDiagnostics.Log(Bot, $"withdrew {Lang.GetItemNameValue(step.ItemType)} x{taken}");
 	}
 }
