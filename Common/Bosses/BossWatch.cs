@@ -25,6 +25,8 @@ public sealed class BossWatch : ModSystem
 			return;
 		if (Main.GameUpdateCount % ProgressLogTicks == 0)
 			LogFightProgress();
+		if (Main.GameUpdateCount % BulbCensusTicks == 0 && NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3 && !NPC.downedPlantBoss)
+			LogBulbs();
 		foreach (var (slot, last) in sightings.ToList())
 		{
 			var npc = Main.npc[slot];
@@ -45,6 +47,27 @@ public sealed class BossWatch : ModSystem
 			sightings[npc.whoAmI] = new Sighting(npc.type, npc.life, npc.lifeMax, npc.timeLeft, npc.target, npc.Center, string.Join(",", npc.ai), string.Join(",", npc.localAI));
 		}
 	}
+
+	const int BulbCensusTicks = 5 * 3600;
+
+	static void LogBulbs()
+	{
+		var bulbs = new List<Point>();
+		for (int x = 10; x < Main.maxTilesX - 10; x++)
+		{
+			for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
+			{
+				var tile = Main.tile[x, y];
+				if (tile.HasTile && tile.TileType == Terraria.ID.TileID.PlanteraBulb && tile.TileFrameX % 36 == 0 && tile.TileFrameY == 0)
+					bulbs.Add(new Point(x, y));
+			}
+		}
+		var known = BotWorldSystem.Factions.Select(faction => $"{faction.Name} knows {bulbs.Count(bulb => KnowsBulb(BotWorldSystem.KnowledgeOf(faction), bulb))}");
+		BotDiagnostics.LogWorld($"plantera bulbs in the world: {bulbs.Count} [{string.Join(" ", bulbs.Take(8))}]; {string.Join(", ", known)}");
+	}
+
+	static bool KnowsBulb(Factions.FactionKnowledge knowledge, Point bulb) =>
+		Enumerable.Range(0, 4).Any(part => knowledge.Knows(new Point(bulb.X + part % 2, bulb.Y + part / 2), Terraria.ID.TileID.PlanteraBulb));
 
 	static void LogFightProgress()
 	{

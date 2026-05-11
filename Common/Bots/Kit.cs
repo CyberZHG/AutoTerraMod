@@ -32,28 +32,30 @@ public static class Kit
 		int ammoType = Inventory.Items(avatar).Where(BotHands.IsRangedWeapon).Select(weapon => weapon.useAmmo).FirstOrDefault();
 		var keptByReserve = new Dictionary<int, int>();
 		int ammoKept = 0;
+		var fixtures = Inventory.Items(avatar).Where(IsFixture).GroupBy(FixtureKind).Select(group => group.MaxBy(item => item.stack)).ToHashSet();
+		bool roomy = Inventory.UsedSlots(avatar) <= Inventory.MainSlots - HobbyFreeSlots;
+		bool summoner = BossGoal.IsSummoner(bot);
 		var toStore = new List<Item>();
 		foreach (var item in Inventory.Items(avatar).ToList())
 		{
 			bool keep = essentials.Contains(item)
 				|| item.IsACoin
 				|| (item.potion && item.healLife > 0)
-				|| Junk.IsBossSummon(item)
-				|| BossGoal.IsSummoner(bot) && BossPrep.IsSummonMaterial(bot, item.type)
+				|| Junk.IsBossSummon(item) && (summoner || item.questItem)
+				|| summoner && BossPrep.IsSummonMaterial(bot, item.type)
 				|| (StatBoosters.IsBooster(item.type) && StatBoosters.KeepsForSelf(bot, item.type))
 				|| (ammoType > 0 && item.ammo == ammoType && WithinAmmoReserve(item, ref ammoKept))
 				|| plannedTypes.Contains(item.type)
 				|| bot.RecentlyWithdrew(item.type)
 				|| bridgeKit && BridgeKitGoal.IsKitItem(item)
-				|| Tasks.CraftTask.IsPortableStation(item)
 				|| item.type == ItemID.TeleportationPotion
 				|| Tasks.BotTask.IsRecall(item)
 				|| Explosives.IsExplosive(item)
 				|| item.type == ItemID.Acorn
-				|| Outpost.IsBed(item) || Outpost.IsDoor(item) || Outpost.IsHouseWall(item)
+				|| fixtures.Contains(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
-				|| (Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0)
-				|| (Tasks.CollectorTask.CollectsArmor(bot) && (item.type == ItemID.Mannequin || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0)))
+				|| roomy && Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0
+				|| roomy && (Tasks.CollectorTask.CollectsArmor(bot) && (item.type == ItemID.Mannequin || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0)))
 				|| WithinReserve(item, keptByReserve);
 			if (!keep || IsSurplusTreasure(bot, item))
 				toStore.Add(item);
@@ -62,6 +64,11 @@ public static class Kit
 	}
 
 	const int HotbarSlots = 10;
+	const int HobbyFreeSlots = 12;
+
+	static bool IsFixture(Item item) => Tasks.CraftTask.IsPortableStation(item) || Outpost.IsBed(item) || Outpost.IsDoor(item) || Outpost.IsHouseWall(item);
+
+	static int FixtureKind(Item item) => item.createTile >= 0 ? item.createTile : -item.createWall;
 
 	static Item BackupMelee(Bot bot) => BestOfKind(bot, GearKind.MeleeWeapon);
 

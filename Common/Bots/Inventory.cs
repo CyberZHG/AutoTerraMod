@@ -10,7 +10,7 @@ namespace AutoTerraMod.Common.Bots;
 public static class Inventory
 {
 	public const int StorageSlots = 58;
-	const int MainSlots = 50;
+	public const int MainSlots = 50;
 	public const int MainSlotCount = MainSlots;
 
 	public static InventoryItems Items(Player avatar) => new(avatar.inventory, StorageSlots);
