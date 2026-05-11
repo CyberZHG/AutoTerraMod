@@ -668,7 +668,7 @@ public sealed class ScoutTask : BotTask
 
 	ScoutStep destinationFor;
 	uint destinationChosenAt;
-	const uint KeepDestinationTicks = 3 * 3600;
+	const uint KeepDestinationTicks = 10 * 3600;
 
 	public override void Start()
 	{
@@ -687,7 +687,7 @@ public sealed class ScoutTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (step.Landmark == Landmark.Underworld)
 			return new Vector2(here.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
-		if (step.SeekTile == TileID.PlanteraBulb && knowledge.SpanOf(step.Landmark) is var (bulbMinX, bulbMaxX) && CavernJungleSpot(knowledge, bulbMinX, bulbMaxX) is Point cavern)
+		if (step.SeekTile == TileID.PlanteraBulb && knowledge.SpanOf(step.Landmark) is var (bulbMinX, bulbMaxX) && CavernJungleSpot(knowledge, here, bulbMinX, bulbMaxX) is Point cavern)
 			return new Vector2(cavern.X * 16f + 8f, cavern.Y * 16f);
 		if (step.Underground && knowledge.SpanOf(step.Landmark) is var (minX, maxX))
 		{
@@ -713,9 +713,11 @@ public sealed class ScoutTask : BotTask
 	const int JungleProbe = 4;
 	const int BulbFloorMargin = 4;
 
-	static Point? CavernJungleSpot(Factions.FactionKnowledge knowledge, int minX, int maxX)
+	static Point? CavernJungleSpot(Factions.FactionKnowledge knowledge, Point from, int minX, int maxX)
 	{
 		Point? fallback = null;
+		Point? nearest = null;
+		long nearestDistance = long.MaxValue;
 		int cell = Factions.FactionKnowledge.ExploreCell;
 		for (int attempt = 0; attempt < CavernSpotTries; attempt++)
 		{
@@ -724,11 +726,17 @@ public sealed class ScoutTask : BotTask
 			if (!NearJungleGrass(x, y))
 				continue;
 			var spot = OpenTileNear(new Point(x, y));
-			if (!knowledge.IsExplored(spot.X / cell, spot.Y / cell))
-				return spot;
 			fallback ??= spot;
+			if (knowledge.IsExplored(spot.X / cell, spot.Y / cell))
+				continue;
+			long distance = (long)(spot.X - from.X) * (spot.X - from.X) + (long)(spot.Y - from.Y) * (spot.Y - from.Y);
+			if (distance < nearestDistance)
+			{
+				nearestDistance = distance;
+				nearest = spot;
+			}
 		}
-		return fallback;
+		return nearest ?? fallback;
 	}
 
 	static bool NearJungleGrass(int x, int y)

@@ -430,7 +430,7 @@ public static class ProgressionPlanner
 		if (stored > 0 && !awayFromBase)
 			return new WithdrawStep(itemType, Math.Min(stored, amount - have));
 		var local = ResolveWithoutStorage(context, itemType, amount, have, depth);
-		bool storageCovers = stored >= amount - have && local is GatherStep;
+		bool storageCovers = stored >= amount - have && local is GatherStep && !Outpost.IsAfield(context.Bot);
 		return stored > 0 && (storageCovers || local is BlockedStep && !context.Bot.CommittedToMining && !Outpost.IsAfield(context.Bot)) ? new WithdrawStep(itemType, Math.Min(stored, amount - have)) : local;
 	}
 
@@ -519,7 +519,7 @@ public static class ProgressionPlanner
 
 	static void WishBossDrop(Bot bot, int itemType)
 	{
-		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss))
+		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss) && Building.BaseStorage.Count(bot.Faction, itemType) == 0)
 		{
 			if (!bot.Faction.WantsRefight(boss.BossType))
 				BotDiagnostics.Log(bot, $"wants to refight {boss.Name} for {Lang.GetItemNameValue(itemType)} (goal {ProgressionGoals.Unwrap(planning)?.Describe()})");
