@@ -28,7 +28,9 @@ public static class BossReadiness
 	const float DefenseHalving = 0.5f;
 	const float MaxConsideredFightSeconds = 600f;
 
-	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner, IEnumerable<Bot> present = null)
+	readonly record struct Setup(List<Bot> Fighters, float RawDps, float BossLife, float BossDamage, float RequiredRatio);
+
+	static Setup Prepare(Faction faction, BossChallenge challenge, Bot summoner, IEnumerable<Bot> present)
 	{
 		var fighters = (present ?? BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id)).ToList();
 		var sample = ContentSamples.NpcsByNetId[challenge.BossType];
@@ -41,15 +43,45 @@ public static class BossReadiness
 		float burstDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense)) * challenge.Exposure;
 		float expectedSeconds = burstDps > 0 ? Math.Min(bossLife / burstDps, MaxConsideredFightSeconds) : MaxConsideredFightSeconds;
 		float rawDps = fighters.Sum(bot => SustainedDamagePerSecond(bot, sample.defense, expectedSeconds)) * challenge.Exposure;
-		var raw = Report(fighters, rawDps, bossLife, bossDamage, requiredRatio);
-		float calibration = Calibration(faction, challenge.BossType);
-		var calibrated = Report(fighters, rawDps * calibration, bossLife, bossDamage, requiredRatio);
+		return new Setup(fighters, rawDps, bossLife, bossDamage, requiredRatio);
+	}
+
+	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner, IEnumerable<Bot> present = null)
+	{
+		var setup = Prepare(faction, challenge, summoner, present);
+		var raw = Report(setup, 1f);
+		var calibrated = Report(setup, Calibration(faction, challenge.BossType));
 		if (present == null)
 			NotePlateau(faction, challenge.BossType, raw.KillSeconds <= 0 ? 0f : raw.SurviveSeconds / (raw.KillSeconds * raw.RequiredRatio));
 		if (!calibrated.IsReady && raw.IsReady && GearPlateaued(faction, challenge.BossType))
 			return raw;
 		return calibrated;
 	}
+
+	const int ThresholdSteps = 12;
+	const float LowestCalibration = 0.01f;
+
+	public static float ReadyThreshold(Faction faction, BossChallenge challenge)
+	{
+		if (BotWorldSystem.Bots.FirstOrDefault(bot => bot.FactionId == faction.Id) is not { } member)
+			return 0f;
+		var setup = Prepare(faction, challenge, member, null);
+		if (!Report(setup, 1f).IsReady)
+			return 0f;
+		float low = LowestCalibration, high = 1f;
+		for (int step = 0; step < ThresholdSteps; step++)
+		{
+			float middle = (low + high) / 2f;
+			if (Report(setup, middle).IsReady)
+				high = middle;
+			else
+				low = middle;
+		}
+		return high;
+	}
+
+	static ReadinessReport Report(Setup setup, float calibration) =>
+		Report(setup.Fighters, setup.RawDps * calibration, setup.BossLife, setup.BossDamage, setup.RequiredRatio);
 
 	static ReadinessReport Report(List<Bot> fighters, float teamDps, float bossLife, float bossDamage, float requiredRatio)
 	{

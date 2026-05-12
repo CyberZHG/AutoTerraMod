@@ -42,7 +42,7 @@ public sealed class BossCredit : GlobalNPC
 	const float MaxCalibration = 1.5f;
 	const float CalibrationBlend = 0.6f;
 
-	public static void CheckCalibration(BossChallenge challenge, bool over)
+	public static void CheckCalibration(BossChallenge challenge, bool over, bool won = false)
 	{
 		if (!expectations.TryGetValue(challenge.BossType, out var expected) || FactionById(expected.factionId) is not { } faction)
 			return;
@@ -57,12 +57,26 @@ public sealed class BossCredit : GlobalNPC
 		float ratio = Microsoft.Xna.Framework.MathHelper.Clamp(dealt / seconds / expected.dps, MinCalibration, MaxCalibration);
 		float old = faction.BossDpsCalibration.GetValueOrDefault(challenge.BossType, 1f);
 		float updated = over ? Microsoft.Xna.Framework.MathHelper.Lerp(old, ratio * old, CalibrationBlend) : System.Math.Min(old, ratio * old);
+		if (won)
+			updated = System.Math.Max(updated, BossReadiness.ReadyThreshold(faction, challenge));
 		if (over)
 			expectations.Remove(challenge.BossType);
 		else
 			expectations[challenge.BossType] = (expected.factionId, expected.dps * updated / old, expected.since);
 		faction.BossDpsCalibration[challenge.BossType] = updated;
 		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} against {expected.dps:0} expected; damage estimate now x{updated:0.00}");
+	}
+
+	public static void FloorDefeatedCalibrations()
+	{
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			foreach (int bossType in faction.BossDpsCalibration.Keys.Where(faction.DefeatedBosses.Contains).ToList())
+			{
+				if (BossCatalog.ChallengeOf(bossType) is { } challenge)
+					faction.BossDpsCalibration[bossType] = System.Math.Max(faction.BossDpsCalibration[bossType], BossReadiness.ReadyThreshold(faction, challenge));
+			}
+		}
 	}
 
 	public static bool SummonedByOther(NPC boss, int factionId) =>
@@ -243,7 +257,7 @@ public sealed class BossCredit : GlobalNPC
 		var challenge = BossCatalog.ChallengeOf(npc.type);
 		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.ContainsKey(challenge.BossType))
 			return;
-		CheckCalibration(challenge, over: true);
+		CheckCalibration(challenge, over: true, won: true);
 		damageByFight.Remove(challenge.BossType, out var byFaction);
 		if (fightersByFight.Remove(challenge.BossType, out var fighters))
 			HandOutBags(challenge, fighters);

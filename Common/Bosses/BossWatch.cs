@@ -25,6 +25,8 @@ public sealed class BossWatch : ModSystem
 			return;
 		if (Main.GameUpdateCount % ProgressLogTicks == 0)
 			LogFightProgress();
+		if (Main.GameUpdateCount % BulbCensusTicks == 0 && !Main.npc.Any(npc => npc.active && npc.boss))
+			BossCredit.FloorDefeatedCalibrations();
 		if (Main.GameUpdateCount % BulbCensusTicks == 0 && NPC.downedMechBoss1 && NPC.downedMechBoss2 && NPC.downedMechBoss3 && !NPC.downedPlantBoss)
 			LogBulbs();
 		foreach (var (slot, last) in sightings.ToList())
