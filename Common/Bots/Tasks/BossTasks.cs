@@ -687,7 +687,10 @@ public sealed class ScoutTask : BotTask
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (step.Landmark == Landmark.Underworld)
 			return new Vector2(here.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
-		if (step.SeekTile == TileID.PlanteraBulb && knowledge.SpanOf(step.Landmark) is var (bulbMinX, bulbMaxX) && CavernJungleSpot(knowledge, here, bulbMinX, bulbMaxX) is Point cavern)
+		if (step.Landmark == Landmark.Temple && knowledge.LandmarkOf(Landmark.Temple) is Point temple)
+			return TempleSpot(knowledge, temple).ToWorldCoordinates(8f, 0f);
+		bool jungleCaverns = step.SeekTile == TileID.PlanteraBulb || step.Landmark == Landmark.Temple;
+		if (jungleCaverns && knowledge.SpanOf(Landmark.Jungle) is var (jungleMinX, jungleMaxX) && CavernJungleSpot(knowledge, here, jungleMinX, jungleMaxX) is Point cavern)
 			return new Vector2(cavern.X * 16f + 8f, cavern.Y * 16f);
 		if (step.Underground && knowledge.SpanOf(step.Landmark) is var (minX, maxX))
 		{
@@ -737,6 +740,26 @@ public sealed class ScoutTask : BotTask
 			}
 		}
 		return nearest ?? fallback;
+	}
+
+	const int TempleReach = 80;
+	const int TempleSpotTries = 200;
+
+	static Point TempleSpot(Factions.FactionKnowledge knowledge, Point temple)
+	{
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		Point? inside = null;
+		for (int attempt = 0; attempt < TempleSpotTries; attempt++)
+		{
+			int x = temple.X + Main.rand.Next(-TempleReach, TempleReach + 1);
+			int y = temple.Y + Main.rand.Next(-TempleReach / 2, TempleReach / 2 + 1);
+			if (!WorldGen.InWorld(x, y, 10) || Main.tile[x, y].WallType != WallID.LihzahrdBrickUnsafe || TileQuery.IsSolid(x, y) || TileQuery.IsSolid(x, y - 1))
+				continue;
+			if (!knowledge.IsExplored(x / cell, y / cell))
+				return new Point(x, y);
+			inside ??= new Point(x, y);
+		}
+		return inside ?? OpenTileNear(temple);
 	}
 
 	static bool NearJungleGrass(int x, int y)

@@ -77,6 +77,10 @@ public static class BossRituals
 
 	static PlanStep PlanAltar(Bot bot, BossChallenge challenge, AltarTrigger trigger)
 	{
+		if (trigger.Place == Landmark.Temple && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0 && Building.BaseStorage.Count(bot.Faction, ItemID.TempleKey) > 0)
+			return new WithdrawStep(ItemID.TempleKey, 1);
+		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null)
+			return new ScoutStep(trigger.Place, true);
 		if (Inventory.Count(bot.Avatar, trigger.Item) == 0)
 			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
 		if (KnownTile(bot, AltarTiles) is not Point altar)

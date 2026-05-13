@@ -49,6 +49,7 @@ public static class Kit
 				|| bot.RecentlyWithdrew(item.type)
 				|| bridgeKit && BridgeKitGoal.IsKitItem(item)
 				|| item.type == ItemID.TeleportationPotion
+				|| item.type == ItemID.TempleKey
 				|| Tasks.BotTask.IsRecall(item)
 				|| Explosives.IsExplosive(item)
 				|| item.type == ItemID.Acorn
