@@ -729,6 +729,8 @@ public sealed class ScoutTask : BotTask
 			if (!NearJungleGrass(x, y))
 				continue;
 			var spot = OpenTileNear(new Point(x, y));
+			if (Navigation.PathFinder.InsideMaze(spot))
+				continue;
 			fallback ??= spot;
 			if (knowledge.IsExplored(spot.X / cell, spot.Y / cell))
 				continue;
