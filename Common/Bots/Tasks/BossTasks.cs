@@ -789,6 +789,11 @@ public sealed class ScoutTask : BotTask
 		bool moving = TravelOrTunnel(destination, 48f);
 		if (moving && !Bot.Motor.HasArrived)
 			return;
+		if (!moving)
+		{
+			BotDiagnostics.Log(Bot, $"cannot reach scouting spot {destination.ToTileCoordinates()}, giving it up; motor: {Bot.Motor.Describe()}");
+			BotWorldSystem.KnowledgeOf(Bot.Faction).MarkExplored(destination.ToTileCoordinates());
+		}
 		destinationFor = null;
 		if (SearchingShrines)
 			BotWorldSystem.KnowledgeOf(Bot.Faction).FruitlessShrineSearches++;
