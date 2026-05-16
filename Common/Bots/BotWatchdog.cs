@@ -24,6 +24,7 @@ public sealed class BotWatchdog
 	uint trapAnchorSince;
 	int checkTimer;
 	readonly System.Collections.Generic.Queue<uint> navigationFailures = new();
+	Point failureAnchor;
 
 	public BotWatchdog(Bot bot)
 	{
@@ -48,6 +49,12 @@ public sealed class BotWatchdog
 	public void ReportNavigationFailure()
 	{
 		uint now = Main.GameUpdateCount;
+		var here = bot.CenterTile;
+		if (navigationFailures.Count == 0 || System.Math.Abs(here.X - failureAnchor.X) + System.Math.Abs(here.Y - failureAnchor.Y) > TravelProgressTiles)
+		{
+			navigationFailures.Clear();
+			failureAnchor = here;
+		}
 		navigationFailures.Enqueue(now);
 		while (navigationFailures.Count > 0 && now - navigationFailures.Peek() > NavigationFailureWindowTicks)
 			navigationFailures.Dequeue();

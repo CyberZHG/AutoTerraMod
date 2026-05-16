@@ -1,4 +1,7 @@
 using System;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -15,8 +18,16 @@ public sealed class ShrineGuard : GlobalTile
 
 	public override void KillTile(int i, int j, int type, ref bool fail, ref bool effectOnly, ref bool noItem)
 	{
-		if (type == TileID.PlanteraBulb && botActing > 0 && bulbAllowed == 0)
+		if (type == TileID.PlanteraBulb && bulbAllowed == 0 && (botActing > 0 || !PlayerNear(i, j)))
 			fail = true;
+	}
+
+	const float PlayerReach = 16f * 30f;
+
+	static bool PlayerNear(int i, int j)
+	{
+		var bulb = new Vector2(i * 16f, j * 16f);
+		return Main.player.Any(player => player.active && !player.dead && Vector2.Distance(player.Center, bulb) < PlayerReach && !Systems.BotWorldSystem.Bots.Any(bot => bot.Avatar == player));
 	}
 
 	sealed class Scope : IDisposable

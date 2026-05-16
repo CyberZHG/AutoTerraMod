@@ -61,11 +61,13 @@ public abstract class BotTask
 
 	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
 
+	const int PointlessRecallTiles = 8;
+
 	protected bool TryRecallHome()
 	{
 		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
 		var body = Bot.Npc;
-		if (recall == null || body == null)
+		if (recall == null || body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f)
 			return false;
 		string name = recall.Name;
 		if (recall.consumable)
