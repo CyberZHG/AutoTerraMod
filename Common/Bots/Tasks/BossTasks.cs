@@ -688,7 +688,7 @@ public sealed class ScoutTask : BotTask
 		if (step.Landmark == Landmark.Underworld)
 			return new Vector2(here.X * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
 		if (step.Landmark == Landmark.Temple && knowledge.LandmarkOf(Landmark.Temple) is Point temple)
-			return TempleSpot(knowledge, temple).ToWorldCoordinates(8f, 0f);
+			return (TempleEntrance(temple, here) ?? TempleSpot(knowledge, temple)).ToWorldCoordinates(8f, 0f);
 		bool jungleCaverns = step.SeekTile == TileID.PlanteraBulb || step.Landmark == Landmark.Temple;
 		if (jungleCaverns && knowledge.SpanOf(Landmark.Jungle) is var (jungleMinX, jungleMaxX) && CavernJungleSpot(knowledge, here, jungleMinX, jungleMaxX) is Point cavern)
 			return new Vector2(cavern.X * 16f + 8f, cavern.Y * 16f);
@@ -762,6 +762,55 @@ public sealed class ScoutTask : BotTask
 			inside ??= new Point(x, y);
 		}
 		return inside ?? OpenTileNear(temple);
+	}
+
+	const int DoorSearchWidth = 200;
+	const int DoorSearchHeight = 120;
+	const int EntranceArrival = 6;
+	const int DoorStepInside = 2;
+
+	static Point? TempleEntrance(Point temple, Point here)
+	{
+		if (LockedTempleDoor(temple) is not Point door)
+			return null;
+		int row = door.Y + 1;
+		Point? mouth = null;
+		int shortest = int.MaxValue;
+		foreach (int direction in new[] { -1, 1 })
+		{
+			for (int offset = 1; offset < DoorSearchWidth; offset++)
+			{
+				int x = door.X + direction * offset;
+				if (!WorldGen.InWorld(x, row, 10))
+					break;
+				if (Main.tile[x, row].WallType == WallID.LihzahrdBrickUnsafe)
+					continue;
+				if (offset < shortest)
+				{
+					shortest = offset;
+					mouth = new Point(x, row);
+				}
+				break;
+			}
+		}
+		if (mouth is not Point outside)
+			return null;
+		if (Math.Abs(here.X - outside.X) > EntranceArrival || Math.Abs(here.Y - outside.Y) > EntranceArrival)
+			return outside;
+		return new Point(door.X - Math.Sign(outside.X - door.X) * DoorStepInside, row);
+	}
+
+	static Point? LockedTempleDoor(Point temple)
+	{
+		for (int x = temple.X - DoorSearchWidth; x <= temple.X + DoorSearchWidth; x++)
+		{
+			for (int y = temple.Y - DoorSearchHeight; y <= temple.Y + DoorSearchHeight; y++)
+			{
+				if (WorldGen.InWorld(x, y, 10) && Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.ClosedDoor && WorldGen.IsLockedDoor(x, y))
+					return new Point(x, y);
+			}
+		}
+		return null;
 	}
 
 	static bool NearJungleGrass(int x, int y)
