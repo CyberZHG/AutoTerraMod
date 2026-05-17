@@ -795,9 +795,22 @@ public sealed class ScoutTask : BotTask
 		}
 		if (mouth is not Point outside)
 			return null;
-		if (Math.Abs(here.X - outside.X) > EntranceArrival || Math.Abs(here.Y - outside.Y) > EntranceArrival)
-			return outside;
-		return new Point(door.X - Math.Sign(outside.X - door.X) * DoorStepInside, row);
+		if (Math.Abs(here.X - outside.X) <= EntranceArrival && Math.Abs(here.Y - outside.Y) <= EntranceArrival)
+			return new Point(door.X - Math.Sign(outside.X - door.X) * DoorStepInside, row);
+		int outward = Math.Sign(outside.X - door.X);
+		if ((here.X - outside.X) * outward < 0)
+			return new Point(outside.X + outward * PorchOffset, RoofRow(door) - PorchOffset);
+		return outside;
+	}
+
+	const int PorchOffset = 4;
+
+	static int RoofRow(Point door)
+	{
+		int y = door.Y - 1;
+		while (y > door.Y - DoorSearchHeight && WorldGen.InWorld(door.X, y, 10) && Main.tile[door.X, y].HasTile && Main.tile[door.X, y].TileType == TileID.LihzahrdBrick)
+			y--;
+		return y;
 	}
 
 	static Point? LockedTempleDoor(Point temple)
