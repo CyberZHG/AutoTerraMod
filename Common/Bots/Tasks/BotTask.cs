@@ -368,6 +368,7 @@ public abstract class BotTask
 	const int DeepDetourRows = 60;
 	const int ShaftLevelRows = 3;
 	const int DeepDetourRise = 40;
+	const int MaxSidewaysTunnel = 300;
 
 	const int ShaftExitMargin = 3;
 
@@ -388,7 +389,7 @@ public abstract class BotTask
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom;
 		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
 			return false;
-		if (!inShaft && goal.Y < Main.UnderworldLayer && System.Math.Abs(goal.X - shaft.X) > System.Math.Abs(goal.X - tile.X) + DeepDetourRise)
+		if (!inShaft && goal.Y < Main.UnderworldLayer && (System.Math.Abs(goal.X - shaft.X) > System.Math.Abs(goal.X - tile.X) + DeepDetourRise || System.Math.Abs(goal.X - shaft.X) > MaxSidewaysTunnel))
 			return false;
 		var feet = Bot.Npc is NPC body ? Navigation.PathFinder.FeetOf(body) : tile;
 		if (inShaft && System.Math.Abs(feet.Y - levelRow) <= 1)

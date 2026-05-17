@@ -402,7 +402,7 @@ public sealed class BotWorldSystem : ModSystem
 
 	public static Vector2 RespawnFeet(Bot bot)
 	{
-		if (bot.OutpostBed is Point outpost && Building.Outpost.BedStands(outpost))
+		if ((Building.Outpost.TempleBed(bot) ?? bot.OutpostBed) is Point outpost && Building.Outpost.BedStands(outpost))
 			return new Vector2(outpost.X * 16f + 8f, (outpost.Y + 1) * 16f);
 		var settlement = bot.Faction.Settlement;
 		int memberIndex = Bots.Where(member => member.FactionId == bot.FactionId).ToList().IndexOf(bot);

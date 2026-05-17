@@ -132,6 +132,16 @@ public static class Outpost
 
 	const float ClaimMargin = 16f * 40f;
 
+	const float TempleBedReach = 16f * 200f;
+
+	public static Point? TempleBed(Bot bot)
+	{
+		if (bot.Brain.Plan is not Planning.ScoutStep { Landmark: World.Landmark.Temple } || BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(World.Landmark.Temple) is not Point temple)
+			return null;
+		var near = FactionBeds(bot.Faction).Where(bed => BedStands(bed) && Vector2.Distance(bed.ToWorldCoordinates(), temple.ToWorldCoordinates()) < TempleBedReach).ToList();
+		return near.Count == 0 ? null : near.MinBy(bed => Vector2.DistanceSquared(bed.ToWorldCoordinates(), temple.ToWorldCoordinates()));
+	}
+
 	public static Point? ClaimableBed(Bot bot)
 	{
 		if (!IsAfield(bot))
