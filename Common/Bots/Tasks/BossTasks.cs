@@ -813,7 +813,7 @@ public sealed class ScoutTask : BotTask
 		return y;
 	}
 
-	static Point? LockedTempleDoor(Point temple)
+	public static Point? LockedTempleDoor(Point temple)
 	{
 		for (int x = temple.X - DoorSearchWidth; x <= temple.X + DoorSearchWidth; x++)
 		{

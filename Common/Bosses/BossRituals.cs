@@ -79,13 +79,34 @@ public static class BossRituals
 	{
 		if (trigger.Place == Landmark.Temple && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0 && Building.BaseStorage.Count(bot.Faction, ItemID.TempleKey) > 0)
 			return new WithdrawStep(ItemID.TempleKey, 1);
-		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null)
+		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null && !LearnAltarOfOpenTemple(bot))
 			return new ScoutStep(trigger.Place, true);
 		if (Inventory.Count(bot.Avatar, trigger.Item) == 0)
 			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
 		if (KnownTile(bot, AltarTiles) is not Point altar)
 			return new ScoutStep(trigger.Place, true);
 		return new SummonBossStep(challenge, trigger, altar.ToWorldCoordinates(), altar);
+	}
+
+	const int TempleAltarReachX = 300;
+	const int TempleAltarReachY = 200;
+
+	static bool LearnAltarOfOpenTemple(Bot bot)
+	{
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || Bots.Tasks.ScoutTask.LockedTempleDoor(temple) != null)
+			return false;
+		for (int x = temple.X - TempleAltarReachX; x <= temple.X + TempleAltarReachX; x++)
+		{
+			for (int y = temple.Y - TempleAltarReachY; y <= temple.Y + TempleAltarReachY; y++)
+			{
+				if (!WorldGen.InWorld(x, y, 10) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.LihzahrdAltar)
+					continue;
+				knowledge.Remember(new Point(x, y), TileID.LihzahrdAltar);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	static PlanStep PlanBulb(Bot bot, BossChallenge challenge, BulbTrigger trigger)

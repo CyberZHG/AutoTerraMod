@@ -22,6 +22,13 @@ public sealed class ShrineGuard : GlobalTile
 			fail = true;
 	}
 
+	public override bool CanKillTile(int i, int j, int type, ref bool blockDamaged) => !GuardsBulb(i, j);
+
+	public override bool CanExplode(int i, int j, int type) => !GuardsBulb(i, j);
+
+	static bool GuardsBulb(int i, int j) =>
+		bulbAllowed == 0 && WorldGen.InWorld(i, j - 1, 2) && Main.tile[i, j - 1].HasTile && Main.tile[i, j - 1].TileType == TileID.PlanteraBulb && (botActing > 0 || !PlayerNear(i, j));
+
 	const float PlayerReach = 16f * 30f;
 
 	static bool PlayerNear(int i, int j)
