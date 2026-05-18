@@ -90,6 +90,10 @@ public sealed class FactionKnowledge
 
 	public void AbandonChest(int chestIndex) => abandonedChests.Add(chestIndex);
 
+	public bool MayLoot(int chestIndex) => !abandonedChests.Contains(chestIndex);
+
+	public bool KnowsChest(int chestIndex) => knownChests.Contains(chestIndex);
+
 	public IEnumerable<int> CollectableChests => knownChests.Where(index =>
 		Main.chest[index] is Chest chest && !abandonedChests.Contains(index)
 		&& (!lootedChests.Contains(index) || chest.item.All(item => item == null || item.IsAir)));

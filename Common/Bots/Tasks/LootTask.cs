@@ -14,9 +14,12 @@ public sealed class LootTask : BotTask
 	const int OpenDelayTicks = 30;
 	const float MaxTravel = 16f * 200f;
 
+	const float WantedScore = 90f;
+
 	int chestIndex = -1;
 	int openTimer;
 	bool emptied;
+	bool wanted;
 
 	public LootTask(Bot bot) : base(bot) { }
 
@@ -26,11 +29,14 @@ public sealed class LootTask : BotTask
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		NoticeVisibleChests(knowledge);
-		chestIndex = NearestLootable(knowledge);
+		chestIndex = WantedChest(knowledge);
+		wanted = chestIndex >= 0;
+		if (!wanted)
+			chestIndex = NearestLootable(knowledge);
 		if (chestIndex < 0 || Inventory.UsedSlots(Avatar) >= 45)
 			return 0f;
 		Detail = Lang.GetMapObjectName(Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y].TileType) ?? "";
-		return 30f + Traits.Exploring * 40f;
+		return wanted ? WantedScore : 30f + Traits.Exploring * 40f;
 	}
 
 	public override void Start()
@@ -51,6 +57,12 @@ public sealed class LootTask : BotTask
 		var chestTile = new Point(chest.x, chest.y);
 		if (!Bot.Hands.CanReach(null, chestTile))
 		{
+			if (wanted)
+			{
+				if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
+					Abandon("cannot reach it");
+				return;
+			}
 			Bot.Motor.MoveTo(chestTile.ToWorldCoordinates(16f, 16f), 24f);
 			if (Bot.Motor.IsStuck)
 				Abandon("stuck on the way");
@@ -140,6 +152,23 @@ public sealed class LootTask : BotTask
 		}
 		return false;
 	}
+
+	int WantedChest(FactionKnowledge knowledge)
+	{
+		if (Bot.Brain.Plan is not Planning.GatherStep { ItemType: int itemType })
+			return -1;
+		return Enumerable.Range(0, Main.maxChests)
+			.Where(index => Main.chest[index] is Chest chest && chest.item.Any(item => item?.type == itemType && item.stack > 0)
+				&& IsLootable(chest) && knowledge.MayLoot(index) && IsExposed(chest)
+				&& (knowledge.KnowsChest(index) || knowledge.IsExplored(chest.x / FactionKnowledge.ExploreCell, chest.y / FactionKnowledge.ExploreCell)))
+			.OrderBy(index => WalkCost(Main.chest[index]))
+			.DefaultIfEmpty(-1)
+			.First();
+	}
+
+	const int ClimbCostFactor = 2;
+
+	int WalkCost(Chest chest) => System.Math.Abs(chest.x - Bot.CenterTile.X) + ClimbCostFactor * System.Math.Abs(chest.y - Bot.CenterTile.Y);
 
 	int NearestLootable(FactionKnowledge knowledge) => knowledge.CollectableChests
 		.Where(index => IsLootable(Main.chest[index]))
