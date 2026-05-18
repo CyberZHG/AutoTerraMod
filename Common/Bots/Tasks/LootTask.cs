@@ -59,7 +59,10 @@ public sealed class LootTask : BotTask
 		{
 			if (wanted)
 			{
-				if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
+				var target = chestTile;
+				if (MazeMouth(chestTile) is Point mouth && System.Math.Abs(mouth.X - Bot.CenterTile.X) + System.Math.Abs(mouth.Y - Bot.CenterTile.Y) > MouthArrival)
+					target = mouth;
+				if (!TravelOrTunnel(target.ToWorldCoordinates(16f, 16f), 24f))
 					Abandon("cannot reach it");
 				return;
 			}
@@ -164,6 +167,32 @@ public sealed class LootTask : BotTask
 			.OrderBy(index => WalkCost(Main.chest[index]))
 			.DefaultIfEmpty(-1)
 			.First();
+	}
+
+	const int MouthArrival = 6;
+	const int MouthSearchWidth = 80;
+
+	static Point? MazeMouth(Point chestTile)
+	{
+		if (!Navigation.PathFinder.InsideMaze(chestTile))
+			return null;
+		Point? mouth = null;
+		foreach (int direction in new[] { -1, 1 })
+		{
+			for (int offset = 1; offset < MouthSearchWidth; offset++)
+			{
+				var tile = new Point(chestTile.X + direction * offset, chestTile.Y);
+				bool maze = Navigation.PathFinder.InsideMaze(tile);
+				if (maze && TileQuery.IsSolid(tile.X, tile.Y))
+					break;
+				if (maze)
+					continue;
+				if (mouth is not Point best || offset < System.Math.Abs(best.X - chestTile.X))
+					mouth = tile;
+				break;
+			}
+		}
+		return mouth;
 	}
 
 	const int ClimbCostFactor = 2;
