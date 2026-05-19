@@ -20,6 +20,9 @@ public sealed class LootTask : BotTask
 	int openTimer;
 	bool emptied;
 	bool wanted;
+	readonly System.Collections.Generic.Dictionary<int, uint> wantedRetryAt = new();
+
+	const uint WantedRetryTicks = 10 * 3600;
 
 	public LootTask(Bot bot) : base(bot) { }
 
@@ -59,11 +62,12 @@ public sealed class LootTask : BotTask
 		{
 			if (wanted)
 			{
-				var target = chestTile;
-				if (MazeMouth(chestTile) is Point mouth && System.Math.Abs(mouth.X - Bot.CenterTile.X) + System.Math.Abs(mouth.Y - Bot.CenterTile.Y) > MouthArrival)
-					target = mouth;
-				if (!TravelOrTunnel(target.ToWorldCoordinates(16f, 16f), 24f))
-					Abandon("cannot reach it");
+				if (!TravelOrTunnel(WantedApproach(chestTile).ToWorldCoordinates(16f, 16f), 24f))
+				{
+					BotDiagnostics.Log(Bot, $"cannot reach chest {chestIndex} at {chestTile} yet, trying again later; motor: {Bot.Motor.Describe()}");
+					wantedRetryAt[chestIndex] = Main.GameUpdateCount + WantedRetryTicks;
+					IsFinished = true;
+				}
 				return;
 			}
 			Bot.Motor.MoveTo(chestTile.ToWorldCoordinates(16f, 16f), 24f);
@@ -163,10 +167,23 @@ public sealed class LootTask : BotTask
 		return Enumerable.Range(0, Main.maxChests)
 			.Where(index => Main.chest[index] is Chest chest && chest.item.Any(item => item?.type == itemType && item.stack > 0)
 				&& IsLootable(chest) && knowledge.MayLoot(index) && IsExposed(chest)
+				&& (!wantedRetryAt.TryGetValue(index, out uint retryAt) || Main.GameUpdateCount >= retryAt)
 				&& (knowledge.KnowsChest(index) || knowledge.IsExplored(chest.x / FactionKnowledge.ExploreCell, chest.y / FactionKnowledge.ExploreCell)))
 			.OrderBy(index => WalkCost(Main.chest[index]))
 			.DefaultIfEmpty(-1)
 			.First();
+	}
+
+	Point WantedApproach(Point chestTile)
+	{
+		if (MazeMouth(chestTile) is not Point mouth)
+			return chestTile;
+		var here = Bot.CenterTile;
+		if (System.Math.Abs(mouth.X - here.X) > MouthArrival && here.Y < mouth.Y - MouthArrival)
+			return new Point(mouth.X, here.Y);
+		if (System.Math.Abs(mouth.X - here.X) + System.Math.Abs(mouth.Y - here.Y) > MouthArrival)
+			return mouth;
+		return chestTile;
 	}
 
 	const int MouthArrival = 6;

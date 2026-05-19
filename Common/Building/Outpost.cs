@@ -90,7 +90,7 @@ public static class Outpost
 		}
 		foreach (var faction in BotWorldSystem.Factions)
 		{
-			faction.Outposts.RemoveAll(bed => !Valid(bed));
+			faction.Outposts.RemoveAll(bed => !Valid(bed) || Trapping(faction, bed));
 			foreach (var stale in faction.OutpostFrames.Keys.Where(bed => !faction.Outposts.Contains(bed)).ToList())
 				faction.OutpostFrames.Remove(stale);
 			foreach (var bed in faction.Outposts)
@@ -102,15 +102,30 @@ public static class Outpost
 		{
 			if (bot.OutpostBed is not Point bed)
 				continue;
-			if (Valid(bed))
+			if (Valid(bed) && !Trapping(bot.Faction, bed))
 				guarded.Add((bed, null));
 			else
 			{
-				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room ({WorldGen.roomCheckFailureReason}), respawning at home again");
+				string reason = Trapping(bot.Faction, bed) ? "its doorway is blocked" : WorldGen.roomCheckFailureReason.ToString();
+				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room ({reason}), respawning at home again");
 				bot.OutpostBed = null;
 			}
 		}
 		return guarded;
+	}
+
+	static bool Trapping(Factions.Faction faction, Point bed) =>
+		faction.OutpostFrames.TryGetValue(bed, out var frame) && ExitBlocked(frame.X + Width - 1, frame.Y);
+
+	public static bool ExitBlocked(int right, int floor)
+	{
+		int x = right + 1;
+		for (int y = floor - 3; y < floor; y++)
+		{
+			if (WorldGen.InWorld(x, y, 2) && World.TileQuery.IsSolid(x, y) && !WorldGen.CanKillTile(x, y))
+				return true;
+		}
+		return false;
 	}
 
 	public static bool InFrame(Point frame, int x, int y)
@@ -305,6 +320,8 @@ public static class Outpost
 		public bool Buildable(bool wetShell = false)
 		{
 			if (!WorldGen.InWorld(Left, Ceiling, 20) || !WorldGen.InWorld(Right, Floor, 20))
+				return false;
+			if (ExitBlocked(Right, Floor))
 				return false;
 			var interior = Interior().ToHashSet();
 			foreach (var tile in interior.Concat(Shell()))
