@@ -90,7 +90,7 @@ public static class Outpost
 		}
 		foreach (var faction in BotWorldSystem.Factions)
 		{
-			faction.Outposts.RemoveAll(bed => !Valid(bed) || Trapping(faction, bed));
+			faction.Outposts.RemoveAll(bed => !Valid(bed) || Trapping(bed));
 			foreach (var stale in faction.OutpostFrames.Keys.Where(bed => !faction.Outposts.Contains(bed)).ToList())
 				faction.OutpostFrames.Remove(stale);
 			foreach (var bed in faction.Outposts)
@@ -102,11 +102,11 @@ public static class Outpost
 		{
 			if (bot.OutpostBed is not Point bed)
 				continue;
-			if (Valid(bed) && !Trapping(bot.Faction, bed))
+			if (Valid(bed) && !Trapping(bed))
 				guarded.Add((bed, null));
 			else
 			{
-				string reason = Trapping(bot.Faction, bed) ? "its doorway is blocked" : WorldGen.roomCheckFailureReason.ToString();
+				string reason = Trapping(bed) ? "its doorway is blocked" : WorldGen.roomCheckFailureReason.ToString();
 				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room ({reason}), respawning at home again");
 				bot.OutpostBed = null;
 			}
@@ -114,8 +114,27 @@ public static class Outpost
 		return guarded;
 	}
 
-	static bool Trapping(Factions.Faction faction, Point bed) =>
-		faction.OutpostFrames.TryGetValue(bed, out var frame) && ExitBlocked(frame.X + Width - 1, frame.Y);
+	static bool Trapping(Point bed)
+	{
+		for (int x = bed.X + Width; x > bed.X; x--)
+		{
+			for (int y = bed.Y - 3; y <= bed.Y; y++)
+			{
+				if (!WorldGen.InWorld(x, y, 2) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType is not (TileID.ClosedDoor or TileID.OpenDoor))
+					continue;
+				int doorTop = y;
+				while (doorTop > y - 3 && Main.tile[x, doorTop - 1].HasTile && Main.tile[x, doorTop - 1].TileType is TileID.ClosedDoor or TileID.OpenDoor)
+					doorTop--;
+				for (int row = doorTop; row < doorTop + 3; row++)
+				{
+					if (World.TileQuery.IsSolid(x + 1, row) && !WorldGen.CanKillTile(x + 1, row))
+						return true;
+				}
+				return false;
+			}
+		}
+		return false;
+	}
 
 	public static bool ExitBlocked(int right, int floor)
 	{
