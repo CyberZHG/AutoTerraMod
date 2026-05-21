@@ -80,6 +80,7 @@ public sealed class BotWorldSystem : ModSystem
 		BaseStorage.Reset();
 		ItemReservations.Clear();
 		ResourceSources.Reset();
+		World.TempleDoor.Reset();
 		World.TreeSupply.Reset();
 		Planning.Shops.Reset();
 		ProgressionPlanner.Reset();

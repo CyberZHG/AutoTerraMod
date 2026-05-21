@@ -251,6 +251,8 @@ public abstract class BotTask
 		if (deepTunnel is Vector2 tunnel && Vector2.DistanceSquared(tunnel, target) < 32f * 32f && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		deepTunnel = null;
+		if (TempleApproach(target) is Vector2 approach)
+			target = approach;
 		if (RecallBeatsLongTrip(target) && TryRecallHome())
 		{
 			Bot.LastRecallTarget = target;
@@ -294,6 +296,27 @@ public abstract class BotTask
 		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
+	}
+
+	const int TempleArrival = 6;
+	const int DoorStepInside = 2;
+
+	Vector2? TempleApproach(Vector2 target)
+	{
+		var goal = target.ToTileCoordinates();
+		var here = Bot.CenterTile;
+		if (!Navigation.PathFinder.InsideMaze(goal) || Navigation.PathFinder.InsideMaze(here))
+			return null;
+		if (World.TempleDoor.Near(goal) is not Point door || World.TempleDoor.Mouth(door) is not Point mouth)
+			return null;
+		Point leg;
+		if (System.Math.Abs(mouth.X - here.X) > TempleArrival && here.Y < mouth.Y - TempleArrival)
+			leg = new Point(mouth.X, here.Y);
+		else if (System.Math.Abs(mouth.X - here.X) + System.Math.Abs(mouth.Y - here.Y) > TempleArrival)
+			leg = mouth;
+		else
+			leg = new Point(door.X - System.Math.Sign(mouth.X - door.X) * DoorStepInside, mouth.Y);
+		return leg.ToWorldCoordinates(8f, 0f);
 	}
 
 	const int BridgeRowSlack = 4;

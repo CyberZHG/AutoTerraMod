@@ -62,7 +62,7 @@ public sealed class LootTask : BotTask
 		{
 			if (wanted)
 			{
-				if (!TravelOrTunnel(WantedApproach(chestTile).ToWorldCoordinates(16f, 16f), 24f))
+				if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
 				{
 					BotDiagnostics.Log(Bot, $"cannot reach chest {chestIndex} at {chestTile} yet, trying again later; motor: {Bot.Motor.Describe()}");
 					wantedRetryAt[chestIndex] = Main.GameUpdateCount + WantedRetryTicks;
@@ -172,44 +172,6 @@ public sealed class LootTask : BotTask
 			.OrderBy(index => WalkCost(Main.chest[index]))
 			.DefaultIfEmpty(-1)
 			.First();
-	}
-
-	Point WantedApproach(Point chestTile)
-	{
-		if (MazeMouth(chestTile) is not Point mouth)
-			return chestTile;
-		var here = Bot.CenterTile;
-		if (System.Math.Abs(mouth.X - here.X) > MouthArrival && here.Y < mouth.Y - MouthArrival)
-			return new Point(mouth.X, here.Y);
-		if (System.Math.Abs(mouth.X - here.X) + System.Math.Abs(mouth.Y - here.Y) > MouthArrival)
-			return mouth;
-		return chestTile;
-	}
-
-	const int MouthArrival = 6;
-	const int MouthSearchWidth = 80;
-
-	static Point? MazeMouth(Point chestTile)
-	{
-		if (!Navigation.PathFinder.InsideMaze(chestTile))
-			return null;
-		Point? mouth = null;
-		foreach (int direction in new[] { -1, 1 })
-		{
-			for (int offset = 1; offset < MouthSearchWidth; offset++)
-			{
-				var tile = new Point(chestTile.X + direction * offset, chestTile.Y);
-				bool maze = Navigation.PathFinder.InsideMaze(tile);
-				if (maze && TileQuery.IsSolid(tile.X, tile.Y))
-					break;
-				if (maze)
-					continue;
-				if (mouth is not Point best || offset < System.Math.Abs(best.X - chestTile.X))
-					mouth = tile;
-				break;
-			}
-		}
-		return mouth;
 	}
 
 	const int ClimbCostFactor = 2;
