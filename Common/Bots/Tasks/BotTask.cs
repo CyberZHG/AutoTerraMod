@@ -307,8 +307,23 @@ public abstract class BotTask
 		var here = Bot.CenterTile;
 		if (!Navigation.PathFinder.InsideMaze(goal) || Navigation.PathFinder.InsideMaze(here))
 			return null;
-		if (World.TempleDoor.Near(goal) is not Point door || World.TempleDoor.Mouth(door) is not Point mouth)
+		var door = World.TempleDoor.Near(goal);
+		var mouth = door is Point found ? World.TempleDoor.Mouth(found) : null;
+		if (Main.GameUpdateCount - templeLoggedAt > TempleLogTicks)
+		{
+			templeLoggedAt = Main.GameUpdateCount;
+			BotDiagnostics.Log(Bot, $"heading into the temple for {goal}: door {door?.ToString() ?? "none"}, mouth {mouth?.ToString() ?? "none"}");
+		}
+		if (door is not Point doorTile || mouth is not Point mouthTile)
 			return null;
+		return TempleLeg(here, doorTile, mouthTile);
+	}
+
+	uint templeLoggedAt;
+	const uint TempleLogTicks = 3600;
+
+	static Vector2 TempleLeg(Point here, Point door, Point mouth)
+	{
 		Point leg;
 		if (System.Math.Abs(mouth.X - here.X) > TempleArrival && here.Y < mouth.Y - TempleArrival)
 			leg = new Point(mouth.X, here.Y);
