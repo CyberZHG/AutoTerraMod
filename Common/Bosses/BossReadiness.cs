@@ -113,8 +113,15 @@ public static class BossReadiness
 			plateaus[key] = (Math.Max(confidence, entry.best), Main.GameUpdateCount);
 	}
 
-	static bool GearPlateaued(Faction faction, int bossType) =>
-		plateaus.TryGetValue((faction.Id, bossType), out var entry) && Main.GameUpdateCount - entry.improvedAt > PlateauTicks;
+	static bool GearPlateaued(Faction faction, int bossType)
+	{
+		if (faction.GearPlateauBosses.Contains(bossType))
+			return true;
+		if (!plateaus.TryGetValue((faction.Id, bossType), out var entry) || Main.GameUpdateCount - entry.improvedAt <= PlateauTicks)
+			return false;
+		faction.GearPlateauBosses.Add(bossType);
+		return true;
+	}
 
 	const float ManaRegenShare = 0.08f;
 

@@ -64,6 +64,8 @@ public sealed class BossCredit : GlobalNPC
 		else
 			expectations[challenge.BossType] = (expected.factionId, expected.dps * updated / old, expected.since);
 		faction.BossDpsCalibration[challenge.BossType] = updated;
+		if (over && !won)
+			faction.GearPlateauBosses.Remove(challenge.BossType);
 		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} against {expected.dps:0} expected; damage estimate now x{updated:0.00}");
 	}
 

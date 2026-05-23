@@ -26,6 +26,7 @@ public sealed class Faction
 	public HashSet<Point> Scaffolding { get; } = new();
 	public HashSet<int> DefeatedBosses { get; } = new();
 	public Dictionary<int, float> BossDpsCalibration { get; } = new();
+	public HashSet<int> GearPlateauBosses { get; } = new();
 	public (Vector2 point, uint until)? Rally { get; set; }
 	public uint RallyCooldownUntil { get; set; }
 	public int RallyLeaderId { get; set; } = -1;
@@ -78,6 +79,7 @@ public sealed class Faction
 		tag["outpostFrames"] = OutpostFrames.SelectMany(entry => new[] { entry.Key.X, entry.Key.Y, entry.Value.X, entry.Value.Y }).ToList();
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["calibration"] = BossDpsCalibration.SelectMany(entry => new[] { (float)entry.Key, entry.Value }).ToList();
+		tag["plateaus"] = GearPlateauBosses.ToList();
 		tag["knowledge"] = Knowledge.Save();
 		if (Hellevator != null)
 		{
@@ -117,6 +119,8 @@ public sealed class Faction
 		var calibration = tag.GetList<float>("calibration");
 		for (int i = 0; i + 1 < calibration.Count; i += 2)
 			faction.BossDpsCalibration[(int)calibration[i]] = calibration[i + 1];
+		foreach (int boss in tag.GetList<int>("plateaus"))
+			faction.GearPlateauBosses.Add(boss);
 		if (tag.ContainsKey("knowledge"))
 			faction.Knowledge.Load(tag.GetCompound("knowledge"));
 		if (tag.ContainsKey("shaftX"))
