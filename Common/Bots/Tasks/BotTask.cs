@@ -299,14 +299,21 @@ public abstract class BotTask
 	}
 
 	const int TempleArrival = 6;
+	const int GuideHop = 30;
 	const int DoorStepInside = 2;
 
 	Vector2? TempleApproach(Vector2 target)
 	{
 		var goal = target.ToTileCoordinates();
 		var here = Bot.CenterTile;
-		if (!Navigation.PathFinder.InsideMaze(goal) || Navigation.PathFinder.InsideMaze(here))
+		if (!Navigation.PathFinder.InsideMaze(goal))
 			return null;
+		if (Navigation.PathFinder.InsideMaze(here))
+		{
+			if (System.Math.Abs(goal.X - here.X) + System.Math.Abs(goal.Y - here.Y) <= GuideHop)
+				return null;
+			return World.TempleDoor.GuideStep(goal, here, GuideHop) is Point step && step != here ? step.ToWorldCoordinates(8f, 0f) : null;
+		}
 		var door = World.TempleDoor.Near(goal);
 		var mouth = door is Point found ? World.TempleDoor.Mouth(found) : null;
 		if (Main.GameUpdateCount - templeLoggedAt > TempleLogTicks)
