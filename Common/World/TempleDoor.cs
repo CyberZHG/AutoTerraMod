@@ -12,7 +12,7 @@ public static class TempleDoor
 	const int SearchHeight = 250;
 	const int MouthSearch = 200;
 	const int LihzahrdDoorTop = 594;
-	const int LihzahrdDoorBottom = 646;
+	const int UnlockedDoorBottom = 700;
 	const uint CacheTicks = 600;
 	const int CacheCell = 100;
 
@@ -48,7 +48,8 @@ public static class TempleDoor
 		if (!WorldGen.InWorld(x, y, 10))
 			return false;
 		var tile = Main.tile[x, y];
-		return tile.HasTile && tile.TileType is TileID.ClosedDoor or TileID.OpenDoor && tile.TileFrameY >= LihzahrdDoorTop && tile.TileFrameY <= LihzahrdDoorBottom;
+		return tile.HasTile && tile.TileType is TileID.ClosedDoor or TileID.OpenDoor && tile.WallType == WallID.LihzahrdBrickUnsafe
+			&& tile.TileFrameY >= LihzahrdDoorTop && tile.TileFrameY <= UnlockedDoorBottom;
 	}
 
 	public static Point? Mouth(Point door)
