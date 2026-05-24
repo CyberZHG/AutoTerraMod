@@ -58,6 +58,20 @@ public static class BossReadiness
 		return calibrated;
 	}
 
+	public static (float rawDps, float factor, float bossLife) Expectation(Faction faction, BossChallenge challenge, Bot summoner)
+	{
+		var setup = Prepare(faction, challenge, summoner, null);
+		float calibration = Calibration(faction, challenge.BossType);
+		bool usesRaw = !Report(setup, calibration).IsReady && Report(setup, 1f).IsReady && GearPlateaued(faction, challenge.BossType);
+		return (setup.RawDps, usesRaw ? 1f : calibration, setup.BossLife);
+	}
+
+	public static void RestartPlateau(Faction faction, int bossType)
+	{
+		faction.GearPlateauBosses.Remove(bossType);
+		plateaus.Remove((faction.Id, bossType));
+	}
+
 	const int ThresholdSteps = 12;
 	const float LowestCalibration = 0.01f;
 

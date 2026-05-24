@@ -29,13 +29,14 @@ public sealed class BossCredit : GlobalNPC
 
 	static readonly Dictionary<int, int> summoners = new();
 
-	public static void RecordSummoner(BossChallenge challenge, int factionId, float expectedDps)
+	public static void RecordSummoner(BossChallenge challenge, Bot summoner)
 	{
-		summoners[challenge.BossType] = factionId;
-		expectations[challenge.BossType] = (factionId, expectedDps, Main.GameUpdateCount);
+		var (rawDps, factor, bossLife) = BossReadiness.Expectation(summoner.Faction, challenge, summoner);
+		summoners[challenge.BossType] = summoner.FactionId;
+		expectations[challenge.BossType] = (summoner.FactionId, rawDps, factor, bossLife, Main.GameUpdateCount);
 	}
 
-	static readonly Dictionary<int, (int factionId, float dps, uint since)> expectations = new();
+	static readonly Dictionary<int, (int factionId, float rawDps, float factor, float bossLife, uint since)> expectations = new();
 
 	const float CalibrationAfterSeconds = 30f;
 	const float MinCalibration = 0.05f;
@@ -47,26 +48,25 @@ public sealed class BossCredit : GlobalNPC
 		if (!expectations.TryGetValue(challenge.BossType, out var expected) || FactionById(expected.factionId) is not { } faction)
 			return;
 		float seconds = (Main.GameUpdateCount - expected.since) / 60f;
-		if (seconds < CalibrationAfterSeconds || expected.dps <= 0f)
+		if (seconds < CalibrationAfterSeconds || expected.rawDps <= 0f)
 		{
 			if (over)
 				expectations.Remove(challenge.BossType);
 			return;
 		}
 		long dealt = damageByFight.TryGetValue(challenge.BossType, out var byFaction) ? byFaction.GetValueOrDefault(expected.factionId) : 0;
-		float ratio = Microsoft.Xna.Framework.MathHelper.Clamp(dealt / seconds / expected.dps, MinCalibration, MaxCalibration);
+		float measured = Microsoft.Xna.Framework.MathHelper.Clamp(dealt / seconds / expected.rawDps, MinCalibration, MaxCalibration);
 		float old = faction.BossDpsCalibration.GetValueOrDefault(challenge.BossType, 1f);
-		float updated = over ? Microsoft.Xna.Framework.MathHelper.Lerp(old, ratio * old, CalibrationBlend) : System.Math.Min(old, ratio * old);
-		if (won)
-			updated = System.Math.Max(updated, BossReadiness.ReadyThreshold(faction, challenge));
+		float progress = expected.bossLife > 0f ? System.Math.Clamp(dealt / expected.bossLife, 0f, 1f) : 0f;
+		float updated = won ? System.Math.Max(Microsoft.Xna.Framework.MathHelper.Lerp(old, measured, CalibrationBlend), BossReadiness.ReadyThreshold(faction, challenge))
+			: over ? System.Math.Max(MinCalibration, expected.factor * progress)
+			: System.Math.Min(old, measured);
 		if (over)
 			expectations.Remove(challenge.BossType);
-		else
-			expectations[challenge.BossType] = (expected.factionId, expected.dps * updated / old, expected.since);
 		faction.BossDpsCalibration[challenge.BossType] = updated;
 		if (over && !won)
-			faction.GearPlateauBosses.Remove(challenge.BossType);
-		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} against {expected.dps:0} expected; damage estimate now x{updated:0.00}");
+			BossReadiness.RestartPlateau(faction, challenge.BossType);
+		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} ({progress:P0} of its life) against {expected.rawDps * expected.factor:0} expected; damage estimate now x{updated:0.00}");
 	}
 
 	public static void FloorDefeatedCalibrations()
@@ -125,7 +125,10 @@ public sealed class BossCredit : GlobalNPC
 			damageByFight[challenge.BossType] = byFaction = new Dictionary<int, long>();
 		byFaction[factionId] = byFaction.GetValueOrDefault(factionId) + damage;
 		if (!expectations.ContainsKey(challenge.BossType) && BotWorldSystem.FindBot(botId) is { } striker)
-			expectations[challenge.BossType] = (factionId, BossReadiness.Evaluate(striker.Faction, challenge, striker).TeamDps, Main.GameUpdateCount);
+		{
+			var (rawDps, factor, bossLife) = BossReadiness.Expectation(striker.Faction, challenge, striker);
+			expectations[challenge.BossType] = (factionId, rawDps, factor, bossLife, Main.GameUpdateCount);
+		}
 		if (!fightersByFight.TryGetValue(challenge.BossType, out var fighters))
 			fightersByFight[challenge.BossType] = fighters = new HashSet<int>();
 		fighters.Add(botId);
