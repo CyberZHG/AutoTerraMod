@@ -59,6 +59,11 @@ public abstract class BotTask
 		return true;
 	}
 
+	const float RecallGainTiles = 40f;
+
+	protected bool RecallBringsCloser(Vector2 target) =>
+		Vector2.Distance(CampLanding, target) + RecallGainTiles * 16f < Vector2.Distance(Bot.Center, target);
+
 	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
 
 	const int PointlessRecallTiles = 8;
@@ -86,7 +91,7 @@ public abstract class BotTask
 
 	const float AspirationCap = 25f;
 
-	protected float Aspire(float score) => Bosses.BossCredit.MainLineDone(Bot.Faction) ? score : System.Math.Min(score, AspirationCap);
+	protected float Aspire(float score) => Bosses.BossCredit.AllBossesDone(Bot.Faction) ? score : System.Math.Min(score, AspirationCap);
 
 	const float BedsideReach = 16f * 4f;
 

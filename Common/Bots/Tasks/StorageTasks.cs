@@ -38,7 +38,7 @@ public abstract class ChestVisitTask : BotTask
 		var tile = BaseStorage.TileOf(chest);
 		if (!Bot.Hands.CanReach(null, tile))
 		{
-			if (Vector2.Distance(Bot.Center, tile.ToWorldCoordinates()) > RecallTripDistance && Bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true && (RecallLandsAtBase() || Bot.OutpostBed != null) && TryRecallToCamp())
+			if (Vector2.Distance(Bot.Center, tile.ToWorldCoordinates()) > RecallTripDistance && Bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true && (RecallLandsAtBase() || Bot.OutpostBed != null) && RecallBringsCloser(tile.ToWorldCoordinates()) && TryRecallToCamp())
 				return;
 			if (!TravelOrTunnel(tile.ToWorldCoordinates(16f, 16f), 24f))
 				IsFinished = true;

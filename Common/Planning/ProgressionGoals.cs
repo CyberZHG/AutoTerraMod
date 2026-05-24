@@ -812,15 +812,21 @@ public sealed class AspirationGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
 	readonly Aspiration aspiration;
+	readonly bool fallback;
 
-	public AspirationGoal(Aspiration aspiration, ProgressionGoal inner)
+	public AspirationGoal(Aspiration aspiration, ProgressionGoal inner, bool fallback = false)
 	{
 		this.aspiration = aspiration;
 		this.inner = inner;
+		this.fallback = fallback;
 	}
 
 	public ProgressionGoal Inner => inner;
-	public override bool AppliesTo(Bot bot) => bot.Personality.Aspiration == aspiration && inner.AppliesTo(bot);
+
+	public AspirationGoal AsFallback() => new(aspiration, inner, true);
+
+	public override bool AppliesTo(Bot bot) =>
+		bot.Personality.Aspiration == aspiration && (fallback || Bosses.BossCredit.AllBossesDone(bot.Faction)) && inner.AppliesTo(bot);
 	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
@@ -1623,6 +1629,7 @@ public static class ProgressionGoals
 		goals.Add(new BridgeKitGoal());
 		foreach (int staff in new[] { ItemID.ImpStaff, ItemID.SpiderStaff, ItemID.OpticStaff })
 			goals.Add(new StyleGoal(new GearGoal(GearKind.SummonWeapon, staff), CombatStyle.Melee, CombatStyle.Ranged, CombatStyle.Magic));
+		goals.AddRange(goals.OfType<AspirationGoal>().Select(goal => goal.AsFallback()).ToList());
 		if (HeadlessTestMode.BossFirst)
 		{
 			var boss = goals.OfType<BossGoal>().First();

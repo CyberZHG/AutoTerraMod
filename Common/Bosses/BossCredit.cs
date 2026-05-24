@@ -152,6 +152,9 @@ public sealed class BossCredit : GlobalNPC
 
 	public static bool MainLineDone(Faction faction) => OpenChallengesFor(faction).All(IsOptional);
 
+	public static bool AllBossesDone(Faction faction) =>
+		BossCatalog.Challenges.Where(BossCatalog.AppliesToThisWorld).All(challenge => HasDefeated(faction, challenge));
+
 	public static int DefeatedCount(Faction faction) =>
 		BossCatalog.Challenges.Count(challenge => BossCatalog.AppliesToThisWorld(challenge) && HasDefeated(faction, challenge));
 

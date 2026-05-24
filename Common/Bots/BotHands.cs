@@ -96,7 +96,7 @@ public sealed class BotHands
 	{
 		if (!TileQuery.HasTile(tile))
 			return ToolResult.Done;
-		if (InOtherBase(tile) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
+		if (InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
@@ -298,7 +298,7 @@ public sealed class BotHands
 
 	public bool Place(Item item, Point tile)
 	{
-		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile))
+		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
 			return false;
 		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;

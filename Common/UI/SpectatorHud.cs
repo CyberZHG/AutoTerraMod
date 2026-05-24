@@ -15,8 +15,10 @@ namespace AutoTerraMod.Common.UI;
 public sealed class SpectatorHud : ModSystem
 {
 	const float LineHeight = 22f;
-	const float PanelLeft = 24f;
+	const float PanelMargin = 24f;
 	const float PanelTop = 110f;
+	const float MinimapGap = 60f;
+	const float PanelTextScale = 0.85f;
 
 	public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
 	{
@@ -99,6 +101,7 @@ public sealed class SpectatorHud : ModSystem
 	const int PanelRefreshFrames = 15;
 
 	static readonly List<(string text, Color color)> lines = new();
+	static float panelWidth;
 	static int framesUntilRefresh;
 	static Bot describedBot;
 
@@ -110,10 +113,11 @@ public sealed class SpectatorHud : ModSystem
 			describedBot = SpectatorSystem.Followed;
 			RebuildPanel();
 		}
-		var position = new Vector2(PanelLeft, PanelTop);
+		float top = Main.mapEnabled && Main.mapStyle == 1 ? Main.miniMapY + Main.miniMapHeight + MinimapGap : PanelTop;
+		var position = new Vector2(Main.screenWidth - PanelMargin - panelWidth, top);
 		foreach (var (text, color) in lines)
 		{
-			Utils.DrawBorderString(Main.spriteBatch, text, position, color, 0.85f);
+			Utils.DrawBorderString(Main.spriteBatch, text, position, color, PanelTextScale);
 			position.Y += LineHeight;
 		}
 		return true;
@@ -135,6 +139,7 @@ public sealed class SpectatorHud : ModSystem
 			SpectatorSystem.KeysOf(SpectatorSystem.FreeCameraKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.InventoryKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.PlayInPersonKey)), Color.Gray));
+		panelWidth = lines.Select(line => Terraria.GameContent.FontAssets.MouseText.Value.MeasureString(line.text).X * PanelTextScale).DefaultIfEmpty(0f).Max();
 	}
 
 	static void DescribeBot(Bot bot, List<(string, Color)> lines)
@@ -156,7 +161,7 @@ public sealed class SpectatorHud : ModSystem
 		var held = avatar.inventory[avatar.selectedItem];
 		var weapon = bot.Hands.BestWeapon();
 		lines.Add((Text("UI.Gear", bot.Hands.BestPickaxe?.Name ?? "-", weapon?.Name ?? "-", held.IsAir ? "-" : held.Name), Color.White));
-		if (Bosses.BossCredit.MainLineDone(bot.Faction))
+		if (Bosses.BossCredit.AllBossesDone(bot.Faction))
 			lines.Add((Text("UI.Aspiration", Text($"Aspirations.{traits.Aspiration}")), Color.LightGray));
 	}
 

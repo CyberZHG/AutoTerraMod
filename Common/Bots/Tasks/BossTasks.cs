@@ -495,8 +495,7 @@ public sealed class SummonTask : BotTask
 				if (doll == null)
 					return Abandon("Guide Voodoo Doll missing");
 				Bot.Motor.Face(ritualTarget);
-				int thrown = Item.NewItem(new EntitySource_Misc("AutoTerraMod:VoodooThrow"), ritualTarget, ItemID.GuideVoodooDoll);
-				Main.item[thrown].noGrabDelay = DollGrabDelay;
+				Bosses.DollThrow.Throw(ItemID.GuideVoodooDoll, Bot.Center, ritualTarget, DollGrabDelay);
 				Inventory.ConsumeOne(Avatar, doll);
 				return true;
 			default:

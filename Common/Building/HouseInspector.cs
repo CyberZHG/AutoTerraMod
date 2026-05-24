@@ -156,7 +156,7 @@ public static class HouseInspector
 
 	public static bool IsProtected(int x, int y)
 	{
-		if (InDungeonEntrance(x, y) || World.Highway.ProtectsAnyDeck(x, y))
+		if (InDungeonEntrance(x, y) || World.Highway.ProtectsAnyDeck(x, y) || World.ShimmerZone.Contains(x, y))
 			return true;
 		foreach (var faction in BotWorldSystem.Factions)
 		{

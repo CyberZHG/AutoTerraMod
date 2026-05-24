@@ -231,13 +231,14 @@ public static class Outpost
 		return usable;
 	}
 
-	public static bool IsDistantArena(Factions.Faction faction, Vector2 point) => Vector2.Distance(point, faction.BaseCenter) > ArenaOutpostDistance;
+	public static bool IsDistantArena(Factions.Faction faction, Vector2 point) =>
+		Vector2.Distance(point, faction.BaseCenter) > ArenaOutpostDistance && !Navigation.PathFinder.InsideMaze(point.ToTileCoordinates());
 
 	public static bool NearArenaSite(Bot bot) =>
 		bot.Faction.Rally is { } rally && Vector2.Distance(bot.Center, rally.point) < ArenaSiteReach;
 
 	public static bool WantsArenaOutpost(Bot bot) =>
-		NearArenaSite(bot) && bot.Faction.Rally is { } rally && Vector2.Distance(rally.point, bot.Faction.BaseCenter) > ArenaOutpostDistance
+		NearArenaSite(bot) && bot.Faction.Rally is { } rally && IsDistantArena(bot.Faction, rally.point)
 		&& ArenaBedFor(bot.Faction) == null && !Bots.Tasks.OutpostTask.ArenaTakenByOther(bot) && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
 		&& (!OnUnderworldBridge(bot.Faction, rally.point) || Count(bot.Avatar, item => item.createTile >= 0 && Main.tileRope[item.createTile]) >= BridgeAccessRopes);
 
