@@ -13,8 +13,13 @@ public sealed class BossWatch : ModSystem
 	readonly record struct Sighting(int Type, int Life, int LifeMax, int TimeLeft, int Target, Vector2 Center, string Ai, string LocalAi);
 
 	readonly Dictionary<int, Sighting> sightings = new();
+	readonly HashSet<BossChallenge> endingFights = new();
 
-	public override void OnWorldUnload() => sightings.Clear();
+	public override void OnWorldUnload()
+	{
+		sightings.Clear();
+		endingFights.Clear();
+	}
 
 	const int ProgressLogTicks = 1800;
 	const int DespawnTimeLeft = 1;
@@ -36,10 +41,11 @@ public sealed class BossWatch : ModSystem
 				continue;
 			sightings.Remove(slot);
 			if (BossCatalog.ChallengeOf(last.Type) is BossChallenge challenge)
-				BossCredit.ForgetIfOver(challenge);
+				endingFights.Add(challenge);
 			string outcome = last.TimeLeft > DespawnTimeLeft && Defeated(last.Type) ? "defeated" : "despawned";
 			BotDiagnostics.LogWorld($"boss {Lang.GetNPCNameValue(last.Type)} {outcome}: life={last.Life}/{last.LifeMax} timeLeft={last.TimeLeft} target={DescribeTarget(last)} lastTile={last.Center.ToTileCoordinates()} nowTile={npc.Center.ToTileCoordinates()} ai={last.Ai} local={last.LocalAi}");
 		}
+		endingFights.RemoveWhere(BossCredit.ForgetIfOver);
 		foreach (var npc in Main.npc)
 		{
 			if (!npc.active || !(npc.boss || BossCatalog.ChallengeOf(npc.type)?.BossType == npc.type))

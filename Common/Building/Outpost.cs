@@ -351,7 +351,7 @@ public static class Outpost
 				var here = Main.tile[tile.X, tile.Y];
 				if (here.LiquidAmount > 0 && (!wetShell || interior.Contains(tile)))
 					return false;
-				if (World.TileQuery.SupportsShrine(tile.X, tile.Y) || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y) || InBridgeClearance(tile.X, tile.Y))
+				if (World.TileQuery.SupportsShrine(tile.X, tile.Y) || Navigation.PathFinder.InsideMaze(tile) || HouseInspector.IsProtected(tile.X, tile.Y) || World.Highway.InAnyClearance(tile.X, tile.Y) || InBridgeClearance(tile.X, tile.Y))
 					return false;
 				if (here.HasTile && (TileID.Sets.BasicChest[here.TileType] || !WorldGen.CanKillTile(tile.X, tile.Y)))
 					return false;

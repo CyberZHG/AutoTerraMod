@@ -84,15 +84,15 @@ public sealed class BossCredit : GlobalNPC
 	public static bool SummonedByOther(NPC boss, int factionId) =>
 		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId;
 
-	public static void ForgetIfOver(BossChallenge challenge)
+	public static bool ForgetIfOver(BossChallenge challenge)
 	{
-		if (!BossCatalog.IsBossAlive(challenge))
-		{
-			CheckCalibration(challenge, over: true);
-			summoners.Remove(challenge.BossType);
-			damageByFight.Remove(challenge.BossType);
-			fightersByFight.Remove(challenge.BossType);
-		}
+		if (BossCatalog.IsBossAlive(challenge))
+			return false;
+		CheckCalibration(challenge, over: true);
+		summoners.Remove(challenge.BossType);
+		damageByFight.Remove(challenge.BossType);
+		fightersByFight.Remove(challenge.BossType);
+		return true;
 	}
 
 	public static string DescribeFight(BossChallenge challenge) =>
