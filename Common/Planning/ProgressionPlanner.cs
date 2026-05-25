@@ -274,7 +274,23 @@ public static class ProgressionPlanner
 	public static PlanStep ObtainAny(Bot bot, IEnumerable<int> options)
 	{
 		var context = Context.Rent(bot);
-		return context.Release(ObtainAny(context, options, 0));
+		var step = ObtainAny(context, options, 0);
+		if (step is BlockedStep && gearPlanning > 0)
+			NoteBlockedGear(bot, options, context.Blocked);
+		return context.Release(step);
+	}
+
+	const uint BlockedGearLogTicks = 10 * 3600;
+	static readonly Dictionary<(int bot, int item), uint> blockedGearLogged = new();
+
+	static void NoteBlockedGear(Bot bot, IEnumerable<int> options, IEnumerable<int> blocked)
+	{
+		int first = options.FirstOrDefault();
+		var key = (bot.Id, first);
+		if (blockedGearLogged.TryGetValue(key, out uint at) && Main.GameUpdateCount - at < BlockedGearLogTicks)
+			return;
+		blockedGearLogged[key] = Main.GameUpdateCount;
+		BotDiagnostics.Log(bot, $"cannot work toward {string.Join("/", options.Select(Lang.GetItemNameValue))}: blocked on {string.Join(", ", blocked.Take(12).Select(Lang.GetItemNameValue))}");
 	}
 
 	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount, bool fresh = false)
