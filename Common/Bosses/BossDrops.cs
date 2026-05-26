@@ -82,8 +82,9 @@ public static class BossDrops
 
 	static bool IsFurniture(int itemType)
 	{
-		int tile = ContentSamples.ItemsByType[itemType].createTile;
-		if (tile < 0 || !Main.tileFrameImportant[tile])
+		var sample = ContentSamples.ItemsByType[itemType];
+		int tile = sample.createTile;
+		if (tile < 0 || !Main.tileFrameImportant[tile] || ItemID.Sets.IsAMaterial[itemType])
 			return false;
 		craftingTiles ??= Main.recipe.Take(Recipe.numRecipes).SelectMany(recipe => recipe.requiredTile).Where(required => required >= 0).ToHashSet();
 		return !craftingTiles.Contains(tile);
