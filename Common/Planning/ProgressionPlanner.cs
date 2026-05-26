@@ -283,6 +283,13 @@ public static class ProgressionPlanner
 	const uint BlockedGearLogTicks = 10 * 3600;
 	static readonly Dictionary<(int bot, int item), uint> blockedGearLogged = new();
 
+	static string DescribeBlocked(Bot bot, int itemType)
+	{
+		string source = ResourceSources.For(itemType)?.GetType().Name ?? (RecipeIndex.For(itemType).Any() ? "recipe" : "none");
+		string boss = Bosses.BossDrops.SourceOf(itemType) is { } challenge ? $" boss={challenge.Name}{(Bosses.BossCredit.HasDefeated(bot.Faction, challenge) ? "" : "(unbeaten)")}" : "";
+		return $"{Lang.GetItemNameValue(itemType)}[{source}{boss} stored={BaseStorage.Count(bot.Faction, itemType)}]";
+	}
+
 	static void NoteBlockedGear(Bot bot, IEnumerable<int> options, IEnumerable<int> blocked)
 	{
 		int first = options.FirstOrDefault();
@@ -290,7 +297,7 @@ public static class ProgressionPlanner
 		if (blockedGearLogged.TryGetValue(key, out uint at) && Main.GameUpdateCount - at < BlockedGearLogTicks)
 			return;
 		blockedGearLogged[key] = Main.GameUpdateCount;
-		BotDiagnostics.Log(bot, $"cannot work toward {string.Join("/", options.Select(Lang.GetItemNameValue))}: blocked on {string.Join(", ", blocked.Take(12).Select(Lang.GetItemNameValue))}");
+		BotDiagnostics.Log(bot, $"cannot work toward {string.Join("/", options.Select(Lang.GetItemNameValue))}: blocked on {string.Join(", ", blocked.Take(12).Select(item => DescribeBlocked(bot, item)))}");
 	}
 
 	public static PlanStep ObtainAnyAmount(Bot bot, IReadOnlyList<int> strongestFirst, int amount, bool fresh = false)
