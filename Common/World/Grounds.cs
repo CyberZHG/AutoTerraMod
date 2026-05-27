@@ -299,6 +299,10 @@ public static class Grounds
 		return dungeonFloors;
 	}
 
+	static readonly System.Collections.Generic.HashSet<int> LihzahrdAltars = new() { Terraria.ID.TileID.LihzahrdAltar };
+	static readonly System.Collections.Generic.HashSet<Point> NoExclusions = new();
+	const int TempleAltarReach = 400;
+
 	public static Vector2? PickSpot(FactionKnowledge knowledge, Landmark ground, Point from)
 	{
 		if (knowledge.LandmarkOf(ground) is not Point anchor || knowledge.SpanOf(ground) is not var (minX, maxX))
@@ -313,6 +317,9 @@ public static class Grounds
 				return DungeonInterior() is { Count: > 0 } floors
 					? FarDungeonFloor(floors, from).ToWorldCoordinates(8f, 0f)
 					: new Vector2((anchor.X + Main.rand.Next(-60, 61)) * 16f, (anchor.Y + Main.rand.Next(0, DungeonRange)) * 16f);
+			case Landmark.Temple:
+				var altar = knowledge.NearestKnown(anchor, LihzahrdAltars, NoExclusions, TempleAltarReach);
+				return TempleDoor.HuntSpot(anchor, altar)?.ToWorldCoordinates(8f, 0f);
 			default:
 				int x = DensestColumn(ground, minX, maxX);
 				return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);

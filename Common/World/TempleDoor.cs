@@ -21,7 +21,7 @@ public static class TempleDoor
 	public static void Reset()
 	{
 		cache.Clear();
-		guide = null;
+		guides.Clear();
 	}
 
 	public static Point? Near(Point tile)
@@ -87,12 +87,17 @@ public static class TempleDoor
 
 	sealed record Guide(Point Goal, uint At, int Left, int Top, int Width, int Height, int[] Steps);
 
-	static Guide guide;
+	static readonly Dictionary<Point, Guide> guides = new();
+	const int MaxGuides = 6;
 
 	public static Point? GuideStep(Point goal, Point here, int hop)
 	{
-		if (guide == null || guide.Goal != goal || Main.GameUpdateCount - guide.At > GuideTicks)
-			guide = Flood(goal);
+		if (!guides.TryGetValue(goal, out var guide) || Main.GameUpdateCount - guide.At > GuideTicks)
+		{
+			if (guides.Count >= MaxGuides)
+				guides.Clear();
+			guides[goal] = guide = Flood(goal);
+		}
 		if (Nearest(guide, here) is not Point start)
 			return null;
 		var at = start;
@@ -117,6 +122,38 @@ public static class TempleDoor
 		for (int drop = 0; drop < MaxDrop && !TileQuery.CanStandOn(at.X, at.Y + 1) && Open(at.X, at.Y + 1); drop++)
 			at.Y++;
 		return at;
+	}
+
+	const int HuntSpotTries = 600;
+	const int ShallowSteps = 40;
+	const int DeepSteps = 450;
+	const int NearAltarSteps = 12;
+	const int AltarRouteSteps = 220;
+
+	public static Point? HuntSpot(Point temple, Point? altar)
+	{
+		if (Near(altar ?? temple) is not Point door || Mouth(door) is not Point mouth)
+			return null;
+		var origin = altar ?? new Point(door.X - Math.Sign(mouth.X - door.X) * 2, mouth.Y);
+		int fewest = altar == null ? ShallowSteps : NearAltarSteps;
+		int most = altar == null ? DeepSteps : AltarRouteSteps;
+		if (!guides.TryGetValue(origin, out var field) || Main.GameUpdateCount - field.At > GuideTicks)
+		{
+			if (guides.Count >= MaxGuides)
+				guides.Clear();
+			guides[origin] = field = Flood(origin);
+		}
+		for (int attempt = 0; attempt < HuntSpotTries; attempt++)
+		{
+			int index = Main.rand.Next(field.Steps.Length);
+			int steps = field.Steps[index];
+			if (steps < fewest || steps > most)
+				continue;
+			int x = field.Left + index % field.Width, y = field.Top + index / field.Width;
+			if (TileQuery.CanStandOn(x, y + 1))
+				return new Point(x, y);
+		}
+		return null;
 	}
 
 	static readonly (int dx, int dy)[] Neighbors = { (0, 1), (-1, 0), (1, 0), (0, -1) };

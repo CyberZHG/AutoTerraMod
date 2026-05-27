@@ -46,7 +46,8 @@ public static class ResourceSources
 		[ItemID.Vertebrae] = Landmark.Crimson,
 		[ItemID.GuideVoodooDoll] = Landmark.Underworld,
 		[ItemID.Stinger] = Landmark.Jungle,
-		[ItemID.ClothierVoodooDoll] = Landmark.Dungeon
+		[ItemID.ClothierVoodooDoll] = Landmark.Dungeon,
+		[ItemID.LihzahrdPowerCell] = Landmark.Temple
 	};
 
 	static readonly Dictionary<int, NpcSource> RareDrops = new()

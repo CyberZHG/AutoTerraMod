@@ -164,11 +164,13 @@ public sealed class LootTask : BotTask
 	{
 		if (Bot.Brain.Plan is not Planning.GatherStep { ItemType: int itemType })
 			return -1;
+		bool knownTemple = knowledge.LandmarkOf(World.Landmark.Temple) != null;
 		return Enumerable.Range(0, Main.maxChests)
 			.Where(index => Main.chest[index] is Chest chest && chest.item.Any(item => item?.type == itemType && item.stack > 0)
 				&& IsLootable(chest) && knowledge.MayLoot(index) && IsExposed(chest)
 				&& (!wantedRetryAt.TryGetValue(index, out uint retryAt) || Main.GameUpdateCount >= retryAt)
-				&& (knowledge.KnowsChest(index) || knowledge.IsExplored(chest.x / FactionKnowledge.ExploreCell, chest.y / FactionKnowledge.ExploreCell)))
+				&& (knowledge.KnowsChest(index) || knowledge.IsExplored(chest.x / FactionKnowledge.ExploreCell, chest.y / FactionKnowledge.ExploreCell)
+					|| knownTemple && Navigation.PathFinder.InsideMaze(new Point(chest.x, chest.y))))
 			.OrderBy(index => WalkCost(Main.chest[index]))
 			.DefaultIfEmpty(-1)
 			.First();
