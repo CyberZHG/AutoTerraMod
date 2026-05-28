@@ -140,7 +140,7 @@ public sealed class OpportunisticMineTask : BotTask
 	bool Worthwhile(int x, int y, int power, int pickTier)
 	{
 		var tile = Main.tile[x, y];
-		if (!tile.HasTile || unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y))
+		if (!tile.HasTile || unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y) || Navigation.PathFinder.InsideMaze(new Point(x, y)))
 			return false;
 		int type = tile.TileType;
 		if (TileQuery.IsChoppableTree(type))
