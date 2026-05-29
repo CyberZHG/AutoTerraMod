@@ -59,7 +59,7 @@ public sealed class BossCredit : GlobalNPC
 		float old = faction.BossDpsCalibration.GetValueOrDefault(challenge.BossType, 1f);
 		float progress = expected.bossLife > 0f ? System.Math.Clamp(dealt / expected.bossLife, 0f, 1f) : 0f;
 		float updated = won ? System.Math.Max(Microsoft.Xna.Framework.MathHelper.Lerp(old, measured, CalibrationBlend), BossReadiness.ReadyThreshold(faction, challenge))
-			: over ? System.Math.Max(MinCalibration, expected.factor * progress)
+			: over ? System.Math.Max(MinCalibration, LossCalibration(faction, challenge, expected.factor) * progress)
 			: System.Math.Min(old, measured);
 		if (over)
 			expectations.Remove(challenge.BossType);
@@ -67,6 +67,12 @@ public sealed class BossCredit : GlobalNPC
 		if (over && !won)
 			BossReadiness.RestartPlateau(faction, challenge.BossType);
 		BotDiagnostics.LogWorld($"{faction.Name} dealt {dealt / seconds:0} dps to {challenge.Name} ({progress:P0} of its life) against {expected.rawDps * expected.factor:0} expected; damage estimate now x{updated:0.00}");
+	}
+
+	static float LossCalibration(Faction faction, BossChallenge challenge, float usedFactor)
+	{
+		float threshold = BossReadiness.ReadyThreshold(faction, challenge);
+		return threshold > 0f ? System.Math.Min(usedFactor, threshold) : usedFactor;
 	}
 
 	public static void FloorDefeatedCalibrations()
