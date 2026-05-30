@@ -21,7 +21,7 @@ public sealed class BotStatusReport : ModSystem
 		ticksSinceReport = 0;
 		if (!Bots.BotDiagnostics.Enabled)
 			return;
-		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}):");
+		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}, invasion={Main.invasionType}/{Main.invasionSize}, danger={NPC.AnyDanger()}, cultistDelay={(int)Terraria.GameContent.Events.CultistRitual.delay}):");
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
