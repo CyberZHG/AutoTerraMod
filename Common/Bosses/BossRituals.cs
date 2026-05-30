@@ -159,7 +159,51 @@ public static class BossRituals
 	{
 		if (KnownLandmark(bot, Landmark.Dungeon) is not Point dungeon)
 			return new ScoutStep(Landmark.Dungeon, false);
+		if (RitualFloorGap() is Point gap)
+			return Inventory.Items(bot.Avatar).Any(Bots.Tasks.FillTileTask.IsFiller) ? new FillTileStep(gap) : ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, RitualFillerBlocks);
 		return new SummonBossStep(challenge, trigger, dungeon.ToWorldCoordinates(), null);
+	}
+
+	const int RitualFillerBlocks = 10;
+	const int RitualColumnStep = 2;
+	const int RitualFloorSlack = 3;
+
+	static Point? RitualFloorGap()
+	{
+		int x = Main.dungeonX, y = Main.dungeonY;
+		if (x <= 0 || y < 8)
+			return null;
+		var center = new Vector2(x * 16 + 8, y * 16 - 64 - 8 - 27);
+		if (Terraria.GameContent.Events.CultistRitual.CheckFloor(center, out _))
+			return null;
+		var middle = center.ToTileCoordinates();
+		foreach (int offset in new[] { -5, -3, 3, 5 })
+		{
+			int column = middle.X + offset * RitualColumnStep;
+			if (HasRitualFloor(column, middle.Y))
+				continue;
+			for (int slack = 0; slack <= RitualFloorSlack; slack++)
+			{
+				foreach (int row in new[] { y + slack, y - slack })
+				{
+					if (!WorldGen.SolidTile(column, row) && !Collision.SolidTiles(column - 1, column + 1, row - 3, row - 1))
+						return new Point(column, row);
+				}
+			}
+		}
+		return null;
+	}
+
+	static bool HasRitualFloor(int column, int middleRow)
+	{
+		for (int row = middleRow - 5; row < middleRow + 12; row++)
+		{
+			if ((WorldGen.SolidTile(column, row) || TileID.Sets.Platforms[Framing.GetTileSafely(column, row).TileType])
+				&& (!Collision.SolidTiles(column - 1, column + 1, row - 3, row - 1)
+					|| !Collision.SolidTiles(column, column, row - 3, row - 1) && !Collision.SolidTiles(column + 1, column + 1, row - 3, row - 2) && !Collision.SolidTiles(column - 1, column - 1, row - 3, row - 2)))
+				return true;
+		}
+		return false;
 	}
 
 	static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
