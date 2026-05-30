@@ -21,7 +21,7 @@ public sealed class BotStatusReport : ModSystem
 		ticksSinceReport = 0;
 		if (!Bots.BotDiagnostics.Enabled)
 			return;
-		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}, invasion={Main.invasionType}/{Main.invasionSize}, danger={NPC.AnyDanger()}, cultistDelay={(int)Terraria.GameContent.Events.CultistRitual.delay}):");
+		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}, invasion={Main.invasionType}/{Main.invasionSize}, danger={NPC.AnyDanger()}, cultistDelay={(int)Terraria.GameContent.Events.CultistRitual.delay}, ritual={DescribeRitualSite()}):");
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
@@ -89,4 +89,14 @@ public sealed class BotStatusReport : ModSystem
 		DeliverStep deliver => $"deliver {Lang.GetItemNameValue(deliver.ItemType)} to #{deliver.RecipientId}",
 		_ => plan.GetType().Name
 	};
+
+	static string DescribeRitualSite()
+	{
+		int x = Main.dungeonX, y = Main.dungeonY;
+		if (x <= 0 || y < 8)
+			return "none";
+		bool blockedAbove = WorldGen.SolidTile(Main.tile[x, y - 7]);
+		bool floor = Terraria.GameContent.Events.CultistRitual.CheckFloor(new Microsoft.Xna.Framework.Vector2(x * 16 + 8, y * 16 - 64 - 8 - 27), out _);
+		return $"{x},{y} above={(blockedAbove ? "solid" : "open")} floor={floor} los={WorldGen.PlayerLOS(x - 6, y) || WorldGen.PlayerLOS(x + 6, y)}";
+	}
 }
