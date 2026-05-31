@@ -536,6 +536,10 @@ public sealed class BotVitals
 		Avatar.ZoneSkyHeight = tileY <= Main.worldSurface * SkyFraction;
 		Avatar.ZoneBeach = WorldGen.oceanDepths(center.X, center.Y);
 		Avatar.ZoneLihzhardTemple = Main.tile[center.X, center.Y].WallType == WallID.LihzahrdBrickUnsafe;
+		Avatar.ZoneTowerSolar = NPC.TowerActiveSolar && NearTower(NPCID.LunarTowerSolar);
+		Avatar.ZoneTowerVortex = NPC.TowerActiveVortex && NearTower(NPCID.LunarTowerVortex);
+		Avatar.ZoneTowerNebula = NPC.TowerActiveNebula && NearTower(NPCID.LunarTowerNebula);
+		Avatar.ZoneTowerStardust = NPC.TowerActiveStardust && NearTower(NPCID.LunarTowerStardust);
 	}
 
 	void MirrorHealthOnBody(NPC body)
@@ -558,5 +562,17 @@ public sealed class BotVitals
 			}
 		}
 		return Main.expertMode ? (int)(ticks * 1.5) : ticks;
+	}
+
+	const float TowerZoneReach = 4000f;
+
+	bool NearTower(int towerType)
+	{
+		foreach (var npc in Main.npc)
+		{
+			if (npc.active && npc.type == towerType && Microsoft.Xna.Framework.Vector2.Distance(npc.Center, Avatar.Center) < TowerZoneReach)
+				return true;
+		}
+		return false;
 	}
 }

@@ -280,7 +280,7 @@ public sealed class SummonTask : BotTask
 			Engagement.Fight(Bot, pillar);
 			return false;
 		}
-		var guard = Main.npc.Where(npc => Engagement.IsHostileTarget(npc) && Vector2.Distance(npc.Center, Bot.Center) < PillarGuardReach)
+		var guard = Main.npc.Where(npc => Engagement.IsHostileTarget(npc) && !Bot.IsIgnoring(npc) && Vector2.Distance(npc.Center, Bot.Center) < PillarGuardReach)
 			.OrderBy(npc => Vector2.DistanceSquared(npc.Center, Bot.Center)).FirstOrDefault();
 		if (guard != null)
 			Engagement.Fight(Bot, guard);
