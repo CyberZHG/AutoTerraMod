@@ -201,6 +201,8 @@ public sealed class SummonTask : BotTask
 		ritualTarget = step.Place;
 		switch (step.Trigger)
 		{
+			case PillarsTrigger:
+				return BesiegePillar();
 			case SummonItemTrigger item when item.CanUseHere != null && !item.CanUseHere(Avatar):
 				return Vector2.Distance(Bot.Center, step.Place) < 32f ? Abandon("not inside the required biome") : MoveCloser(step.Place, 16f);
 			case SmashOrbsTrigger when step.Shrine is Point shrine:
@@ -262,6 +264,29 @@ public sealed class SummonTask : BotTask
 			default:
 				return true;
 		}
+	}
+
+	const float PillarReach = 16f * 60f;
+	const float PillarGuardReach = 16f * 40f;
+
+	bool BesiegePillar()
+	{
+		var pillar = BossRituals.NearestPillar(step.Place);
+		if (pillar == null || Vector2.Distance(pillar.Center, step.Place) > PillarReach)
+			return true;
+		Bot.Watchdog.RecordProgress();
+		if (!pillar.dontTakeDamage)
+		{
+			Engagement.Fight(Bot, pillar);
+			return false;
+		}
+		var guard = Main.npc.Where(npc => Engagement.IsHostileTarget(npc) && Vector2.Distance(npc.Center, Bot.Center) < PillarGuardReach)
+			.OrderBy(npc => Vector2.DistanceSquared(npc.Center, Bot.Center)).FirstOrDefault();
+		if (guard != null)
+			Engagement.Fight(Bot, guard);
+		else
+			TravelOrTunnel(pillar.Bottom, PillarGuardReach * 0.25f);
+		return false;
 	}
 
 	bool MoveCloser(Vector2 target, float radius)
