@@ -209,7 +209,15 @@ public static class BossRituals
 	static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
 
 	public static NPC NearestPillar(Vector2 from) =>
-		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(npc => Vector2.Distance(npc.Center, from)).FirstOrDefault();
+		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => Vector2.Distance(npc.Center, from)).FirstOrDefault();
+
+	static int ShieldLeft(NPC pillar) => pillar.type switch
+	{
+		NPCID.LunarTowerSolar => NPC.ShieldStrengthTowerSolar,
+		NPCID.LunarTowerVortex => NPC.ShieldStrengthTowerVortex,
+		NPCID.LunarTowerNebula => NPC.ShieldStrengthTowerNebula,
+		_ => NPC.ShieldStrengthTowerStardust
+	};
 
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
 		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, pillar.Bottom, null) : PlanStep.Blocked;
