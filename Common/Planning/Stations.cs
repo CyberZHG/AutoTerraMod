@@ -188,7 +188,7 @@ public static class Stations
 		foreach (int x in OutdoorColumns(faction))
 		{
 			int y = World.TileQuery.SurfaceY(x) - 1;
-			if (y < settlement.Floor)
+			if (y < settlement.Floor + OutdoorDrop)
 				yield return new Point(x, y);
 		}
 	}
@@ -212,6 +212,8 @@ public static class Stations
 
 		const int OutdoorPlacementRange = 30;
 	const int OutdoorClearance = 2;
+
+	const int OutdoorDrop = 20;
 
 	static IEnumerable<int> OutdoorColumns(Faction faction)
 	{

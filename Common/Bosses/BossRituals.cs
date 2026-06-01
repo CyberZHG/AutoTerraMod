@@ -46,6 +46,7 @@ public static class BossRituals
 		challenge.Triggers.OrderBy(trigger => trigger switch
 		{
 			SummonItemTrigger item when Inventory.Count(bot.Avatar, item.Item) > 0 => 0,
+			PillarsTrigger when NearestPillar(bot.Center) != null => 0,
 			SmashOrbsTrigger when !CanMineEvilStone(bot) => 2,
 			_ => 1
 		});
