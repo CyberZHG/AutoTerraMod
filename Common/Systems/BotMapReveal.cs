@@ -22,7 +22,7 @@ public sealed class BotMapReveal : ModSystem
 
 	public override void PostUpdateEverything()
 	{
-		if (Main.dedServ || !Main.mapEnabled || Main.Map == null)
+		if (Main.dedServ || !Main.mapEnabled || Main.Map == null || !Spectating.SpectatorSystem.IsSpectating)
 			return;
 		for (int step = 0; step < Main.maxNPCs; step++)
 		{

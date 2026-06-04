@@ -18,14 +18,16 @@ public static class StabRenderer
 
 	public static void Draw(IEnumerable<Bot> bots)
 	{
-		var stabbing = bots.Where(bot => IsStabbing(bot) || IsThrowing(bot)).ToList();
+		var stabbing = bots.Where(bot => IsStabbing(bot) || IsThrowing(bot) || IsHoldingTool(bot)).ToList();
 		if (stabbing.Count == 0)
 			return;
 		var spriteBatch = Main.spriteBatch;
 		spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, Main.DefaultSamplerState, DepthStencilState.None, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
 		foreach (var bot in stabbing)
 		{
-			if (IsThrowing(bot))
+			if (IsHoldingTool(bot))
+				DrawHeldTool(spriteBatch, bot);
+			else if (IsThrowing(bot))
 				DrawYoyo(spriteBatch, bot);
 			else
 				DrawStab(spriteBatch, bot);
@@ -40,12 +42,38 @@ public static class StabRenderer
 		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.useStyle == ItemUseStyleID.Rapier;
 	}
 
+	static bool IsHeldTool(Item item) => item.channel && (item.pick > 0 || item.axe > 0 || item.hammer > 0);
+
+	static bool IsHoldingTool(Bot bot)
+	{
+		var avatar = bot.Avatar;
+		var item = avatar.lastVisualizedSelectedItem;
+		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.shoot > ProjectileID.None && IsHeldTool(item);
+	}
+
 	static bool IsThrowing(Bot bot)
 	{
 		var avatar = bot.Avatar;
 		var item = avatar.lastVisualizedSelectedItem;
-		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.shoot > ProjectileID.None && item.useStyle != ItemUseStyleID.Rapier
-			&& (BotHands.IsYoyo(item) || item.noUseGraphic && item.DamageType.CountsAsClass(Terraria.ModLoader.DamageClass.Melee));
+		return avatar.itemAnimation > 0 && item != null && !item.IsAir && item.shoot > ProjectileID.None && item.useStyle != ItemUseStyleID.Rapier && !IsHeldTool(item)
+			&& (BotHands.IsYoyo(item) || BotHands.IsWhip(item) || item.noUseGraphic && item.DamageType.CountsAsClass(Terraria.ModLoader.DamageClass.Melee));
+	}
+
+	const float ToolHold = 14f;
+	const float ToolJitter = 1.5f;
+
+	static void DrawHeldTool(SpriteBatch spriteBatch, Bot bot)
+	{
+		var avatar = bot.Avatar;
+		var item = avatar.lastVisualizedSelectedItem;
+		Main.instance.LoadProjectile(item.shoot);
+		var texture = TextureAssets.Projectile[item.shoot].Value;
+		var aim = bot.Hands.AimDirection;
+		var jitter = new Vector2(Main.rand.NextFloat(-ToolJitter, ToolJitter), Main.rand.NextFloat(-ToolJitter, ToolJitter));
+		var position = bot.Center + aim * ToolHold + jitter;
+		var light = Lighting.GetColor(position.ToTileCoordinates());
+		var effects = aim.X < 0f ? SpriteEffects.FlipVertically : SpriteEffects.None;
+		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, aim.ToRotation(), texture.Size() / 2f, 1f, effects, 0f);
 	}
 
 	const float YoyoSpinTurns = 6f;
@@ -65,7 +93,7 @@ public static class StabRenderer
 		var position = Vector2.Lerp(hand, target, (float)Math.Sin(progress * MathHelper.Pi));
 		var line = position - hand;
 		var light = Lighting.GetColor(position.ToTileCoordinates());
-		if (BotHands.IsYoyo(item))
+		if (BotHands.IsYoyo(item) || BotHands.IsWhip(item))
 			spriteBatch.Draw(TextureAssets.MagicPixel.Value, hand - Main.screenPosition, new Rectangle(0, 0, 1, 1), YoyoString.MultiplyRGB(light), line.ToRotation(), Vector2.Zero, new Vector2(line.Length(), 1f), SpriteEffects.None, 0f);
 		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, progress * MathHelper.TwoPi * YoyoSpinTurns, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
 	}

@@ -342,6 +342,11 @@ public sealed class BotHands
 			WorldGen.KillTile(tile.X, tile.Y);
 	}
 
+	public static bool Anchored(Point tile) =>
+		WorldGen.InWorld(tile.X, tile.Y, 2) && (Main.tile[tile.X, tile.Y].WallType > 0
+			|| Main.tile[tile.X - 1, tile.Y].HasTile || Main.tile[tile.X + 1, tile.Y].HasTile
+			|| Main.tile[tile.X, tile.Y - 1].HasTile || Main.tile[tile.X, tile.Y + 1].HasTile);
+
 	internal static bool TryPlaceTile(Item item, Point tile)
 	{
 		if (TileObjectData.GetTileData(item.createTile, item.placeStyle) != null)
@@ -354,6 +359,8 @@ public sealed class BotHands
 			TileObjectData.CallPostPlacementPlayerHook(tile.X, tile.Y, item.createTile, item.placeStyle, 1, objectData.alternate, objectData);
 			return true;
 		}
+		if (!Anchored(tile))
+			return false;
 		WorldGen.PlaceTile(tile.X, tile.Y, item.createTile, style: item.placeStyle);
 		var placedTile = Main.tile[tile.X, tile.Y];
 		return placedTile.HasTile && placedTile.TileType == item.createTile;
