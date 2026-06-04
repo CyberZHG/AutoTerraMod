@@ -956,6 +956,29 @@ public sealed class HighwayGoal : ProgressionGoal
 	}
 }
 
+public sealed class SkyArenaGoal : ProgressionGoal
+{
+	const int PlatformBatch = 60;
+
+	public override bool MayUseWood => true;
+
+	public override string Describe() => "SkyArena";
+
+	public override bool AppliesTo(Bot bot) => World.SkyArena.Wanted && HouseInspector.IsDesignatedBuilder(bot) && World.SkyArena.For(bot.Faction) != null;
+
+	public override bool IsMet(Bot bot) => World.SkyArena.For(bot.Faction).IsComplete;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var arena = World.SkyArena.For(bot.Faction);
+		if (!arena.RopeReady)
+			return HighwayGoal.Hang(bot, arena.CenterX, arena.DeckRow, arena.Surface - 1) ?? PlanStep.Blocked;
+		if (!bot.Hands.HasPlatform)
+			return ProgressionPlanner.ObtainPlatforms(bot, PlatformBatch);
+		return new BuildSkyArenaStep();
+	}
+}
+
 public sealed class ArenaKitGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -1464,6 +1487,7 @@ public static class ProgressionGoals
 			new ClaimOutpostGoal(),
 			new OutpostGoal(),
 			new ArenaKitGoal(),
+			new SkyArenaGoal(),
 			new BossGoal(),
 			new BossSupportGoal(),
 			new ArenaOutpostGoal(),

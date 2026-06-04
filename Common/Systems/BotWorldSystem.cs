@@ -81,6 +81,7 @@ public sealed class BotWorldSystem : ModSystem
 		ItemReservations.Clear();
 		ResourceSources.Reset();
 		World.TempleDoor.Reset();
+		World.SkyArena.Forget();
 		World.ShimmerZone.Reset();
 		World.TreeSupply.Reset();
 		Planning.Shops.Reset();

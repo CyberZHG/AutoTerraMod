@@ -834,13 +834,14 @@ public sealed class BotMotor
 			gear = new NavigationAbilities(pickPower, pickPower > 0, bot.Hands.BridgeMaterialCount() >= ScarceBridgeMaterial, false, bot.Hands.HasRope,
 				flyRise > 0 ? WingedSafeFall : 0, HasTempleKey, singleRise + (extraJump ? ExtraJumpRise : 0), flyRise, bot.Grapple.HookReachTiles, bot.Hands.HasAxe, singleRise, LeapReach(extraJump, flyRise));
 		}
-		bool canRope = gear.CanRope && !PlacementForbidden;
+		bool noPlacing = PlacementForbidden || World.SkyArena.FightingOn(bot);
+		bool canRope = gear.CanRope && !noPlacing;
 		return gear with
 		{
 			CanRope = canRope,
 			HookReach = AlongCorridor ? 0 : gear.HookReach,
-			CanBridge = gear.CanBridge && !PlacementForbidden,
-			CanPillar = gear.CanBridge && !PlacementForbidden && (ScaffoldingAllowed || !canRope),
+			CanBridge = gear.CanBridge && !noPlacing,
+			CanPillar = gear.CanBridge && !noPlacing && (ScaffoldingAllowed || !canRope),
 			MaxFall = gear.FlyRise > 0 ? WingedSafeFall : AffordableFall
 		};
 	}

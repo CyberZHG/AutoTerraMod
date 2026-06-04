@@ -372,6 +372,10 @@ public sealed class BotHands
 
 	public bool PlaceRope(Point tile) => !World.Hellevator.OffRopeColumn(tile.X, tile.Y) && Place(FindPlaceable(IsRopeTile), tile);
 
+	public bool PlacePlatform(Point tile) => Place(FindPlaceable(IsPlatformTile), tile);
+
+	public bool CanReachPlatform(Point tile) => FindPlaceable(IsPlatformTile) is Item platform && CanReach(platform, tile);
+
 	public bool PlaceScaffold(Point tile)
 	{
 		var platform = FindPlaceable(IsPlatformTile);

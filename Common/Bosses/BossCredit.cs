@@ -258,7 +258,7 @@ public sealed class BossCredit : GlobalNPC
 			RecordDamage(npc, shot.factionId, shot.botId, damageDone);
 	}
 
-	const uint LootWindowTicks = 1800;
+	const uint LootWindowTicks = 3 * 3600;
 	static (Microsoft.Xna.Framework.Vector2 at, uint tick)? lastBossDeath;
 
 	public static Microsoft.Xna.Framework.Vector2? RecentLootPoint =>
@@ -266,7 +266,7 @@ public sealed class BossCredit : GlobalNPC
 
 	static void OnBossKill(NPC npc)
 	{
-		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null)
+		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null || npc.type is NPCID.LunarTowerSolar or NPCID.LunarTowerVortex or NPCID.LunarTowerNebula or NPCID.LunarTowerStardust)
 			lastBossDeath = (npc.Center, Main.GameUpdateCount);
 		var challenge = BossCatalog.ChallengeOf(npc.type);
 		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.ContainsKey(challenge.BossType))

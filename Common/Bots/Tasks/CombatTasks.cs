@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Terraria;
 
@@ -81,6 +82,13 @@ public sealed class FightTask : BotTask
 			boss = null;
 		if (boss != null && !Bot.IsIgnoring(boss))
 		{
+			if (UrgentAdd() is NPC add)
+			{
+				target = add;
+				closeThreat = true;
+				Detail = add.GivenOrTypeName;
+				return BossPriority;
+			}
 			if (BossFightPest() is NPC pest)
 			{
 				target = pest;
@@ -132,6 +140,13 @@ public sealed class FightTask : BotTask
 	bool GuardingRally() => Bot.Faction.Rally is { } rally && Vector2.Distance(Bot.Center, rally.point) < RallyGuardReach;
 
 	const float PestRadius = 16f * 6f;
+
+	const float UrgentAddRadius = 16f * 60f;
+
+	NPC UrgentAdd() => Main.npc
+		.Where(npc => npc.active && npc.type == Terraria.ID.NPCID.MoonLordLeechBlob && !Bot.IsIgnoring(npc) && Vector2.Distance(npc.Center, Bot.Center) < UrgentAddRadius)
+		.OrderBy(npc => Vector2.DistanceSquared(npc.Center, Bot.Center))
+		.FirstOrDefault();
 
 	NPC BossFightPest()
 	{

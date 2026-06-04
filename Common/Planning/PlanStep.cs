@@ -50,6 +50,8 @@ public sealed record TravelStep(Microsoft.Xna.Framework.Vector2 Place) : PlanSte
 
 public sealed record FillTileStep(Microsoft.Xna.Framework.Point Tile) : PlanStep;
 
+public sealed record BuildSkyArenaStep : PlanStep;
+
 public abstract record ResourceSource;
 
 public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int, bool> Accept = null, bool OnSurface = false, World.Landmark? Ground = null) : ResourceSource

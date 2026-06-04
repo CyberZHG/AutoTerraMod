@@ -231,7 +231,7 @@ public static class BossRituals
 			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
 		if (trigger.Place is not Landmark landmark)
 		{
-			var arena = Grounds.CampArena(bot.Faction);
+			var arena = Main.hardMode && SkyArena.For(bot.Faction) is { IsComplete: true } sky ? sky.Center : Grounds.CampArena(bot.Faction);
 			return MaySetOut(bot, challenge, arena) ? new SummonBossStep(challenge, trigger, arena, null) : PlanStep.Idle;
 		}
 		if (Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), landmark, bot.Faction.BaseTile) is not Vector2 place)
