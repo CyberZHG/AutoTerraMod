@@ -8,8 +8,6 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 
 public sealed class RopeColumnTask : BotTask
 {
-	const float WorkReach = 16f * 4f;
-
 	HangRopeStep step;
 
 	public RopeColumnTask(Bot bot) : base(bot) { }
@@ -87,7 +85,7 @@ public sealed class RopeColumnTask : BotTask
 		}
 		var cell = new Point(step.X, row);
 		var spot = new Vector2(PathFinder.CenterXOf(step.X), row * 16f + 8f);
-		if (Vector2.Distance(Bot.Center, spot) > WorkReach || !Bot.Hands.CanReach(null, cell))
+		if (!Bot.Hands.CanReach(null, cell))
 		{
 			if (Main.GameUpdateCount % 600 == 0)
 				BotDiagnostics.Log(Bot, $"rope cell {cell} out of reach: distance={Vector2.Distance(Bot.Center, spot):0} reach={Bot.Hands.CanReach(null, cell)} tile={TileQuery.TypeAt(cell)}{TerrainDump.Around(cell, 5, 5)}");

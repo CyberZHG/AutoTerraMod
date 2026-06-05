@@ -38,6 +38,7 @@ public sealed class PathFollower
 	const int NoRouteBackoffTicks = 120;
 	const int SkipAheadWindow = 4;
 	const float CenteringTolerance = 3f;
+	const int ShaftAimRise = 1;
 	const float CreepToDropPixels = 40f;
 
 	PathResult path = PathResult.None;
@@ -277,9 +278,10 @@ public sealed class PathFollower
 			if (PathFinder.IsClosedDoor(cell.X, cell.Y))
 				intent.DigTile = cell;
 		}
-		float offset = AimX(node) - body.Center.X;
-		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		int rise = feet.Y - node.Feet.Y;
+		float aimX = node.Arrival == MoveKind.Fly && rise > ShaftAimRise ? PathFinder.BodyCenterAt(node.Feet).X : AimX(node);
+		float offset = aimX - body.Center.X;
+		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		bool hangingOnRope = (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0) && !PathFinder.IsSupportedNow(feet.X, feet.Y);
 		bool ropeReachesNode = PathFinder.RopeColumn(feet.X, node.Feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, node.Feet.Y - 1) >= 0;
 		if (hangingOnRope && (node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1 || node.Arrival is MoveKind.Walk or MoveKind.Drop or MoveKind.Jump && ropeReachesNode))

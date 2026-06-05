@@ -439,8 +439,13 @@ public sealed class SummonTask : BotTask
 		if (weapon == null)
 			return Abandon("no weapon");
 		using (AvatarPresence.Enter())
+		{
+			Avatar.killClothier = true;
 			Bot.Hands.Strike(Main.npc[clothierIndex], weapon);
-		return !Main.npc[clothierIndex].active || Main.npc[clothierIndex].type != NPCID.Clothier;
+		}
+		if (Main.npc[clothierIndex].active && Main.npc[clothierIndex].type == NPCID.Clothier)
+			return false;
+		return NPC.AnyNPCs(NPCID.SkeletronHead) || Abandon("the Clothier died without summoning Skeletron");
 	}
 
 	bool WearDoll()

@@ -317,8 +317,36 @@ public sealed class PathSearch
 		}
 	}
 
+	const int NearbyClimbReach = 5;
+	const int NearbyPlatformRise = 6;
+
+	bool ClimbableNearby(int x, int y)
+	{
+		foreach (int dir in Directions)
+		{
+			for (int dx = 1; dx <= NearbyClimbReach; dx++)
+			{
+				int cx = x + dir * dx;
+				if (!BodyClear(cx, y))
+					break;
+				if (PathFinder.RopeColumn(cx, y - 2) >= 0)
+					return true;
+				for (int rise = 2; rise <= NearbyPlatformRise; rise++)
+				{
+					if (TileQuery.IsSolid(cx, y - rise))
+						break;
+					if (TileQuery.IsPlatform(cx, y - rise))
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	void AddPillarEdges(int x, int y)
 	{
+		if (ClimbableNearby(x, y))
+			return;
 		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise) && (Placeable(x, y - rise + 1) || Placeable(x + 1, y - rise + 1)); rise++)
 		{
 			int top = y - rise;
@@ -450,6 +478,8 @@ public sealed class PathSearch
 
 	void AddRopeClimbEdges(int x, int y)
 	{
+		if (!PathFinder.IsRope(x, y - 1) && ClimbableNearby(x, y))
+			return;
 		if (!RopeFits(x, y) || !RopeFits(x, y - 1) || !RopeFits(x, y - 2))
 			return;
 		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise) && RopeFits(x, y - rise - 2); rise++)
