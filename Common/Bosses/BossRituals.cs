@@ -122,7 +122,10 @@ public static class BossRituals
 	static PlanStep PlanBait(Bot bot, BossChallenge challenge, BaitTrigger trigger)
 	{
 		if (!Inventory.Items(bot.Avatar).Any(IsFishingPole))
-			return ProgressionPlanner.ObtainAny(bot, new int[] { ItemID.WoodFishingPole, ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher });
+		{
+			var woodPole = ProgressionPlanner.Obtain(bot, ItemID.WoodFishingPole, 1);
+			return woodPole is not BlockedStep ? woodPole : ProgressionPlanner.ObtainAny(bot, new int[] { ItemID.ReinforcedFishingPole, ItemID.FisherofSouls, ItemID.Fleshcatcher });
+		}
 		if (Inventory.Count(bot.Avatar, trigger.Bait) == 0)
 			return ProgressionPlanner.Obtain(bot, trigger.Bait, 1);
 		return Shoreline(bot) is Vector2 shore ? new SummonBossStep(challenge, trigger, shore, null) : new ScoutStep(Landmark.Ocean, false);

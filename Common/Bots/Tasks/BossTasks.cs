@@ -241,7 +241,8 @@ public sealed class SummonTask : BotTask
 				ritualTarget = sea.ToWorldCoordinates();
 				return Vector2.Distance(Bot.Center, ritualTarget) <= CastRadius || MoveCloser(ritualTarget, CastRadius * 0.5f);
 			case LacewingTrigger:
-				return Avatar.ZoneHallow || MoveCloser(step.Place, 16f);
+				float fromSpot = Vector2.Distance(Bot.Center, step.Place);
+				return fromSpot < 16f * 4f || Avatar.ZoneHallow && fromSpot < LacewingWaitRadius || MoveCloser(step.Place, 16f);
 			case CultistRitualTrigger:
 				var devotee = Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.CultistDevote && Vector2.Distance(npc.Center, step.Place) < OldManSearchRadius);
 				if (devotee == null)
@@ -334,6 +335,7 @@ public sealed class SummonTask : BotTask
 
 	const float CastRadius = 16f * 15f;
 	const float LacewingSearchRadius = 16f * 80f;
+	const float LacewingWaitRadius = 16f * 30f;
 
 	NPC lacewing;
 
