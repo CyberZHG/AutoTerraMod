@@ -516,6 +516,8 @@ public sealed class BossGoal : ProgressionGoal
 	{
 		if (Terraria.Main.GameUpdateCount < bot.Faction.RallyCooldownUntil)
 			return PlanStep.Idle;
+		if (Bosses.BossRituals.LeftoverPillars(bot) is { } pillars)
+			return pillars;
 		PlanStep preparation = null;
 		foreach (var challenge in Bosses.BossCredit.OpenChallengesFor(bot.Faction))
 		{

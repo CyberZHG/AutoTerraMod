@@ -229,6 +229,16 @@ public static class BossRituals
 		_ => NPC.ShieldStrengthTowerStardust
 	};
 
+	public static PlanStep LeftoverPillars(Bot bot)
+	{
+		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
+		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || NearestPillar(bot.Center) == null)
+			return null;
+		if (bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType)
+			return null;
+		return PlanPillars(bot, moonLord, new PillarsTrigger());
+	}
+
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
 		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, pillar.Bottom, null) : PlanStep.Blocked;
 
