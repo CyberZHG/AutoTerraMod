@@ -64,4 +64,5 @@ public sealed record NpcSource(ISet<int> NpcTypes, World.Landmark? Ground = null
 	public bool IsRare { get; init; }
 	public bool Underground { get; init; }
 	public bool Sky { get; init; }
+	public bool Critter { get; init; }
 }

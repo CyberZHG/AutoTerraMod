@@ -94,7 +94,9 @@ public sealed class HuntTask : BotTask
 		}
 		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
 		skyHunt = Bot.Brain.Plan is GatherStep { Source: NpcSource { Sky: true } };
-		if (skyHunt && Bot.CenterTile.Y > SkyHeight + SkyTolerance)
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Critter: true } })
+			huntingGround = Avatar.ZoneGlowshroom ? null : World.MushroomPatch.Nearest(Bot.CenterTile);
+		else if (skyHunt && Bot.CenterTile.Y > SkyHeight + SkyTolerance)
 		{
 			var ladder = SkyLadder.Beside(Bot.Faction, SkyOffset);
 			huntingGround = new Vector2((ladder.X + 1) * 16f, (ladder.TopRung - 1) * 16f);
@@ -108,6 +110,11 @@ public sealed class HuntTask : BotTask
 		if (prey != null && prey.active && Engagement.IsHostileTarget(prey) && !Bot.IsIgnoring(prey))
 		{
 			Engagement.Fight(Bot, prey);
+			return;
+		}
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Critter: true } } && huntingGround == null)
+		{
+			StalkCritter();
 			return;
 		}
 		if (skyHunt && SkyLadder.Beside(Bot.Faction, SkyOffset) is var ladder && !ladder.IsComplete)
@@ -159,6 +166,33 @@ public sealed class HuntTask : BotTask
 	}
 
 	const int WanderEdgeMargin = 50;
+	const float NetReach = 16f * 3f;
+
+	void StalkCritter()
+	{
+		if (prey == null || !prey.active || prey.catchItem <= 0)
+		{
+			Bot.Motor.Stop();
+			Bot.Watchdog.RecordProgress();
+			if (!Avatar.ZoneGlowshroom)
+				IsFinished = true;
+			return;
+		}
+		if (Vector2.Distance(Bot.Center, prey.Center) > NetReach)
+		{
+			Bot.Motor.MoveTo(prey.Center, NetReach * 0.5f);
+			if (Bot.Motor.IsStalled)
+				IsFinished = true;
+			return;
+		}
+		var caught = new Item();
+		caught.SetDefaults(prey.catchItem);
+		prey.active = false;
+		Inventory.Add(Avatar, caught);
+		BotDiagnostics.Log(Bot, $"caught a {Lang.GetItemNameValue(caught.type)} with the bug net");
+		Bot.Watchdog.RecordProgress();
+		IsFinished = true;
+	}
 
 	bool InBiome(Landmark ground) => ground switch
 	{

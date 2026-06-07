@@ -83,6 +83,7 @@ public sealed class BotWorldSystem : ModSystem
 		World.TempleDoor.Reset();
 		World.SkyArena.Forget();
 		World.ShimmerZone.Reset();
+		World.MushroomPatch.Reset();
 		World.TreeSupply.Reset();
 		Planning.Shops.Reset();
 		ProgressionPlanner.Reset();
