@@ -535,6 +535,8 @@ public sealed class BossGoal : ProgressionGoal
 			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
 			{
 				var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
+				if (step is SummonBossStep summon && Bosses.BossRituals.PillarInTheWay(bot, summon.Place) is { } pillar)
+					return pillar;
 				if (step is not BlockedStep and not IdleStep)
 					return step;
 			}

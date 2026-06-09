@@ -232,11 +232,23 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || NearestPillar(bot.Center) == null)
+		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || bot.Faction.Rally == null || bot.Faction.RallyBossType != moonLord.BossType)
 			return null;
-		if (bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType)
+		return NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
+	}
+
+	const float PillarZone = 4000f;
+
+	public static PlanStep PillarInTheWay(Bot bot, Vector2 destination)
+	{
+		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
+		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord))
 			return null;
-		return PlanPillars(bot, moonLord, new PillarsTrigger());
+		float near = System.Math.Min(bot.Faction.BaseCenter.X, destination.X) - PillarZone;
+		float far = System.Math.Max(bot.Faction.BaseCenter.X, destination.X) + PillarZone;
+		var pillar = Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type) && npc.Center.X > near && npc.Center.X < far)
+			.OrderBy(ShieldLeft).ThenBy(npc => Vector2.Distance(npc.Center, bot.Center)).FirstOrDefault();
+		return pillar == null ? null : new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null);
 	}
 
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
