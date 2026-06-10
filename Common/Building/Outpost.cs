@@ -106,12 +106,37 @@ public static class Outpost
 				guarded.Add((bed, null));
 			else
 			{
-				string reason = Trapping(bed) ? "its doorway is blocked" : WorldGen.roomCheckFailureReason.ToString();
+				string reason = Trapping(bed) ? "its doorway is blocked" : $"{WorldGen.roomCheckFailureReason} at {FirstHole(bed)?.ToString() ?? "?"}";
 				BotDiagnostics.Log(bot, $"the outpost bed {bed} is no longer in a valid room ({reason}), respawning at home again");
 				bot.OutpostBed = null;
 			}
 		}
 		return guarded;
+	}
+
+	const int HoleSearchReach = 30;
+
+	static Point? FirstHole(Point bed)
+	{
+		var seen = new HashSet<Point> { new(bed.X, bed.Y - 1) };
+		var frontier = new Queue<Point>(seen);
+		while (frontier.Count > 0)
+		{
+			var cell = frontier.Dequeue();
+			if (Main.tile[cell.X, cell.Y].WallType == WallID.None)
+				return cell;
+			foreach (var next in new[] { new Point(cell.X + 1, cell.Y), new Point(cell.X - 1, cell.Y), new Point(cell.X, cell.Y + 1), new Point(cell.X, cell.Y - 1) })
+			{
+				if (System.Math.Abs(next.X - bed.X) > HoleSearchReach || System.Math.Abs(next.Y - bed.Y) > HoleSearchReach || World.TileQuery.IsSolid(next) || seen.Contains(next))
+					continue;
+				var tile = Main.tile[next.X, next.Y];
+				if (tile.HasTile && tile.TileType is TileID.ClosedDoor or TileID.OpenDoor)
+					continue;
+				seen.Add(next);
+				frontier.Enqueue(next);
+			}
+		}
+		return null;
 	}
 
 	static bool Trapping(Point bed)
