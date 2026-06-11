@@ -250,7 +250,7 @@ public sealed class BotGrapple
 			{
 				if (!TileQuery.IsSolid(x, y) || settlement?.Contains(x, y) == true)
 					continue;
-				if (bot.Hands.Dig(new Point(x, y)) != ToolResult.Working)
+				if (Building.HouseInspector.IsProtected(x, y) || bot.Hands.Dig(new Point(x, y)) != ToolResult.Working)
 					return false;
 				snaggedTicks = SnagTicks;
 				return true;

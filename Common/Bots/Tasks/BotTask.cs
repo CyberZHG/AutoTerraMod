@@ -474,7 +474,7 @@ public abstract class BotTask
 	{
 		for (int y = feetRow - 2; y <= feetRow; y++)
 		{
-			if (!TileQuery.IsSolid(x, y))
+			if (!TileQuery.IsSolid(x, y) || Building.HouseInspector.IsProtected(x, y))
 				continue;
 			Bot.Motor.Stop();
 			Bot.Hands.Dig(new Point(x, y));
