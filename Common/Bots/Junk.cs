@@ -73,7 +73,7 @@ public static class Junk
 	static void DropHardestToUse(Bot bot)
 	{
 		var victim = Kit.ItemsToStore(bot)
-			.Where(item => !IsBossSummon(item) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
+			.Where(item => !IsBossSummon(item) && !CraftingBlocks.Contains(item.type) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
 			.OrderBy(Usefulness)
 			.ThenBy(item => (long)item.value * item.stack)
 			.FirstOrDefault();
@@ -281,7 +281,7 @@ public static class Junk
 		}
 	}
 
-	static readonly HashSet<int> CraftingBlocks = new() { ItemID.Obsidian };
+	static readonly HashSet<int> CraftingBlocks = new() { ItemID.Obsidian, ItemID.LunarOre, ItemID.LunarBar, ItemID.FragmentSolar, ItemID.FragmentVortex, ItemID.FragmentNebula, ItemID.FragmentStardust };
 
 	static int ReserveFor(Item item)
 	{

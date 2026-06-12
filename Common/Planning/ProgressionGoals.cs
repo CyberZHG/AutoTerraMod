@@ -1629,6 +1629,9 @@ public static class ProgressionGoals
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
 		goals.Add(new OwnGoal(ItemID.AngelWings, ItemID.DemonWings));
+		goals.Add(new GearGoal(GearKind.Body, ItemID.SolarFlareBreastplate));
+		goals.Add(new GearGoal(GearKind.Head, ItemID.SolarFlareHelmet));
+		goals.Add(new GearGoal(GearKind.Legs, ItemID.SolarFlareLeggings));
 		goals.Add(new OwnGoal(ItemID.TerrasparkBoots));
 		goals.Add(new OwnGoal(ItemID.AnkhShield));
 		goals.Add(new OwnGoal(ItemID.CellPhone));
