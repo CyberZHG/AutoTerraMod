@@ -303,6 +303,9 @@ public sealed class BotHands
 		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;
 		ClearReplaceableTile(tile);
+		if (!CanPlaceAt(item, tile) && CanPlaceClearingRopes(item, tile))
+			foreach (var rope in RopesUnder(item, tile))
+				WorldGen.KillTile(rope.X, rope.Y);
 		if (!TryPlaceTile(item, tile))
 			return false;
 		Swing(item, CombinedHooks.TotalUseTime(item.useTime, Avatar, item), tile.ToWorldCoordinates());
@@ -333,6 +336,44 @@ public sealed class BotHands
 		if (TileObjectData.GetTileData(item.createTile, item.placeStyle) == null)
 			return !Main.tile[tile.X, tile.Y].HasTile;
 		return TileObject.CanPlace(tile.X, tile.Y, item.createTile, item.placeStyle, 1, out _, onlyCheck: true);
+	}
+
+	public bool CanPlaceClearingRopes(Item item, Point tile)
+	{
+		if (CanPlaceAt(item, tile))
+			return true;
+		var ropes = RopesUnder(item, tile).ToList();
+		if (ropes.Count == 0)
+			return false;
+		foreach (var rope in ropes)
+		{
+			var cell = Main.tile[rope.X, rope.Y];
+			cell.HasTile = false;
+		}
+		bool fits = CanPlaceAt(item, tile);
+		foreach (var rope in ropes)
+		{
+			var cell = Main.tile[rope.X, rope.Y];
+			cell.HasTile = true;
+		}
+		return fits;
+	}
+
+	static System.Collections.Generic.IEnumerable<Point> RopesUnder(Item item, Point tile)
+	{
+		var data = item?.createTile >= 0 ? TileObjectData.GetTileData(item.createTile, item.placeStyle) : null;
+		if (data == null)
+			yield break;
+		int left = tile.X - data.Origin.X;
+		int top = tile.Y - data.Origin.Y;
+		for (int x = left; x < left + data.Width; x++)
+		{
+			for (int y = top; y < top + data.Height; y++)
+			{
+				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType])
+					yield return new Point(x, y);
+			}
+		}
 	}
 
 	static void ClearReplaceableTile(Point tile)

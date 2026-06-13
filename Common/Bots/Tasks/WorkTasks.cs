@@ -339,6 +339,8 @@ public sealed class CraftTask : BotTask
 		var spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
 		if (spot == null && FlattenFloors(item))
 			spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && OnGround(candidate.Value) && Bot.Hands.CanPlaceAt(item, candidate.Value));
+		if (spot == null)
+			spot = Stations.PlacementSpots(Bot.Faction, item).Cast<Point?>().FirstOrDefault(candidate => Usable(candidate.Value) && OnGround(candidate.Value) && Bot.Hands.CanPlaceClearingRopes(item, candidate.Value));
 		if (spot == null && GraveOnSpot(item) is Point grave)
 		{
 			if (!Bot.Hands.CanReach(Bot.Hands.BestPickaxe, grave))
