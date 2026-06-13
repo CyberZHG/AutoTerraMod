@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Common.World;
@@ -34,6 +35,8 @@ public sealed class HuntTask : BotTask
 			return 0f;
 		Detail = Lang.GetItemNameValue(gather.ItemType);
 		prey = NearestPrey(source);
+		if (prey == null && source.Critter && BotWorldSystem.Bots.Any(mate => mate != Bot && mate.FactionId == Bot.FactionId && mate.IsAlive && mate.Brain.Current is HuntTask && mate.Brain.Plan is GatherStep { Source: NpcSource { Critter: true } }))
+			return 0f;
 		return prey != null ? 40f + Traits.Combat * 40f : 30f + Traits.Combat * 20f;
 	}
 
