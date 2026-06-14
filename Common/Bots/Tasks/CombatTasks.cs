@@ -184,11 +184,42 @@ public sealed class FightTask : BotTask
 			Bot.Hands.DrinkHealingPotion();
 		if (Bosses.BossCatalog.IsBossPart(target))
 			Bot.Hands.DrinkBattlePotions();
+		if (target.type == Terraria.ID.NPCID.DukeFishron && HoldingInReserve(target))
+			return;
 		if (Bosses.BossCatalog.IsBossPart(target) && Vector2.Distance(Bot.Center, target.Center) > BossApproachDistance)
 		{
 			TravelOrTunnel(target.Bottom, BossApproachDistance * 0.5f);
 			return;
 		}
 		Engagement.Fight(Bot, target);
+	}
+
+	const float ReserveDistance = 16f * 160f;
+	const float ReserveMinGap = 16f * 100f;
+	const float EngagedRadius = 16f * 80f;
+	const int ReserveEdgeMargin = 60;
+	const int FightersBeforeReserve = 2;
+
+	bool IsReserve() => Systems.BotWorldSystem.Bots.Where(mate => mate.FactionId == Bot.FactionId).MaxBy(mate => mate.Id) == Bot;
+
+	bool HoldingInReserve(NPC boss)
+	{
+		if (!IsReserve())
+			return false;
+		int fighters = Systems.BotWorldSystem.Bots.Count(mate => mate != Bot && mate.IsAlive && Vector2.Distance(mate.Center, boss.Center) < EngagedRadius
+			&& Systems.BotWorldSystem.Bots.Where(other => other.FactionId == mate.FactionId).MaxBy(other => other.Id) != mate);
+		if (fighters < FightersBeforeReserve)
+			return false;
+		int toEdge = boss.Center.X > Main.maxTilesX * 8f ? 1 : -1;
+		float x = MathHelper.Clamp(boss.Center.X + toEdge * ReserveDistance, ReserveEdgeMargin * 16f, (Main.maxTilesX - ReserveEdgeMargin) * 16f);
+		if (System.Math.Abs(x - boss.Center.X) < ReserveMinGap)
+			x = boss.Center.X - toEdge * ReserveDistance;
+		var spot = new Vector2(x, World.TileQuery.SurfaceY((int)(x / 16f)) * 16f - 24f);
+		Bot.Watchdog.RecordProgress();
+		if (Vector2.Distance(Bot.Center, spot) > 16f * 4f)
+			TravelOrTunnel(spot, 16f * 2f);
+		else
+			Bot.Motor.Stop();
+		return true;
 	}
 }
