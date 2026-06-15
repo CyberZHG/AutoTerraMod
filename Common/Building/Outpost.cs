@@ -91,12 +91,12 @@ public static class Outpost
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			faction.Outposts.RemoveAll(bed => !Valid(bed) || Trapping(bed));
-			foreach (var stale in faction.OutpostFrames.Keys.Where(bed => !faction.Outposts.Contains(bed)).ToList())
+			foreach (var stale in faction.OutpostFrames.Keys.Where(bed => !faction.Outposts.Contains(bed) && faction.ArenaBed != bed).ToList())
 				faction.OutpostFrames.Remove(stale);
 			foreach (var bed in faction.Outposts)
 				guarded.Add((bed, faction.OutpostFrames.TryGetValue(bed, out var frame) ? frame : null));
-			if (faction.ArenaBed is Point arena && BedStands(arena) && IsUsable(arena))
-				guarded.Add((arena, null));
+			if (faction.ArenaBed is Point arena && BedStands(arena))
+				guarded.Add((arena, faction.OutpostFrames.TryGetValue(arena, out var arenaFrame) ? arenaFrame : null));
 		}
 		foreach (var bot in BotWorldSystem.Bots)
 		{
