@@ -186,12 +186,38 @@ public sealed class FightTask : BotTask
 			Bot.Hands.DrinkBattlePotions();
 		if (target.type == Terraria.ID.NPCID.DukeFishron && HoldingInReserve(target))
 			return;
+		if (target.type == Terraria.ID.NPCID.DukeFishron && FishronCalmSpot() is Vector2 calm)
+		{
+			Bot.Watchdog.RecordProgress();
+			TravelOrTunnel(calm, 16f * 2f);
+			return;
+		}
 		if (Bosses.BossCatalog.IsBossPart(target) && Vector2.Distance(Bot.Center, target.Center) > BossApproachDistance)
 		{
 			TravelOrTunnel(target.Bottom, BossApproachDistance * 0.5f);
 			return;
 		}
 		Engagement.Fight(Bot, target);
+	}
+
+	const float FishronCalmEdge = 16f * 400f;
+	const float CalmSlack = 16f * 15f;
+	const float CalmStep = 16f * 10f;
+	const float SkyCeiling = 800f;
+
+	Vector2? FishronCalmSpot()
+	{
+		bool seaOnLeft = Bot.Center.X < Main.maxTilesX * 8f;
+		float limit = seaOnLeft ? FishronCalmEdge - CalmSlack : Main.maxTilesX * 16f - FishronCalmEdge + CalmSlack;
+		bool inland = seaOnLeft ? Bot.Center.X > limit : Bot.Center.X < limit;
+		float surface = (float)Main.worldSurface * 16f - CalmSlack;
+		bool deep = Bot.Center.Y > surface;
+		bool high = Bot.Center.Y < SkyCeiling + CalmSlack;
+		if (!inland && !deep && !high)
+			return null;
+		float x = inland ? limit + (seaOnLeft ? -CalmStep : CalmStep) : Bot.Center.X;
+		float y = deep ? surface - CalmStep : high ? SkyCeiling + CalmSlack + CalmStep : Bot.Center.Y;
+		return new Vector2(x, y);
 	}
 
 	const float ReserveDistance = 16f * 160f;
