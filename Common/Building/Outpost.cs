@@ -207,7 +207,7 @@ public static class Outpost
 	{
 		if (!IsAfield(bot))
 			return null;
-		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed)).ToList();
+		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed) && !Bosses.BossRituals.InPillarZone(bed.ToWorldCoordinates())).ToList();
 		if (beds.Count == 0)
 			return null;
 		var nearest = beds.MinBy(bed => Vector2.DistanceSquared(bed.ToWorldCoordinates(), bot.Center));
@@ -222,7 +222,7 @@ public static class Outpost
 
 	public static bool WantsNew(Bot bot)
 	{
-		if (!IsAfield(bot) || bot.CenterTile.Y >= Main.UnderworldLayer - 10 || FactionBeds(bot.Faction).Any(bed => !NearCamp(bot.Faction, bed) && Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
+		if (!IsAfield(bot) || bot.CenterTile.Y >= Main.UnderworldLayer - 10 || Bosses.BossRituals.InPillarZone(bot.Center) || FactionBeds(bot.Faction).Any(bed => !NearCamp(bot.Faction, bed) && Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
 			return false;
 		var anchor = bot.OutpostBed is Point bed ? bed.ToWorldCoordinates() : BotWorldSystem.RespawnFeet(bot);
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;
