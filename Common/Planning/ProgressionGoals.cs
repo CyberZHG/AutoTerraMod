@@ -968,7 +968,7 @@ public sealed class SkyArenaGoal : ProgressionGoal
 
 	public override string Describe() => "SkyArena";
 
-	public override bool AppliesTo(Bot bot) => World.SkyArena.Wanted && HouseInspector.IsDesignatedBuilder(bot) && World.SkyArena.For(bot.Faction) != null;
+	public override bool AppliesTo(Bot bot) => World.SkyArena.Wanted && HouseInspector.IsDesignatedBuilder(bot) && World.SkyArena.Safe(bot.Faction) != null;
 
 	public override bool IsMet(Bot bot) => World.SkyArena.For(bot.Faction).IsComplete;
 

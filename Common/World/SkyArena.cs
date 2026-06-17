@@ -33,11 +33,13 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 	{
 		if (planned.TryGetValue(faction.Id, out var known))
 			return known;
-		int origin = faction.Settlement is { } camp ? camp.Left - CampMargin - HalfLength : faction.BaseTile.X - CampMargin - HalfLength;
+		int leftOrigin = (faction.Settlement?.Left ?? faction.BaseTile.X) - CampMargin - HalfLength;
+		int rightOrigin = (faction.Settlement?.Right ?? faction.BaseTile.X) + CampMargin + HalfLength;
 		SkyArena found = null;
-		for (int shift = 0; shift < Shifts && found == null; shift++)
+		for (int attempt = 0; attempt < Shifts * 2 && found == null; attempt++)
 		{
-			int x = origin - shift * ShiftStep;
+			int shift = attempt % Shifts;
+			int x = attempt < Shifts ? leftOrigin - shift * ShiftStep : rightOrigin + shift * ShiftStep;
 			if (x - HalfLength < 50 || x + HalfLength > Main.maxTilesX - 50)
 				continue;
 			for (int lift = 0; lift < ExtraHeights && found == null; lift++)
@@ -49,6 +51,16 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 		}
 		planned[faction.Id] = found;
 		return found;
+	}
+
+	public bool Endangered =>
+		Bosses.BossRituals.InPillarZone(new Vector2(Left * 16f, DeckRow * 16f)) || Bosses.BossRituals.InPillarZone(new Vector2(Right * 16f, DeckRow * 16f));
+
+	public static SkyArena Safe(Faction faction)
+	{
+		if (For(faction) is { Endangered: true })
+			planned.Remove(faction.Id);
+		return For(faction);
 	}
 
 	static bool Ours(int x, int y) => TileQuery.IsPlatform(x, y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType];
