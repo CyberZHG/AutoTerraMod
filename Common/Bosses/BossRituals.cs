@@ -216,7 +216,7 @@ public static class BossRituals
 		return false;
 	}
 
-	static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
+	public static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
 
 	public static NPC NearestPillar(Vector2 from) =>
 		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => Vector2.Distance(npc.Center, from)).FirstOrDefault();
@@ -234,7 +234,35 @@ public static class BossRituals
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
 		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || bot.Faction.Rally == null || bot.Faction.RallyBossType != moonLord.BossType)
 			return null;
-		return NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
+		return NearestPillar(bot.Center) is NPC pillar && !SiegeStalled(bot, pillar) ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
+	}
+
+	const uint SiegePatienceTicks = 5 * 3600;
+	const uint SiegeRestTicks = 20 * 3600;
+	const float SiegeProgressFraction = 0.05f;
+
+	static readonly Dictionary<int, (int pillar, int life, uint since)> sieges = new();
+	static readonly Dictionary<int, uint> siegeRestUntil = new();
+
+	static bool SiegeStalled(Bot bot, NPC pillar)
+	{
+		var faction = bot.Faction;
+		uint now = Main.GameUpdateCount;
+		if (siegeRestUntil.TryGetValue(faction.Id, out uint rest) && now < rest)
+			return true;
+		if (!sieges.TryGetValue(faction.Id, out var siege) || siege.pillar != pillar.whoAmI || pillar.life < siege.life - pillar.lifeMax * SiegeProgressFraction)
+		{
+			sieges[faction.Id] = (pillar.whoAmI, pillar.life, now);
+			return false;
+		}
+		if (now - siege.since < SiegePatienceTicks)
+			return false;
+		sieges.Remove(faction.Id);
+		siegeRestUntil[faction.Id] = now + SiegeRestTicks;
+		if (faction.RallyBossType == NPCID.MoonLordCore)
+			faction.Rally = null;
+		BotDiagnostics.Log(bot, $"giving up on the {Lang.GetNPCNameValue(pillar.type)} at {pillar.Bottom.ToTileCoordinates()} for now: life {pillar.life}/{pillar.lifeMax} barely moved");
+		return true;
 	}
 
 	const float PillarZone = 4000f;
@@ -252,7 +280,7 @@ public static class BossRituals
 		float far = System.Math.Max(bot.Faction.BaseCenter.X, destination.X) + PillarZone;
 		var pillar = Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type) && npc.Center.X > near && npc.Center.X < far)
 			.OrderBy(ShieldLeft).ThenBy(npc => Vector2.Distance(npc.Center, bot.Center)).FirstOrDefault();
-		return pillar == null ? null : new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null);
+		return pillar == null || SiegeStalled(bot, pillar) ? null : new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null);
 	}
 
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>

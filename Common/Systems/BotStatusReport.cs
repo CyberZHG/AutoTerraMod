@@ -21,7 +21,7 @@ public sealed class BotStatusReport : ModSystem
 		ticksSinceReport = 0;
 		if (!Bots.BotDiagnostics.Enabled)
 			return;
-		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}, invasion={Main.invasionType}/{Main.invasionSize}, danger={NPC.AnyDanger()}, cultistDelay={(int)Terraria.GameContent.Events.CultistRitual.delay}, ritual={DescribeRitualSite()}, shields=S{NPC.ShieldStrengthTowerSolar}/V{NPC.ShieldStrengthTowerVortex}/N{NPC.ShieldStrengthTowerNebula}/D{NPC.ShieldStrengthTowerStardust}):");
+		var report = new StringBuilder($"status (day={Main.dayTime}, time={(int)Main.time}, bosses={WorldBosses.DefeatedCount}/{WorldBosses.InProgressionOrder.Count}, next={WorldBosses.NextUndefeated?.Name}, invasion={Main.invasionType}/{Main.invasionSize}, danger={NPC.AnyDanger()}, cultistDelay={(int)Terraria.GameContent.Events.CultistRitual.delay}, ritual={DescribeRitualSite()}, shields=S{NPC.ShieldStrengthTowerSolar}/V{NPC.ShieldStrengthTowerVortex}/N{NPC.ShieldStrengthTowerNebula}/D{NPC.ShieldStrengthTowerStardust}{DescribePillars()}):");
 		foreach (var faction in BotWorldSystem.Factions)
 		{
 			var settlement = faction.Settlement;
@@ -89,6 +89,9 @@ public sealed class BotStatusReport : ModSystem
 		DeliverStep deliver => $"deliver {Lang.GetItemNameValue(deliver.ItemType)} to #{deliver.RecipientId}",
 		_ => plan.GetType().Name
 	};
+
+	static string DescribePillars() =>
+		string.Concat(Main.npc.Where(npc => npc.active && Bosses.BossRituals.Pillars.Contains(npc.type)).Select(npc => $" {Lang.GetNPCNameValue(npc.type)}@{(int)(npc.Center.X / 16)}={npc.life}/{npc.lifeMax}"));
 
 	static string DescribeRitualSite()
 	{
