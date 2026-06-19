@@ -126,7 +126,8 @@ public sealed class OpportunisticMineTask : BotTask
 				}
 			}
 		}
-		return best ?? Systems.BotWorldSystem.KnowledgeOf(Bot.Faction).NearestKnown(here, Graves, unreachable, GraveReach);
+		best ??= Systems.BotWorldSystem.KnowledgeOf(Bot.Faction).NearestKnown(here, Graves, unreachable, GraveReach);
+		return best is Point target && Bosses.BossRituals.InPillarZone(target.ToWorldCoordinates()) ? null : best;
 	}
 
 	bool WithinReach(Point tile)

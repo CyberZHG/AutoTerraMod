@@ -294,6 +294,13 @@ public sealed class ExploreTask : BotTask
 			direction = -direction;
 		int x = NearestUnexploredAhead(depth) ?? Utils.Clamp(here + direction * SurfaceStepTiles, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
 		int y = delveUnderground ? depth : TileQuery.SurfaceY(x) - 2;
+		if (Bosses.BossRituals.InPillarZone(new Vector2(x * 16f, y * 16f)))
+		{
+			direction = -direction;
+			x = Utils.Clamp(here + direction * SurfaceStepTiles, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+			y = TileQuery.SurfaceY(x) - 2;
+			delveUnderground = false;
+		}
 		destination = new Vector2(x * 16f, y * 16f);
 		Detail = delveUnderground ? "↓" : direction > 0 ? "→" : "←";
 	}
@@ -321,6 +328,8 @@ public sealed class ExploreTask : BotTask
 	void StartDive()
 	{
 		diveX = DiveColumn();
+		if (diveX is int column && Bosses.BossRituals.InPillarZone(new Vector2(column * 16f, Bot.Center.Y)))
+			diveX = null;
 		diveLegY = 0;
 		deepestY = 0;
 		deepestAt = Main.GameUpdateCount;
@@ -332,6 +341,8 @@ public sealed class ExploreTask : BotTask
 	{
 		crossDepth = Main.rand.Next((int)Main.worldSurface + CrossTopMargin, Main.UnderworldLayer - CrossBottomMargin);
 		crossDirection = Main.rand.NextBool() ? 1 : -1;
+		if (Bosses.BossRituals.InPillarZone(Bot.Center + new Vector2(crossDirection * 16f * DiveLegTiles, 0f)))
+			crossDirection = -crossDirection;
 		crossLegX = Bot.CenterTile.X;
 		diveLegY = 0;
 		crossProgress = int.MinValue;
