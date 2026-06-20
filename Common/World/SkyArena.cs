@@ -45,8 +45,8 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 			for (int lift = 0; lift < ExtraHeights && found == null; lift++)
 			{
 				int deck = TileQuery.SurfaceY(x) - Height - lift * HeightStep;
-				if (deck > 60 && Clear(x, deck))
-					found = new SkyArena(x, deck);
+				if (deck > 60 && Clear(x, deck) && new SkyArena(x, deck) is { Endangered: false } candidate)
+					found = candidate;
 			}
 		}
 		planned[faction.Id] = found;
