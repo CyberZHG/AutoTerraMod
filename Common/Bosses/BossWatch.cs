@@ -43,7 +43,7 @@ public sealed class BossWatch : ModSystem
 			if (BossCatalog.ChallengeOf(last.Type) is BossChallenge challenge)
 				endingFights.Add(challenge);
 			string outcome = last.TimeLeft > DespawnTimeLeft && Defeated(last.Type) ? "defeated" : "despawned";
-			BotDiagnostics.LogWorld($"boss {Lang.GetNPCNameValue(last.Type)} {outcome}: life={last.Life}/{last.LifeMax} timeLeft={last.TimeLeft} target={DescribeTarget(last)} lastTile={last.Center.ToTileCoordinates()} nowTile={npc.Center.ToTileCoordinates()} ai={last.Ai} local={last.LocalAi}");
+			BotDiagnostics.LogWorld($"boss {Lang.GetNPCNameValue(last.Type)} {outcome}: life={last.Life}/{last.LifeMax} timeLeft={last.TimeLeft} target={DescribeTarget(last)} lastTile={last.Center.ToTileCoordinates()} nowTile={npc.Center.ToTileCoordinates()} ai={last.Ai} local={last.LocalAi} damage=[{BossCredit.DescribeSources(BossCatalog.ChallengeOf(last.Type)?.BossType ?? last.Type)}]");
 		}
 		endingFights.RemoveWhere(BossCredit.ForgetIfOver);
 		foreach (var npc in Main.npc)

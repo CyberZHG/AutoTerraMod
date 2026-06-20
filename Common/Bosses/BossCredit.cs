@@ -18,11 +18,13 @@ public sealed class BossCredit : GlobalNPC
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId, int botId)> shots = new();
 	static readonly Dictionary<int, HashSet<int>> fightersByFight = new();
+	static readonly Dictionary<int, Dictionary<(int botId, string source), long>> damageBySource = new();
 
 	public static void Reset()
 	{
 		damageByFight.Clear();
 		fightersByFight.Clear();
+		damageBySource.Clear();
 		summoners.Clear();
 		shots.Clear();
 	}
@@ -98,6 +100,7 @@ public sealed class BossCredit : GlobalNPC
 		summoners.Remove(challenge.BossType);
 		damageByFight.Remove(challenge.BossType);
 		fightersByFight.Remove(challenge.BossType);
+		damageBySource.Remove(challenge.BossType);
 		return true;
 	}
 
@@ -122,11 +125,19 @@ public sealed class BossCredit : GlobalNPC
 	public static int? ShooterFaction(Projectile projectile) =>
 		shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity ? shot.factionId : null;
 
-	public static void RecordDamage(NPC target, int factionId, int botId, int damage)
+	public static string DescribeSources(int bossType) =>
+		damageBySource.TryGetValue(bossType, out var bySource)
+			? string.Join(", ", bySource.OrderByDescending(entry => entry.Value).Select(entry => $"{BotWorldSystem.FindBot(entry.Key.botId)?.Name}:{entry.Key.source}={entry.Value}"))
+			: "none";
+
+	public static void RecordDamage(NPC target, int factionId, int botId, int damage, string source = "melee")
 	{
 		var challenge = BossCatalog.ChallengeOf(target.type);
 		if (challenge == null || damage <= 0)
 			return;
+		if (!damageBySource.TryGetValue(challenge.BossType, out var bySource))
+			damageBySource[challenge.BossType] = bySource = new();
+		bySource[(botId, source)] = bySource.GetValueOrDefault((botId, source)) + damage;
 		if (!damageByFight.TryGetValue(challenge.BossType, out var byFaction))
 			damageByFight[challenge.BossType] = byFaction = new Dictionary<int, long>();
 		byFaction[factionId] = byFaction.GetValueOrDefault(factionId) + damage;
@@ -255,7 +266,7 @@ public sealed class BossCredit : GlobalNPC
 	public override void OnHitByProjectile(NPC npc, Projectile projectile, NPC.HitInfo hit, int damageDone)
 	{
 		if (shots.TryGetValue(projectile.whoAmI, out var shot) && shot.identity == projectile.identity)
-			RecordDamage(npc, shot.factionId, shot.botId, damageDone);
+			RecordDamage(npc, shot.factionId, shot.botId, damageDone, projectile.Name);
 	}
 
 	const uint LootWindowTicks = 3 * 3600;
