@@ -528,15 +528,20 @@ public sealed class BotHands
 		&& !Main.tileFrameImportant[item.createTile]
 		&& !TileID.Sets.Ore[item.createTile];
 
-	public Item BestWeapon()
+	const float CloseMeleeAgainstFlierFactor = 0.25f;
+
+	public Item BestWeapon(NPC against = null)
 	{
 		Item best = null;
 		float bestScore = float.MinValue;
+		bool flier = against != null && against.noGravity && Bosses.BossCatalog.IsBossPart(against);
 		foreach (var item in Inventory.Items(Avatar))
 		{
 			if (!IsUsableWeapon(item))
 				continue;
 			float score = PreferenceScore(item);
+			if (flier && !IsProjectileWeapon(item) && !IsYoyo(item) && !IsWhip(item))
+				score *= CloseMeleeAgainstFlierFactor;
 			if (best == null || score > bestScore)
 			{
 				best = item;

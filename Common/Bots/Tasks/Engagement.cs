@@ -184,7 +184,7 @@ public static class Engagement
 			&& NearestMinion(bot, BotHands.IsProjectileWeapon(held) ? MinionThreat : MeleeMinionThreat) is NPC minion)
 			target = minion;
 		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
-		var weapon = bot.Hands.BestWeapon();
+		var weapon = bot.Hands.BestWeapon(target);
 		if (Bosses.BossCatalog.IsBossPart(target) && Bosses.BossCatalog.ChallengeOf(target.type) is { Arena: World.Landmark arena }
 			&& !Bosses.BossChallenge.InArena(bot.Avatar, arena) && bot.Faction.ArenaPoint is Vector2 arenaPoint
 			&& Vector2.Distance(bot.Center, arenaPoint) > ArenaReturnRadius * ArenaSettledFactor)
