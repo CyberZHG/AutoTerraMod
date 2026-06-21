@@ -4,37 +4,37 @@ Configs: {
 
 		BotsEnabled: {
 			Label: Enable bots
-			Tooltip: Turns the AI factions on or off for the current world. New worlds start with them off. Turning them off hides every bot and keeps them in the save; turning them back on brings them back where they were. Also /autoterra enabled on|off.
+			Tooltip: Turn AI factions on or off in this world. Off hides bots but keeps them saved.
 		}
 
 		FactionCount: {
 			Label: Faction count
-			Tooltip: Number of AI factions used when a new world starts (1-4). Afterwards each world keeps its own settings; changing it while in a world applies to that world, and lowering it hides the extra bots while keeping them in the save.
+			Tooltip: Number of AI factions (1-6). Lowering it hides the extra ones.
 		}
 
 		BotsPerFaction: {
 			Label: Bots per faction
-			Tooltip: Number of AI bots per faction used when a new world starts (1-6). Afterwards each world keeps its own settings; changing it while in a world applies to that world, and lowering it hides the extra bots while keeping them in the save.
+			Tooltip: Bots in each faction (1-20). Lowering it hides the extra ones.
 		}
 
 		Relation: {
 			Label: Faction relation
-			Tooltip: Used when a new world starts. Race keeps knowledge separate; Cooperate shares discovered resources between factions; War lets factions fight each other but never wreck or rob each other's bases. Change it later with /autoterra relation.
+			Tooltip: Race: separate knowledge. Cooperate: shared discoveries. War: factions fight each other.
 		}
 
 		ShowInfoPanel: {
 			Label: Show faction/bot info panel
-			Tooltip: Shows the panel on the left with faction progress and the followed bot's details.
+			Tooltip: Left panel with faction progress and the followed bot.
 		}
 
 		SpectatorMode: {
 			Label: Spectator mode
-			Tooltip: Turns you into an untargetable ghost and lets the camera follow bots.
+			Tooltip: Become an untargetable ghost; the camera follows bots.
 		}
 
 		DiagnosticLogging: {
 			Label: Diagnostic logging
-			Tooltip: Writes each bot's task and plan changes to client.log.
+			Tooltip: Log bot task and plan changes to client.log.
 		}
 	}
 
@@ -81,7 +81,9 @@ Factions: {
 	Name0: Red
 	Name1: Blue
 	Name2: Green
-	Name3: Gold
+	Name3: Yellow
+	Name4: Pink
+	Name5: White
 }
 
 Archetypes: {
@@ -99,10 +101,10 @@ Styles: {
 }
 
 Aspirations: {
-	Naturalist: Naturalist (critter exhibition)
-	MonsterHunter: Monster hunter (banners)
-	Collector: Collector (armor on mannequins)
-	Angler: Angler (catch every kind of fish)
+	Naturalist: Critter exhibition
+	MonsterHunter: Banners
+	Collector: Armor on Mannequins
+	Angler: Fishing
 }
 
 Tasks: {

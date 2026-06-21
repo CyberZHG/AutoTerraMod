@@ -29,6 +29,8 @@ public static class ResourceSources
 
 	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh, TileID.VanityTreeSakura, TileID.VanityTreeYellowWillow, TileID.LivingWood }, true);
 
+	static readonly TileSource Cacti = new(new HashSet<int> { TileID.Cactus }, false, OnSurface: true);
+
 	static readonly Dictionary<int, Landmark> ForageGrounds = new()
 	{
 		[ItemID.VileMushroom] = Landmark.Corruption,
@@ -78,6 +80,8 @@ public static class ResourceSources
 	{
 		if (WoodItems.Contains(itemType))
 			return Trees;
+		if (itemType == ItemID.Cactus)
+			return Cacti;
 		if (World.WorldScan.ForageTiles.TryGetValue(itemType, out var forage))
 			return ForageSource(itemType, forage.tileType);
 		if (RareDrops.TryGetValue(itemType, out var rare))

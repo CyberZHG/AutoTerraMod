@@ -1,10 +1,10 @@
-To enable this MOD, select a new map and go to Settings -> Mod Configurations -> Auto Terra Factions, then set Enable Bots to On.
+To enable this MOD, select a map and go to Settings -> Mod Configurations -> Auto Terra Factions, then set Enable Bots to On.
 
-Up to 4 AI factions (1-6 bots each) play Terraria by vanilla rules while you spectate or play along.
-- Gather, craft, build bases and upgrade gear; melee, ranged, magic and summoner bots.
-- Builders lay flat highways, a rope shaft to the Underworld and small houses at distant boss arenas.
-- Fight every boss from King Slime to Moon Lord and chase end-game gear.
-- Use ammo, earn and spend money, share supplies with teammates.
-- Rescue and house town NPCs; hobbies like fishing, banners, mannequins, critter cages and faction-colored dyes.
-- Modes: Race, Cooperate, War. Settings are saved per world (/autoterra).
-Single-player only.
+Up to 6 AI factions play Terraria by vanilla rules while you spectate or play along.
+
+Note: All testing during development was conducted with 2 factions, each consisting of 6 characters. Selecting too many characters may cause lag or make progression permanently impossible due to resource depletion in the world.
+
+- AI-controlled NPCs can gather resources, craft items, build bases, and upgrade equipment. They also have different weapon preferences.
+- The goal is to defeat all bosses up to and including the Moon Lord.
+- Settings and NPC data are saved with the world.
+- Single-player only.

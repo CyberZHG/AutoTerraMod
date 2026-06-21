@@ -4,37 +4,37 @@ Configs: {
 
 		BotsEnabled: {
 			Label: 开启 AI 角色
-			Tooltip: 在当前世界开启或关闭 AI 阵营，新世界默认关闭。关闭时所有角色隐藏但保留在存档中，重新开启后回到原来的位置。也可用 /autoterra enabled on|off。
+			Tooltip: 开关本世界的 AI 阵营。关闭时角色隐藏但保留存档。
 		}
 
 		FactionCount: {
 			Label: 阵营数量
-			Tooltip: 新世界第一次开始时使用的 AI 阵营数（1-4）。之后每个世界保存自己的设置；在世界中修改会应用到当前世界，调小时多出的角色会隐藏但仍保留在存档中。
+			Tooltip: AI 阵营数（1-6）。调小时多出的阵营会隐藏。
 		}
 
 		BotsPerFaction: {
 			Label: 每阵营人数
-			Tooltip: 新世界第一次开始时每个阵营的 AI 角色数（1-6）。之后每个世界保存自己的设置；在世界中修改会应用到当前世界，调小时多出的角色会隐藏但仍保留在存档中。
+			Tooltip: 每个阵营的角色数（1-20）。调小时多出的角色会隐藏。
 		}
 
 		Relation: {
 			Label: 阵营关系
-			Tooltip: 新世界第一次开始时使用。竞速：各阵营情报独立；合作：共享已发现的资源位置；敌对：阵营之间可以互相攻击，但不会破坏或偷取其他阵营的基地。之后可用 /autoterra relation 修改。
+			Tooltip: 竞速：情报独立；合作：共享发现；敌对：互相攻击。
 		}
 
 		ShowInfoPanel: {
 			Label: 显示阵营/角色信息面板
-			Tooltip: 在左侧显示阵营进度和当前跟随角色的详细信息。
+			Tooltip: 左侧显示阵营进度和跟随角色信息。
 		}
 
 		SpectatorMode: {
 			Label: 观战模式
-			Tooltip: 你会变成不会被攻击的幽灵，镜头跟随 AI 角色。
+			Tooltip: 变成不被攻击的幽灵，镜头跟随角色。
 		}
 
 		DiagnosticLogging: {
 			Label: 诊断日志
-			Tooltip: 把每个角色的任务和计划变化写入 client.log。
+			Tooltip: 把角色任务和计划变化写入 client.log。
 		}
 	}
 
@@ -82,6 +82,8 @@ Factions: {
 	Name1: 蓝队
 	Name2: 绿队
 	Name3: 黄队
+	Name4: 粉队
+	Name5: 白队
 }
 
 Archetypes: {
@@ -99,10 +101,10 @@ Styles: {
 }
 
 Aspirations: {
-	Naturalist: 博物学家（生物展览馆）
-	MonsterHunter: 怪物猎人（挂旗帜）
-	Collector: 收藏家（衣架摆装备）
-	Angler: 钓鱼爱好者（钓遍各种鱼）
+	Naturalist: 小动物
+	MonsterHunter: 怪物旗帜
+	Collector: 盔甲
+	Angler: 钓鱼
 }
 
 Tasks: {

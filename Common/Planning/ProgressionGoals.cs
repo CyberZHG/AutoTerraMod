@@ -1508,6 +1508,9 @@ public static class ProgressionGoals
 			new ShoppingGoal(),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
+			new GearGoal(GearKind.Head, ItemID.CactusHelmet),
+			new GearGoal(GearKind.Body, ItemID.CactusBreastplate),
+			new GearGoal(GearKind.Legs, ItemID.CactusLeggings),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),
 			new StationGoal(TileID.Anvils, ItemID.IronAnvil, ItemID.LeadAnvil),
 			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop),
@@ -1531,7 +1534,7 @@ public static class ProgressionGoals
 		goals.Add(new FurnishBedroomsGoal());
 		goals.Add(new StructureGoal(settlement => settlement.StorageAnnexes.Append(settlement.Gallery)));
 		goals.Add(new CraftableUpgradeGoal());
-		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
+		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CactusSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee, CombatStyle.Magic));
 		AddOreTier(goals,
 			pickaxes: new int[] { ItemID.IronPickaxe, ItemID.LeadPickaxe },

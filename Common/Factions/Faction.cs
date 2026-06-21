@@ -9,13 +9,7 @@ namespace AutoTerraMod.Common.Factions;
 
 public sealed class Faction
 {
-	static readonly Color[] Palette =
-	{
-		new(230, 76, 76),
-		new(76, 136, 240),
-		new(90, 200, 100),
-		new(240, 196, 64)
-	};
+	static readonly int[] PvpTeams = { 1, 3, 2, 4, 5, 0 };
 
 	Settlement settlement;
 
@@ -57,7 +51,9 @@ public sealed class Faction
 	public void ForgetSettlement() => settlement = null;
 	int MemberCount => System.Math.Max(1, Systems.BotWorldSystem.Bots.Count(bot => bot.FactionId == Id));
 
-	public Color Color => Palette[Id % Palette.Length];
+	public int PvpTeam => PvpTeams[Id % PvpTeams.Length];
+
+	public Color Color => Terraria.Main.teamColor[PvpTeam];
 	public string Name => Language.GetTextValue($"Mods.AutoTerraMod.Factions.Name{Id}");
 	public Vector2 BaseFeet => new(BaseTile.X * 16 + 8, (BaseTile.Y + 1) * 16);
 	public Vector2 BaseCenter => BaseFeet - new Vector2(0, 21);

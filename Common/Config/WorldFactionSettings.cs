@@ -4,8 +4,8 @@ namespace AutoTerraMod.Common.Config;
 
 public sealed record WorldFactionSettings(int FactionCount, int BotsPerFaction, FactionRelation Relation, bool BotsEnabled = true, int MaterialMultiplier = 1)
 {
-	public const int MaxFactions = 4;
-	public const int MaxBotsPerFaction = 6;
+	public const int MaxFactions = 6;
+	public const int MaxBotsPerFaction = 20;
 
 	public static readonly int[] MaterialMultipliers = { 1, 5, 10, 20, 50 };
 

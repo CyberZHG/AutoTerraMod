@@ -17,12 +17,12 @@ public sealed class AutoTerraConfig : ModConfig
 	[DefaultValue(false)]
 	public bool BotsEnabled;
 
-	[Range(1, 4)]
+	[Range(1, WorldFactionSettings.MaxFactions)]
 	[DefaultValue(2)]
 	[Slider]
 	public int FactionCount;
 
-	[Range(1, 6)]
+	[Range(1, WorldFactionSettings.MaxBotsPerFaction)]
 	[DefaultValue(3)]
 	[Slider]
 	public int BotsPerFaction;
