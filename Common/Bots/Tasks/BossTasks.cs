@@ -62,6 +62,8 @@ public sealed class SummonTask : BotTask
 	{
 		base.Start();
 		travelFailures = 0;
+		closestApproach = float.MaxValue;
+		closestApproachAt = Main.GameUpdateCount;
 		lacewing = null;
 		extensions = 0;
 		headcount = null;
@@ -180,13 +182,25 @@ public sealed class SummonTask : BotTask
 
 	const float UnderworldAcceptRadius = 16f * 60f;
 
+	const uint ApproachPatienceTicks = 8 * 60;
+	float closestApproach = float.MaxValue;
+	uint closestApproachAt;
+
 	bool ReachedPlace()
 	{
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		bool noWayCloser = Bot.Motor.IsStalled || Bot.Motor.Tunneling || Bot.Motor.HasNoRoute;
 		bool inUnderworld = Bot.CenterTile.Y >= Main.UnderworldLayer && step.Place.Y >= Main.UnderworldLayer * 16f;
-		if (distance <= ArrivalRadius || noWayCloser && distance <= StuckAcceptRadius || inUnderworld && distance <= UnderworldAcceptRadius)
+		if (distance < closestApproach - 16f)
+		{
+			closestApproach = distance;
+			closestApproachAt = Main.GameUpdateCount;
+		}
+		bool noLongerApproaching = Main.GameUpdateCount - closestApproachAt > ApproachPatienceTicks;
+		if (distance <= ArrivalRadius || (noWayCloser || noLongerApproaching) && distance <= StuckAcceptRadius || inUnderworld && distance <= UnderworldAcceptRadius)
 			return true;
+		if (!noLongerApproaching)
+			Bot.Watchdog.RecordProgress();
 		Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + (uint)(Vector2.Distance(step.Place, Bot.Faction.BaseCenter) > DistantArenaReach ? DistantRallyTicks : RallyTicks));
 		if (TravelOrTunnel(step.Place, ArrivalRadius * 0.5f))
 			return false;
