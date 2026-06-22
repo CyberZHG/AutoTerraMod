@@ -36,9 +36,19 @@ public static class WaterFinder
 	{
 		if (cache.TryGetValue(anchor, out var cached) && Main.GameUpdateCount - cached.tick < CacheTicks)
 			return cached.shore;
+		var best = ScanShore(anchor, anchor.X - SearchHalfWidth, anchor.X + SearchHalfWidth)
+			?? ScanShore(anchor, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+		cache[anchor] = (Main.GameUpdateCount, best);
+		return best;
+	}
+
+	const int WorldEdgeMargin = 45;
+
+	static Point? ScanShore(Point anchor, int left, int right)
+	{
 		Point? best = null;
 		long bestDistance = long.MaxValue;
-		for (int x = anchor.X - SearchHalfWidth; x <= anchor.X + SearchHalfWidth; x++)
+		for (int x = System.Math.Max(left, WorldEdgeMargin); x <= System.Math.Min(right, Main.maxTilesX - WorldEdgeMargin); x++)
 		{
 			for (int y = anchor.Y - SearchRowsAbove; y <= anchor.Y + SearchRowsBelow; y++)
 			{
@@ -53,7 +63,6 @@ public static class WaterFinder
 				}
 			}
 		}
-		cache[anchor] = (Main.GameUpdateCount, best);
 		return best;
 	}
 
