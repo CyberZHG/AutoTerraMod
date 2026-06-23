@@ -1,6 +1,6 @@
-To enable this MOD, select a map and go to Settings -> Mod Configurations -> Auto Terra Factions, then set Enable Bots to On.
-
 Up to 6 AI factions play Terraria by vanilla rules while you spectate or play along.
+
+To enable this MOD, select a map and go to Settings -> Mod Configurations -> Auto Terra Factions, then set Enable Bots to On.
 
 Note: All testing during development was conducted with 2 factions, each consisting of 6 characters. Selecting too many characters may cause lag or make progression permanently impossible due to resource depletion in the world.
 

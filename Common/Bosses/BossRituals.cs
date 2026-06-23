@@ -160,7 +160,8 @@ public static class BossRituals
 	{
 		if (!challenge.CanSummonNow)
 			return PlanStep.Idle;
-		return Grounds.ArenaSpot(BotWorldSystem.KnowledgeOf(bot.Faction), Landmark.Hallow, bot.Faction.BaseTile) is Vector2 place
+		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
+		return (Grounds.QuietSurfaceSpot(knowledge, Landmark.Hallow, bot.Faction.BaseTile) ?? Grounds.ArenaSpot(knowledge, Landmark.Hallow, bot.Faction.BaseTile)) is Vector2 place
 			? new SummonBossStep(challenge, trigger, place, null)
 			: new ScoutStep(Landmark.Hallow, false);
 	}

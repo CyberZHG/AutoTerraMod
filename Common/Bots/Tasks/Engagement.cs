@@ -206,6 +206,7 @@ public static class Engagement
 			}
 			int away = bot.Center.X >= target.Center.X ? 1 : -1;
 			bot.Motor.MoveTo(new Vector2(target.Center.X + away * BreatherDistance, bot.Center.Y), 16f * 3f);
+			DodgeCharge(bot, target);
 			return;
 		}
 		if (!Bosses.BossCatalog.IsBossPart(target) && ChaseIsFutile(bot, target, weapon))
@@ -256,6 +257,7 @@ public static class Engagement
 				&& Math.Abs(target.Center.X - body.Center.X) < target.width / 2f + BotHands.MeleeReach(weapon);
 			if (overhead)
 				bot.Motor.RequestJump();
+			DodgeCharge(bot, target);
 			return;
 		}
 		KeepMeleeSpacing(bot, target, weapon);

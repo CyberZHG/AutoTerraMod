@@ -40,6 +40,51 @@ public static class Grounds
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
 	}
 
+	const int TownQuietRadius = 130;
+	const int QuietStep = 8;
+	const int QuietDistanceWeight = 4;
+	const uint QuietCacheTicks = 3600;
+
+	static readonly System.Collections.Generic.Dictionary<Landmark, (uint at, Vector2? spot)> quiet = new();
+
+	public static Vector2? QuietSurfaceSpot(FactionKnowledge knowledge, Landmark ground, Point from)
+	{
+		if (quiet.TryGetValue(ground, out var cached) && Main.GameUpdateCount - cached.at < QuietCacheTicks)
+			return cached.spot;
+		Vector2? found = null;
+		if (knowledge.SpanOf(ground) is var (minX, maxX))
+		{
+			int bestScore = int.MinValue;
+			for (int x = minX; x <= maxX; x += QuietStep)
+			{
+				if (NearTown(x))
+					continue;
+				int density = Density(ground, x);
+				var feet = new Point(x, TileQuery.SurfaceY(x) - 2);
+				if (density < BiomeDensity || !IsGroundBeneath(ground, feet))
+					continue;
+				int score = density - Math.Abs(x - from.X) / QuietDistanceWeight;
+				if (score > bestScore)
+				{
+					bestScore = score;
+					found = new Vector2(x * 16f, feet.Y * 16f);
+				}
+			}
+		}
+		quiet[ground] = (Main.GameUpdateCount, found);
+		return found;
+	}
+
+	static bool NearTown(int x)
+	{
+		foreach (var npc in Main.npc)
+		{
+			if (npc.active && npc.townNPC && Math.Abs(npc.Center.X / 16f - x) < TownQuietRadius)
+				return true;
+		}
+		return false;
+	}
+
 	const int ArenaProbeDepth = 6;
 	const int StandingSearchRadius = 20;
 

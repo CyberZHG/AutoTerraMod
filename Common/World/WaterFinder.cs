@@ -36,13 +36,24 @@ public static class WaterFinder
 	{
 		if (cache.TryGetValue(anchor, out var cached) && Main.GameUpdateCount - cached.tick < CacheTicks)
 			return cached.shore;
-		var best = ScanShore(anchor, anchor.X - SearchHalfWidth, anchor.X + SearchHalfWidth)
-			?? ScanShore(anchor, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+		var best = ScanShore(anchor, anchor.X - SearchHalfWidth, anchor.X + SearchHalfWidth) ?? OceanShore(anchor);
 		cache[anchor] = (Main.GameUpdateCount, best);
 		return best;
 	}
 
 	const int WorldEdgeMargin = 45;
+	const int OceanWidth = 380;
+
+	static Point? OceanShore(Point anchor)
+	{
+		var left = ScanShore(anchor, WorldEdgeMargin, OceanWidth);
+		var right = ScanShore(anchor, Main.maxTilesX - OceanWidth, Main.maxTilesX - WorldEdgeMargin);
+		if (left is not Point l)
+			return right;
+		if (right is not Point r)
+			return left;
+		return WorldScan.DistanceSq(anchor, l) <= WorldScan.DistanceSq(anchor, r) ? left : right;
+	}
 
 	static Point? ScanShore(Point anchor, int left, int right)
 	{
@@ -55,6 +66,8 @@ public static class WaterFinder
 				if (!IsWaterSurface(x, y))
 					continue;
 				var surface = new Point(x, y - 1);
+				if (Bosses.BossRituals.InPillarZone(surface.ToWorldCoordinates()))
+					continue;
 				long distance = WorldScan.DistanceSq(anchor, surface);
 				if (distance < bestDistance)
 				{

@@ -1485,6 +1485,7 @@ public static class ProgressionGoals
 			new HealingPotionGoal(),
 			new GatedGoal(new ReserveGoal(ItemID.IronskinPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.RegenerationPotion, 2, 5), () => Terraria.Main.hardMode),
+			new GatedGoal(new ReserveGoal(ItemID.InfernoPotion, 2, 5), () => Terraria.NPC.downedGolemBoss),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
