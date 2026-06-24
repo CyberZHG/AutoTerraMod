@@ -41,13 +41,26 @@ public static class WaterFinder
 		return best;
 	}
 
+	static bool PillarBetween(int fromX, int toX)
+	{
+		foreach (var npc in Main.npc)
+		{
+			if (!npc.active || !System.Array.Exists(Bosses.BossRituals.Pillars, type => type == npc.type))
+				continue;
+			int x = (int)(npc.Center.X / 16f);
+			if (x > System.Math.Min(fromX, toX) && x < System.Math.Max(fromX, toX))
+				return true;
+		}
+		return false;
+	}
+
 	const int WorldEdgeMargin = 45;
 	const int OceanWidth = 380;
 
 	static Point? OceanShore(Point anchor)
 	{
-		var left = ScanShore(anchor, WorldEdgeMargin, OceanWidth);
-		var right = ScanShore(anchor, Main.maxTilesX - OceanWidth, Main.maxTilesX - WorldEdgeMargin);
+		var left = PillarBetween(anchor.X, OceanWidth) ? null : ScanShore(anchor, WorldEdgeMargin, OceanWidth);
+		var right = PillarBetween(anchor.X, Main.maxTilesX - OceanWidth) ? null : ScanShore(anchor, Main.maxTilesX - OceanWidth, Main.maxTilesX - WorldEdgeMargin);
 		if (left is not Point l)
 			return right;
 		if (right is not Point r)

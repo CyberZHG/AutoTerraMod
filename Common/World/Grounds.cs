@@ -61,7 +61,7 @@ public static class Grounds
 					continue;
 				int density = Density(ground, x);
 				var feet = new Point(x, TileQuery.SurfaceY(x) - 2);
-				if (density < BiomeDensity || !IsGroundBeneath(ground, feet))
+				if (density < BiomeDensity || feet.Y + 2 > Main.worldSurface || !IsGroundBeneath(ground, feet))
 					continue;
 				int score = density - Math.Abs(x - from.X) / QuietDistanceWeight;
 				if (score > bestScore)
