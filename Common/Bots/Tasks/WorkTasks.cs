@@ -213,8 +213,7 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		Bot.Motor.MoveTo(shore.ToWorldCoordinates(), StationArrivalRadius);
-		if (Bot.Motor.IsStuck)
+		if (!TravelOrTunnel(shore.ToWorldCoordinates(), StationArrivalRadius))
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to water at {shore}");
 			IsFinished = true;

@@ -122,7 +122,7 @@ public sealed class SummonTask : BotTask
 	bool AwaitingArenaOutpost()
 	{
 		var faction = Bot.Faction;
-		if (!Building.Outpost.IsDistantArena(faction, step.Place) || Building.Outpost.ArenaBedFor(faction) != null)
+		if (step.Trigger is LacewingTrigger || !Building.Outpost.IsDistantArena(faction, step.Place) || Building.Outpost.ArenaBedFor(faction) != null)
 			return false;
 		if (arenaWaitStarted == 0 || Main.GameUpdateCount - arenaWaitStarted > ArenaOutpostWaitTicks * 2)
 		{
