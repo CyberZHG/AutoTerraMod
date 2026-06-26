@@ -223,6 +223,7 @@ public sealed class BotBrain
 		}
 		using (Probes.Measure("Torch"))
 			TorchPlacer.LightUpIfDark(bot);
+		WaterBottler.FillWhileAtWater(bot);
 		using (Systems.Perf.Measure(Systems.PerfSection.Planner))
 		using (Probes.Measure("Planner"))
 			Plan = ProgressionPlanner.NextStep(bot, IsSuppressed, out currentGoal);
