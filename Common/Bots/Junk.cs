@@ -97,7 +97,7 @@ public static class Junk
 			return 5;
 		if (item.material)
 			return 4;
-		if (item.potion || item.ammo > 0 || item.accessory)
+		if (item.potion || IsBuffPotion(item) || item.ammo > 0 || item.accessory)
 			return 3;
 		if (item.damage > 0 || item.pick > 0 || item.axe > 0 || item.hammer > 0 || !item.vanity && (item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0))
 			return 2;
@@ -252,6 +252,8 @@ public static class Junk
 		BotDiagnostics.Log(bot, $"cleared {purged} cluttering stacks from storage (earned {earned} copper)");
 	}
 
+	static bool IsBuffPotion(Item item) => item.consumable && item.buffType > 0 && item.buffTime > 0;
+
 	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
 
 	static readonly HashSet<int> RitualItems = new()
@@ -263,7 +265,7 @@ public static class Junk
 
 	static bool IsCheapClutter(Item item) =>
 		!IsBossSummon(item) && !item.material && item.damage <= 0 && item.createTile < 0 && item.createWall <= 0 && !item.accessory
-		&& item.headSlot < 0 && item.bodySlot < 0 && item.legSlot < 0 && !item.potion && item.value < OverflowCheapItemValue;
+		&& item.headSlot < 0 && item.bodySlot < 0 && item.legSlot < 0 && !item.potion && !IsBuffPotion(item) && item.value < OverflowCheapItemValue;
 
 	public static void TrashExcess(Bot bot)
 	{

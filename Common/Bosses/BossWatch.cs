@@ -14,11 +14,14 @@ public sealed class BossWatch : ModSystem
 
 	readonly Dictionary<int, Sighting> sightings = new();
 	readonly HashSet<BossChallenge> endingFights = new();
+	static int fishronTicks;
+	static int fishronEnragedTicks;
 
 	public override void OnWorldUnload()
 	{
 		sightings.Clear();
 		endingFights.Clear();
+		fishronTicks = fishronEnragedTicks = 0;
 	}
 
 	const int ProgressLogTicks = 1800;
@@ -28,6 +31,7 @@ public sealed class BossWatch : ModSystem
 	{
 		if (!BotWorldSystem.IsRunning)
 			return;
+		CountFishronRage();
 		if (Main.GameUpdateCount % ProgressLogTicks == 0)
 			LogFightProgress();
 		if (Main.GameUpdateCount % BulbCensusTicks == 0 && !Main.npc.Any(npc => npc.active && npc.boss))
@@ -77,13 +81,32 @@ public sealed class BossWatch : ModSystem
 	static bool KnowsBulb(Factions.FactionKnowledge knowledge, Point bulb) =>
 		Enumerable.Range(0, 4).Any(part => knowledge.Knows(new Point(bulb.X + part % 2, bulb.Y + part / 2), Terraria.ID.TileID.PlanteraBulb));
 
+	static void CountFishronRage()
+	{
+		var fishron = Main.npc.FirstOrDefault(npc => npc.active && npc.type == Terraria.ID.NPCID.DukeFishron);
+		if (fishron == null)
+			return;
+		fishronTicks++;
+		if (fishron.defense > fishron.defDefense)
+			fishronEnragedTicks++;
+	}
+
+	static string FishronRage()
+	{
+		if (fishronTicks == 0)
+			return "";
+		string rage = $"; enraged {fishronEnragedTicks * 100 / fishronTicks}% of {fishronTicks / 60}s";
+		fishronTicks = fishronEnragedTicks = 0;
+		return rage;
+	}
+
 	static void LogFightProgress()
 	{
 		foreach (var challenge in BossCatalog.Challenges.Where(BossCatalog.IsBossAlive))
 		{
 			BossCredit.CheckCalibration(challenge, over: false);
 			var parts = Main.npc.Where(npc => npc.active && challenge.IsPart(npc.type)).ToList();
-			BotDiagnostics.LogWorld($"boss fight {challenge.Name}: parts [{string.Join(", ", parts.Select(npc => $"{npc.TypeName} {npc.life}{(npc.dontTakeDamage ? " shielded" : "")}"))}], life left {parts.Where(npc => npc.realLife < 0 || npc.realLife == npc.whoAmI).Sum(npc => npc.life)} at {parts.FirstOrDefault()?.Center.ToTileCoordinates()}; damage {BossCredit.DescribeFight(challenge)}");
+			BotDiagnostics.LogWorld($"boss fight {challenge.Name}: parts [{string.Join(", ", parts.Select(npc => $"{npc.TypeName} {npc.life}{(npc.dontTakeDamage ? " shielded" : "")}"))}], life left {parts.Where(npc => npc.realLife < 0 || npc.realLife == npc.whoAmI).Sum(npc => npc.life)} at {parts.FirstOrDefault()?.Center.ToTileCoordinates()}; damage {BossCredit.DescribeFight(challenge)}{(challenge.BossType == Terraria.ID.NPCID.DukeFishron ? FishronRage() : "")}");
 		}
 	}
 
