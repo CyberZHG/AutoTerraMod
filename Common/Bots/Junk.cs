@@ -73,7 +73,7 @@ public static class Junk
 	static void DropHardestToUse(Bot bot)
 	{
 		var victim = Kit.ItemsToStore(bot)
-			.Where(item => !IsBossSummon(item) && !CraftingBlocks.Contains(item.type) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
+			.Where(item => !IsBossSummon(item) && !CraftingBlocks.Contains(item.type) && !BotHands.IsBattlePotion(item.type) && !(item.potion && item.healLife > 0) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
 			.OrderBy(Usefulness)
 			.ThenBy(item => (long)item.value * item.stack)
 			.FirstOrDefault();

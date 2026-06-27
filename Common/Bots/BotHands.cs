@@ -824,6 +824,8 @@ public sealed class BotHands
 		ItemID.SwiftnessPotion, ItemID.ArcheryPotion, ItemID.WrathPotion, ItemID.RagePotion, ItemID.ThornsPotion, ItemID.InfernoPotion
 	};
 
+	public static bool IsBattlePotion(int type) => System.Array.IndexOf(BattlePotions, type) >= 0;
+
 	public void DrinkBattlePotions()
 	{
 		foreach (int type in BattlePotions)
