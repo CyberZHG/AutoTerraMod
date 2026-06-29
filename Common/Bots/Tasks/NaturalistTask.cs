@@ -73,11 +73,7 @@ public sealed class NaturalistTask : BotTask
 				IsFinished = true;
 			return;
 		}
-		var caught = new Item();
-		caught.SetDefaults(critter.catchItem);
-		critter.active = false;
-		Inventory.Add(Avatar, caught);
-		BotDiagnostics.Log(Bot, $"caught a {Lang.GetItemNameValue(caught.type)} with the bug net");
+		Bot.Hands.NetCritter(critter);
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;
 	}

@@ -927,6 +927,21 @@ public sealed class BotHands
 		SoundEngine.PlaySound(SoundID.Grab, bot.Center);
 	}
 
+	static readonly int[] BugNets = { ItemID.GoldenBugNet, ItemID.FireproofBugNet, ItemID.BugNet };
+
+	public Item NetCritter(NPC critter)
+	{
+		var net = BugNets.Select(type => Inventory.Items(Avatar).FirstOrDefault(item => item.type == type)).FirstOrDefault(item => item != null);
+		if (net != null)
+			Swing(net, net.useTime, critter.Center);
+		var caught = new Item();
+		caught.SetDefaults(critter.catchItem);
+		critter.active = false;
+		Inventory.Add(Avatar, caught);
+		BotDiagnostics.Log(bot, $"caught a {Lang.GetItemNameValue(caught.type)} with the bug net");
+		return caught;
+	}
+
 	void Swing(Item item, int useTime, Vector2 toward)
 	{
 		int slot = Inventory.FindSlot(Avatar, item);

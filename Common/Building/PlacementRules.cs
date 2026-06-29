@@ -14,7 +14,9 @@ public static class PlacementRules
 
 	static readonly Dictionary<int, (uint at, int pick)> weakestPick = new();
 
-	public static bool IsEvil(int tileType) => TileID.Sets.Corrupt[tileType] || TileID.Sets.Crimson[tileType];
+	static readonly System.Collections.Generic.HashSet<int> EvilBricks = new() { TileID.CrimtaneBrick, TileID.CrimstoneBrick, TileID.DemoniteBrick, TileID.EbonstoneBrick };
+
+	public static bool IsEvil(int tileType) => TileID.Sets.Corrupt[tileType] || TileID.Sets.Crimson[tileType] || EvilBricks.Contains(tileType);
 
 	public static bool Allows(Faction faction, Item item) =>
 		item.createTile < 0 || !IsEvil(item.createTile) && Navigation.PickRequirement.MinimumPick(item.createTile, 0, Main.maxTilesY / 2) <= WeakestPick(faction);

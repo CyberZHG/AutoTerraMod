@@ -156,10 +156,20 @@ public static class BossRituals
 		return new Vector2(land * 16f, (TileQuery.SurfaceY(land) - 2) * 16f);
 	}
 
+	const double LacewingSpawnEnd = 16200.0;
+
+	static bool LacewingsFlying => !Main.dayTime && Main.time < LacewingSpawnEnd;
+
 	static PlanStep PlanLacewing(Bot bot, BossChallenge challenge, LacewingTrigger trigger)
 	{
 		if (!challenge.CanSummonNow)
 			return PlanStep.Idle;
+		if (Inventory.Count(bot.Avatar, ItemID.EmpressButterfly) == 0)
+		{
+			if (!BugNets.Any(net => Inventory.Count(bot.Avatar, net) > 0))
+				return ProgressionPlanner.ObtainAny(bot, BugNets);
+			return LacewingsFlying ? ProgressionPlanner.Obtain(bot, ItemID.EmpressButterfly, 1) : PlanStep.Idle;
+		}
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
 		return (Grounds.QuietSurfaceSpot(knowledge, Landmark.Hallow, bot.Faction.BaseTile) ?? Grounds.ArenaSpot(knowledge, Landmark.Hallow, bot.Faction.BaseTile)) is Vector2 place
 			? new SummonBossStep(challenge, trigger, place, null)

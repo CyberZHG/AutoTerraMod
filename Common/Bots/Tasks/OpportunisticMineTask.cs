@@ -75,7 +75,7 @@ public sealed class OpportunisticMineTask : BotTask
 		if (Inventory.IsNearlyFull(Avatar) || Bot.StoreAfterDeath && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < StoreAfterDeathReach)
 			return 0f;
 		if (target is Point known && WithinReach(known) && Worthwhile(known.X, known.Y, PickPower(), PickTier(PickPower())))
-			return Priority;
+			return PriorityOf(known);
 		target = null;
 		if (Main.GameUpdateCount - scannedAt < ScanIntervalTicks || Main.GameUpdateCount < pausedUntil)
 			return 0f;
@@ -91,8 +91,12 @@ public sealed class OpportunisticMineTask : BotTask
 		if (target is not Point found)
 			return 0f;
 		Detail = TileID.Search.GetName(Main.tile[found.X, found.Y].TileType);
-		return Priority;
+		return PriorityOf(found);
 	}
+
+	const float GravePriority = 35f;
+
+	static float PriorityOf(Point tile) => Main.tile[tile.X, tile.Y].TileType == TileID.Tombstones ? GravePriority : Priority;
 
 	Point? Scan()
 	{

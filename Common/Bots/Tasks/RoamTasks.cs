@@ -97,8 +97,8 @@ public sealed class HuntTask : BotTask
 		}
 		var knowledge = Systems.BotWorldSystem.KnowledgeOf(Bot.Faction);
 		skyHunt = Bot.Brain.Plan is GatherStep { Source: NpcSource { Sky: true } };
-		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Critter: true } })
-			huntingGround = Avatar.ZoneGlowshroom ? null : World.MushroomPatch.Nearest(Bot.CenterTile);
+		if (Bot.Brain.Plan is GatherStep { Source: NpcSource { Critter: true } critterSource })
+			huntingGround = InCritterGround(critterSource) ? null : CritterGround(knowledge, critterSource);
 		else if (skyHunt && Bot.CenterTile.Y > SkyHeight + SkyTolerance)
 		{
 			var ladder = SkyLadder.Beside(Bot.Faction, SkyOffset);
@@ -177,7 +177,7 @@ public sealed class HuntTask : BotTask
 		{
 			Bot.Motor.Stop();
 			Bot.Watchdog.RecordProgress();
-			if (!Avatar.ZoneGlowshroom)
+			if (Bot.Brain.Plan is not GatherStep { Source: NpcSource source } || !InCritterGround(source))
 				IsFinished = true;
 			return;
 		}
@@ -188,14 +188,18 @@ public sealed class HuntTask : BotTask
 				IsFinished = true;
 			return;
 		}
-		var caught = new Item();
-		caught.SetDefaults(prey.catchItem);
-		prey.active = false;
-		Inventory.Add(Avatar, caught);
-		BotDiagnostics.Log(Bot, $"caught a {Lang.GetItemNameValue(caught.type)} with the bug net");
+		Bot.Hands.NetCritter(prey);
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;
 	}
+
+	Vector2? CritterGround(Factions.FactionKnowledge knowledge, NpcSource source) => source.Ground is Landmark ground
+		? Grounds.QuietSurfaceSpot(knowledge, ground, Bot.Faction.BaseTile) ?? Grounds.PickSpot(knowledge, ground, Bot.CenterTile)
+		: World.MushroomPatch.Nearest(Bot.CenterTile);
+
+	bool InCritterGround(NpcSource source) => source.Ground is Landmark ground
+		? InBiome(ground) && Bot.CenterTile.Y <= Main.worldSurface
+		: Avatar.ZoneGlowshroom;
 
 	bool InBiome(Landmark ground) => ground switch
 	{

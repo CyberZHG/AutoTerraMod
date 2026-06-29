@@ -205,7 +205,7 @@ public static class Outpost
 
 	public static Point? ClaimableBed(Bot bot)
 	{
-		if (!IsAfield(bot))
+		if (!IsAfield(bot) || HeadingHome(bot))
 			return null;
 		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed) && !Bosses.BossRituals.InPillarZone(bed.ToWorldCoordinates())).ToList();
 		if (beds.Count == 0)
@@ -217,6 +217,8 @@ public static class Outpost
 	}
 
 	const float CampOutpostClearance = 16f * 150f;
+
+	static bool HeadingHome(Bot bot) => bot.Motor.Destination is Vector2 destination && Vector2.Distance(destination, bot.Faction.BaseCenter) < CampOutpostClearance;
 
 	static bool NearCamp(Factions.Faction faction, Point bed) => Vector2.Distance(bed.ToWorldCoordinates(), faction.BaseCenter) < CampOutpostClearance;
 

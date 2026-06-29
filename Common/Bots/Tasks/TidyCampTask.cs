@@ -66,7 +66,7 @@ public sealed class TidyCampTask : BotTask
 	uint workingSince;
 
 	const int ScanIntervalTicks = 120;
-	const uint RopeScanIntervalTicks = 18000;
+	const uint RopeScanIntervalTicks = 1800;
 
 	static readonly System.Collections.Generic.Dictionary<int, (uint at, bool any)> campScans = new();
 	static readonly System.Collections.Generic.Dictionary<int, uint> ropeScans = new();
@@ -127,7 +127,7 @@ public sealed class TidyCampTask : BotTask
 					continue;
 				if (!IsClutter(x, y) && !IsCampObstacle(settlement, x, y))
 					continue;
-				if (Main.tileRope[Main.tile[x, y].TileType] && (!ropes || y > settlement.Floor || BotNear(new Point(x, y))))
+				if (Main.tileRope[Main.tile[x, y].TileType] && (!ropes || BotNear(new Point(x, y))))
 					continue;
 				long distance = WorldScan.DistanceSq(origin, new Point(x, y));
 				if (distance < nearestDistance)
@@ -258,7 +258,36 @@ public sealed class TidyCampTask : BotTask
 			return false;
 		if (tile.TileType == TileID.Tombstones)
 			return true;
-		return Main.tileRope[tile.TileType] && Main.tile[x - 1, y].HasTile && Main.tileRope[Main.tile[x - 1, y].TileType];
+		return Main.tileRope[tile.TileType] && !KeptRope(x, y) && RopeBeside(x, y);
+	}
+
+	const int RedundantRopeSpan = 5;
+
+	static bool RopeBeside(int x, int y)
+	{
+		for (int dx = 1; dx <= RedundantRopeSpan; dx++)
+		{
+			var side = Main.tile[x - dx, y];
+			if (side.HasTile && Main.tileRope[side.TileType])
+				return true;
+			if (TileQuery.IsSolid(x - dx, y))
+				return false;
+		}
+		return false;
+	}
+
+	static bool KeptRope(int x, int y)
+	{
+		if (Building.HouseInspector.IsProtected(x, y))
+			return true;
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Hellevator is { } shaft && System.Math.Abs(x - shaft.RopeX) <= 1)
+				return true;
+			if (World.SkyArena.For(faction) is { } arena && System.Math.Abs(x - arena.CenterX) <= 2)
+				return true;
+		}
+		return false;
 	}
 
 	public override void Tick()

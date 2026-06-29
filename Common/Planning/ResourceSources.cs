@@ -55,7 +55,8 @@ public static class ResourceSources
 	static readonly Dictionary<int, NpcSource> RareDrops = new()
 	{
 		[ItemID.ClothierVoodooDoll] = new NpcSource(new HashSet<int> { NPCID.AngryBones, NPCID.AngryBonesBig, NPCID.AngryBonesBigMuscle, NPCID.AngryBonesBigHelmet, NPCID.ShortBones }, Landmark.Dungeon),
-		[ItemID.TruffleWorm] = new NpcSource(new HashSet<int> { NPCID.TruffleWorm, NPCID.TruffleWormDigger }) { Critter = true }
+		[ItemID.TruffleWorm] = new NpcSource(new HashSet<int> { NPCID.TruffleWorm, NPCID.TruffleWormDigger }) { Critter = true },
+		[ItemID.EmpressButterfly] = new NpcSource(new HashSet<int> { NPCID.EmpressButterfly }, Landmark.Hallow) { Critter = true }
 	};
 
 	static Dictionary<int, TileSource> tileSources;

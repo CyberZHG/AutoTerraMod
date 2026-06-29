@@ -15,6 +15,7 @@ public sealed class BuildTask : BotTask
 
 	const uint OperationTimeoutTicks = 1200;
 	const float NearOperationDistance = 16f * 10f;
+	const float FarOperationDistance = 16f * 40f;
 	const float StepAsideRadius = 6f;
 
 	BuildOperation? lastOperation;
@@ -80,6 +81,15 @@ public sealed class BuildTask : BotTask
 		}
 		if (!Bot.Hands.CanReach(tool, operation.Tile))
 		{
+			if (Vector2.Distance(Bot.Center, operation.Tile.ToWorldCoordinates()) > FarOperationDistance)
+			{
+				if (!TravelOrTunnel(operation.Tile.ToWorldCoordinates(), NearOperationDistance * 0.5f))
+				{
+					HouseInspector.Skip(Bot, operation);
+					Bot.Motor.Stop();
+				}
+				return;
+			}
 			Bot.Motor.MoveTo(StandingSpotFor(operation), ApproachRadius);
 			if (Bot.Motor.IsStuck)
 			{
