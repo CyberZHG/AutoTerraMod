@@ -132,7 +132,8 @@ public sealed class BuildTask : BotTask
 		{
 			var spot = new Point(x, structure.Floor - 1);
 			int type = TileQuery.TypeAt(spot);
-			if (type < 0 || !TileID.Sets.RoomNeeds.CountsAsTable.Contains(type) && !TileID.Sets.RoomNeeds.CountsAsChair.Contains(type))
+			if (type < 0 || !TileID.Sets.RoomNeeds.CountsAsTable.Contains(type) && !TileID.Sets.RoomNeeds.CountsAsChair.Contains(type)
+				&& !TileQuery.IsPlatform(spot.X, spot.Y) && !Main.tileRope[type])
 				continue;
 			if (!Bot.Hands.CanReach(pickaxe, spot))
 				continue;

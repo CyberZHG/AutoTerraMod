@@ -202,13 +202,14 @@ public sealed class FightTask : BotTask
 
 	const float FishronCalmEdge = 16f * 400f;
 	const float CalmSlack = 16f * 15f;
+	const float CalmInset = 16f * 45f;
 	const float CalmStep = 16f * 10f;
 	const float SkyCeiling = 800f;
 
 	Vector2? FishronCalmSpot()
 	{
 		bool seaOnLeft = Bot.Center.X < Main.maxTilesX * 8f;
-		float limit = seaOnLeft ? FishronCalmEdge - CalmSlack : Main.maxTilesX * 16f - FishronCalmEdge + CalmSlack;
+		float limit = seaOnLeft ? FishronCalmEdge - CalmInset : Main.maxTilesX * 16f - FishronCalmEdge + CalmInset;
 		bool inland = seaOnLeft ? Bot.Center.X > limit : Bot.Center.X < limit;
 		float surface = (float)Main.worldSurface * 16f - CalmSlack;
 		bool deep = Bot.Center.Y > surface;
@@ -221,7 +222,6 @@ public sealed class FightTask : BotTask
 	}
 
 	const float ReserveDistance = 16f * 160f;
-	const float ReserveMinGap = 16f * 100f;
 	const float EngagedRadius = 16f * 80f;
 	const int ReserveEdgeMargin = 60;
 	const int FightersBeforeReserve = 2;
@@ -238,8 +238,6 @@ public sealed class FightTask : BotTask
 			return false;
 		int toEdge = boss.Center.X > Main.maxTilesX * 8f ? 1 : -1;
 		float x = MathHelper.Clamp(boss.Center.X + toEdge * ReserveDistance, ReserveEdgeMargin * 16f, (Main.maxTilesX - ReserveEdgeMargin) * 16f);
-		if (System.Math.Abs(x - boss.Center.X) < ReserveMinGap)
-			x = boss.Center.X - toEdge * ReserveDistance;
 		var spot = new Vector2(x, World.TileQuery.SurfaceY((int)(x / 16f)) * 16f - 24f);
 		Bot.Watchdog.RecordProgress();
 		if (Vector2.Distance(Bot.Center, spot) > 16f * 4f)

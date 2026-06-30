@@ -938,7 +938,7 @@ public sealed class BotHands
 		caught.SetDefaults(critter.catchItem);
 		critter.active = false;
 		Inventory.Add(Avatar, caught);
-		BotDiagnostics.Log(bot, $"caught a {Lang.GetItemNameValue(caught.type)} with the bug net");
+		BotDiagnostics.Log(bot, $"caught a {caught.Name} with the bug net");
 		return caught;
 	}
 
