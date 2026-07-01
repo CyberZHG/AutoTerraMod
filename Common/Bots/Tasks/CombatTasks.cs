@@ -202,7 +202,7 @@ public sealed class FightTask : BotTask
 
 	const float FishronCalmEdge = 16f * 400f;
 	const float CalmSlack = 16f * 15f;
-	const float CalmInset = 16f * 45f;
+	const float CalmInset = 16f * 20f;
 	const float CalmStep = 16f * 10f;
 	const float SkyCeiling = 800f;
 
@@ -238,6 +238,8 @@ public sealed class FightTask : BotTask
 			return false;
 		int toEdge = boss.Center.X > Main.maxTilesX * 8f ? 1 : -1;
 		float x = MathHelper.Clamp(boss.Center.X + toEdge * ReserveDistance, ReserveEdgeMargin * 16f, (Main.maxTilesX - ReserveEdgeMargin) * 16f);
+		if (Bosses.BossRituals.Shoreline(Bot) is Vector2 shore)
+			x = toEdge > 0 ? System.Math.Min(x, shore.X) : System.Math.Max(x, shore.X);
 		var spot = new Vector2(x, World.TileQuery.SurfaceY((int)(x / 16f)) * 16f - 24f);
 		Bot.Watchdog.RecordProgress();
 		if (Vector2.Distance(Bot.Center, spot) > 16f * 4f)

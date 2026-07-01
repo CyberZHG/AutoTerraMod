@@ -338,7 +338,28 @@ public sealed class TidyCampTask : BotTask
 		else if (Bot.Hands.Dig(tile) is ToolResult.Unbreakable or ToolResult.NoTool)
 			GiveUp(tile);
 		else
+		{
+			if (Main.tileRope[Main.tile[tile.X, tile.Y].TileType])
+				SweepRopes(tile);
 			Accomplished = true;
+		}
+	}
+
+	const int RopeSweepRadius = 5;
+
+	static void SweepRopes(Point around)
+	{
+		for (int x = around.X - RopeSweepRadius; x <= around.X + RopeSweepRadius; x++)
+		{
+			for (int y = around.Y - RopeSweepRadius; y <= around.Y + RopeSweepRadius; y++)
+			{
+				if (!WorldGen.InWorld(x, y, 10) || x == around.X && y == around.Y || !IsClutter(x, y) || !Main.tileRope[Main.tile[x, y].TileType] || BotNear(new Point(x, y)))
+					continue;
+				WorldGen.KillTile(x, y, noItem: true);
+				if (Main.netMode == Terraria.ID.NetmodeID.Server)
+					NetMessage.SendTileSquare(-1, x, y);
+			}
+		}
 	}
 
 	static Point? RestOfColumn(Point cleared)
