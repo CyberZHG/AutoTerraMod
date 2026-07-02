@@ -345,7 +345,7 @@ public sealed class TidyCampTask : BotTask
 		}
 	}
 
-	const int RopeSweepRadius = 5;
+	const int RopeSweepRadius = 10;
 
 	static void SweepRopes(Point around)
 	{
