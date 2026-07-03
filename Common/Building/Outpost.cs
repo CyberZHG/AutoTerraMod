@@ -266,7 +266,7 @@ public static class Outpost
 
 	public static bool WantsArenaOutpost(Bot bot) =>
 		NearArenaSite(bot) && bot.Faction.Rally is { } rally && IsDistantArena(bot.Faction, rally.point) && !RacingTheNight(bot.Faction)
-		&& ArenaBedFor(bot.Faction) == null && !Bots.Tasks.OutpostTask.ArenaTakenByOther(bot) && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
+		&& ArenaBedFor(bot.Faction) == null && !Bots.Tasks.OutpostTask.ArenaTakenByOther(bot) && !Bots.Tasks.OutpostTask.ArenaRecentlyRejected(bot) && CarriesKit(bot.Avatar) && Count(bot.Avatar, IsBlock) >= BlocksNeeded
 		&& (!OnUnderworldBridge(bot.Faction, rally.point) || Count(bot.Avatar, item => item.createTile >= 0 && Main.tileRope[item.createTile]) >= BridgeAccessRopes);
 
 	static bool RacingTheNight(Factions.Faction faction) =>

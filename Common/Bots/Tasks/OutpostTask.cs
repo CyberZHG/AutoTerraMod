@@ -204,10 +204,18 @@ public sealed class OutpostTask : BotTask
 		site = null;
 	}
 
+	const uint ArenaRetryTicks = 5 * 3600;
+	static readonly System.Collections.Generic.Dictionary<int, uint> arenaRejections = new();
+
+	public static bool ArenaRecentlyRejected(Bot bot) =>
+		arenaRejections.TryGetValue(bot.FactionId, out uint at) && Main.GameUpdateCount - at < ArenaRetryTicks;
+
 	void RejectSite()
 	{
 		ReleaseSite();
 		siteRejectedAt = Main.GameUpdateCount;
+		if (Building.Outpost.NearArenaSite(Bot))
+			arenaRejections[Bot.FactionId] = Main.GameUpdateCount;
 		IsFinished = true;
 	}
 

@@ -186,6 +186,13 @@ public sealed class FightTask : BotTask
 			Bot.Hands.DrinkBattlePotions();
 		if (target.type == Terraria.ID.NPCID.DukeFishron && HoldingInReserve(target))
 			return;
+		if (target.type == Terraria.ID.NPCID.DukeFishron && NearbyTornado() is Projectile tornado)
+		{
+			Bot.Watchdog.RecordProgress();
+			int away = Bot.Center.X >= tornado.Center.X ? 1 : -1;
+			Bot.Motor.MoveTo(new Vector2(tornado.Center.X + away * (tornado.width / 2f + TornadoClearance), Bot.Center.Y), 16f * 2f);
+			return;
+		}
 		if (target.type == Terraria.ID.NPCID.DukeFishron && FishronCalmSpot() is Vector2 calm)
 		{
 			Bot.Watchdog.RecordProgress();
@@ -198,6 +205,22 @@ public sealed class FightTask : BotTask
 			return;
 		}
 		Engagement.Fight(Bot, target);
+	}
+
+	const float TornadoClearance = 16f * 8f;
+	const float TornadoHeight = 16f * 60f;
+
+	Projectile NearbyTornado()
+	{
+		foreach (var projectile in Main.projectile)
+		{
+			if (!projectile.active || projectile.type is not (Terraria.ID.ProjectileID.Sharknado or Terraria.ID.ProjectileID.Cthulunado))
+				continue;
+			if (System.Math.Abs(projectile.Center.X - Bot.Center.X) < projectile.width / 2f + TornadoClearance * 0.75f
+				&& System.Math.Abs(projectile.Center.Y - Bot.Center.Y) < TornadoHeight)
+				return projectile;
+		}
+		return null;
 	}
 
 	const float FishronCalmEdge = 16f * 400f;
