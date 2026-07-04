@@ -160,7 +160,7 @@ public sealed class BossCredit : GlobalNPC
 		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)).OrderBy(challenge => challenge.NightOnly && NightComing ? 0 : 1));
 	}
 
-	const double DuskLead = 3 * 3600;
+	const double DuskLead = 6 * 3600;
 
 	static bool NightComing => !Main.dayTime || Main.time >= Main.dayLength - DuskLead;
 
