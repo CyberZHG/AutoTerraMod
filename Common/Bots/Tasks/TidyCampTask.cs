@@ -240,7 +240,7 @@ public sealed class TidyCampTask : BotTask
 
 	const float RopeInUseDistance = 16f * 4f;
 
-	static bool BotNear(Point tile)
+	public static bool BotNear(Point tile)
 	{
 		var center = tile.ToWorldCoordinates();
 		foreach (var bot in Systems.BotWorldSystem.Bots)
@@ -276,7 +276,7 @@ public sealed class TidyCampTask : BotTask
 		return false;
 	}
 
-	static bool KeptRope(int x, int y)
+	public static bool KeptRope(int x, int y)
 	{
 		if (Building.HouseInspector.IsProtected(x, y))
 			return true;

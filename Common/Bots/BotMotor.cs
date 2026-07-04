@@ -348,8 +348,8 @@ public sealed class BotMotor
 	{
 		if (BridgeTile is Point bridge)
 			bot.Hands.PlaceBridge(bridge);
-		else if (RopeTile is Point rope)
-			bot.Hands.PlaceRope(rope);
+		else if (RopeTile is Point rope && bot.Hands.PlaceRope(rope))
+			World.RopeLedger.Note(rope);
 		else if (ScaffoldTile is Point scaffold)
 			PlaceFoothold(scaffold);
 	}

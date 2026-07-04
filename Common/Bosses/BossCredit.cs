@@ -157,8 +157,12 @@ public sealed class BossCredit : GlobalNPC
 	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction)
 	{
 		var open = BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge) && challenge.IsUnlocked).ToList();
-		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)).OrderBy(challenge => challenge.NightOnly && !Main.dayTime ? 0 : 1));
+		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)).OrderBy(challenge => challenge.NightOnly && NightComing ? 0 : 1));
 	}
+
+	const double DuskLead = 3 * 3600;
+
+	static bool NightComing => !Main.dayTime || Main.time >= Main.dayLength - DuskLead;
 
 	static readonly HashSet<int> OptionalBosses = new() { NPCID.DukeFishron, NPCID.HallowBoss };
 
