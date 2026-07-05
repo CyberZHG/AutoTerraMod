@@ -371,6 +371,16 @@ public sealed class SummonTask : BotTask
 		var pole = Inventory.Items(Avatar).Where(BossRituals.IsFishingPole).MaxBy(item => item.fishingPole);
 		if (bait == null || pole == null)
 			return Abandon("no bait or fishing pole");
+		if (castAt == 0 || Main.GameUpdateCount - castAt > CastWaitTicks * 4)
+		{
+			castAt = Main.GameUpdateCount;
+			Bot.Hands.CastLine(pole, water);
+			return false;
+		}
+		if (Main.GameUpdateCount - castAt < CastWaitTicks)
+			return false;
+		castAt = 0;
+		Bot.Hands.CastLine(pole, water);
 		using (AvatarPresence.Enter())
 		{
 			int bobber = Projectile.NewProjectile(new EntitySource_ItemUse(Avatar, pole), water, Vector2.Zero, pole.shoot, 0, 0f, Avatar.whoAmI);
@@ -380,6 +390,9 @@ public sealed class SummonTask : BotTask
 		Inventory.ConsumeOne(Avatar, bait);
 		return true;
 	}
+
+	const uint CastWaitTicks = 90;
+	uint castAt;
 
 	NPC Lacewing() =>
 		Main.npc.FirstOrDefault(npc => npc.active && npc.type == NPCID.EmpressButterfly && Vector2.Distance(npc.Center, Bot.Center) < LacewingSearchRadius);
@@ -1061,11 +1074,31 @@ public sealed class BuildBridgeTask : BotTask
 			return true;
 		for (int y = bridge.FeetRow(x) - bridge.Headroom + 1; y <= bridge.FeetRow(x); y++)
 		{
-			if (TileQuery.IsSolid(x, y) && !bridge.IsTolerated(x, y))
+			if (Blocks(bridge, x, y))
 				return true;
 		}
 		return false;
 	}
+
+	const int ClutterSweepColumns = 40;
+
+	static void SweepClutter(World.Highway highway, int fromX)
+	{
+		for (int x = fromX; x != fromX + highway.Direction * ClutterSweepColumns && highway.Spans(x); x += highway.Direction)
+		{
+			for (int y = highway.Y - highway.Headroom + 1; y <= highway.Y; y++)
+			{
+				if (!World.Highway.IsClutter(x, y))
+					continue;
+				WorldGen.KillTile(x, y, noItem: true);
+				if (Main.netMode == NetmodeID.Server)
+					NetMessage.SendTileSquare(-1, x, y);
+			}
+		}
+	}
+
+	static bool Blocks(World.ICorridor bridge, int x, int y) =>
+		TileQuery.IsSolid(x, y) && !bridge.IsTolerated(x, y) || bridge is World.Highway && World.Highway.IsClutter(x, y);
 	int stuckFrontier = int.MinValue;
 	uint stuckSince;
 
@@ -1134,8 +1167,15 @@ public sealed class BuildBridgeTask : BotTask
 			int feet = bridge.FeetRow(column);
 			for (int y = feet - bridge.Headroom + 1; y <= feet; y++)
 			{
-				if (TileQuery.IsSolid(column, y) && !bridge.IsTolerated(column, y))
+				if (Blocks(bridge, column, y))
 				{
+					if (bridge is World.Highway highway && World.Highway.IsClutter(column, y))
+					{
+						Bot.Hands.Dig(new Point(column, y), clearSaplings: true);
+						SweepClutter(highway, column);
+						Bot.Watchdog.RecordProgress();
+						return;
+					}
 					var dug = Bot.Hands.Dig(new Point(column, y), clearSaplings: true);
 					if (dug == ToolResult.OutOfReach)
 					{

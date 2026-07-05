@@ -82,11 +82,41 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	{
 		for (int y = Y - Headroom + 1; y <= Y; y++)
 		{
-			if (TileQuery.IsSolid(x, y) && !tolerated.Contains((x, y)))
+			if (TileQuery.IsSolid(x, y) && !tolerated.Contains((x, y)) || IsClutter(x, y))
 				return false;
 		}
 		return true;
 	}
+
+	public static bool IsClutter(int x, int y)
+	{
+		var tile = Main.tile[x, y];
+		return tile.HasTile && (TileQuery.IsPlatform(x, y) || Main.tileRope[tile.TileType] && !Bots.Tasks.TidyCampTask.KeptRope(x, y));
+	}
+
+	public int UsableEnd => IsComplete ? EndX : Frontier(Direction) - Direction;
+
+	public static IEnumerable<Highway> Toward(int fromX, int toX)
+	{
+		int direction = System.Math.Sign(toX - fromX);
+		int low = System.Math.Min(fromX, toX), high = System.Math.Max(fromX, toX);
+		return Systems.BotWorldSystem.Factions.SelectMany(For)
+			.Where(highway => highway.Direction == direction && System.Math.Max(highway.StartX, highway.EndX) >= low && System.Math.Min(highway.StartX, highway.EndX) <= high)
+			.OrderBy(highway => System.Math.Abs(highway.StartX - fromX));
+	}
+
+	public (int low, int high)? BuiltSpan
+	{
+		get
+		{
+			int end = UsableEnd;
+			if ((end - StartX) * Direction < 0)
+				return null;
+			return (System.Math.Min(StartX, end), System.Math.Max(StartX, end));
+		}
+	}
+
+	public static IEnumerable<Highway> All => Systems.BotWorldSystem.Factions.SelectMany(For);
 
 	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, Y + 1, Y + 1)) && HeadroomClear(x);
 

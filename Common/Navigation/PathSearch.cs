@@ -89,6 +89,14 @@ public sealed class PathSearch
 		originY = start.Y - reach;
 		cells = System.Buffers.ArrayPool<ushort>.Shared.Rent(span * span);
 		Array.Clear(cells, 0, span * span);
+		foreach (var highway in World.Highway.All)
+		{
+			if (highway.Spans(start.X) && Math.Abs(start.Y - highway.Y) <= 1)
+			{
+				corridor = highway;
+				break;
+			}
+		}
 		costSoFar[start] = 0f;
 		open.Enqueue(start, HeuristicWeight * heuristic(start));
 		best = start;
@@ -207,7 +215,7 @@ public sealed class PathSearch
 				continue;
 			if (forbiddenSteps != null && forbiddenSteps.Contains((current, edge.To)))
 				continue;
-			float cost = here + edge.Cost + (IsHazardousStand(edge.To) ? HazardPenalty : 0f);
+			float cost = here + edge.Cost + (IsHazardousStand(edge.To) ? HazardPenalty : 0f) + (AboveCorridor(edge.To) ? OffCorridorPenalty : 0f);
 			if (costSoFar.TryGetValue(edge.To, out float known) && known <= cost)
 				continue;
 			costSoFar[edge.To] = cost;
@@ -215,6 +223,11 @@ public sealed class PathSearch
 			open.Enqueue(edge.To, cost + HeuristicWeight * heuristic(edge.To));
 		}
 	}
+
+	World.Highway corridor;
+	const float OffCorridorPenalty = 6f;
+
+	bool AboveCorridor(Point feet) => corridor != null && feet.Y < corridor.Y && corridor.Spans(feet.X);
 
 	List<PathNode> Reconstruct(Point end)
 	{
@@ -374,11 +387,15 @@ public sealed class PathSearch
 
 	public static bool HangEdges = true;
 	const int LeapDropTiles = 8;
+	const int LeapTilesPerHeadroom = 2;
 	const float LeapCost = 4f;
 
 	void AddLeapEdges(int x, int y)
 	{
-		int reach = abilities.LeapReach;
+		int headroom = 0;
+		while (headroom < abilities.SingleJumpRise && BodyClear(x, y - headroom - 1))
+			headroom++;
+		int reach = headroom >= abilities.SingleJumpRise || abilities.FlyRise > 0 ? abilities.LeapReach : Math.Min(abilities.LeapReach, (headroom + 1) * LeapTilesPerHeadroom);
 		int arc = y - 2;
 		for (int direction = -1; direction <= 1; direction += 2)
 		{

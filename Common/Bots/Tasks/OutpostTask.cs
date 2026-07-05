@@ -308,7 +308,7 @@ public sealed class OutpostTask : BotTask
 
 	bool Clear(Point tile)
 	{
-		if (TileQuery.IsSolid(tile) || TileQuery.IsPlatform(tile.X, tile.Y))
+		if (TileQuery.IsSolid(tile) || TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.InOcean(tile.X, tile.Y))
 			return Bot.Hands.Dig(tile) is ToolResult.Working or ToolResult.Done;
 		WorldGen.KillTile(tile.X, tile.Y);
 		return !TileQuery.HasTile(tile);

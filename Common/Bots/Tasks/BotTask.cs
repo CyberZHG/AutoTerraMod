@@ -258,14 +258,22 @@ public abstract class BotTask
 		deepTunnel = null;
 		if (TempleApproach(target) is Vector2 approach)
 			target = approach;
-		if (RecallBeatsLongTrip(target) && TryRecallHome())
+		var road = HighwayRoute(target, out bool recalled);
+		if (recalled)
 		{
 			Bot.LastRecallTarget = target;
 			return true;
 		}
-		if (ShaftShortcut(target))
+		if (road == null && RecallBeatsLongTrip(target) && TryRecallHome())
+		{
+			Bot.LastRecallTarget = target;
 			return true;
-		if (BridgeLeg(target) is Vector2 leg)
+		}
+		if (road is Vector2 onRoad)
+			target = onRoad;
+		else if (ShaftShortcut(target))
+			return true;
+		else if (BridgeLeg(target) is Vector2 leg)
 			target = leg;
 		else if (SurfaceFirst(target) is Vector2 overland)
 			target = overland;
@@ -400,6 +408,77 @@ public abstract class BotTask
 				return true;
 		}
 		return false;
+	}
+
+	const int HighwayTripTiles = 200;
+	const int HighwayWorthTiles = 100;
+	const int HighwayEntryReach = 100;
+	const int HighwaySurfaceDepth = 60;
+	const int HighwayExitSlack = 3;
+
+	Vector2? HighwayRoute(Vector2 target, out bool recalled)
+	{
+		recalled = false;
+		var here = Bot.CenterTile;
+		var goal = target.ToTileCoordinates();
+		if (System.Math.Abs(goal.X - here.X) < HighwayTripTiles || goal.Y > Main.worldSurface + HighwaySurfaceDepth)
+			return null;
+		int baseX = Bot.Faction.BaseTile.X;
+		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0;
+		int tripLow = System.Math.Min(here.X, goal.X), tripHigh = System.Math.Max(here.X, goal.X);
+		NoteLeftRoad(here);
+		Highway best = null;
+		Point bestEntry = default;
+		float bestDistance = float.MaxValue;
+		foreach (var highway in Highway.All)
+		{
+			if (highway.BuiltSpan is not var (low, high))
+				continue;
+			if (System.Math.Abs(here.Y - highway.Y) <= BridgeRowSlack && here.X >= low && here.X <= high && bossSide)
+			{
+				int exit = Utils.Clamp(goal.X, low, high);
+				if (System.Math.Abs(exit - here.X) <= HighwayExitSlack)
+					return null;
+				roadRow = (highway, Main.GameUpdateCount);
+				return Leg(here, new Point(exit, highway.Y), _ => highway.Y) ?? new Vector2(exit * 16f + 8f, (highway.Y + 1) * 16f - 21f);
+			}
+			int overlap = System.Math.Min(high, tripHigh) - System.Math.Max(low, tripLow);
+			if (overlap < HighwayWorthTiles)
+				continue;
+			var entry = new Point(Utils.Clamp(here.X, low, high), highway.Y);
+			float distance = Vector2.Distance(Bot.Center, entry.ToWorldCoordinates());
+			if (distance < bestDistance)
+			{
+				best = highway;
+				bestEntry = entry;
+				bestDistance = distance;
+			}
+		}
+		if (best == null)
+			return null;
+		var entryPoint = new Vector2(bestEntry.X * 16f + 8f, (best.Y + 1) * 16f - 21f);
+		if (bestDistance > HighwayEntryReach * 16f && CarriesRecall(Avatar) && Main.GameUpdateCount - Bot.LastRecallAt >= RecallCooldownTicks
+			&& RecallBringsCloser(entryPoint) && TryRecallHome())
+		{
+			recalled = true;
+			return null;
+		}
+		return bestDistance < Vector2.Distance(Bot.Center, target) ? entryPoint : null;
+	}
+
+	(Highway highway, uint at)? roadRow;
+	uint leftRoadLoggedAt;
+	const uint RoadMemoryTicks = 120;
+	const uint LeftRoadLogTicks = 600;
+
+	void NoteLeftRoad(Point here)
+	{
+		if (roadRow is not var (highway, at) || Main.GameUpdateCount - at > RoadMemoryTicks)
+			return;
+		if (System.Math.Abs(here.Y - highway.Y) <= BridgeRowSlack || !highway.Spans(here.X) || Main.GameUpdateCount - leftRoadLoggedAt < LeftRoadLogTicks)
+			return;
+		leftRoadLoggedAt = Main.GameUpdateCount;
+		BotDiagnostics.Log(Bot, $"left the highway row {highway.Y} at {here} while {NameKey}{TerrainDump.Around(new Point(here.X, highway.Y), 8, 6)}");
 	}
 
 	static bool Along(int row, Point here, Point goal) => System.Math.Abs(here.Y - row) <= BridgeRowSlack && System.Math.Abs(goal.Y - row) <= BridgeRowSlack;

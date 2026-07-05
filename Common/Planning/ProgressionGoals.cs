@@ -878,6 +878,26 @@ public sealed class OutpostKitGoal : ProgressionGoal
 	}
 }
 
+public sealed class RoadFirstGoal : ProgressionGoal
+{
+	public override string Describe() => "RoadFirst";
+
+	public override bool AppliesTo(Bot bot) => (BossGoal.IsSummoner(bot) || HouseInspector.IsDesignatedBuilder(bot)) && PendingRoad(bot).Any();
+
+	public override bool IsMet(Bot bot) => false;
+
+	public override PlanStep Plan(Bot bot) => HighwayGoal.PlanHighways(bot, PendingRoad(bot)) ?? PlanStep.Idle;
+
+	public static IEnumerable<World.Highway> PendingRoad(Bot bot)
+	{
+		if (Bosses.BossCredit.NextChallengeFor(bot.Faction) is not { BossType: NPCID.DukeFishron } || bot.Faction.Rally != null || Bosses.BossRituals.Shoreline(bot) is not Microsoft.Xna.Framework.Vector2 shore)
+			return System.Array.Empty<World.Highway>();
+		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
+		return World.Highway.Toward(bot.Faction.BaseTile.X, (int)(shore.X / 16f))
+			.Where(highway => !highway.IsComplete && !highway.BlockedAt(highway.Frontier(highway.Direction), pick));
+	}
+}
+
 public sealed class HighwayGoal : ProgressionGoal
 {
 	const int BlockRestock = 500;
@@ -898,8 +918,18 @@ public sealed class HighwayGoal : ProgressionGoal
 
 	public override PlanStep Plan(Bot bot)
 	{
+		if (PlanHighways(bot, World.Highway.For(bot.Faction)) is { } road)
+			return road;
+		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
+		if (!shaft.IsFinished && (Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Hands.Explosives.Carries) && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
+			return dig;
+		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) ?? PlanStep.Idle;
+	}
+
+	internal static PlanStep PlanHighways(Bot bot, IEnumerable<World.Highway> highways)
+	{
 		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
-		foreach (var highway in World.Highway.For(bot.Faction))
+		foreach (var highway in highways)
 		{
 			if (highway.IsComplete)
 			{
@@ -943,10 +973,7 @@ public sealed class HighwayGoal : ProgressionGoal
 			}
 			return new BuildBridgeStep(highway, highway.Direction);
 		}
-		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		if (!shaft.IsFinished && (Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Hands.Explosives.Carries) && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
-			return dig;
-		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) ?? PlanStep.Idle;
+		return null;
 	}
 
 	internal static PlanStep Hang(Bot bot, int x, int top, int bottom, int restock = RopeRestock)
@@ -1493,6 +1520,7 @@ public static class ProgressionGoals
 			new OutpostGoal(),
 			new ArenaKitGoal(),
 			new SkyArenaGoal(),
+			new RoadFirstGoal(),
 			new BossGoal(),
 			new BossSupportGoal(),
 			new ArenaOutpostGoal(),

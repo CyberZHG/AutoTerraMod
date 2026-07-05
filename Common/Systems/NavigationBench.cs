@@ -16,7 +16,19 @@ public sealed class NavigationBench : ModSystem
 		public bool InWorld => Map == null;
 	}
 
-	const int ArenaTop = 60;
+	static int ArenaTop
+	{
+		get
+		{
+			float scale = Main.maxTilesX / 4200f;
+			return System.Math.Max(MinArenaTop, (int)(SpaceTop + SpaceScaleRows * scale * scale + Main.worldSurface / 6.0) + GravityMargin);
+		}
+	}
+
+	const int MinArenaTop = 60;
+	const int SpaceTop = 60;
+	const int SpaceScaleRows = 10;
+	const int GravityMargin = 4;
 	const int ArenaLeft = 300;
 	const int ArenaSpacing = 60;
 	const int ArenaRowHeight = 100;
@@ -1133,6 +1145,10 @@ public sealed class NavigationBench : ModSystem
 			"#......................................#",
 			"#......................................#",
 			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
 			"#S.........................G...........#",
 			"##########..........####################",
 			"##########%%%%%%%%%%####################",
@@ -1340,6 +1356,10 @@ public sealed class NavigationBench : ModSystem
 			"#......................................#",
 			"#......................................#",
 			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
 			"#S..................G..................#",
 			"##########.......#######################",
 			"##########%%%%%%%#######################",
@@ -1348,6 +1368,10 @@ public sealed class NavigationBench : ModSystem
 		new("SwiftLavaGap", new[]
 		{
 			"########################################",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
+			"#......................................#",
 			"#......................................#",
 			"#......................................#",
 			"#......................................#",
@@ -1430,7 +1454,70 @@ public sealed class NavigationBench : ModSystem
 			"##############################"
 		}),
 		new("HorseshoeFall", FallShaft(60)),
+		new("ClutterRoomsLow", ClutterRooms(10)),
+		new("ClutterRoomsHigh", ClutterRooms(1)),
+		new("ClutterRoomsMid", ClutterRooms(5)),
+		new("RocketCeiling0", CeilingSlot(0)),
+		new("RocketCeiling1", CeilingSlot(1)),
+		new("RocketCeiling2", CeilingSlot(2)),
+		new("RocketCeiling3", CeilingSlot(3)),
+		new("WingCeiling0", CeilingSlot(0)),
+		new("WingCeiling1", CeilingSlot(1)),
+		new("WingCeiling2", CeilingSlot(2)),
+		new("WingCeiling3", CeilingSlot(3)),
 	};
+
+	const int SlotWallHeight = 8;
+	const int SlotGapRows = 3;
+	const int SlotWallColumn = 15;
+	const int SlotWidth = 20;
+
+	static string[] CeilingSlot(int stub)
+	{
+		int height = stub + SlotGapRows + SlotWallHeight;
+		var rows = new List<string> { new string('#', SlotWidth) };
+		for (int row = 1; row <= height; row++)
+		{
+			bool open = row > stub && row <= stub + SlotGapRows;
+			var line = new char[SlotWidth];
+			for (int x = 0; x < SlotWidth; x++)
+				line[x] = x == 0 || x == SlotWidth - 1 ? '#' : '.';
+			if (!open)
+				line[SlotWallColumn] = '#';
+			if (row == height)
+			{
+				line[1] = 'S';
+				line[SlotWidth - 2] = 'G';
+			}
+			rows.Add(new string(line));
+		}
+		rows.Add(new string('#', SlotWidth));
+		return rows.ToArray();
+	}
+
+	const int ClutterRoomWidth = 10;
+	const int ClutterRoomHeight = 12;
+	const int ClutterGapRows = 3;
+
+	static string[] ClutterRooms(int gapTop)
+	{
+		int width = ClutterRoomWidth * 3 + 4;
+		var rows = new List<string> { new string('#', width) };
+		for (int row = 1; row <= ClutterRoomHeight; row++)
+		{
+			bool gap = row >= gapTop && row < gapTop + ClutterGapRows;
+			var line = new System.Text.StringBuilder("#");
+			line.Append(row == ClutterRoomHeight ? "S" + new string('!', ClutterRoomWidth - 1) : new string('!', ClutterRoomWidth));
+			line.Append(gap ? '.' : '#');
+			line.Append(new string('=', ClutterRoomWidth));
+			line.Append(gap ? '.' : '#');
+			line.Append(row == ClutterRoomHeight ? new string('.', ClutterRoomWidth - 2) + "G." : new string('.', ClutterRoomWidth));
+			line.Append('#');
+			rows.Add(line.ToString());
+		}
+		rows.Add(new string('#', width));
+		return rows.ToArray();
+	}
 
 	static string[] LidShaft(int goalColumn, string surface, string grass, string soil, string shaft, string bottom)
 	{
@@ -1571,8 +1658,19 @@ public sealed class NavigationBench : ModSystem
 		if (!Active || !BotWorldSystem.IsRunning || caseIndex >= Cases.Length)
 			return;
 		var runner = BotWorldSystem.Bots.FirstOrDefault();
-		if (runner == null || !runner.IsAlive)
+		if (runner == null)
 			return;
+		if (!runner.IsAlive)
+		{
+			runnerDied |= caseIndex >= 0;
+			return;
+		}
+		if (runnerDied)
+		{
+			runnerDied = false;
+			Conclude(runner, false, $"FAIL: runner died during the case (respawned at {runner.CenterTile})");
+			return;
+		}
 		if (caseIndex < 0)
 		{
 			foreach (var bot in BotWorldSystem.Bots)
@@ -1580,6 +1678,7 @@ public sealed class NavigationBench : ModSystem
 			StartCase(runner, 0);
 			return;
 		}
+		ClearHostiles(runner);
 		uint elapsed = Main.GameUpdateCount - caseStartedAt;
 		if (Cases[caseIndex].InWorld)
 		{
@@ -1602,6 +1701,13 @@ public sealed class NavigationBench : ModSystem
 			return;
 		string verdict = dugPlatforms.Count > 0 ? $"FAIL: dug platforms at {string.Join(" ", dugPlatforms)}"
 			: arrived ? $"PASS in {(elapsed - SettleTicks) / 60f:0.0}s hp={runner.Avatar.statLife}/{runner.Avatar.statLifeMax2}" : $"FAIL at {runner.CenterTile}; motor: {runner.Motor.Describe()}; fresh search: {FreshSearch(runner)}; below: {Below(runner)} ropes={Inventory.Count(runner.Avatar, ItemID.Rope)} ready={runner.Hands.Ready} armor=[{string.Join(",", runner.Avatar.armor.Select(item => item.type))}] rocket={runner.Avatar.rocketBoots}{World.TerrainDump.Around(runner.CenterTile, Cases[caseIndex].InWorld ? 40 : 16, Cases[caseIndex].InWorld ? 25 : 8)}";
+		Conclude(runner, arrived, verdict);
+	}
+
+	bool runnerDied;
+
+	void Conclude(Bot runner, bool arrived, string verdict)
+	{
 		results.Add($"{Cases[caseIndex].Name}: {(arrived ? "PASS" : "FAIL")}");
 		BotDiagnostics.LogWorld($"nav bench {Cases[caseIndex].Name}: {verdict}");
 		if (caseIndex + 1 < Cases.Length)
@@ -1612,6 +1718,31 @@ public sealed class NavigationBench : ModSystem
 		caseIndex = Cases.Length;
 		runner.Brain.Override = new HoldStillTask(runner);
 		BotDiagnostics.LogWorld($"nav bench done: {results.Count(result => result.EndsWith("PASS"))}/{results.Count} passed ({string.Join(", ", results)})");
+	}
+
+	const float HostileClearRadius = 16f * 80f;
+
+	static void ClearHostiles(Bot runner)
+	{
+		foreach (var npc in Main.npc)
+		{
+			if (npc.active && !npc.friendly && npc.damage > 0 && !npc.townNPC && Vector2.Distance(npc.Center, runner.Center) < HostileClearRadius
+				&& !BotWorldSystem.Bots.Any(bot => bot.Npc == npc))
+				npc.active = false;
+		}
+	}
+
+	static void Refresh(Bot runner)
+	{
+		var avatar = runner.Avatar;
+		for (int slot = 0; slot < avatar.buffType.Length; slot++)
+		{
+			if (avatar.buffType[slot] > 0 && Main.debuff[avatar.buffType[slot]])
+				avatar.DelBuff(slot--);
+		}
+		avatar.statLife = avatar.statLifeMax2;
+		if (runner.Npc is NPC body)
+			body.life = body.lifeMax;
 	}
 
 	static string Below(Bot runner)
@@ -1681,6 +1812,7 @@ public sealed class NavigationBench : ModSystem
 			}
 		}
 		ClearClutter(runner);
+		Refresh(runner);
 		EquipBenchGear(runner, bench.Name);
 		bool toolless = new[] { "Wing", "Cloud", "Hook", "Fledgling", "Bare", "Frog", "Balloon", "Rocket", "Swift", "Hermes", "Slow", "Horseshoe" }.Any(bench.Name.StartsWith);
 		if (!toolless)

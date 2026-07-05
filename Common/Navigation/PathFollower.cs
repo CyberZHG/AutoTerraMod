@@ -87,7 +87,7 @@ public sealed class PathFollower
 			return default;
 		stepTicks++;
 		lastIntent = Execute(body, feet, grounded, path.Nodes[index], abilities);
-		if (!grounded && index > 0 && path.Nodes[index - 1].Arrival == MoveKind.Fly)
+		if (!grounded && index > 0 && path.Nodes[index - 1].Arrival == MoveKind.Fly && feet.Y > path.Nodes[index].Feet.Y)
 			lastIntent.Fly = true;
 		bool launchesNext = index + 1 < path.Nodes.Count && path.Nodes[index + 1].Arrival is not (MoveKind.Walk or MoveKind.Drop);
 		if (grounded && OvershootsIntoDeadlyDrop(body, feet, path.Nodes[index], lastIntent, abilities.MaxFall, launchesNext))
@@ -172,7 +172,7 @@ public sealed class PathFollower
 		{
 			var node = path.Nodes[candidate];
 			bool settled = grounded || node.Arrival == MoveKind.Climb;
-			if (IsAt(feet, node, centerX) && settled)
+			if (IsAt(feet, node, centerX) && settled || node.Arrival == MoveKind.Fly && ReachedFlightTop(feet, node))
 			{
 				index = candidate + 1;
 				stepOrigin = feet;
@@ -181,6 +181,14 @@ public sealed class PathFollower
 			}
 		}
 	}
+
+	const int FlightOvershootRows = 3;
+	const int RopeTopStallTicks = 20;
+	const int SteerAscentRows = 1;
+	const float RopeStallSpeed = 1f;
+
+	static bool ReachedFlightTop(Point feet, PathNode node) =>
+		Math.Abs(feet.X - node.Feet.X) <= 1 && feet.Y <= node.Feet.Y && feet.Y >= node.Feet.Y - FlightOvershootRows;
 
 	static bool IsAt(Point feet, PathNode node, float centerX)
 	{
@@ -288,7 +296,13 @@ public sealed class PathFollower
 		{
 			float standingBottom = (node.Feet.Y + 1) * 16f;
 			float bottom = body.position.Y + body.height;
-			if (bottom > standingBottom || bottom < standingBottom - RopeStepTolerance)
+			if (bottom > standingBottom && stepTicks > RopeTopStallTicks && Math.Abs(body.velocity.Y) < RopeStallSpeed && node.Feet.X != feet.X)
+			{
+				intent.Jump = true;
+				intent.JumpHoldTicks = HoldTicksForRise(2);
+				intent.MoveDirection = Math.Sign(node.Feet.X - feet.X);
+			}
+			else if (bottom > standingBottom || bottom < standingBottom - RopeStepTolerance)
 			{
 				intent.ClimbDirection = bottom > standingBottom ? -1 : 1;
 				intent.ClimbColumn = feet.X;
@@ -314,11 +328,12 @@ public sealed class PathFollower
 				intent.JumpHoldTicks = HoldTicksForRise(2);
 				break;
 			case MoveKind.Jump:
-				intent.Jump = grounded && body.velocity.X * intent.MoveDirection > -TurnAroundSpeed || body.velocity.Y < 0f || rise > abilities.SingleJumpRise;
+				intent.Jump = grounded && body.velocity.X * intent.MoveDirection > -TurnAroundSpeed || body.velocity.Y < 0f || rise > abilities.SingleJumpRise
+					|| !grounded && rise > 0 && abilities.JumpRise > abilities.SingleJumpRise;
 				intent.JumpHoldTicks = HoldTicksForRise(Math.Min(rise, abilities.SingleJumpRise));
-				if (!grounded && body.velocity.Y > 0f)
+				if (!grounded && (body.velocity.Y > 0f || stepOrigin.Y - node.Feet.Y <= SteerAscentRows))
 					intent.MoveDirection = AirSteer(body, offset);
-				if (rise > 0 && intent.MoveDirection != 0 && OverhangBeside(body, intent.MoveDirection))
+				if (rise > 0 && intent.MoveDirection != 0 && (OverhangBeside(body, intent.MoveDirection) || BelowAdjacentLedge(feet, node)))
 					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Fly:
@@ -379,6 +394,9 @@ public sealed class PathFollower
 			return new Point(second, y);
 		return new Point(firstFree || !secondFree ? first : second, y);
 	}
+
+	static bool BelowAdjacentLedge(Point feet, PathNode node) =>
+		Math.Abs(node.Feet.X - feet.X) == 1 && feet.Y > node.Feet.Y && TileQuery.IsSolid(node.Feet.X, node.Feet.Y + 1);
 
 	static bool OverhangBeside(NPC body, int direction)
 	{

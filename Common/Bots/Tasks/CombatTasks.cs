@@ -193,6 +193,12 @@ public sealed class FightTask : BotTask
 			Bot.Motor.MoveTo(new Vector2(tornado.Center.X + away * (tornado.width / 2f + TornadoClearance), Bot.Center.Y), 16f * 2f);
 			return;
 		}
+		if (target.type == Terraria.ID.NPCID.DukeFishron && OffTheBeach() is Vector2 beach)
+		{
+			Bot.Watchdog.RecordProgress();
+			TravelOrTunnel(beach, 16f * 2f);
+			return;
+		}
 		if (target.type == Terraria.ID.NPCID.DukeFishron && FishronCalmSpot() is Vector2 calm)
 		{
 			Bot.Watchdog.RecordProgress();
@@ -205,6 +211,17 @@ public sealed class FightTask : BotTask
 			return;
 		}
 		Engagement.Fight(Bot, target);
+	}
+
+	const float ShoreSlack = 16f * 2f;
+
+	Vector2? OffTheBeach()
+	{
+		if (Bosses.BossRituals.Shoreline(Bot) is not Vector2 shore)
+			return null;
+		int seaward = shore.X > Main.maxTilesX * 8f ? 1 : -1;
+		bool atSea = (Bot.Center.X - shore.X) * seaward > ShoreSlack || Bot.Npc.wet && (Bot.Center.X - shore.X) * seaward > -ShoreSlack * 4f;
+		return atSea ? shore : null;
 	}
 
 	const float TornadoClearance = 16f * 8f;

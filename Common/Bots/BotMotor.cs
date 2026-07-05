@@ -346,6 +346,8 @@ public sealed class BotMotor
 
 	void PlacePlannedSupport()
 	{
+		if ((BridgeTile ?? RopeTile ?? ScaffoldTile) is Point support && World.Highway.InAnyClearance(support.X, support.Y))
+			return;
 		if (BridgeTile is Point bridge)
 			bot.Hands.PlaceBridge(bridge);
 		else if (RopeTile is Point rope && bot.Hands.PlaceRope(rope))
@@ -691,7 +693,7 @@ public sealed class BotMotor
 		if (leg == null && follower.HasNoRoute)
 			needsWholeRoute = true;
 		AimProgressAt(leg ?? target);
-		if (follower.HasPath)
+		if (follower.HasPath && !(Main.GameUpdateCount < recyclingUntil && !follower.ReachesGoal))
 		{
 			sprinting = npc.velocity.Y == 0f && follower.FlatAhead(SprintLookahead);
 			ApplyIntent(npc, intent, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
@@ -702,8 +704,11 @@ public sealed class BotMotor
 			npc.velocity.X = 0f;
 			return;
 		}
-		if ((follower.HasNoRoute || follower.FinishedShortOfGoal) && !PlacementForbidden && RecycleBlocks(npc, delta, ref moveDirection, ref wantsJump, ref jumpHoldTicks))
+		if ((follower.HasNoRoute || follower.FinishedShortOfGoal || Main.GameUpdateCount < recyclingUntil) && !PlacementForbidden && RecycleBlocks(npc, delta, ref moveDirection, ref wantsJump, ref jumpHoldTicks))
+		{
+			recyclingUntil = Main.GameUpdateCount + RecyclingStickTicks;
 			return;
+		}
 		SteerGreedy(npc, target, delta, ref moveDirection, ref wantsJump);
 	}
 
@@ -725,6 +730,9 @@ public sealed class BotMotor
 	}
 
 	const int RecycleFrontierLimit = 40;
+	const uint RecyclingStickTicks = 60;
+	uint recyclingUntil;
+	const float TargetFeetOffset = 21f;
 	const float AlignedPixels = 12f;
 	const float FrontierTolerance = 4f;
 	const float FrontierCreepSpeed = 1f;
@@ -736,7 +744,8 @@ public sealed class BotMotor
 		var body = BodyTiles.Of(npc);
 		bool grounded = npc.velocity.Y == 0f;
 		int column = (int)(npc.Center.X / 16f);
-		if (delta.Y < -(Abilities().JumpRise + 1) * 16f)
+		int targetFeet = (int)((npc.Center.Y + delta.Y + TargetFeetOffset) / 16f);
+		if (body.Bottom - targetFeet >= Abilities().JumpRise)
 			return RecycleUpward(npc, body, column, grounded, ref wantsJump, ref jumpHoldTicks);
 		return Math.Abs(delta.X) >= AlignedPixels && Math.Abs(delta.X) >= delta.Y && RecycleAcross(npc, body, column, grounded, Math.Sign(delta.X), ref moveDirection);
 	}
@@ -848,6 +857,7 @@ public sealed class BotMotor
 
 	const int WingedSafeFall = 120;
 	const int ExtraJumpRise = 4;
+	const float ExtraJumpFallSpeed = 0.5f;
 	const int MaxFlightRise = 40;
 	const float FlightRiseEfficiency = 0.9f;
 
@@ -1284,7 +1294,7 @@ public sealed class BotMotor
 			npc.velocity.Y = -jumpSpeed;
 			jumpHold--;
 		}
-		else if (extraJumpReady && flightTicks == 0 && npc.velocity.Y >= 0f)
+		else if (extraJumpReady && flightTicks == 0 && npc.velocity.Y > ExtraJumpFallSpeed)
 		{
 			npc.velocity.Y = -jumpSpeed;
 			jumpHold = HoldFor(holdTicks);

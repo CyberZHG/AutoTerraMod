@@ -942,6 +942,8 @@ public sealed class BotHands
 		return caught;
 	}
 
+	public void CastLine(Item pole, Vector2 water) => Swing(pole, pole.useTime, water);
+
 	void Swing(Item item, int useTime, Vector2 toward)
 	{
 		int slot = Inventory.FindSlot(Avatar, item);
