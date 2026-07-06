@@ -77,9 +77,13 @@ public sealed class SummonTask : BotTask
 		faction.RallyAssembled = false;
 	}
 
+	bool YieldsToNightBoss() =>
+		!step.Challenge.NightOnly && step.Trigger is not PillarsTrigger && BossCredit.IsOptional(step.Challenge)
+		&& BossCredit.NextChallengeFor(Bot.Faction) is { NightOnly: true } next && next != step.Challenge;
+
 	public override void Tick()
 	{
-		if (!step.Challenge.WindowStillOpen || BossCatalog.IsBossAlive(step.Challenge))
+		if (!step.Challenge.WindowStillOpen || BossCatalog.IsBossAlive(step.Challenge) || YieldsToNightBoss())
 		{
 			if (Bot.Faction.RallyLeaderId == Bot.Id)
 				Bot.Faction.Rally = null;

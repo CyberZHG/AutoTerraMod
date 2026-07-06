@@ -67,12 +67,14 @@ public abstract class BotTask
 	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
 
 	const int PointlessRecallTiles = 8;
+	const uint MinRecallGapTicks = 300;
 
 	protected bool TryRecallHome()
 	{
 		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
 		var body = Bot.Npc;
-		if (recall == null || body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f)
+		if (recall == null || body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f
+			|| Bot.LastRecallAt != 0 && Main.GameUpdateCount - Bot.LastRecallAt < MinRecallGapTicks)
 			return false;
 		string name = recall.Name;
 		if (recall.consumable)
@@ -458,7 +460,7 @@ public abstract class BotTask
 			return null;
 		var entryPoint = new Vector2(bestEntry.X * 16f + 8f, (best.Y + 1) * 16f - 21f);
 		if (bestDistance > HighwayEntryReach * 16f && CarriesRecall(Avatar) && Main.GameUpdateCount - Bot.LastRecallAt >= RecallCooldownTicks
-			&& RecallBringsCloser(entryPoint) && TryRecallHome())
+			&& RecallBringsCloser(entryPoint) && TryRecallToCamp())
 		{
 			recalled = true;
 			return null;
