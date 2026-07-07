@@ -91,7 +91,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	public static bool IsClutter(int x, int y)
 	{
 		var tile = Main.tile[x, y];
-		return tile.HasTile && (TileQuery.IsPlatform(x, y) || Main.tileRope[tile.TileType] && !Bots.Tasks.TidyCampTask.KeptRope(x, y));
+		return tile.HasTile && (TileQuery.IsPlatform(x, y) || Main.tileRope[tile.TileType] && !Bots.Tasks.TidyCampTask.KeptRope(x, y)) && WorldGen.CanKillTile(x, y);
 	}
 
 	public int UsableEnd => IsComplete ? EndX : Frontier(Direction) - Direction;

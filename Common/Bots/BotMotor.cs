@@ -968,12 +968,25 @@ public sealed class BotMotor
 			npc.GravityMultiplier = MultipliableFloat.One * 0f;
 			if (intent.ClimbDirection < 0 && intent.ClimbColumn >= 0 && !RopeAtHead(npc, intent.ClimbColumn))
 			{
+				if (++ropeTopTicks >= RopeTopJumpTicks)
+				{
+					ropeTopTicks = 0;
+					npc.GravityMultiplier = MultipliableFloat.One;
+					npc.velocity.Y = -bot.Vitals.JumpSpeed;
+					jumpHold = HoldFor(RopeTopJumpHold);
+					return;
+				}
 				npc.velocity = Vector2.Zero;
 				return;
 			}
+			ropeTopTicks = 0;
 			npc.velocity = new Vector2(0f, NextRopeSpeed(intent.ClimbDirection));
 		}
 	}
+
+	int ropeTopTicks;
+	const int RopeTopJumpTicks = 15;
+	const int RopeTopJumpHold = 6;
 
 	static int ExistingRopeColumn(NPC npc, int column)
 	{

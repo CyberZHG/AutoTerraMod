@@ -388,6 +388,16 @@ public sealed class PathSearch
 	public static bool HangEdges = true;
 	const int LeapDropTiles = 8;
 	const int LeapTilesPerHeadroom = 2;
+
+	static bool RopeInArc(int x, int feetY)
+	{
+		for (int row = feetY - 2; row <= feetY; row++)
+		{
+			if (PathFinder.IsRope(x, row) || PathFinder.IsRope(x + 1, row))
+				return true;
+		}
+		return false;
+	}
 	const float LeapCost = 4f;
 
 	void AddLeapEdges(int x, int y)
@@ -404,7 +414,7 @@ public sealed class PathSearch
 			for (int dx = 2; dx <= reach; dx++)
 			{
 				int nx = x + direction * dx;
-				if (!BodyClear(nx, arc))
+				if (!BodyClear(nx, arc) || RopeInArc(nx, arc))
 					break;
 				for (int ny = y - 1; ny <= y + LeapDropTiles && BodyClear(nx, ny); ny++)
 				{
