@@ -239,7 +239,7 @@ public sealed class CraftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && (RecallLandsAtBase() || Bot.OutpostBed != null) && RecallBringsCloser(station.ToWorldCoordinates()) && TryRecallToCamp())
+		if (Vector2.Distance(Bot.Center, station.ToWorldCoordinates()) > RecallTripDistance && Bot.Hands.TicksSinceWork > RecallAfterWorkTicks && Bot.Faction.Settlement?.Contains(station.X, station.Y) != false && RecallReachesCamp() && RecallBringsCloser(station.ToWorldCoordinates()) && TryRecallToCamp())
 			return;
 		var standAt = World.Grounds.StandingSpotNear(station) is Point feet ? Navigation.PathFinder.BodyCenterAt(feet) : station.ToWorldCoordinates();
 		bool remote = Bot.Faction.Settlement?.Contains(station.X, station.Y) != true;

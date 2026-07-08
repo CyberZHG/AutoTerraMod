@@ -634,7 +634,8 @@ public sealed class RefightGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) => !Wanted(bot).Any();
 
 	IEnumerable<Bosses.BossChallenge> Wanted(Bot bot) =>
-		Bosses.BossCatalog.Challenges.Where(challenge => bot.Faction.WantsRefight(challenge.BossType, gearOnly) && Bosses.BossCredit.HasDefeated(bot.Faction, challenge));
+		Bosses.BossCatalog.Challenges.Where(challenge => bot.Faction.WantsRefight(challenge.BossType, gearOnly) && Bosses.BossCredit.HasDefeated(bot.Faction, challenge)
+			&& (challenge.BossType != Terraria.ID.NPCID.CultistBoss || Bosses.BossRituals.PillarsWorthRaising(bot.Faction)));
 
 	public override PlanStep Plan(Bot bot)
 	{

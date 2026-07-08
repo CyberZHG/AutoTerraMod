@@ -64,7 +64,11 @@ public abstract class BotTask
 	protected bool RecallBringsCloser(Vector2 target) =>
 		Vector2.Distance(CampLanding, target) + RecallGainTiles * 16f < Vector2.Distance(Bot.Center, target);
 
-	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
+	protected Vector2 CampLanding => Bot.OutpostBed != null && !RecallLandsAtBase() && !KeepsArenaBed ? Bot.Faction.BaseFeet : BotWorldSystem.RespawnFeet(Bot);
+
+	bool KeepsArenaBed => Bot.OutpostBed is Point bed && bed == Bot.Faction.ArenaBed && Bot.Faction.Rally != null;
+
+	protected bool RecallReachesCamp() => RecallLandsAtBase() || Bot.OutpostBed != null && !KeepsArenaBed;
 
 	const int PointlessRecallTiles = 8;
 	const uint MinRecallGapTicks = 300;

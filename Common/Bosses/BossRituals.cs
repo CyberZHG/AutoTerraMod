@@ -243,7 +243,8 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || bot.Faction.Rally == null || bot.Faction.RallyBossType != moonLord.BossType)
+		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType
+			|| Main.npc.Any(npc => npc.active && npc.boss))
 			return null;
 		return NearestPillar(bot.Center) is NPC pillar && !SiegeStalled(bot, pillar) ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
 	}
@@ -252,8 +253,14 @@ public static class BossRituals
 	const uint SiegeRestTicks = 20 * 3600;
 	const float SiegeProgressFraction = 0.05f;
 
-	static readonly Dictionary<int, (int pillar, int life, uint since)> sieges = new();
+	const uint SiegeTripTicks = 15 * 3600;
+	const float SiegeNearReach = 16f * 100f;
+
+	static readonly Dictionary<int, (int pillar, int life, uint since, uint started)> sieges = new();
 	static readonly Dictionary<int, uint> siegeRestUntil = new();
+
+	public static bool PillarsWorthRaising(Factions.Faction faction) =>
+		!Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type)) && faction.WantsRefight(NPCID.MoonLordCore);
 
 	static bool SiegeStalled(Bot bot, NPC pillar)
 	{
@@ -261,9 +268,16 @@ public static class BossRituals
 		uint now = Main.GameUpdateCount;
 		if (siegeRestUntil.TryGetValue(faction.Id, out uint rest) && now < rest)
 			return true;
-		if (!sieges.TryGetValue(faction.Id, out var siege) || siege.pillar != pillar.whoAmI || pillar.life < siege.life - pillar.lifeMax * SiegeProgressFraction)
+		bool known = sieges.TryGetValue(faction.Id, out var siege) && siege.pillar == pillar.whoAmI;
+		if (!known || pillar.life < siege.life - pillar.lifeMax * SiegeProgressFraction)
 		{
-			sieges[faction.Id] = (pillar.whoAmI, pillar.life, now);
+			sieges[faction.Id] = (pillar.whoAmI, pillar.life, now, known ? siege.started : now);
+			return false;
+		}
+		bool besieging = BotWorldSystem.Bots.Any(member => member.FactionId == faction.Id && member.IsAlive && Vector2.Distance(member.Center, pillar.Center) < SiegeNearReach);
+		if (!besieging && now - siege.started < SiegeTripTicks)
+		{
+			sieges[faction.Id] = siege with { since = now };
 			return false;
 		}
 		if (now - siege.since < SiegePatienceTicks)
