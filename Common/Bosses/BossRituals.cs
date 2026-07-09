@@ -253,8 +253,7 @@ public static class BossRituals
 	const uint SiegeRestTicks = 20 * 3600;
 	const float SiegeProgressFraction = 0.05f;
 
-	const uint SiegeTripTicks = 15 * 3600;
-	const float SiegeNearReach = 16f * 100f;
+	const uint SiegeTripTicks = 10 * 3600;
 
 	static readonly Dictionary<int, (int pillar, int life, uint since, uint started)> sieges = new();
 	static readonly Dictionary<int, uint> siegeRestUntil = new();
@@ -274,7 +273,7 @@ public static class BossRituals
 			sieges[faction.Id] = (pillar.whoAmI, pillar.life, now, known ? siege.started : now);
 			return false;
 		}
-		bool besieging = BotWorldSystem.Bots.Any(member => member.FactionId == faction.Id && member.IsAlive && Vector2.Distance(member.Center, pillar.Center) < SiegeNearReach);
+		bool besieging = BotWorldSystem.Bots.Any(member => member.FactionId == faction.Id && member.IsAlive && Vector2.Distance(member.Center, pillar.Center) < PillarZone);
 		if (!besieging && now - siege.started < SiegeTripTicks)
 		{
 			sieges[faction.Id] = siege with { since = now };
