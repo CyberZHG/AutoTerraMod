@@ -1679,7 +1679,6 @@ public static class ProgressionGoals
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.Zenith), CombatStyle.Melee));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.VortexBeater), CombatStyle.Ranged));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MagicWeapon, ItemID.LastPrism), CombatStyle.Magic));
-		goals.Add(new StyleGoal(new OwnGoal(ItemID.EmpressBlade), CombatStyle.Summon));
 		for (int i = hardmodeStart; i < goals.Count; i++)
 			goals[i] = new GatedGoal(goals[i], () => Terraria.Main.hardMode);
 		LinkSuccessors(goals);

@@ -421,6 +421,7 @@ public abstract class BotTask
 	const int HighwayEntryReach = 100;
 	const int HighwaySurfaceDepth = 60;
 	const int HighwayExitSlack = 3;
+	const int HighwayEntryArrival = 10;
 
 	Vector2? HighwayRoute(Vector2 target, out bool recalled)
 	{
@@ -435,6 +436,7 @@ public abstract class BotTask
 		NoteLeftRoad(here);
 		Highway best = null;
 		Point bestEntry = default;
+		(int low, int high) bestSpan = default;
 		float bestDistance = float.MaxValue;
 		foreach (var highway in Highway.All)
 		{
@@ -457,11 +459,21 @@ public abstract class BotTask
 			{
 				best = highway;
 				bestEntry = entry;
+				bestSpan = (low, high);
 				bestDistance = distance;
 			}
 		}
 		if (best == null)
 			return null;
+		if (bossSide && bestDistance <= HighwayEntryArrival * 16f)
+		{
+			int exit = Utils.Clamp(goal.X, bestSpan.low, bestSpan.high);
+			if (System.Math.Abs(exit - bestEntry.X) > HighwayExitSlack)
+			{
+				roadRow = (best, Main.GameUpdateCount);
+				return Leg(bestEntry, new Point(exit, best.Y), _ => best.Y) ?? new Vector2(exit * 16f + 8f, (best.Y + 1) * 16f - 21f);
+			}
+		}
 		var entryPoint = new Vector2(bestEntry.X * 16f + 8f, (best.Y + 1) * 16f - 21f);
 		if (bestDistance > HighwayEntryReach * 16f && CarriesRecall(Avatar) && Main.GameUpdateCount - Bot.LastRecallAt >= RecallCooldownTicks
 			&& RecallBringsCloser(entryPoint) && TryRecallToCamp())

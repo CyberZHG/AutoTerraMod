@@ -28,6 +28,8 @@ public static class BossDrops
 	{
 		if (drop.conditions == null)
 			return true;
+		if (drop.conditions.Any(condition => condition is Conditions.EmpressOfLightIsGenuinelyEnraged))
+			return false;
 		var info = new DropAttemptInfo { IsExpertMode = Main.expertMode, IsMasterMode = Main.masterMode };
 		return drop.conditions.All(condition => condition is not (Conditions.IsCrimson or Conditions.IsCorruption or Conditions.IsCrimsonAndNotExpert or Conditions.IsCorruptionAndNotExpert) || condition.CanDrop(info));
 	}

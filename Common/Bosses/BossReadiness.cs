@@ -53,7 +53,7 @@ public static class BossReadiness
 		var calibrated = Report(setup, Calibration(faction, challenge.BossType));
 		if (present == null)
 			NotePlateau(faction, challenge.BossType, raw.KillSeconds <= 0 ? 0f : raw.SurviveSeconds / (raw.KillSeconds * raw.RequiredRatio));
-		if (!calibrated.IsReady && raw.IsReady && GearPlateaued(faction, challenge.BossType))
+		if (present == null && !calibrated.IsReady && raw.IsReady && GearPlateaued(faction, challenge.BossType))
 			return raw;
 		return calibrated;
 	}
