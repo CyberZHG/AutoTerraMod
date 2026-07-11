@@ -507,7 +507,7 @@ public sealed class PathSearch
 	{
 		if (!PathFinder.IsRope(x, y - 1) && ClimbableNearby(x, y))
 			return;
-		if (!RopeFits(x, y) || !RopeFits(x, y - 1) || !RopeFits(x, y - 2))
+		if (!RopeFits(x, y) || !RopeFits(x, y - 1) || !RopeFits(x, y - 2) || !RopeAnchored(x, y))
 			return;
 		for (int rise = 1; rise <= MaxRopeClimb && BodyClear(x, y - rise) && RopeFits(x, y - rise - 2); rise++)
 		{
@@ -522,6 +522,8 @@ public sealed class PathSearch
 
 	bool Placeable(int x, int y) =>
 		(TileQuery.FreeForPlacing(x, y) || abilities.CanChop && TileQuery.IsChoppableTree(Main.tile[x, y].TileType)) && !World.Highway.InAnyClearance(x, y);
+
+	static bool RopeAnchored(int x, int y) => PathFinder.IsRope(x, y) || Main.tile[x, y + 1].HasTile || Main.tile[x, y - 1].HasTile;
 
 	static bool RopeFits(int x, int y) => PathFinder.IsRope(x, y) || TileQuery.FreeForPlacing(x, y);
 

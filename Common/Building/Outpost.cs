@@ -240,11 +240,24 @@ public static class Outpost
 
 	public static Point? ArenaBedFor(Factions.Faction faction)
 	{
-		if (faction.ArenaBed is not Point bed)
-			return null;
+		if (faction.ArenaBed is Point bed && Serves(faction, bed))
+			return bed;
+		foreach (var other in BotWorldSystem.Factions)
+		{
+			if (other != faction && other.ArenaBed is Point shared && Serves(faction, shared))
+			{
+				faction.ArenaBed = shared;
+				return shared;
+			}
+		}
+		return null;
+	}
+
+	static bool Serves(Factions.Faction faction, Point bed)
+	{
 		var at = bed.ToWorldCoordinates();
 		bool serving = faction.Rally is { } rally ? Vector2.Distance(rally.point, at) < ArenaBedReach : Bosses.BossCatalog.NearestActiveBoss(at, ArenaFightReach) != null;
-		return serving && UsableCached(bed) ? bed : null;
+		return serving && UsableCached(bed);
 	}
 
 	static readonly Dictionary<Point, (uint at, bool usable)> usableCache = new();
