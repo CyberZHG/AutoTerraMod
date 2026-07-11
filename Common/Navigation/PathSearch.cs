@@ -261,7 +261,10 @@ public sealed class PathSearch
 				else
 				{
 					if (DropLanding(nx, y, abilities.MaxFall) is Point landing)
-						edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
+					{
+						if (!SameRopeSpot(x, landing))
+							edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
+					}
 					else if (abilities.CanRope && abilities.CanBridge && anchored && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
 						edges.Add(new Edge(bottom, MoveKind.RopeDown, RopeClimbBaseCost + (bottom.Y - y) * RopeClimbCostPerTile));
 					if (abilities.CanBridge && anchored && !Main.tile[PathFinder.BridgeColumn(x, nx), y + 1].HasTile && !World.Highway.InAnyClearance(PathFinder.BridgeColumn(x, nx), y + 1))
@@ -590,6 +593,9 @@ public sealed class PathSearch
 		loosensSand |= PathFinder.UnderFallingBlock(x, y);
 		return true;
 	}
+
+	static bool SameRopeSpot(int x, Point landing) =>
+		PathFinder.RopeColumn(x, landing.Y) is int column && column >= 0 && PathFinder.RopeColumn(landing.X, landing.Y) == column;
 
 	Point? DropLanding(int x, int y, int maxFall)
 	{

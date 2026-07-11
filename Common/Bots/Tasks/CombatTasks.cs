@@ -31,7 +31,7 @@ public sealed class FleeTask : BotTask
 
 	bool InBossFight() =>
 		Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossFightRadius) is NPC boss && !Bot.IsIgnoring(boss)
-		&& (!Bosses.BossCredit.SummonedByOther(boss, Bot.FactionId) || Vector2.Distance(Bot.Center, boss.Center) <= 16f * 50f);
+		&& (!Bosses.BossCredit.ForeignFight(boss, Bot.FactionId) || Vector2.Distance(Bot.Center, boss.Center) <= 16f * 50f);
 
 	bool HoldingArena(NPC npc) =>
 		Bosses.BossCatalog.ChallengeOf(npc.type) is { Arena: World.Landmark arena } && Bosses.BossChallenge.InArena(Avatar, arena);
@@ -78,7 +78,7 @@ public sealed class FightTask : BotTask
 	{
 		closeThreat = false;
 		var boss = Bosses.BossCatalog.NearestActiveBoss(Bot.Center, BossEngagementRange) ?? Bosses.BossCredit.EngagedBoss(Bot);
-		if (boss != null && Bosses.BossCredit.SummonedByOther(boss, Bot.FactionId) && Vector2.Distance(Bot.Center, boss.Center) > ForeignBossReach)
+		if (boss != null && Bosses.BossCredit.ForeignFight(boss, Bot.FactionId) && Vector2.Distance(Bot.Center, boss.Center) > ForeignBossReach)
 			boss = null;
 		if (boss != null && !Bot.IsIgnoring(boss))
 		{

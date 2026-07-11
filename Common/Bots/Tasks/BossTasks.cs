@@ -51,7 +51,7 @@ public sealed class SummonTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Bot.Brain.Plan is not SummonBossStep summon)
+		if (Bot.Brain.Plan is not SummonBossStep summon || RallyTask.Hosted(Bot.Faction, summon.Challenge.BossType))
 			return 0f;
 		step = summon;
 		Detail = Bot.Faction.RallyAssembled ? summon.Challenge.Name : headcount ?? summon.Challenge.Name;
@@ -92,6 +92,7 @@ public sealed class SummonTask : BotTask
 		}
 		if (!Assembled())
 			return;
+		InviteGuests();
 		if (!ReachedPlace())
 			return;
 		if (!ApproachRitual(out var ritualTarget))
@@ -118,6 +119,28 @@ public sealed class SummonTask : BotTask
 			BotDiagnostics.Log(Bot, $"summoned {step.Challenge.Name} via {step.Trigger.GetType().Name}");
 		}
 		IsFinished = true;
+	}
+
+	void InviteGuests()
+	{
+		var host = Bot.Faction;
+		if (step.Trigger is PillarsTrigger || BotWorldSystem.Relation == Config.FactionRelation.War || host.Rally is not { } rally)
+			return;
+		foreach (var guest in BotWorldSystem.Factions)
+		{
+			if (guest == host || BossCredit.HasDefeated(guest, step.Challenge))
+				continue;
+			bool free = guest.Rally is not { } own || Main.GameUpdateCount >= own.until || guest.RallyLeaderId == Bot.Id;
+			if (!free)
+				continue;
+			if (guest.RallyLeaderId != Bot.Id)
+				BotDiagnostics.Log(Bot, $"invited {guest.Name} to fight {step.Challenge.Name} at {rally.point.ToTileCoordinates()}");
+			guest.Rally = rally;
+			guest.RallyBossType = step.Challenge.BossType;
+			guest.RallyLeaderId = Bot.Id;
+			guest.RallyLeaderSeenAt = Main.GameUpdateCount;
+			guest.RallyAssembled = true;
+		}
 	}
 
 	const uint ArenaOutpostWaitTicks = 5 * 3600;
@@ -605,6 +628,10 @@ public sealed class RallyTask : BotTask
 		return Vector2.Distance(Bot.Center, target) - Vector2.Distance(CampLanding, target) > RecallTripDistance;
 	}
 
+	public static bool Hosted(Factions.Faction faction, int bossType) =>
+		faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyBossType == bossType
+		&& BotWorldSystem.FindBot(faction.RallyLeaderId) is { } leader && leader.FactionId != faction.Id;
+
 	public static bool Joined(Bot member, Vector2 point, float radius) =>
 		member.IsAlive && member.Npc is NPC body && Vector2.Distance(body.Center, point) < radius
 		&& World.TileQuery.ClearLine(body.Center, point);
@@ -619,7 +646,7 @@ public sealed class RallyTask : BotTask
 
 	public override float Evaluate()
 	{
-		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep)
+		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep && !Hosted(Bot.Faction, Bot.Faction.RallyBossType))
 			return 0f;
 		bool leading = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is { IsAlive: true } leader && (leader.Brain.Plan is SummonBossStep or BuildOutpostStep || leader.Brain.Current is SummonTask);
 		if (leading)

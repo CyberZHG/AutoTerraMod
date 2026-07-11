@@ -89,8 +89,9 @@ public sealed class BossCredit : GlobalNPC
 		}
 	}
 
-	public static bool SummonedByOther(NPC boss, int factionId) =>
-		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId;
+	public static bool ForeignFight(NPC boss, int factionId) =>
+		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId
+		&& (BotWorldSystem.Relation == FactionRelation.War || FactionById(factionId) is not { } faction || HasDefeated(faction, challenge));
 
 	public static bool ForgetIfOver(BossChallenge challenge)
 	{
