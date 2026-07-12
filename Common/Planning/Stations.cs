@@ -191,6 +191,17 @@ public static class Stations
 			if (y < settlement.Floor + OutdoorDrop)
 				yield return new Point(x, y);
 		}
+		if (item.createTile >= 0 && Main.tileFrameImportant[item.createTile] && !Main.tileTable[item.createTile])
+			foreach (var top in TableTops(settlement))
+				yield return top;
+	}
+
+	static IEnumerable<Point> TableTops(Building.Settlement settlement)
+	{
+		for (int x = settlement.Left; x <= settlement.Right; x++)
+			for (int y = settlement.Top; y <= settlement.Floor; y++)
+				if (Main.tile[x, y].HasTile && Main.tileTable[Main.tile[x, y].TileType] && !Main.tile[x, y - 1].HasTile)
+					yield return new Point(x, y - 1);
 	}
 
 	const int HighwayDisplayEvery = 8;
