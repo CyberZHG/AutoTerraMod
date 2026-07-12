@@ -331,16 +331,14 @@ public static class Outpost
 		public IEnumerable<Point> Shell()
 		{
 			for (int x = Left; x <= Right; x++)
-			{
 				yield return new Point(x, Floor);
-				yield return new Point(x, Ceiling);
-			}
-			for (int y = Ceiling + 1; y < Floor; y++)
-			{
+			for (int y = Floor - 1; y > Ceiling; y--)
 				yield return new Point(Left, y);
+			for (int x = Left; x <= Right; x++)
+				yield return new Point(x, Ceiling);
+			for (int y = Ceiling + 1; y < Floor; y++)
 				if (!IsDoorway(Right, y))
 					yield return new Point(Right, y);
-			}
 		}
 
 		public IEnumerable<Point> FloorRow()
