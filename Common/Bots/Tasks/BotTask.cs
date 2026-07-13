@@ -255,6 +255,13 @@ public abstract class BotTask
 		return !Bot.Motor.IsStuck;
 	}
 
+	protected bool AtArenaBed()
+	{
+		if (Building.Outpost.ArenaBedFor(Bot.Faction) is not Point arena || Bot.OutpostBed == arena || Building.Outpost.TakeArenaBed(Bot))
+			return true;
+		return !TravelOrTunnel(Building.Outpost.Bedside(arena), Building.Outpost.BedsideReach * 0.5f);
+	}
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)

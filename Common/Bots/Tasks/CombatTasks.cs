@@ -183,7 +183,10 @@ public sealed class FightTask : BotTask
 		if (HealthFraction < (Bosses.BossCatalog.IsBossPart(target) ? BossDrinkHealthFraction : DrinkHealthFraction))
 			Bot.Hands.DrinkHealingPotion();
 		if (Bosses.BossCatalog.IsBossPart(target))
+		{
 			Bot.Hands.DrinkBattlePotions();
+			Building.Outpost.TakeArenaBed(Bot);
+		}
 		if (target.type == Terraria.ID.NPCID.DukeFishron && HoldingInReserve(target))
 			return;
 		if (target.type == Terraria.ID.NPCID.DukeFishron && NearbyTornado() is Projectile tornado)

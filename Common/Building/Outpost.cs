@@ -205,7 +205,7 @@ public static class Outpost
 
 	public static Point? ClaimableBed(Bot bot)
 	{
-		if (!IsAfield(bot) || HeadingHome(bot))
+		if (!IsAfield(bot) || HeadingHome(bot) || bot.OutpostBed is Point held && held == ArenaBedFor(bot.Faction))
 			return null;
 		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed) && !Bosses.BossRituals.InPillarZone(bed.ToWorldCoordinates())).ToList();
 		if (beds.Count == 0)
@@ -251,6 +251,19 @@ public static class Outpost
 			}
 		}
 		return null;
+	}
+
+	public const float BedsideReach = 16f * 3f;
+
+	public static Vector2 Bedside(Point bed) => new(bed.X * 16f + 8f, (bed.Y + 1) * 16f - 21f);
+
+	public static bool TakeArenaBed(Bot bot)
+	{
+		if (ArenaBedFor(bot.Faction) is not Point arena || bot.OutpostBed == arena || Vector2.Distance(bot.Center, Bedside(arena)) > BedsideReach)
+			return false;
+		bot.OutpostBed = arena;
+		BotDiagnostics.Log(bot, $"set the respawn point at the arena outpost bed {arena}");
+		return true;
 	}
 
 	static bool Serves(Factions.Faction faction, Point bed)
