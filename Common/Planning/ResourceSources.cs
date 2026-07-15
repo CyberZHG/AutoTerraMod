@@ -31,6 +31,15 @@ public static class ResourceSources
 
 	static readonly TileSource Cacti = new(new HashSet<int> { TileID.Cactus }, false, OnSurface: true);
 
+	static readonly HashSet<int> HerbTiles = new() { TileID.MatureHerbs, TileID.BloomingHerbs };
+
+	static readonly Dictionary<int, Landmark> HerbGrounds = new()
+	{
+		[ItemID.Moonglow] = Landmark.Jungle,
+		[ItemID.Shiverthorn] = Landmark.Snow,
+		[ItemID.Fireblossom] = Landmark.Underworld
+	};
+
 	static readonly Dictionary<int, Landmark> ForageGrounds = new()
 	{
 		[ItemID.VileMushroom] = Landmark.Corruption,
@@ -85,6 +94,8 @@ public static class ResourceSources
 			return Cacti;
 		if (World.WorldScan.ForageTiles.TryGetValue(itemType, out var forage))
 			return ForageSource(itemType, forage.tileType);
+		if (World.WorldScan.HerbStyles.TryGetValue(itemType, out int herb))
+			return new TileSource(HerbTiles, false, (x, y) => World.WorldScan.IsHerb(x, y, herb), herb is not (2 or 5), HerbGrounds.TryGetValue(itemType, out var herbGround) ? herbGround : null);
 		if (RareDrops.TryGetValue(itemType, out var rare))
 			return rare;
 		if (itemType == ItemID.SoulofFlight)

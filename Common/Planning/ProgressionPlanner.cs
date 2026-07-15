@@ -585,21 +585,24 @@ public static class ProgressionPlanner
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
 		bool atStations = recipe.requiredTile.All(tile => tile < 0 || StationWithin(context.Bot, tile, HandsOnReach));
-		foreach (var required in recipe.requiredItem)
+		for (int pass = 0; pass < 2; pass++)
 		{
-			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
-			int have = context.CountAny(accepted);
-			foreach (int type in accepted)
-				have += Equipment.WornCount(avatar, type);
-			if (have >= required.stack * crafts || have >= required.stack && atStations)
-				continue;
-			var ingredient = ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
-			if (have >= required.stack && ingredient is BlockedStep)
-				continue;
-			if (ingredient is not BlockedStep)
-				foreach (var part in recipe.requiredItem)
-					chainItems.UnionWith(RecipeIndex.AcceptedTypes(recipe, part));
-			return ingredient;
+			foreach (var required in recipe.requiredItem)
+			{
+				var accepted = RecipeIndex.AcceptedTypes(recipe, required);
+				int have = context.CountAny(accepted);
+				foreach (int type in accepted)
+					have += Equipment.WornCount(avatar, type);
+				if (have >= required.stack * crafts || have >= required.stack && (atStations || pass == 0))
+					continue;
+				var ingredient = ResolveIngredient(context, accepted, required.stack * crafts, have, depth);
+				if (have >= required.stack && ingredient is BlockedStep)
+					continue;
+				if (ingredient is not BlockedStep)
+					foreach (var part in recipe.requiredItem)
+						chainItems.UnionWith(RecipeIndex.AcceptedTypes(recipe, part));
+				return ingredient;
+			}
 		}
 		return new CraftStep(recipe);
 	}

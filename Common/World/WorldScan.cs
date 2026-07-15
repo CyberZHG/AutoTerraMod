@@ -84,8 +84,24 @@ public static class WorldScan
 		[ItemID.ViciousMushroom] = (TileID.CrimsonPlants, 270)
 	};
 
+	public static readonly Dictionary<int, int> HerbStyles = new()
+	{
+		[ItemID.Daybloom] = 0,
+		[ItemID.Moonglow] = 1,
+		[ItemID.Blinkroot] = 2,
+		[ItemID.Deathweed] = 3,
+		[ItemID.Waterleaf] = 4,
+		[ItemID.Fireblossom] = 5,
+		[ItemID.Shiverthorn] = 6
+	};
+
+	public static bool IsHerb(int x, int y, int style) =>
+		Main.tile[x, y].TileType is TileID.MatureHerbs or TileID.BloomingHerbs && Main.tile[x, y].TileFrameX / 18 == style;
+
 	public static bool IsForage(int x, int y, int tileType)
 	{
+		if (tileType is TileID.MatureHerbs or TileID.BloomingHerbs)
+			return true;
 		foreach (var (forageTile, frameX) in ForageTiles.Values)
 		{
 			if (tileType == forageTile && Main.tile[x, y].TileFrameX == frameX)
