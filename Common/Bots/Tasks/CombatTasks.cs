@@ -264,10 +264,8 @@ public sealed class FightTask : BotTask
 		return new Vector2(x, y);
 	}
 
-	const float ReserveDistance = 16f * 160f;
-	const float EngagedRadius = 16f * 80f;
+	const float ReserveDistance = 16f * 100f;
 	const int ReserveEdgeMargin = 60;
-	const int FightersBeforeReserve = 2;
 
 	bool IsReserve() => Systems.BotWorldSystem.Bots.Where(mate => mate.FactionId == Bot.FactionId).MaxBy(mate => mate.Id) == Bot;
 
@@ -275,14 +273,8 @@ public sealed class FightTask : BotTask
 	{
 		if (!IsReserve())
 			return false;
-		int fighters = Systems.BotWorldSystem.Bots.Count(mate => mate != Bot && mate.IsAlive && Vector2.Distance(mate.Center, boss.Center) < EngagedRadius
-			&& Systems.BotWorldSystem.Bots.Where(other => other.FactionId == mate.FactionId).MaxBy(other => other.Id) != mate);
-		if (fighters < FightersBeforeReserve)
-			return false;
-		int toEdge = boss.Center.X > Main.maxTilesX * 8f ? 1 : -1;
-		float x = MathHelper.Clamp(boss.Center.X + toEdge * ReserveDistance, ReserveEdgeMargin * 16f, (Main.maxTilesX - ReserveEdgeMargin) * 16f);
-		if (Bosses.BossRituals.Shoreline(Bot) is Vector2 shore)
-			x = toEdge > 0 ? System.Math.Min(x, shore.X) : System.Math.Max(x, shore.X);
+		int inland = boss.Center.X > Main.maxTilesX * 8f ? -1 : 1;
+		float x = MathHelper.Clamp(boss.Center.X + inland * ReserveDistance, ReserveEdgeMargin * 16f, (Main.maxTilesX - ReserveEdgeMargin) * 16f);
 		var spot = new Vector2(x, World.TileQuery.SurfaceY((int)(x / 16f)) * 16f - 24f);
 		Bot.Watchdog.RecordProgress();
 		if (Vector2.Distance(Bot.Center, spot) > 16f * 4f)
