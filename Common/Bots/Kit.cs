@@ -35,6 +35,7 @@ public static class Kit
 		var fixtures = Inventory.Items(avatar).Where(IsFixture).GroupBy(FixtureKind).Select(group => group.MaxBy(item => item.stack)).ToHashSet();
 		bool roomy = Inventory.UsedSlots(avatar) <= Inventory.MainSlots - HobbyFreeSlots;
 		bool summoner = BossGoal.IsSummoner(bot);
+		var recall = Tasks.BotTask.KeptRecall(avatar);
 		var toStore = new List<Item>();
 		foreach (var item in Inventory.Items(avatar).ToList())
 		{
@@ -50,7 +51,7 @@ public static class Kit
 				|| bridgeKit && BridgeKitGoal.IsKitItem(item)
 				|| item.type == ItemID.TeleportationPotion
 				|| item.type == ItemID.TempleKey
-				|| Tasks.BotTask.IsRecall(item)
+				|| item == recall
 				|| Explosives.IsExplosive(item)
 				|| item.type == ItemID.Acorn
 				|| fixtures.Contains(item)

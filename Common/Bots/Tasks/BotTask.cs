@@ -49,6 +49,9 @@ public abstract class BotTask
 
 	public static bool CarriesRecall(Player avatar) => Inventory.Items(avatar).Any(item => RecallItems.Contains(item.type));
 
+	public static Item KeptRecall(Player avatar) =>
+		Inventory.Items(avatar).Where(IsRecall).MaxBy(item => item.type == ItemID.RecallPotion ? -1 : System.Array.IndexOf(RecallItems, item.type));
+
 	protected bool TryRecallToCamp()
 	{
 		bool viaOutpost = Bot.OutpostBed != null && !RecallLandsAtBase();
@@ -75,7 +78,7 @@ public abstract class BotTask
 
 	protected bool TryRecallHome()
 	{
-		var recall = Inventory.Items(Avatar).FirstOrDefault(item => RecallItems.Contains(item.type));
+		var recall = KeptRecall(Avatar);
 		var body = Bot.Npc;
 		if (recall == null || body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f
 			|| Bot.LastRecallAt != 0 && Main.GameUpdateCount - Bot.LastRecallAt < MinRecallGapTicks)

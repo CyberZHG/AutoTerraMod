@@ -124,7 +124,7 @@ public static class PathFinder
 
 	public static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
 
-	static bool IsGoal(Point node, Point goal, int radius) =>
+	public static bool IsGoal(Point node, Point goal, int radius) =>
 		Math.Abs(node.X - goal.X) <= radius && Math.Abs(node.Y - goal.Y) <= radius + 2 && !SealedBelow(node, goal);
 
 	static bool SealedBelow(Point node, Point goal)

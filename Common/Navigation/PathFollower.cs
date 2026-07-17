@@ -144,6 +144,8 @@ public sealed class PathFollower
 	void BeginReplan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
 	{
 		int goalRadius = Math.Max(1, (int)(arriveRadius / 16f));
+		if (PathFinder.IsGoal(feet, goal, goalRadius))
+			goalRadius = 0;
 		int multiplier = ExtendNextSearch ? ExtendedSearchMultiplier : 1;
 		ExtendNextSearch = false;
 		pending = PathFinder.BeginFind(feet, goal, goalRadius, abilities, failedSteps, multiplier);
@@ -236,6 +238,9 @@ public sealed class PathFollower
 	}
 
 	const int HookJumpHoldTicks = 15;
+	const int RopeLeapCommitTicks = 40;
+	const int RopeSideLeapRise = 2;
+	uint ropeLeapAt;
 	const float HookLaunchClearance = 6f;
 	Point? hookedToward;
 
@@ -292,15 +297,19 @@ public sealed class PathFollower
 		intent.MoveDirection = Math.Abs(offset) > CenteringTolerance ? Math.Sign(offset) : 0;
 		bool hangingOnRope = (PathFinder.RopeColumn(feet.X, feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, feet.Y - 1) >= 0) && !PathFinder.IsSupportedNow(feet.X, feet.Y);
 		bool ropeReachesNode = PathFinder.RopeColumn(feet.X, node.Feet.Y) >= 0 || PathFinder.RopeColumn(feet.X, node.Feet.Y - 1) >= 0;
-		if (hangingOnRope && (node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1 || node.Arrival is MoveKind.Walk or MoveKind.Drop or MoveKind.Jump && ropeReachesNode))
+		bool leapingOffRope = Main.GameUpdateCount - ropeLeapAt < RopeLeapCommitTicks && !grounded;
+		if (hangingOnRope && !leapingOffRope && (node.Arrival is MoveKind.Walk or MoveKind.Drop && Math.Abs(rise) <= 1 || node.Arrival is MoveKind.Walk or MoveKind.Drop or MoveKind.Jump && ropeReachesNode))
 		{
 			float standingBottom = (node.Feet.Y + 1) * 16f;
 			float bottom = body.position.Y + body.height;
-			if (bottom > standingBottom && stepTicks > RopeTopStallTicks && Math.Abs(body.velocity.Y) < RopeStallSpeed && node.Feet.X != feet.X)
+			bool stalledBelowTop = stepTicks > RopeTopStallTicks && Math.Abs(body.velocity.Y) < RopeStallSpeed;
+			bool sidewaysLeap = Math.Abs(node.Feet.X - feet.X) > 1 && rise <= RopeSideLeapRise;
+			if (bottom > standingBottom && node.Feet.X != feet.X && (stalledBelowTop || sidewaysLeap))
 			{
 				intent.Jump = true;
-				intent.JumpHoldTicks = HoldTicksForRise(2);
+				intent.JumpHoldTicks = HoldTicksForRise(Math.Abs(node.Feet.X - feet.X) > 1 ? abilities.SingleJumpRise : 2);
 				intent.MoveDirection = Math.Sign(node.Feet.X - feet.X);
+				ropeLeapAt = Main.GameUpdateCount;
 			}
 			else if (bottom > standingBottom || bottom < standingBottom - RopeStepTolerance)
 			{
@@ -312,10 +321,11 @@ public sealed class PathFollower
 				intent.HoldRope = true;
 			return intent;
 		}
-		if (hangingOnRope && node.Arrival is MoveKind.Walk or MoveKind.Jump && rise >= 0)
+		if (hangingOnRope && !leapingOffRope && node.Arrival is MoveKind.Walk or MoveKind.Jump && rise >= 0)
 		{
 			intent.Jump = true;
 			intent.JumpHoldTicks = HoldTicksForRise(rise + 1);
+			ropeLeapAt = Main.GameUpdateCount;
 			return intent;
 		}
 		bool overNode = intent.MoveDirection == 0 && Math.Abs(node.Feet.X - feet.X) <= 1;

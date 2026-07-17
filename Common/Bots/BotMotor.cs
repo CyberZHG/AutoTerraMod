@@ -1029,7 +1029,8 @@ public sealed class BotMotor
 		{
 			if (!IsRope(column, y) && !IsRope(column + 1, y))
 			{
-				int place = World.Hellevator.OffRopeColumn(column, y) ? column + 1 : column;
+				bool ropeOnRight = IsRope(column + 1, y + 1) && !IsRope(column, y + 1);
+				int place = ropeOnRight || World.Hellevator.OffRopeColumn(column, y) ? column + 1 : column;
 				return MayPlaceRope && !Main.tile[place, y].HasTile && !World.Hellevator.OffRopeColumn(place, y) ? new Point(place, y) : null;
 			}
 		}
