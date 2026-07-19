@@ -276,10 +276,10 @@ public sealed class TidyCampTask : BotTask
 		return false;
 	}
 
-	public static bool KeptRope(int x, int y)
+	public static bool KeptRope(int x, int y) => Building.HouseInspector.IsProtected(x, y) || IsLifelineColumn(x);
+
+	public static bool IsLifelineColumn(int x)
 	{
-		if (Building.HouseInspector.IsProtected(x, y))
-			return true;
 		foreach (var faction in Systems.BotWorldSystem.Factions)
 		{
 			if (faction.Hellevator is { } shaft && System.Math.Abs(x - shaft.RopeX) <= 1)

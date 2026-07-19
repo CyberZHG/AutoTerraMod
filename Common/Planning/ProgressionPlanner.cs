@@ -483,7 +483,8 @@ public static class ProgressionPlanner
 		if (CanAffordEasily(context.Bot, itemType, amount - have))
 			return PlanPurchase(context.Bot, itemType, amount - have);
 		var source = ResourceSources.For(itemType);
-		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes) || FarmedFromBoss(context.Bot, itemType)))
+		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes) || FarmedFromBoss(context.Bot, itemType)
+			|| World.WorldScan.HerbStyles.TryGetValue(itemType, out int herb) && World.TilePresence.HerbCount(herb) < amount - have))
 		{
 			WishBossDrop(context.Bot, itemType);
 			return PlanStep.Blocked;

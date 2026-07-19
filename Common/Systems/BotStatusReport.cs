@@ -66,7 +66,9 @@ public sealed class BotStatusReport : ModSystem
 		var bill = Building.ConstructionBill.For(structure, materials);
 		string needs = string.Join(", ", bill.Select(line => $"{Lang.GetItemNameValue(line.ItemType)} x{line.Amount}"));
 		var next = Building.HouseInspector.NextOperation(faction, structure);
-		return $"\n    building {structure.Purpose}#{structure.Index}: next={next?.Action} needs=[{needs}]";
+		var unfinished = settlement.Structures.Where(candidate => !Building.HouseInspector.IsFinished(faction, candidate))
+			.Select(candidate => $"#{candidate.Index}{(Building.HouseInspector.IsComplete(faction, candidate) ? "" : " room-check-failed " + Building.HouseInspector.RoomCheckFailure(candidate))} next={Building.HouseInspector.NextOperation(faction, candidate)?.ToString() ?? "none"}");
+		return $"\n    building {structure.Purpose}#{structure.Index}: next={next?.Action} needs=[{needs}]\n    unfinished: {string.Join("; ", unfinished)}";
 	}
 
 	static string Describe(Bot bot)

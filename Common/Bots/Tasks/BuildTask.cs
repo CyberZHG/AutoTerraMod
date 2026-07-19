@@ -243,6 +243,8 @@ public sealed class BuildTask : BotTask
 			case BuildAction.PlaceTable:
 			case BuildAction.PlaceChair:
 			case BuildAction.PlaceBed:
+				for (int x = structure.Left; x <= structure.Right; x++)
+					Flatten(x, structure.Floor);
 				foreach (var spot in structure.FurnitureSpots(tile))
 				{
 					if (Bot.Hands.CanReach(tool, spot) && Bot.Hands.Place(tool, spot))
@@ -252,7 +254,7 @@ public sealed class BuildTask : BotTask
 			case BuildAction.PlaceDoor:
 				Flatten(tile.X, tile.Y - 2);
 				Flatten(tile.X, tile.Y + 2);
-				return Bot.Hands.Place(tool, tile);
+				return TileQuery.IsSolid(tile.X, tile.Y - 2) && TileQuery.IsSolid(tile.X, tile.Y + 2) && Bot.Hands.Place(tool, tile);
 			case BuildAction.PlaceBlock when Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsSolid(tile) && !Main.tileCut[Main.tile[tile.X, tile.Y].TileType]:
 				if (TileQuery.IsPlatform(tile.X, tile.Y) || !Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType])
 					return Bot.Hands.Dig(tile) == ToolResult.Working;

@@ -72,11 +72,38 @@ public sealed class HouseBlueprint
 	public int Ceiling { get; }
 	public int Top { get; }
 	public RoofStyle Roof { get; }
-	public Point InsideProbe => new(center, Floor - 2);
+	public Point InsideProbe
+	{
+		get
+		{
+			var preferred = new Point(center, Floor - 2);
+			return InteriorTiles()
+				.Where(tile => !(Main.tile[tile.X, tile.Y].HasTile && Main.tileSolid[Main.tile[tile.X, tile.Y].TileType]))
+				.Cast<Point?>()
+				.MinBy(tile => System.Math.Abs(tile.Value.X - preferred.X) + System.Math.Abs(tile.Value.Y - preferred.Y)) ?? preferred;
+		}
+	}
 	public Vector2 CenterWorld => new(center * 16f + 8f, (Floor - 1) * 16f - 8f);
 
 	public bool IsInterior(int x, int y) => x > Left && x < Right && y > Ceiling && y < Floor;
-	public bool IsDoorway(int x, int y) => (x == Left || x == Right) && y >= Floor - DoorHeight && y < Floor;
+	public bool IsDoorway(int x, int y) => HasDoorAt(x) && y >= Floor - DoorHeight && y < Floor;
+	public bool HasDoorAt(int x) => (x == Left || x == Right) && !closedSides.Contains(x);
+	public IEnumerable<Point> ShellTiles => shell;
+
+	readonly HashSet<int> closedSides = new();
+
+	public void CloseSide(int x, System.Func<int, int, bool> claimed)
+	{
+		closedSides.Add(x);
+		for (int y = Ceiling; y < Floor; y++)
+		{
+			var tile = new Point(x, y);
+			if (!claimed(x, y))
+				AddShell(x, y);
+			else if (shell.Remove(tile))
+				shellInBuildOrder.Remove(tile);
+		}
+	}
 	public bool IsShell(int x, int y) => shell.Contains(new Point(x, y));
 	bool IsPlatformSpot(Point tile) => platforms.Contains(tile);
 
@@ -172,12 +199,17 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlaceWall, tile);
 		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
-		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile)))
+		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X))))
 			yield return Operation(BuildAction.PlaceBlock, tile);
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
-		foreach (int x in new[] { Left, Right })
+		foreach (int x in new[] { Left, Right }.Where(HasDoorAt))
 		{
+			if (IsRealDoor(x, Floor - 2) && !(IsRealDoor(x, Floor - DoorHeight) && IsRealDoor(x, Floor - 1)))
+			{
+				yield return Operation(BuildAction.ClearTile, new Point(x, Floor - 2));
+				continue;
+			}
 			if (IsRealDoor(x, Floor - 2))
 			{
 				foreach (var blocker in SwingToClear(x))
@@ -192,7 +224,7 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
 		}
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))
-			yield return Operation(BuildAction.PlaceTorch, new Point(center, Ceiling + 1));
+			yield return Operation(BuildAction.PlaceTorch, TorchSpot());
 		if (Purpose == StructurePurpose.Bedroom && !InteriorHas(new int[] { TileID.Beds }))
 			yield return Operation(BuildAction.PlaceBed, new Point(Left + 3, Floor - 1));
 		if (Purpose != StructurePurpose.Storage)
@@ -220,7 +252,7 @@ public sealed class HouseBlueprint
 	public IEnumerable<Point> FurnitureSpots(Point preferred)
 	{
 		yield return preferred;
-		for (int x = Left + 3; x < Right - 2; x++)
+		for (int x = Left + 3; x <= Right - 2; x++)
 		{
 			if (x != preferred.X)
 				yield return new Point(x, Floor - 1);
@@ -318,9 +350,14 @@ public sealed class HouseBlueprint
 					yield return TreeBaseBelow(x, y);
 					continue;
 				}
-				if (IsPlatformSpot(new Point(x, y)))
+				if (IsPlatformSpot(new Point(x, y)) || Main.tileRope[tile.TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(x))
 					continue;
-				if (IsShell(x, y) && !TileQuery.IsSolid(x, y) && !TileID.Sets.RoomNeeds.CountsAsDoor.Contains(tile.TileType))
+				if (IsShell(x, y) && !TileQuery.IsSolid(x, y))
+				{
+					yield return new Point(x, y);
+					continue;
+				}
+				if (y == Floor - 1 && IsInterior(x, y) && TileID.Sets.Platforms[tile.TileType])
 				{
 					yield return new Point(x, y);
 					continue;
@@ -328,7 +365,7 @@ public sealed class HouseBlueprint
 				bool inLivingSpace = IsInterior(x, y) || IsDoorway(x, y);
 				if (!inLivingSpace || TileID.Sets.RoomNeeds.CountsAsDoor.Contains(tile.TileType))
 					continue;
-				if (TileQuery.IsSolid(x, y) || Main.tileRope[tile.TileType] || TileID.Sets.TreeSapling[tile.TileType])
+				if (TileQuery.IsSolid(x, y) || Main.tileRope[tile.TileType] && !Bots.Tasks.TidyCampTask.KeptRope(x, y) || TileID.Sets.TreeSapling[tile.TileType])
 					yield return new Point(x, y);
 			}
 		}
@@ -350,6 +387,10 @@ public sealed class HouseBlueprint
 		return new Point(x, y);
 	}
 
+	Point TorchSpot() =>
+		InteriorTiles().Where(tile => !Main.tile[tile.X, tile.Y].HasTile && !IsPlatformSpot(tile)).OrderBy(tile => tile.Y).ThenBy(tile => System.Math.Abs(tile.X - center)).Cast<Point?>().FirstOrDefault()
+		?? new Point(center, Ceiling + 1);
+
 	IEnumerable<Point> InteriorTiles()
 	{
 		for (int y = Floor - 1; y > Ceiling; y--)
@@ -361,8 +402,14 @@ public sealed class HouseBlueprint
 
 	bool InteriorHas(int[] tileTypes) => InteriorTiles().Any(tile => HasTileOfSet(tile.X, tile.Y, tileTypes));
 
-	IEnumerable<Point> SwingToClear(int doorX) =>
-		SwingBlockers(doorX - 1).Concat(SwingBlockers(doorX + 1)).Where(tile => !IsPrecious(tile));
+	IEnumerable<Point> SwingToClear(int doorX)
+	{
+		var left = SwingBlockers(doorX - 1);
+		var right = SwingBlockers(doorX + 1);
+		if (left.Count == 0 || right.Count == 0)
+			return System.Array.Empty<Point>();
+		return left.Concat(right).Where(tile => !IsPrecious(tile));
+	}
 
 	List<Point> SwingBlockers(int x)
 	{

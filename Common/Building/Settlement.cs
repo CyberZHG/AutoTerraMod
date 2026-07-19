@@ -69,6 +69,7 @@ public sealed class Settlement
 		stack = Workshop;
 		for (int story = 0; story < WorkshopStorageStories; story++)
 			stack = StackStorage(stack, WorkshopWidth, workshopHatch);
+		CloseMisalignedDoors();
 		AddBalconies(floor);
 		Left = structures.Min(structure => structure.Left);
 		Right = structures.Max(structure => structure.Right);
@@ -125,6 +126,38 @@ public sealed class Settlement
 					yield return new Point(x, y);
 			}
 		}
+	}
+
+	void CloseMisalignedDoors()
+	{
+		foreach (var room in structures)
+		{
+			foreach (var other in structures.Where(other => other != room && Yields(room, other)))
+			{
+				foreach (int x in new[] { room.Left, room.Right }.Where(x => room.HasDoorAt(x) && (x == other.Left || x == other.Right) && Clashes(room, other, x)))
+					room.CloseSide(x, (cx, cy) => structures.Any(keeper => keeper != room && keeper.IsDoorway(cx, cy)));
+			}
+		}
+		shell.Clear();
+		foreach (var tile in structures.SelectMany(structure => structure.ShellTiles))
+			shell.Add(tile);
+	}
+
+	static bool Yields(HouseBlueprint room, HouseBlueprint other)
+	{
+		bool roomStorage = room.Purpose == StructurePurpose.Storage, otherStorage = other.Purpose == StructurePurpose.Storage;
+		return roomStorage != otherStorage ? roomStorage : room.Index > other.Index;
+	}
+
+	static bool Clashes(HouseBlueprint room, HouseBlueprint other, int x)
+	{
+		for (int y = Math.Min(room.Top, other.Top); y <= Math.Max(room.Floor, other.Floor); y++)
+		{
+			bool roomDoor = room.IsDoorway(x, y), otherDoor = other.IsDoorway(x, y);
+			if (roomDoor != otherDoor && (roomDoor ? other.IsShell(x, y) : otherDoor && room.IsShell(x, y)))
+				return true;
+		}
+		return false;
 	}
 
 	const int BalconyWidth = 5;

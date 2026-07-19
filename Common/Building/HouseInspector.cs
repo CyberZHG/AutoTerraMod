@@ -47,6 +47,31 @@ public static class HouseInspector
 		return complete;
 	}
 
+	public static string RoomCheckFailure(HouseBlueprint structure)
+	{
+		var start = structure.InsideProbe;
+		var seen = new HashSet<Point> { start };
+		var queue = new Queue<Point>();
+		queue.Enqueue(start);
+		while (queue.Count > 0)
+		{
+			var tile = queue.Dequeue();
+			if (tile.X < structure.Left || tile.X > structure.Right || tile.Y < structure.Top || tile.Y > structure.Floor)
+				return $"leaks at {tile}";
+			if (Main.tile[tile.X, tile.Y].WallType == WallID.None)
+				return $"no wall at {tile}";
+			foreach (var next in new[] { new Point(tile.X + 1, tile.Y), new Point(tile.X - 1, tile.Y), new Point(tile.X, tile.Y + 1), new Point(tile.X, tile.Y - 1) })
+			{
+				var t = Main.tile[next.X, next.Y];
+				bool wall = t.HasTile && (Main.tileSolid[t.TileType] && !t.IsActuated || TileID.Sets.HousingWalls[t.TileType]);
+				if (!wall && seen.Add(next))
+					queue.Enqueue(next);
+			}
+		}
+		WorldGen.StartRoomCheck(start.X, start.Y);
+		return $"tiles={WorldGen.numRoomTiles}";
+	}
+
 	static bool PassesRoomCheck(HouseBlueprint structure)
 	{
 		var probe = structure.InsideProbe;

@@ -200,56 +200,109 @@ public static class Junk
 
 	const int OutdatedGearValue = 5000;
 
-	public static bool IsStorageClutter(Bot bot, Item item, bool duplicate)
+	const int KeptAccessoryCopies = 2;
+	const int KeptFullStacks = 2;
+
+	static bool IsStorageClutter(Bot bot, Item item, int copiesBefore, int amountBefore)
 	{
-		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || item.accessory || item.potion)
+		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || item.IsACoin)
+			return false;
+		if (item.maxStack > 1)
+			return amountBefore >= item.maxStack * KeptFullStacks || IsCheapClutter(item);
+		if (item.accessory)
+			return copiesBefore >= KeptAccessoryCopies;
+		if (item.potion)
 			return false;
 		if (IsCheapClutter(item) || item.createTile == TileID.Statues || item.createTile == TileID.PressurePlates)
 			return true;
 		bool gear = item.damage > 0 || item.pick > 0 || item.axe > 0 || item.hammer > 0 || item.headSlot >= 0 || item.bodySlot >= 0 || item.legSlot >= 0;
-		return gear && item.maxStack == 1 && (duplicate || item.value < OutdatedGearValue) && !UpgradesTeammate(bot, item);
+		return gear && (copiesBefore > 0 || item.value < OutdatedGearValue) && !UpgradesTeammate(bot, item);
 	}
 
-	public static bool StorageHasClutter(Bot bot, IEnumerable<Chest> chests)
+	static IEnumerable<Item> StorageClutter(Bot bot, IEnumerable<Chest> chests)
 	{
-		var seen = new HashSet<int>();
-		foreach (var chest in chests)
-		{
-			foreach (var item in chest.item)
-			{
-				if (item != null && !item.IsAir && IsStorageClutter(bot, item, !seen.Add(item.type)))
-					return true;
-			}
-		}
-		return false;
-	}
-
-	public static void PurgeStorage(Bot bot, IEnumerable<Chest> chests)
-	{
-		var seen = new HashSet<int>();
-		var shopkeeper = Planning.Shops.NearbyShopkeeper(bot.Center);
-		int purged = 0;
-		long earned = 0;
+		var copies = new Dictionary<int, int>();
+		var amounts = new Dictionary<int, int>();
 		foreach (var chest in chests)
 		{
 			foreach (var item in chest.item)
 			{
 				if (item == null || item.IsAir)
 					continue;
-				bool duplicate = !seen.Add(item.type);
-				if (!IsStorageClutter(bot, item, duplicate))
-					continue;
-				if (shopkeeper != null)
-					earned += Planning.Shops.SellPrice(item, item.stack);
-				item.TurnToAir();
-				purged++;
+				copies.TryGetValue(item.type, out int copiesBefore);
+				amounts.TryGetValue(item.type, out int amountBefore);
+				copies[item.type] = copiesBefore + 1;
+				amounts[item.type] = amountBefore + item.stack;
+				if (IsStorageClutter(bot, item, copiesBefore, amountBefore))
+					yield return item;
 			}
 		}
-		if (purged == 0)
+	}
+
+	static bool HasLooseStacks(IEnumerable<Chest> chests)
+	{
+		var partial = new HashSet<int>();
+		foreach (var chest in chests)
+		{
+			foreach (var item in chest.item)
+			{
+				if (item != null && !item.IsAir && item.stack < item.maxStack && !partial.Add(item.type))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	static int MergeStacks(IEnumerable<Chest> chests)
+	{
+		var open = new Dictionary<int, Item>();
+		int freed = 0;
+		foreach (var chest in chests)
+		{
+			foreach (var item in chest.item)
+			{
+				if (item == null || item.IsAir || item.maxStack <= 1)
+					continue;
+				if (open.TryGetValue(item.type, out var target) && target.prefix == item.prefix)
+				{
+					int moved = System.Math.Min(item.stack, target.maxStack - target.stack);
+					target.stack += moved;
+					item.stack -= moved;
+					if (item.stack <= 0)
+					{
+						item.TurnToAir();
+						freed++;
+						continue;
+					}
+				}
+				if (item.stack < item.maxStack)
+					open[item.type] = item;
+			}
+		}
+		return freed;
+	}
+
+	public static bool StorageHasClutter(Bot bot, IEnumerable<Chest> chests) => HasLooseStacks(chests) || StorageClutter(bot, chests).Any();
+
+	public static void PurgeStorage(Bot bot, IEnumerable<Chest> chests)
+	{
+		var list = chests.ToList();
+		int merged = MergeStacks(list);
+		var shopkeeper = Planning.Shops.NearbyShopkeeper(bot.Center);
+		int purged = 0;
+		long earned = 0;
+		foreach (var item in StorageClutter(bot, list).ToList())
+		{
+			if (shopkeeper != null)
+				earned += Planning.Shops.SellPrice(item, item.stack);
+			item.TurnToAir();
+			purged++;
+		}
+		if (purged == 0 && merged == 0)
 			return;
 		if (earned > 0)
 			Inventory.AddCoins(bot.Avatar, earned);
-		BotDiagnostics.Log(bot, $"cleared {purged} cluttering stacks from storage (earned {earned} copper)");
+		BotDiagnostics.Log(bot, $"merged {merged} and cleared {purged} cluttering stacks from storage (earned {earned} copper)");
 	}
 
 	static bool IsBuffPotion(Item item) => item.consumable && item.buffType > 0 && item.buffTime > 0;

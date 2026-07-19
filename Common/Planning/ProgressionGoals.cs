@@ -233,8 +233,11 @@ public sealed class WaterproofTorchGoal : ProgressionGoal
 	public override bool MayUseWood => true;
 
 	public static readonly int[] Torches = { ItemID.CursedTorch, ItemID.IchorTorch };
+	static readonly int[] Flames = { ItemID.CursedFlame, ItemID.Ichor };
 	const int Minimum = 20;
 	const int RestockTo = 50;
+
+	public override bool AppliesTo(Bot bot) => Flames.Any(flame => Inventory.Count(bot.Avatar, flame) > 0 || BaseStorage.Count(bot.Faction, flame) > 0);
 
 	public override bool IsMet(Bot bot) => Inventory.CountAny(bot.Avatar, Torches) >= Minimum;
 
@@ -1082,9 +1085,11 @@ public sealed class OutpostGoal : ProgressionGoal
 public sealed class GatedGoal : ProgressionGoal
 {
 	readonly ProgressionGoal inner;
-	readonly Func<bool> open;
+	readonly Func<Bot, bool> open;
 
-	public GatedGoal(ProgressionGoal inner, Func<bool> open)
+	public GatedGoal(ProgressionGoal inner, Func<bool> open) : this(inner, _ => open()) { }
+
+	public GatedGoal(ProgressionGoal inner, Func<Bot, bool> open)
 	{
 		this.inner = inner;
 		this.open = open;
@@ -1092,7 +1097,7 @@ public sealed class GatedGoal : ProgressionGoal
 
 	public ProgressionGoal Inner => inner;
 	public override GearTrack Track => inner.Track;
-	public override bool AppliesTo(Bot bot) => open() && inner.AppliesTo(bot);
+	public override bool AppliesTo(Bot bot) => open(bot) && inner.AppliesTo(bot);
 	public override string Describe() => inner.Describe();
 	public override bool IsMet(Bot bot) => inner.IsMet(bot);
 	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
@@ -1359,6 +1364,34 @@ public sealed class AcornGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanPurchase(bot, ItemID.Acorn, Batch);
 }
 
+public sealed class GardenGoal : ProgressionGoal
+{
+	public override bool NeedsSurface => true;
+
+	public override string Describe() => "Garden";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && Shops.TradesWith(bot, NPCID.Dryad) && HerbGarden.HasSeeds(bot);
+
+	public override bool IsMet(Bot bot) => HerbGarden.Boxes(bot.Faction).Count + HerbGarden.BoxesOnHand(bot) >= HerbGarden.Size;
+
+	public override PlanStep Plan(Bot bot) =>
+		ProgressionPlanner.PlanPurchase(bot, HerbGarden.Box, HerbGarden.Size - HerbGarden.Boxes(bot.Faction).Count - HerbGarden.BoxesOnHand(bot));
+}
+
+public sealed class GardenSeedGoal : ProgressionGoal
+{
+	public override bool NeedsSurface => true;
+
+	public override string Describe() => "GardenSeed";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && Terraria.Main.dayTime && Terraria.Main.hardMode && !HerbGarden.HasSeeds(bot)
+		&& BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Exploring) == bot;
+
+	public override bool IsMet(Bot bot) => HerbGarden.HasSeeds(bot);
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, ItemID.Daybloom, Inventory.Count(bot.Avatar, ItemID.Daybloom) + 1);
+}
+
 public sealed class DyeGoal : ProgressionGoal
 {
 	public override bool NeedsSurface => true;
@@ -1502,6 +1535,13 @@ public static class ProgressionGoals
 		BotWorldSystem.Factions.FirstOrDefault(faction => faction.Settlement == settlement) is { } owner
 		&& HouseInspector.IsComplete(owner, settlement.Storage) && BaseStorage.FreeSlots(owner) < CrowdedFreeSlots;
 
+	static readonly int[] ObsidianSkulls = { ItemID.ObsidianSkull, ItemID.ObsidianHorseshoe, ItemID.ObsidianShield, ItemID.AnkhShield, ItemID.ObsidianSkullRose, ItemID.MoltenSkullRose, ItemID.LavaSkull, ItemID.MoltenCharm };
+	const int SkullObsidian = 20;
+
+	static bool HasObsidianForSkull(Bot bot) =>
+		Inventory.Count(bot.Avatar, ItemID.Obsidian) + BaseStorage.Count(bot.Faction, ItemID.Obsidian) >= SkullObsidian
+		|| ObsidianSkulls.Any(skull => BaseStorage.Count(bot.Faction, skull) > 0);
+
 	public static ProgressionGoal[] Build()
 	{
 		var goals = new List<ProgressionGoal>
@@ -1554,6 +1594,8 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => StorageCrowded(settlement) ? settlement.StorageAnnexes : System.Array.Empty<HouseBlueprint>()));
 		goals.Add(new RopeGoal());
 		goals.Add(new AcornGoal());
+		goals.Add(new GardenSeedGoal());
+		goals.Add(new GardenGoal());
 		goals.Add(new DyeGoal());
 		goals.Add(new StockpileGoal("Stone", 200, 500, bot => Stone));
 		goals.Add(new StockpileGoal("Torch", 40, 100, bot => Torches));
@@ -1594,7 +1636,7 @@ public static class ProgressionGoals
 			bows: new int[] { ItemID.DemonBow, ItemID.TendonBow },
 			staffs: new int[] { ItemID.Vilethorn, ItemID.CrimsonRod },
 			armor: new (int, int, int)[] { (ItemID.ShadowHelmet, ItemID.ShadowScalemail, ItemID.ShadowGreaves), (ItemID.CrimsonHelmet, ItemID.CrimsonScalemail, ItemID.CrimsonGreaves) });
-		goals.Add(new OwnGoal(ItemID.ObsidianSkull, ItemID.ObsidianHorseshoe, ItemID.ObsidianShield, ItemID.AnkhShield, ItemID.ObsidianSkullRose, ItemID.MoltenSkullRose, ItemID.LavaSkull, ItemID.MoltenCharm));
+		goals.Add(new GatedGoal(new OwnGoal(ObsidianSkulls), HasObsidianForSkull));
 		goals.Add(new StationGoal(TileID.Hellforge, ItemID.Hellforge));
 		int moltenStart = goals.Count;
 		AddOreTier(goals,

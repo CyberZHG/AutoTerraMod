@@ -127,6 +127,7 @@ Tasks: {
 	Outpost: Building an underground outpost
 	TidyCamp: Tidying the camp
 	PlantTrees: Planting trees
+	Garden: Tending the herb garden
 	Deliver: Delivering materials
 	Escape: Escaping
 	Treasure: Collecting treasure
@@ -208,7 +209,6 @@ UI: {
 	Task: Task: {0} {1}
 	Plan: Plan: {0}
 	Gear: Pickaxe: {0}   Weapon: {1}   Holding: {2}
-	Aspiration: Life goal: {0}
 	RelationRace: Mode: Race
 	RelationCooperate: Mode: Cooperate
 	RelationWar: Mode: War

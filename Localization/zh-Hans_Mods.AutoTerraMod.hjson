@@ -127,6 +127,7 @@ Tasks: {
 	Outpost: 建造地下营地
 	TidyCamp: 整理营地
 	PlantTrees: 种树
+	Garden: 照料草药园
 	Deliver: 送材料
 	Escape: 脱困
 	Treasure: 挖生命水晶
@@ -208,7 +209,6 @@ UI: {
 	Task: 任务：{0} {1}
 	Plan: 计划：{0}
 	Gear: 镐：{0}   武器：{1}   手持：{2}
-	Aspiration: 人生目标：{0}
 	RelationRace: 模式：竞速
 	RelationCooperate: 模式：合作
 	RelationWar: 模式：敌对
