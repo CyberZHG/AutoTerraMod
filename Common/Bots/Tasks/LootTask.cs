@@ -38,7 +38,8 @@ public sealed class LootTask : BotTask
 			chestIndex = NearestLootable(knowledge);
 		if (chestIndex < 0 || Inventory.UsedSlots(Avatar) >= 45)
 			return 0f;
-		Detail = Lang.GetMapObjectName(Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y].TileType) ?? "";
+		var chestTile = Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y];
+		Detail = Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36)) ?? "";
 		return wanted ? WantedScore : 30f + Traits.Exploring * 40f;
 	}
 
@@ -58,7 +59,8 @@ public sealed class LootTask : BotTask
 			return;
 		}
 		var chestTile = new Point(chest.x, chest.y);
-		if (!Bot.Hands.CanReach(null, chestTile))
+		var reachTool = emptied && ShouldCarryHome(chest) ? Bot.Hands.BestPickaxe : null;
+		if (!Bot.Hands.CanReach(reachTool, chestTile))
 		{
 			if (wanted)
 			{
