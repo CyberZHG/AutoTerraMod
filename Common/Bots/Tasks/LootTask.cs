@@ -92,10 +92,19 @@ public sealed class LootTask : BotTask
 		}
 		if (!ShouldCarryHome(chest))
 		{
+			if (chest.item.All(item => item == null || item.IsAir))
+				BotWorldSystem.KnowledgeOf(Bot.Faction).AbandonChest(chestIndex);
 			IsFinished = true;
 			return;
 		}
 		var result = Bot.Hands.Dig(chestTile);
+		if (result == ToolResult.OutOfReach)
+		{
+			Bot.Motor.MoveTo(chestTile.ToWorldCoordinates(16f, 16f), 16f);
+			if (Bot.Motor.IsStuck)
+				Abandon("cannot get within pickaxe reach");
+			return;
+		}
 		if (result is ToolResult.Unbreakable or ToolResult.NoTool)
 			BotWorldSystem.KnowledgeOf(Bot.Faction).AbandonChest(chestIndex);
 		if (!TileQuery.HasTile(chestTile))
