@@ -420,6 +420,8 @@ public sealed class GatherTask : BotTask
 
 	public override string NameKey => step?.Source is TileSource { IsTree: true } ? "Chop" : target == null ? "Prospect" : "Mine";
 
+	public bool IsProspecting => target == null && step?.Source is TileSource { IsTree: false };
+
 	public override float Evaluate()
 	{
 		if (Bot.Brain.Plan is not GatherStep { Source: TileSource tiles } gather || !Inventory.HasRoomForType(Avatar, gather.ItemType))

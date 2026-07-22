@@ -81,6 +81,8 @@ public static class TileQuery
 
 	public static int TypeAt(Point tile) => HasTile(tile) ? Main.tile[tile.X, tile.Y].TileType : -1;
 
+	public static bool HoldsCactus(int x, int y) => Main.tile[x, y].TileType != TileID.Cactus && Main.tile[x, y - 1] is { HasTile: true, TileType: TileID.Cactus };
+
 	public static bool IsExposed(int x, int y) =>
 		!IsSolid(x - 1, y) || !IsSolid(x + 1, y) || !IsSolid(x, y - 1) || !IsSolid(x, y + 1);
 

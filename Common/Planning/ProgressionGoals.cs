@@ -1524,6 +1524,9 @@ public static class ProgressionGoals
 	const uint GearBreakTicks = 7200;
 	const uint GearBreakEvery = 3;
 
+	static ProgressionGoal CactusGear(GearKind kind, int item, int cactus) =>
+		new GatedGoal(new GearGoal(kind, item), bot => Inventory.Count(bot.Avatar, ItemID.Cactus) + Building.BaseStorage.Count(bot.Faction, ItemID.Cactus) >= cactus);
+
 	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0;
 
 	static readonly int[] Stone = { ItemID.StoneBlock };
@@ -1578,9 +1581,9 @@ public static class ProgressionGoals
 			new ShoppingGoal(),
 			new GearGoal(GearKind.Head, ItemID.WoodHelmet),
 			new GearGoal(GearKind.Body, ItemID.WoodBreastplate),
-			new GearGoal(GearKind.Head, ItemID.CactusHelmet),
-			new GearGoal(GearKind.Body, ItemID.CactusBreastplate),
-			new GearGoal(GearKind.Legs, ItemID.CactusLeggings),
+			CactusGear(GearKind.Head, ItemID.CactusHelmet, 20),
+			CactusGear(GearKind.Body, ItemID.CactusBreastplate, 30),
+			CactusGear(GearKind.Legs, ItemID.CactusLeggings, 25),
 			new StationGoal(TileID.Furnaces, ItemID.Furnace),
 			new StationGoal(TileID.Anvils, ItemID.IronAnvil, ItemID.LeadAnvil),
 			new StationGoal(TileID.TinkerersWorkbench, ItemID.TinkerersWorkshop),
@@ -1825,7 +1828,7 @@ public static class ProgressionGoals
 		}
 		goals.Add(new GearGoal(GearKind.Legs, armor.Select(set => set.legs).ToArray()));
 		bool hookPlanned = goals.OfType<GearGoal>().Any(goal => goal.Kind == GearKind.Hook);
-		if (!hookPlanned && goals.OfType<GearGoal>().Count(goal => goal.Kind == GearKind.Legs) >= HookAfterArmorTiers)
+		if (!hookPlanned && goals.Select(Unwrap).OfType<GearGoal>().Count(goal => goal.Kind == GearKind.Legs) >= HookAfterArmorTiers)
 			goals.Add(new GearGoal(GearKind.Hook, Hooks));
 	}
 

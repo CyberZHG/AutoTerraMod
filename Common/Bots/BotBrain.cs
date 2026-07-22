@@ -238,7 +238,7 @@ public sealed class BotBrain
 			float score;
 			using (Probes.Measure(task.EvaluateLabel))
 				score = task.Evaluate();
-			if (task == current && !task.IsFinished)
+			if (task == current && !task.IsFinished && !IsRoaming(task))
 				score *= CurrentTaskBias;
 			if (score > bestScore)
 			{
@@ -261,6 +261,8 @@ public sealed class BotBrain
 			BotDiagnostics.LogDecision(bot, current, Plan);
 		lastDecisionSignature = signature;
 	}
+
+	static bool IsRoaming(BotTask task) => task is GatherTask { IsProspecting: true } or ScoutTask or SurveyTask or ExploreTask;
 
 	static bool ExecutesPlan(BotTask task) => task is SummonTask or ScoutTask or SurveyTask or SmashShrineTask or TravelTask or BuildBridgeTask
 		or DigShaftTask or OutpostTask or CraftTask or BuildTask or GatherTask or HuntTask or BuyTask or DeliverTask or WithdrawTask;
