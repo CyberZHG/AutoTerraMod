@@ -184,7 +184,7 @@ public sealed class TidyCampTask : BotTask
 			return false;
 		if (!TileQuery.HasTile(new Point(x, y)))
 			return true;
-		return !Main.tileFrameImportant[Main.tile[x, y].TileType] && (WorldGen.CanKillTile(x, y) || TileQuery.HoldsCactus(x, y));
+		return !Main.tileFrameImportant[Main.tile[x, y].TileType] && (WorldGen.CanKillTile(x, y) || TileQuery.HoldsRemovableTop(x, y));
 	}
 
 	Item EntrancePlatform() => Inventory.Items(Avatar).FirstOrDefault(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]);
@@ -196,7 +196,7 @@ public sealed class TidyCampTask : BotTask
 		if (!InCamp(settlement, x) || y >= settlement.Floor || y < settlement.Top - CampRowsAbove || !WorldGen.InWorld(x, y, 10) || !TileQuery.IsSolid(x, y))
 			return false;
 		int type = Main.tile[x, y].TileType;
-		return !Main.tileFrameImportant[type] && TileQuery.IsExposed(x, y) && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y) && (WorldGen.CanKillTile(x, y) || TileQuery.HoldsCactus(x, y));
+		return !Main.tileFrameImportant[type] && TileQuery.IsExposed(x, y) && !Building.HouseInspector.IsProtected(x, y) && !InAnotherCamp(settlement, x, y) && (WorldGen.CanKillTile(x, y) || TileQuery.HoldsRemovableTop(x, y));
 	}
 
 	static bool InAnotherCamp(Building.Settlement own, int x, int y)

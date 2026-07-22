@@ -98,6 +98,15 @@ public sealed class BotHands
 			return ToolResult.Done;
 		if (TileQuery.HoldsCactus(tile.X, tile.Y))
 			tile = new Point(tile.X, tile.Y - 1);
+		else if (TileQuery.HoldsTree(tile.X, tile.Y))
+			return Chop(new Point(tile.X, tile.Y - 1));
+		else if (TileQuery.HoldsChest(tile.X, tile.Y))
+		{
+			var chestTile = new Point(tile.X, tile.Y - 1);
+			if (Building.HouseInspector.IsProtected(chestTile.X, chestTile.Y) || InAnyStructure(chestTile) || !EmptyWildChest(chestTile))
+				return ToolResult.Unbreakable;
+			tile = chestTile;
+		}
 		if (InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
@@ -114,6 +123,28 @@ public sealed class BotHands
 			Avatar.PickTile(tile.X, tile.Y, pickaxe.pick);
 		bot.Watchdog.RecordProgress();
 		return ToolResult.Working;
+	}
+
+	static bool InAnyStructure(Point tile) => Systems.BotWorldSystem.Factions.Any(faction => faction.Settlement?.Structures.Any(structure =>
+		tile.X >= structure.Left && tile.X <= structure.Right && tile.Y >= structure.Top && tile.Y <= structure.Floor) == true);
+
+	bool EmptyWildChest(Point tile)
+	{
+		var frame = Main.tile[tile.X, tile.Y];
+		int index = Chest.FindChest(tile.X - frame.TileFrameX % 36 / 18, tile.Y - frame.TileFrameY % 36 / 18);
+		if (index < 0)
+			return true;
+		var chest = Main.chest[index];
+		if (Chest.IsLocked(chest.x, chest.y) || Main.LocalPlayer.chest == index)
+			return false;
+		for (int slot = 0; slot < chest.item.Length; slot++)
+		{
+			if (chest.item[slot] is not { IsAir: false } item)
+				continue;
+			var leftover = Inventory.Add(Avatar, item.Clone());
+			chest.item[slot] = leftover.IsAir ? new Item() : leftover;
+		}
+		return chest.item.All(item => item == null || item.IsAir);
 	}
 
 	public ToolResult Chop(Point tile)

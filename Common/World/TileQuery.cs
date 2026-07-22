@@ -83,6 +83,12 @@ public static class TileQuery
 
 	public static bool HoldsCactus(int x, int y) => Main.tile[x, y].TileType != TileID.Cactus && Main.tile[x, y - 1] is { HasTile: true, TileType: TileID.Cactus };
 
+	public static bool HoldsTree(int x, int y) => Main.tile[x, y - 1].HasTile && IsChoppableTree(Main.tile[x, y - 1].TileType) && Main.tile[x, y].TileType != Main.tile[x, y - 1].TileType;
+
+	public static bool HoldsChest(int x, int y) => Main.tile[x, y - 1].HasTile && TileID.Sets.BasicChest[Main.tile[x, y - 1].TileType] && !TileID.Sets.BasicChest[Main.tile[x, y].TileType];
+
+	public static bool HoldsRemovableTop(int x, int y) => HoldsCactus(x, y) || HoldsTree(x, y) || HoldsChest(x, y);
+
 	public static bool IsExposed(int x, int y) =>
 		!IsSolid(x - 1, y) || !IsSolid(x + 1, y) || !IsSolid(x, y - 1) || !IsSolid(x, y + 1);
 

@@ -457,7 +457,8 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	{
 		if (Need(bot, out var builder) is not BillLine need)
 			return PlanStep.Idle;
-		bool canHandOver = Inventory.UsedSlots(builder.Avatar) < Inventory.MainSlotCount;
+		bool canHandOver = Inventory.UsedSlots(builder.Avatar) < Inventory.MainSlotCount
+			&& Microsoft.Xna.Framework.Vector2.Distance(builder.Center, bot.Faction.BaseCenter) < BuilderAtHome;
 		if (GiftOnHand(bot, need) is int gift && canHandOver)
 			return new DeliverStep(gift, builder.Id, HandOver: true);
 		int batch = System.Math.Min(need.Amount, BatchSize);
@@ -467,6 +468,7 @@ public sealed class SupportConstructionGoal : ProgressionGoal
 	}
 
 	const int MinimumGift = 20;
+	const float BuilderAtHome = 16f * 60f;
 
 	static int? GiftOnHand(Bot bot, BillLine need)
 	{
