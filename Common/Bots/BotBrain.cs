@@ -262,7 +262,7 @@ public sealed class BotBrain
 		lastDecisionSignature = signature;
 	}
 
-	static bool IsRoaming(BotTask task) => task is GatherTask { IsProspecting: true } or ScoutTask or SurveyTask or ExploreTask;
+	static bool IsRoaming(BotTask task) => task is GatherTask { IsProspecting: true } or ScoutTask or SurveyTask or ExploreTask or OpportunisticMineTask;
 
 	static bool ExecutesPlan(BotTask task) => task is SummonTask or ScoutTask or SurveyTask or SmashShrineTask or TravelTask or BuildBridgeTask
 		or DigShaftTask or OutpostTask or CraftTask or BuildTask or GatherTask or HuntTask or BuyTask or DeliverTask or WithdrawTask;

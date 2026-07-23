@@ -264,9 +264,14 @@ public sealed class OpportunisticMineTask : BotTask
 			return;
 		if (target is not Point tile || !Worthwhile(tile.X, tile.Y, PickPower(), PickTier(PickPower())))
 		{
-			target = null;
-			IsFinished = true;
-			return;
+			target = Accomplished && Main.GameUpdateCount >= pausedUntil ? Scan() : null;
+			if (target is not Point next || !WithinReach(next))
+			{
+				target = null;
+				IsFinished = true;
+				return;
+			}
+			tile = next;
 		}
 		int type = Main.tile[tile.X, tile.Y].TileType;
 		bool pot = type == TileID.Pots;

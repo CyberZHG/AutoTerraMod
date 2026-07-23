@@ -149,8 +149,6 @@ public static class HouseInspector
 			if (!excluded.Contains(operation.Tile))
 				return operation;
 		}
-		if (pending.Count > 0)
-			return null;
 		foreach (var tile in ScaffoldToRemove(faction))
 			return new BuildOperation(BuildAction.RemoveScaffold, tile, structure.Index);
 		return null;
