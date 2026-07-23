@@ -13,6 +13,7 @@ public static class Junk
 	const int OverflowNaturalBlockReserve = 20;
 	const int OverflowCheapItemValue = 100;
 	const int DefaultNaturalBlockReserve = 50;
+	public const int Plenty = 9999;
 
 	static readonly Dictionary<int, int> Reserves = new()
 	{
@@ -27,6 +28,8 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
+		if (Inventory.Count(bot.Avatar, item.type) >= Plenty)
+			return true;
 		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item) || FitsExistingStack(bot.Avatar, item) || DyeTaste.IsFavorite(bot.Faction, item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
@@ -54,6 +57,7 @@ public static class Junk
 
 	public static void TrashExcessIfCrowded(Bot bot)
 	{
+		TrashBeyondPlenty(bot);
 		int used = Inventory.UsedSlots(bot.Avatar);
 		if (used < InventoryPressureSlots)
 			return;
@@ -104,6 +108,16 @@ public static class Junk
 		if (item.createTile >= 0 || item.createWall > 0)
 			return 1;
 		return 0;
+	}
+
+	static void TrashBeyondPlenty(Bot bot)
+	{
+		foreach (var group in Inventory.Items(bot.Avatar).GroupBy(item => item.type).ToList())
+		{
+			int excess = group.Sum(item => item.stack) - Plenty;
+			if (excess > 0)
+				Discard(bot, group.First(), excess, $"already {Plenty}");
+		}
 	}
 
 	static void TrashOverflow(Bot bot)
@@ -205,10 +219,14 @@ public static class Junk
 
 	static bool IsStorageClutter(Bot bot, Item item, int copiesBefore, int amountBefore)
 	{
-		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type) || item.IsACoin)
+		if (item.IsACoin)
+			return false;
+		if (item.maxStack > 1 && amountBefore >= Plenty)
+			return true;
+		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type))
 			return false;
 		if (item.maxStack > 1)
-			return amountBefore >= item.maxStack * KeptFullStacks || IsCheapClutter(item);
+			return amountBefore >= System.Math.Min(item.maxStack * KeptFullStacks, Plenty) || IsCheapClutter(item);
 		if (item.accessory)
 			return copiesBefore >= KeptAccessoryCopies;
 		if (item.potion)
