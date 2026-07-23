@@ -108,8 +108,20 @@ public sealed class StoreTask : ChestVisitTask
 		if (BaseStorage.FreeSlots(Bot.Faction) < PurgeBelowFreeSlots)
 			Junk.PurgeStorage(Bot, BaseStorage.Chests(Bot.Faction));
 		int stored = 0;
-		foreach (var item in Kit.ItemsToStore(Bot))
+		foreach (var item in Kit.ItemsToStore(Bot).ToList())
 		{
+			int room = item.maxStack > 1 ? Junk.Plenty - BaseStorage.Count(Bot.Faction, item.type) : int.MaxValue;
+			if (room < item.stack)
+			{
+				int excess = item.stack - Math.Max(room, 0);
+				BotDiagnostics.Log(Bot, $"trashed {item.Name} x{excess} (storage already holds {Junk.Plenty})");
+				item.stack -= excess;
+				if (item.stack <= 0)
+				{
+					item.TurnToAir();
+					continue;
+				}
+			}
 			var category = BaseStorage.CategoryOf(item);
 			var ordered = reachable
 				.OrderBy(candidate => BaseStorage.CategoryOfChest(Bot.Faction, candidate) == category ? 0 : 1)
