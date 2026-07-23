@@ -177,7 +177,7 @@ public sealed class OpportunisticMineTask : BotTask
 		return tier;
 	}
 
-	const int EnoughOfOneKind = 100;
+	const int EnoughOfOneKind = 999;
 	const int EnoughWood = 200;
 
 	bool wantsWood;
@@ -292,7 +292,7 @@ public sealed class OpportunisticMineTask : BotTask
 			return;
 		}
 		Bot.Motor.MoveTo(tile.ToWorldCoordinates(), Hazards.Contains(type) ? HazardStandoff : 24f);
-		if (Bot.Motor.IsStalled)
+		if (Bot.Motor.IsStalled || Bot.Motor.HasArrived)
 			GiveUp(tile);
 	}
 
