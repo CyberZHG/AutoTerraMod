@@ -92,6 +92,20 @@ public static class TileQuery
 	public static bool IsExposed(int x, int y) =>
 		!IsSolid(x - 1, y) || !IsSolid(x + 1, y) || !IsSolid(x, y - 1) || !IsSolid(x, y + 1);
 
+	public static Point TreeBaseOf(Point tile)
+	{
+		int type = Main.tile[tile.X, tile.Y].TileType;
+		foreach (int x in new[] { tile.X, tile.X - 1, tile.X + 1 })
+		{
+			int y = tile.Y;
+			while (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == type && Main.tile[x, y + 1].HasTile && Main.tile[x, y + 1].TileType == type)
+				y++;
+			if (IsTreeBase(x, y))
+				return new Point(x, y);
+		}
+		return tile;
+	}
+
 	public static bool IsTreeBase(int x, int y)
 	{
 		var tile = Main.tile[x, y];

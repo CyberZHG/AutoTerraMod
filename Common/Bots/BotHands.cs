@@ -154,6 +154,8 @@ public sealed class BotHands
 		var axe = BestAxe;
 		if (axe == null)
 			return ToolResult.NoTool;
+		if (TileQuery.IsChoppableTree(Main.tile[tile.X, tile.Y].TileType) && TileQuery.TreeBaseOf(tile) is var trunkBase && CanReach(axe, trunkBase))
+			tile = trunkBase;
 		if (!CanReach(axe, tile))
 			return ToolResult.OutOfReach;
 		if (!WorldGen.CanKillTile(tile.X, tile.Y))

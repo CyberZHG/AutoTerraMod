@@ -156,7 +156,8 @@ public sealed class BuildTask : BotTask
 		var blueprint = structure;
 		var here = Bot.CenterTile;
 		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock;
-		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile) is Point foothold)
+		var avoid = operation.Action == BuildAction.RemoveScaffold ? Bot.Faction.Scaffolding : null;
+		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile, avoid) is Point foothold)
 			return Navigation.PathFinder.BodyCenterAt(foothold);
 		if (operation.Tile.Y < blueprint.Ceiling)
 		{
@@ -174,9 +175,9 @@ public sealed class BuildTask : BotTask
 
 	const int FootholdReachX = 3;
 	const int FootholdBelowMin = -2;
-	const int FootholdBelowMax = 4;
+	const int FootholdBelowMax = 5;
 
-	static Point? FootholdNear(Point tile)
+	static Point? FootholdNear(Point tile, System.Collections.Generic.ISet<Point> avoid = null)
 	{
 		Point? best = null;
 		int bestScore = int.MaxValue;
@@ -185,7 +186,7 @@ public sealed class BuildTask : BotTask
 			for (int dx = -FootholdReachX; dx <= FootholdReachX; dx++)
 			{
 				var feet = new Point(tile.X + dx, tile.Y + dy);
-				if (!Standable(feet) || Overlaps(feet, tile))
+				if (!Standable(feet) || Overlaps(feet, tile) || avoid != null && (avoid.Contains(new Point(feet.X, feet.Y + 1)) || avoid.Contains(new Point(feet.X + 1, feet.Y + 1))))
 					continue;
 				int score = System.Math.Abs(dx) + System.Math.Abs(dy);
 				if (score < bestScore)

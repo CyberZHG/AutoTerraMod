@@ -52,6 +52,10 @@ public sealed class PathFollower
 	uint failedStepsSince;
 
 	public bool HasNoRoute { get; private set; }
+
+	public bool Searching => pending != null;
+
+	public int StepsReached { get; private set; }
 	public bool HasPath => path.Nodes.Count > 0 && index < path.Nodes.Count;
 
 	public string Describe() => HasPath
@@ -176,6 +180,7 @@ public sealed class PathFollower
 			bool settled = grounded || node.Arrival == MoveKind.Climb;
 			if (IsAt(feet, node, centerX) && settled || node.Arrival == MoveKind.Fly && ReachedFlightTop(feet, node))
 			{
+				StepsReached += candidate + 1 - index;
 				index = candidate + 1;
 				stepOrigin = feet;
 				stepTicks = 0;

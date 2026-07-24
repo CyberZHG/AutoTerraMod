@@ -1396,6 +1396,8 @@ public sealed class BotMotor
 		closestDistance = float.MaxValue;
 	}
 
+	int stepsAtLastCheck;
+
 	void TrackProgress(NPC npc)
 	{
 		if (destination is not Vector2 target || HasArrived)
@@ -1407,7 +1409,9 @@ public sealed class BotMotor
 			return;
 		progressTimer = 0;
 		float distance = Vector2.Distance(npc.Center, progressAim ?? target);
-		if (distance < closestDistance - MeaningfulProgress || bot.Hands.IsWorking)
+		bool followingRoute = follower.Searching || follower.StepsReached != stepsAtLastCheck;
+		stepsAtLastCheck = follower.StepsReached;
+		if (distance < closestDistance - MeaningfulProgress || bot.Hands.IsWorking || followingRoute)
 		{
 			closestDistance = Math.Min(distance, closestDistance);
 			stalledChecks = 0;
