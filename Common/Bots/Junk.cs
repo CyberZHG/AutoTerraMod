@@ -112,6 +112,7 @@ public static class Junk
 
 	static void TrashBeyondPlenty(Bot bot)
 	{
+		Inventory.MergeStacks(bot.Avatar);
 		foreach (var group in Inventory.Items(bot.Avatar).GroupBy(item => item.type).ToList())
 		{
 			int excess = group.Sum(item => item.stack) - Plenty;

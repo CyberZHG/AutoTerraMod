@@ -215,6 +215,25 @@ public static class Inventory
 		return true;
 	}
 
+	public static void MergeStacks(Player avatar)
+	{
+		for (int slot = 0; slot < MainSlots; slot++)
+		{
+			var held = avatar.inventory[slot];
+			for (int other = slot + 1; other < MainSlots && !held.IsAir && held.stack < held.maxStack; other++)
+			{
+				var incoming = avatar.inventory[other];
+				if (incoming.IsAir || !CanMerge(held, incoming))
+					continue;
+				int moved = Math.Min(incoming.stack, held.maxStack - held.stack);
+				held.stack += moved;
+				incoming.stack -= moved;
+				if (incoming.stack <= 0)
+					incoming.TurnToAir();
+			}
+		}
+	}
+
 	static bool CanMerge(Item held, Item incoming) =>
 		!held.IsAir && held.type == incoming.type && held.stack < held.maxStack && ItemLoader.CanStack(held, incoming);
 }
