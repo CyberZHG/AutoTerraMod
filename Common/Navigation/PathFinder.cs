@@ -51,8 +51,9 @@ public static class PathFinder
 	const int SwimmableLiquid = 64;
 	const double TickBudgetMilliseconds = 3.0;
 	const double SliceMilliseconds = 1.0;
-	const double StarvedSliceMilliseconds = 0.3;
-	const int MaxStarvedTicks = 10;
+	const uint ForgetWaitingTicks = 60;
+
+	static readonly List<PathSearch> waiting = new();
 
 	static uint budgetTick;
 	static long tickDeadline;
@@ -80,15 +81,20 @@ public static class PathFinder
 	{
 		if (search.IsDone)
 			return true;
-		if (!HasBudget)
+		StartBudgetTick();
+		waiting.RemoveAll(other => other.IsDone || Main.GameUpdateCount - other.PolledAt > ForgetWaitingTicks);
+		int ahead = waiting.IndexOf(search);
+		long reserved = (ahead < 0 ? waiting.Count : ahead) * Ticks(SliceMilliseconds);
+		long now = Stopwatch.GetTimestamp();
+		search.PolledAt = Main.GameUpdateCount;
+		if (now + reserved >= tickDeadline)
 		{
-			if (++search.StarvedTicks < MaxStarvedTicks)
-				return false;
-			search.StarvedTicks = 0;
-			return search.Step(Stopwatch.GetTimestamp() + Ticks(StarvedSliceMilliseconds));
+			if (ahead < 0)
+				waiting.Add(search);
+			return false;
 		}
-		search.StarvedTicks = 0;
-		return search.Step(Math.Min(tickDeadline, Stopwatch.GetTimestamp() + Ticks(SliceMilliseconds)));
+		waiting.Remove(search);
+		return search.Step(Math.Min(tickDeadline - reserved, now + Ticks(SliceMilliseconds)));
 	}
 
 	public static Point FeetOf(Entity body)
