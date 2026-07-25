@@ -51,6 +51,8 @@ public static class PathFinder
 	const int SwimmableLiquid = 64;
 	const double TickBudgetMilliseconds = 3.0;
 	const double SliceMilliseconds = 1.0;
+	const double StarvedSliceMilliseconds = 0.3;
+	const int MaxStarvedTicks = 10;
 
 	static uint budgetTick;
 	static long tickDeadline;
@@ -79,7 +81,13 @@ public static class PathFinder
 		if (search.IsDone)
 			return true;
 		if (!HasBudget)
-			return false;
+		{
+			if (++search.StarvedTicks < MaxStarvedTicks)
+				return false;
+			search.StarvedTicks = 0;
+			return search.Step(Stopwatch.GetTimestamp() + Ticks(StarvedSliceMilliseconds));
+		}
+		search.StarvedTicks = 0;
 		return search.Step(Math.Min(tickDeadline, Stopwatch.GetTimestamp() + Ticks(SliceMilliseconds)));
 	}
 

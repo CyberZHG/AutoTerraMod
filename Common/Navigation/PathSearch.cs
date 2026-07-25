@@ -11,6 +11,8 @@ namespace AutoTerraMod.Common.Navigation;
 
 public sealed class PathSearch
 {
+	public int StarvedTicks { get; set; }
+
 	const float HeuristicWeight = 1.3f;
 	const int MaxJumpRise = 5;
 	const int MaxRopeClimb = 60;

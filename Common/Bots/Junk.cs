@@ -12,17 +12,10 @@ public static class Junk
 	const int OverflowSlots = 49;
 	const int OverflowNaturalBlockReserve = 20;
 	const int OverflowCheapItemValue = 100;
-	const int DefaultNaturalBlockReserve = 50;
 	public const int Plenty = 9999;
 
 	static readonly Dictionary<int, int> Reserves = new()
 	{
-		[ItemID.DirtBlock] = 60,
-		[ItemID.StoneBlock] = 999,
-		[ItemID.GraniteBlock] = 250,
-		[ItemID.MarbleBlock] = 250,
-		[ItemID.SandBlock] = 100,
-		[ItemID.ClayBlock] = 300,
 		[ItemID.Acorn] = 20
 	};
 
@@ -368,7 +361,7 @@ public static class Junk
 		if (IsGrassSeed(item))
 			return 0;
 		if (IsNaturalBlock(item))
-			return DefaultNaturalBlockReserve;
+			return Plenty;
 		return int.MaxValue;
 	}
 
