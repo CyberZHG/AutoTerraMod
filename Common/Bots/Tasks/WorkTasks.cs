@@ -157,9 +157,9 @@ public sealed class CraftTask : BotTask
 		var feet = Navigation.PathFinder.FeetOf(Bot.Npc);
 		string name = station.Name;
 		int itemType = station.type;
-		foreach (int dx in new[] { 2, -3, 3, -4, 1, -2 })
+		foreach (int dx in new[] { 2, -3, 3, -4, 1, -2, 4, -5, 5, -6 })
 		{
-			for (int dy = 0; dy >= -1; dy--)
+			for (int dy = 0; dy >= -3; dy--)
 			{
 				var spot = new Point(feet.X + dx, feet.Y + dy);
 				if (!Bot.Hands.CanReach(station, spot) || !Bot.Hands.Place(station, spot))
@@ -171,6 +171,7 @@ public sealed class CraftTask : BotTask
 				return true;
 			}
 		}
+		BotDiagnostics.Log(Bot, $"no spot to set up a portable {name} near {feet}");
 		return false;
 	}
 

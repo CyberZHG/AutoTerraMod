@@ -10,7 +10,6 @@ public static class Junk
 {
 	const int InventoryPressureSlots = 46;
 	const int OverflowSlots = 49;
-	const int OverflowNaturalBlockReserve = 20;
 	const int OverflowCheapItemValue = 100;
 	public const int Plenty = 9999;
 
@@ -44,7 +43,7 @@ public static class Junk
 
 	static int OverflowReserveFor(Item item) =>
 		CraftingBlocks.Contains(item.type) ? int.MaxValue
-		: IsNaturalBlock(item) ? OverflowNaturalBlockReserve
+		: IsNaturalBlock(item) ? Plenty
 		: IsGrassSeed(item) || item.type == ItemID.Acorn || IsCheapClutter(item) ? 0
 		: ReserveFor(item);
 

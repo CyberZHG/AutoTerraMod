@@ -205,15 +205,19 @@ public sealed class CraftableUpgradeGoal : ProgressionGoal
 	{
 		foreach (var recipe in GearRecipes())
 		{
-			if (Crafting.HasIngredients(bot.Avatar, recipe) && Improves(bot, recipe.createItem))
+			if (Crafting.HasIngredients(bot.Avatar, recipe) && Improves(bot, recipe.createItem) && HasStations(bot, recipe))
 				return new CraftStep(recipe);
 		}
 		return null;
 	}
 
+	static bool HasStations(Bot bot, Recipe recipe) => recipe.requiredTile.All(tile => tile < 0
+		|| Stations.IsReachableStation(bot.Faction, tile, bot.CenterTile)
+		|| Bots.Tasks.CraftTask.IsPortableStationTile(tile) && Stations.ItemsPlacing(tile).Any(item => Inventory.Count(bot.Avatar, item) > 0));
+
 	static bool StillValid(Bot bot, PlanStep step) => step switch
 	{
-		CraftStep craft => Crafting.HasIngredients(bot.Avatar, craft.Recipe) && Improves(bot, craft.Recipe.createItem),
+		CraftStep craft => Crafting.HasIngredients(bot.Avatar, craft.Recipe) && Improves(bot, craft.Recipe.createItem) && HasStations(bot, craft.Recipe),
 		WithdrawStep withdraw => BaseStorage.Count(bot.Faction, withdraw.ItemType) > 0 && Improves(bot, ContentSamples.ItemsByType[withdraw.ItemType]),
 		_ => true
 	};
@@ -1529,7 +1533,11 @@ public static class ProgressionGoals
 	static ProgressionGoal CactusGear(GearKind kind, int item, int cactus) =>
 		new GatedGoal(new GearGoal(kind, item), bot => Inventory.Count(bot.Avatar, ItemID.Cactus) + Building.BaseStorage.Count(bot.Faction, ItemID.Cactus) >= cactus);
 
-	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0;
+	public static bool OnGearBreak(Bot bot) => (Main.GameUpdateCount / GearBreakTicks + (uint)bot.Id) % GearBreakEvery == 0 && !CoreUnbuilt(bot);
+
+	static bool CoreUnbuilt(Bot bot) =>
+		HouseInspector.IsDesignatedBuilder(bot) && bot.Faction.Settlement is { } settlement
+		&& !(HouseInspector.IsFinished(bot.Faction, settlement.Hall) && HouseInspector.IsFinished(bot.Faction, settlement.Storage));
 
 	static readonly int[] Stone = { ItemID.StoneBlock };
 	static readonly int[] Torches = { ItemID.Torch };
