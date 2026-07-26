@@ -151,10 +151,10 @@ public sealed class FightTask : BotTask
 	NPC BossFightPest()
 	{
 		var attacker = Bot.Vitals.RecentAttacker;
-		if (attacker != null && attacker.active && !Bosses.BossCatalog.IsBossPart(attacker) && Engagement.IsHostileTo(Bot, attacker) && !Bot.IsIgnoring(attacker)
+		if (attacker != null && attacker.active && !Bosses.BossCatalog.IsBossPart(attacker) && attacker.ModNPC is not Content.NPCs.BotNPC && Engagement.IsHostileTo(Bot, attacker) && !Bot.IsIgnoring(attacker)
 			&& Vector2.Distance(Bot.Center, attacker.Center) < AmbushRadius)
 			return attacker;
-		var near = Engagement.NearestHostile(Bot, PestRadius, true);
+		var near = Engagement.NearestHostile(Bot, PestRadius, true, ignoreBots: true);
 		return near != null && !Bosses.BossCatalog.IsBossPart(near) ? near : null;
 	}
 

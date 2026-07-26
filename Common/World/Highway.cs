@@ -39,6 +39,16 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		return false;
 	}
 
+	public static bool ProtectsOthersDeck(int factionId, int x, int y)
+	{
+		foreach (var (owner, highways) in planned)
+			if (owner != factionId)
+				foreach (var highway in highways)
+					if (highway.ProtectsDeck(x, y) || highway.LinkX == x && highway.LinkRows is var (top, bottom) && y >= top && y <= bottom + 1)
+						return true;
+		return false;
+	}
+
 	public static bool InAnyClearance(int x, int y)
 	{
 		foreach (var highways in planned.Values)

@@ -50,6 +50,16 @@ public sealed record Hellevator(int X, int TopY)
 		return false;
 	}
 
+	public static bool InOthersShaft(int factionId, int x, int y)
+	{
+		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Id != factionId && faction.Hellevator is { } shaft && x >= shaft.X - 1 && x <= shaft.Right + 1 && shaft.Contains(System.Math.Clamp(x, shaft.X, shaft.Right), y))
+				return true;
+		}
+		return false;
+	}
+
 	public static bool InAnyShaft(int x, int y)
 	{
 		foreach (var faction in Common.Systems.BotWorldSystem.Factions)

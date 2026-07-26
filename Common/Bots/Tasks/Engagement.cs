@@ -37,14 +37,14 @@ public static class Engagement
 
 	public static bool IsHostileTo(Bot bot, NPC npc) => IsHostileTarget(npc) || EnemyBotOf(bot, npc) != null;
 
-	public static NPC NearestHostile(Bot bot, float radius, bool requireSight)
+	public static NPC NearestHostile(Bot bot, float radius, bool requireSight, bool ignoreBots = false)
 	{
 		NPC nearest = null;
 		float nearestDistance = radius;
 		var body = bot.Npc;
 		foreach (var npc in World.EntityIndex.ActiveNpcs)
 		{
-			if (!IsHostileTo(bot, npc) || bot.IsIgnoring(npc))
+			if (!IsHostileTo(bot, npc) || bot.IsIgnoring(npc) || ignoreBots && npc.ModNPC is BotNPC)
 				continue;
 			float distance = Vector2.Distance(body.Center, npc.Center);
 			if (distance >= nearestDistance)
@@ -93,13 +93,15 @@ public static class Engagement
 
 	const float ReflexFireRange = 16f * 12f;
 	const float ReflexMeleeSlack = 32f;
+	public const float BossTruceRange = 16f * 100f;
 
 	public static void Reflex(Bot bot)
 	{
 		if (!bot.Hands.Ready || bot.Npc == null || bot.Hands.BestWeapon() is not Item weapon)
 			return;
 		bool ranged = BotHands.IsProjectileWeapon(weapon);
-		var target = NearestHostile(bot, ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack, ranged);
+		bool bossNear = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossTruceRange) != null;
+		var target = NearestHostile(bot, ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack, ranged, bossNear);
 		if (target == null)
 			return;
 		if (ranged)

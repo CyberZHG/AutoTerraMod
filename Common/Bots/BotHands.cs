@@ -107,6 +107,8 @@ public sealed class BotHands
 				return ToolResult.Unbreakable;
 			tile = chestTile;
 		}
+		if (World.Highway.ProtectsOthersDeck(bot.FactionId, tile.X, tile.Y) || World.Hellevator.InOthersShaft(bot.FactionId, tile.X, tile.Y))
+			return ToolResult.Unbreakable;
 		if (InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		var pickaxe = BestPickaxe;
