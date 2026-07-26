@@ -1409,7 +1409,7 @@ public sealed class BotMotor
 			return;
 		progressTimer = 0;
 		float distance = Vector2.Distance(npc.Center, progressAim ?? target);
-		bool followingRoute = follower.Searching || follower.StepsReached != stepsAtLastCheck;
+		bool followingRoute = !follower.HasNoRoute && follower.StepsReached != stepsAtLastCheck;
 		stepsAtLastCheck = follower.StepsReached;
 		if (distance < closestDistance - MeaningfulProgress || bot.Hands.IsWorking || followingRoute)
 		{

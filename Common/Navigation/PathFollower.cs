@@ -53,8 +53,6 @@ public sealed class PathFollower
 
 	public bool HasNoRoute { get; private set; }
 
-	public bool Searching => pending != null;
-
 	public int StepsReached { get; private set; }
 	public bool HasPath => path.Nodes.Count > 0 && index < path.Nodes.Count;
 
