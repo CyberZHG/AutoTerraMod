@@ -135,7 +135,7 @@ public static class Junk
 	{
 		var planned = bot.Brain.PlannedItemTypes;
 		var cheapest = Kit.ItemsToStore(bot)
-			.Where(item => item.type != incoming.type && !planned.Contains(item.type))
+			.Where(item => item.type != incoming.type && !planned.Contains(item.type) && !IsBossSummon(item))
 			.MinBy(item => (long)item.value * item.stack);
 		if (cheapest == null)
 			return false;
