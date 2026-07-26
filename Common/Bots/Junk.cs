@@ -54,6 +54,7 @@ public static class Junk
 		if (used < InventoryPressureSlots)
 			return;
 		TrashExcess(bot);
+		TrashOutgrownWeapons(bot);
 		if (IsOverflowing(bot))
 			TrashOverflow(bot);
 		if (IsOverflowing(bot))
@@ -161,6 +162,20 @@ public static class Junk
 		BotDiagnostics.Log(bot, $"sold {loot.Count} pieces of outgrown loot to the {shopkeeper.TypeName} for {earned} copper");
 	}
 
+	static void TrashOutgrownWeapons(Bot bot)
+	{
+		var hammer = bot.Hands.BestHammer;
+		var outgrown = Kit.ItemsToStore(bot).Where(item => item != hammer && item.damage > 0 && IsSellableLoot(item) && Outclassed(bot, item));
+		foreach (var group in outgrown.GroupBy(item => item.type).ToList())
+		{
+			foreach (var item in group.OrderByDescending(item => item.damage).Skip(UpgradesTeammate(bot, group.First()) ? 1 : 0).ToList())
+			{
+				BotDiagnostics.Log(bot, $"trashed outgrown {item.Name} (bag crowded)");
+				item.TurnToAir();
+			}
+		}
+	}
+
 	static readonly Planning.GearKind[] ShareableKinds =
 	{
 		Planning.GearKind.Head, Planning.GearKind.Body, Planning.GearKind.Legs, Planning.GearKind.Pickaxe,
@@ -174,9 +189,10 @@ public static class Junk
 			int power = Planning.Equipment.PowerOf(item, kind);
 			if (power <= 0)
 				continue;
+			bool weapon = kind is Planning.GearKind.MeleeWeapon or Planning.GearKind.RangedWeapon or Planning.GearKind.MagicWeapon or Planning.GearKind.SummonWeapon;
 			foreach (var mate in Systems.BotWorldSystem.Bots)
 			{
-				if (mate.FactionId == bot.FactionId && mate != bot && Planning.Equipment.BestPower(mate.Avatar, kind) < power)
+				if (mate.FactionId == bot.FactionId && mate != bot && (!weapon || mate.Personality.Style == BotHands.StyleOf(item)) && Planning.Equipment.BestPower(mate.Avatar, kind) < power)
 					return true;
 			}
 		}
