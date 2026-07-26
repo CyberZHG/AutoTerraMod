@@ -199,7 +199,8 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlaceWall, tile);
 		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
-		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X))))
+		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X)))
+			.OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
 			yield return Operation(BuildAction.PlaceBlock, tile);
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);

@@ -108,7 +108,7 @@ public sealed class BuildTask : BotTask
 		}
 		else if (++failures >= FailuresBeforeSkipping)
 		{
-			BotDiagnostics.Log(Bot, $"{operation.Action} with {tool.Name} (tile {tool.createTile} style {tool.placeStyle}) keeps failing at {operation.Tile}{TerrainDump.Around(operation.Tile, 8, 4)}");
+			BotDiagnostics.Log(Bot, $"{operation.Action} with {tool.Name} (tile {tool.createTile} style {tool.placeStyle}) keeps failing at {operation.Tile} ({Bot.Hands.PlaceFailure(tool, operation.Tile)}){TerrainDump.Around(operation.Tile, 8, 4)}");
 			HouseInspector.Skip(Bot, operation);
 			Bot.Motor.Stop();
 		}

@@ -351,6 +351,26 @@ public sealed class BotHands
 		return true;
 	}
 
+	public string PlaceFailure(Item item, Point tile)
+	{
+		if (item == null || item.IsAir || item.createTile < 0)
+			return "no item";
+		if (!Ready)
+			return "not ready";
+		if (!CanReach(item, tile))
+			return "out of reach";
+		if (World.ShimmerZone.Contains(tile.X, tile.Y))
+			return "shimmer zone";
+		if (World.Highway.InAnyClearance(tile.X, tile.Y))
+			return "highway clearance";
+		if (World.Hellevator.InAnyShaft(tile.X, tile.Y))
+			return "hellevator shaft";
+		if (!Anchored(tile))
+			return "unanchored";
+		var here = Main.tile[tile.X, tile.Y];
+		return $"tile {here.TileType} active={here.HasTile} wall={here.WallType}";
+	}
+
 	public bool PlaceWall(Item item, Point tile)
 	{
 		if (item == null || item.IsAir || item.createWall <= WallID.None || !Ready || !CanReach(item, tile))
