@@ -351,7 +351,7 @@ public sealed class HouseBlueprint
 					yield return TreeBaseBelow(x, y);
 					continue;
 				}
-				if (IsPlatformSpot(new Point(x, y)) || Main.tileRope[tile.TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(x))
+				if (IsPlatformSpot(new Point(x, y)) || Main.tileRope[tile.TileType] && (Bots.Tasks.TidyCampTask.IsLifelineColumn(x) || Bots.Tasks.TidyCampTask.BotNear(new Point(x, y))))
 					continue;
 				if (IsShell(x, y) && !TileQuery.IsSolid(x, y))
 				{
