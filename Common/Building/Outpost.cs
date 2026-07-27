@@ -216,7 +216,7 @@ public static class Outpost
 		return toBed < RebuildDistance && toBed + ClaimMargin < toSpawn ? nearest : null;
 	}
 
-	const float CampOutpostClearance = 16f * 150f;
+	const float CampOutpostClearance = 16f * 300f;
 
 	static bool HeadingHome(Bot bot) => bot.Motor.Destination is Vector2 destination && Vector2.Distance(destination, bot.Faction.BaseCenter) < CampOutpostClearance;
 
@@ -225,6 +225,8 @@ public static class Outpost
 	public static bool WantsNew(Bot bot)
 	{
 		if (!IsAfield(bot) || bot.CenterTile.Y >= Main.UnderworldLayer - 10 || Bosses.BossRituals.InPillarZone(bot.Center) || FactionBeds(bot.Faction).Any(bed => !NearCamp(bot.Faction, bed) && Vector2.Distance(bed.ToWorldCoordinates(), bot.Center) < RebuildDistance))
+			return false;
+		if (Vector2.Distance(bot.Center, bot.Faction.BaseCenter) < CampOutpostClearance)
 			return false;
 		var anchor = bot.OutpostBed is Point bed ? bed.ToWorldCoordinates() : BotWorldSystem.RespawnFeet(bot);
 		return Vector2.Distance(bot.Center, anchor) > RebuildDistance;

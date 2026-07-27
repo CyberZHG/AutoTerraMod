@@ -102,9 +102,11 @@ public static class ProgressionPlanner
 			if (focus is GearTrack track && goal.Track != GearTrack.None && goal.Track != track)
 				continue;
 			using var probe = Probes.Measure(goal.ProbeLabel);
-			if (isSuppressed(goal) || goal.NeedsSurface && bot.CommittedToMining || !goal.AppliesTo(bot) || goal.IsMet(bot))
+			if (isSuppressed(goal) || goal.NeedsSurface && bot.CommittedToMining || !goal.AppliesTo(bot) || goal.IsMet(bot) || goal.IsExpedition && goal is not BossGoal && Building.HouseInspector.BuildingDuty(bot))
 				continue;
 			var step = PlanUnlessStuck(bot, goal);
+			if (step is ScoutStep or SurveyStep && goal is not BossGoal && Building.HouseInspector.BuildingDuty(bot))
+				continue;
 			if (step is not BlockedStep and not IdleStep)
 			{
 				if (goal.IsExpedition)
@@ -251,7 +253,7 @@ public static class ProgressionPlanner
 		if (!expeditions.TryGetValue(bot.Id, out var expedition))
 			return null;
 		var goal = expedition.goal;
-		if (Main.GameUpdateCount > expedition.until || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+		if (Main.GameUpdateCount > expedition.until || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot) || goal is not BossGoal && Building.HouseInspector.BuildingDuty(bot))
 		{
 			expeditions.Remove(bot.Id);
 			return null;
