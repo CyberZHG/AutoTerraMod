@@ -21,6 +21,12 @@ public sealed record Hellevator(int X, int TopY)
 
 	public const int SafeDiveRows = 10;
 
+	public const int DesperateDiveRows = 25;
+
+	public const int MaxWaterBlasts = 6;
+
+	public int WaterBlasts { get; set; }
+
 	public int WaterAbove(int row)
 	{
 		int rows = 0;

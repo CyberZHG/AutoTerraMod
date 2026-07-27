@@ -469,14 +469,18 @@ public static class BossRituals
 
 	public static bool BreathesUnderwater(Bot bot) => bot.Avatar.gills || bot.Avatar.accMerman || bot.Avatar.accDivingHelm;
 
+	public static bool NeedsWaterBlast(Bot bot, Hellevator shaft) =>
+		!BreathesUnderwater(bot) && shaft.WaterAbove(shaft.FirstUnfinishedRow()) > Hellevator.DesperateDiveRows;
+
 	public static bool ShaftTooFlooded(Bot bot, Hellevator shaft)
 	{
 		if (Main.GameUpdateCount < shaft.FloodedUntil)
 			return !BreathesUnderwater(bot);
-		if (BreathesUnderwater(bot) || shaft.WaterAbove(shaft.FirstUnfinishedRow()) <= Hellevator.SafeDiveRows)
+		if (!NeedsWaterBlast(bot, shaft) || shaft.WaterBlasts < Hellevator.MaxWaterBlasts)
 			return false;
 		shaft.FloodedUntil = Main.GameUpdateCount + Hellevator.FloodPauseTicks;
-		BotDiagnostics.Log(bot, $"hellevator at x={shaft.X} is flooded {shaft.WaterAbove(shaft.FirstUnfinishedRow())} rows above row {shaft.FirstUnfinishedRow()}, leaving it for a while");
+		shaft.WaterBlasts = 0;
+		BotDiagnostics.Log(bot, $"hellevator at x={shaft.X} is still flooded {shaft.WaterAbove(shaft.FirstUnfinishedRow())} rows deep after {Hellevator.MaxWaterBlasts} blasts, leaving it for a while");
 		return true;
 	}
 
@@ -486,6 +490,8 @@ public static class BossRituals
 			return PlanStep.Blocked;
 		if (ShaftTooFlooded(bot, shaft))
 			return PlanStep.Idle;
+		if (NeedsWaterBlast(bot, shaft) && !bot.Hands.Explosives.Carries)
+			return ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
 		if (carried == 0 && !roped)

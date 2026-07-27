@@ -1331,6 +1331,40 @@ public sealed class DigShaftTask : BotTask
 
 	bool viaMouth;
 
+	const int BombDropRows = 20;
+	const int ThrowSpotSlack = 2;
+
+	void BlastWater(Hellevator shaft, int row)
+	{
+		if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks)
+		{
+			if (!Bot.Hands.Explosives.IsFused)
+				Bot.Motor.Stop();
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
+		if (!Bot.Hands.Explosives.Carries)
+		{
+			IsFinished = true;
+			return;
+		}
+		int waterTop = row - shaft.WaterAbove(row);
+		int throwRow = System.Math.Min(row - ThrowSpotSlack, System.Math.Max(row - BombDropRows, waterTop + Hellevator.SafeDiveRows));
+		var spot = new Vector2((shaft.X + 1) * 16f, throwRow * 16f - 21f);
+		if (System.Math.Abs(Bot.CenterTile.Y - throwRow) > ThrowSpotSlack || Bot.CenterTile.X < shaft.X || Bot.CenterTile.X > shaft.Right)
+		{
+			Descend(shaft, spot);
+			return;
+		}
+		if (shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor))
+		{
+			shaft.WaterBlasts++;
+			shaft.LastBlastAt = Main.GameUpdateCount;
+			BotDiagnostics.Log(Bot, $"blasting the floor at {floor} under {row - waterTop} rows of water in the hellevator ({shaft.WaterBlasts}/{Hellevator.MaxWaterBlasts})");
+		}
+		IsFinished = true;
+	}
+
 	public override void Start()
 	{
 		base.Start();
@@ -1358,6 +1392,11 @@ public sealed class DigShaftTask : BotTask
 		if (shaft.IsFinished || BossRituals.ShaftTooFlooded(Bot, shaft))
 		{
 			IsFinished = true;
+			return;
+		}
+		if (BossRituals.NeedsWaterBlast(Bot, shaft))
+		{
+			BlastWater(shaft, row);
 			return;
 		}
 		if (Hellevator.LavaBelow(shaft.X, row))
