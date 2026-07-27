@@ -467,10 +467,25 @@ public static class BossRituals
 
 	static readonly HashSet<int> platformRestock = new();
 
+	public static bool BreathesUnderwater(Bot bot) => bot.Avatar.gills || bot.Avatar.accMerman || bot.Avatar.accDivingHelm;
+
+	public static bool ShaftTooFlooded(Bot bot, Hellevator shaft)
+	{
+		if (Main.GameUpdateCount < shaft.FloodedUntil)
+			return !BreathesUnderwater(bot);
+		if (BreathesUnderwater(bot) || shaft.WaterAbove(shaft.FirstUnfinishedRow()) <= Hellevator.SafeDiveRows)
+			return false;
+		shaft.FloodedUntil = Main.GameUpdateCount + Hellevator.FloodPauseTicks;
+		BotDiagnostics.Log(bot, $"hellevator at x={shaft.X} is flooded {shaft.WaterAbove(shaft.FirstUnfinishedRow())} rows above row {shaft.FirstUnfinishedRow()}, leaving it for a while");
+		return true;
+	}
+
 	public static PlanStep ShaftWork(Bot bot, Hellevator shaft)
 	{
 		if (!CanDigRow(bot, shaft, shaft.FirstUnfinishedRow()))
 			return PlanStep.Blocked;
+		if (ShaftTooFlooded(bot, shaft))
+			return PlanStep.Idle;
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
 		if (carried == 0 && !roped)

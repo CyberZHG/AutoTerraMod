@@ -1355,7 +1355,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		var shaft = step.Shaft;
 		int row = shaft.FirstUnfinishedRow();
-		if (shaft.IsFinished)
+		if (shaft.IsFinished || BossRituals.ShaftTooFlooded(Bot, shaft))
 		{
 			IsFinished = true;
 			return;

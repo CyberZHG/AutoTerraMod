@@ -15,6 +15,20 @@ public sealed record Hellevator(int X, int TopY)
 
 	public const uint DrainTicks = 600;
 
+	public uint FloodedUntil { get; set; }
+
+	public const uint FloodPauseTicks = 10 * 3600;
+
+	public const int SafeDiveRows = 10;
+
+	public int WaterAbove(int row)
+	{
+		int rows = 0;
+		for (int y = row - 1; y > TopY && Main.tile[RopeX, y].LiquidAmount > 0 && Main.tile[RopeX, y].LiquidType != LiquidID.Lava; y--)
+			rows++;
+		return rows;
+	}
+
 	public const int Width = 3;
 
 	public int RopeX => X + 1;
