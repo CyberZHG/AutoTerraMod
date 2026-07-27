@@ -19,7 +19,9 @@ namespace AutoTerraMod.Common.Systems;
 public sealed class BotWorldSystem : ModSystem
 {
 	public const int FirstAvatarSlot = 200;
-	const int BaseSpacingTiles = 240;
+	const int MinimumBaseSpacing = 240;
+
+	static int BaseSpacingTiles => System.Math.Max(MinimumBaseSpacing, Main.maxTilesX / (2 * System.Math.Max(1, Settings?.FactionCount ?? 1)));
 	const int WorldEdgeMargin = 150;
 
 	public static readonly List<Faction> Factions = new();
@@ -240,7 +242,7 @@ public sealed class BotWorldSystem : ModSystem
 		initialized = true;
 	}
 
-	const int MinimumBaseSeparation = 150;
+	static int MinimumBaseSeparation => BaseSpacingTiles * 5 / 8;
 
 	static void GrowToConfig()
 	{
