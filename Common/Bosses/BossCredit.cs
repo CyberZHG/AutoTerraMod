@@ -158,8 +158,37 @@ public sealed class BossCredit : GlobalNPC
 	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction)
 	{
 		var open = BossCatalog.Challenges.Where(challenge => BossCatalog.AppliesToThisWorld(challenge) && !HasDefeated(faction, challenge) && challenge.IsUnlocked).ToList();
-		return open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)).OrderBy(challenge => challenge.NightOnly && NightComing ? 0 : 1));
+		var ordered = open.Where(challenge => !Deferred(faction, challenge)).Concat(open.Where(challenge => Deferred(faction, challenge)).OrderBy(challenge => challenge.NightOnly && NightComing ? 0 : 1)).ToList();
+		if (ordered.Count > 1 && UnorderedEarly.Contains(ordered[0].BossType)
+			&& ordered.FirstOrDefault(challenge => UnorderedEarly.Contains(challenge.BossType) && !Deferred(faction, challenge) && CanStartNow(faction, challenge)) is { } ready && ready != ordered[0])
+		{
+			ordered.Remove(ready);
+			ordered.Insert(0, ready);
+		}
+		return ordered;
 	}
+
+	static readonly HashSet<int> UnorderedEarly = new() { NPCID.KingSlime, NPCID.EyeofCthulhu, NPCID.EaterofWorldsHead, NPCID.BrainofCthulhu, NPCID.SkeletronHead };
+
+	static readonly Dictionary<int, (uint at, bool ready)> skeletronReady = new();
+	const uint ReadinessCacheTicks = 300;
+
+	static bool CanStartNow(Faction faction, BossChallenge challenge)
+	{
+		if (challenge.BossType != NPCID.SkeletronHead)
+			return SummonOnHand(faction, challenge);
+		if (skeletronReady.TryGetValue(faction.Id, out var cached) && Main.GameUpdateCount - cached.at < ReadinessCacheTicks)
+			return cached.ready;
+		bool ready = Systems.BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).MaxBy(bot => bot.Personality.Combat) is { } summoner
+			&& BossReadiness.Evaluate(faction, challenge, summoner).IsReady;
+		skeletronReady[faction.Id] = (Main.GameUpdateCount, ready);
+		return ready;
+	}
+
+	static bool SummonOnHand(Faction faction, BossChallenge challenge) =>
+		challenge.Triggers.OfType<SummonItemTrigger>().Any(trigger =>
+			Building.BaseStorage.Count(faction, trigger.Item) > 0
+			|| Systems.BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && bot.IsAlive && Bots.Inventory.Count(bot.Avatar, trigger.Item) > 0));
 
 	const double DuskLead = 6 * 3600;
 
