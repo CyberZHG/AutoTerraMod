@@ -1306,6 +1306,34 @@ public sealed class StockpileGoal : ProgressionGoal
 	}
 }
 
+public sealed class HandSummonGoal : ProgressionGoal
+{
+	const float HandOverTrip = 16f * 30f;
+
+	public override string Describe() => "HandSummon";
+
+	public override bool AppliesTo(Bot bot) => !BossGoal.IsSummoner(bot) && HeldSummon(bot) > 0;
+
+	public override bool IsUrgent(Bot bot) => AppliesTo(bot) && Plan(bot) is DeliverStep;
+
+	public override bool IsMet(Bot bot) => HeldSummon(bot) == 0;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		int item = HeldSummon(bot);
+		if (item == 0 || BotWorldSystem.Bots.FirstOrDefault(member => member.FactionId == bot.FactionId && member.IsAlive && BossGoal.IsSummoner(member)) is not { } summoner)
+			return PlanStep.Idle;
+		if (Microsoft.Xna.Framework.Vector2.Distance(summoner.Center, bot.Center) <= HandOverTrip && Inventory.HasRoomForType(summoner.Avatar, item))
+			return new DeliverStep(item, summoner.Id, HandOver: true);
+		return BaseStorage.HasRoom(bot.Faction) ? new DeliverStep(item, summoner.Id) : PlanStep.Idle;
+	}
+
+	static int HeldSummon(Bot bot) =>
+		Bosses.BossCredit.NextChallengeFor(bot.Faction) is { } challenge
+			? challenge.Triggers.OfType<Bosses.SummonItemTrigger>().Select(trigger => trigger.Item).FirstOrDefault(item => Inventory.Count(bot.Avatar, item) > 0)
+			: 0;
+}
+
 public sealed class ShareSuppliesGoal : ProgressionGoal
 {
 	const float MinimumCooperation = 0.4f;
@@ -1584,6 +1612,7 @@ public static class ProgressionGoals
 			new HellbridgeGoal(),
 			new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Ranged),
 			new AmmoGoal(),
+			new HandSummonGoal(),
 			new ShareSuppliesGoal(),
 			new ChampionCraftGoal(),
 			new ChampionPoolGoal(),
