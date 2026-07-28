@@ -121,7 +121,7 @@ public static class Grounds
 			foreach (int x in new[] { camp.Right + offset, camp.Left - offset })
 			{
 				int y = TileQuery.SurfaceY(x) - 1;
-				if (!WorldGen.InWorld(x, y, OpennessHalfWidth + OpennessHeight + 2) || !IsDryFooting(x, y))
+				if (!WorldGen.InWorld(x, y, OpennessHalfWidth + OpennessHeight + 2) || !IsDryFooting(x, y) || !SolidUnderfoot(x, y))
 					continue;
 				int score = Openness(x, y) - CampArenaClimbPenalty * Math.Abs(y + 1 - camp.Floor);
 				if (score > bestScore)
@@ -132,6 +132,18 @@ public static class Grounds
 			}
 		}
 		return best is Point feet ? new Vector2(feet.X * 16f + 8f, feet.Y * 16f - 5f) : faction.BaseCenter;
+	}
+
+	const int UnderfootHalfWidth = 3;
+	const int UnderfootDepth = 4;
+
+	static bool SolidUnderfoot(int x, int y)
+	{
+		for (int dx = -UnderfootHalfWidth; dx <= UnderfootHalfWidth; dx++)
+			for (int dy = 1; dy <= UnderfootDepth; dy++)
+				if (!TileQuery.IsSolid(x + dx, y + dy))
+					return false;
+		return true;
 	}
 
 	const int OpenSearchRadius = 150;

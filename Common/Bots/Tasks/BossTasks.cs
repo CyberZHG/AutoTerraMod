@@ -689,7 +689,8 @@ public sealed class RallyTask : BotTask
 		LeaveOutpostIfBedside();
 		if (!AtArenaBed())
 			return;
-		bool close = Vector2.Distance(Bot.Center, target) < CloseEnough;
+		bool sees = Bot.Npc is NPC body && Collision.CanHitLine(body.position, body.width, body.height, target - new Vector2(8f), 16, 16);
+		bool close = sees && Vector2.Distance(Bot.Center, target) < CloseEnough;
 		if (close && (Bot.Motor.IsStalled || Bot.Motor.IsStuck))
 			parkedUntil = Main.GameUpdateCount + ParkTicks;
 		if (close && Main.GameUpdateCount < parkedUntil)
@@ -698,7 +699,7 @@ public sealed class RallyTask : BotTask
 			Bot.Watchdog.RecordProgress();
 			return;
 		}
-		bool inSight = Joined(Bot, target, ArrivalRadius * 2f);
+		bool inSight = sees && Joined(Bot, target, ArrivalRadius * 2f);
 		if (!inSight && RecallShortensTrip(target) && TryRecallToCamp())
 			return;
 		TravelOrTunnel(target, inSight ? ArrivalRadius : 16f);
