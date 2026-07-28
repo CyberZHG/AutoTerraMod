@@ -126,7 +126,7 @@ public sealed class SummonTask : BotTask
 	void InviteGuests()
 	{
 		var host = Bot.Faction;
-		if (step.Trigger is PillarsTrigger || BotWorldSystem.Relation == Config.FactionRelation.War || host.Rally is not { } rally)
+		if (step.Trigger is PillarsTrigger || BotWorldSystem.Relation == Config.FactionRelation.War || host.Rally is not { } rally || ConfidentAlone(host))
 			return;
 		foreach (var guest in BotWorldSystem.Factions)
 		{
@@ -143,6 +143,22 @@ public sealed class SummonTask : BotTask
 			guest.RallyLeaderSeenAt = Main.GameUpdateCount;
 			guest.RallyAssembled = true;
 		}
+	}
+
+	const float SoloComfort = 1.5f;
+
+	const uint ConfidenceCacheTicks = 600;
+	uint confidenceAt;
+	bool confident;
+
+	bool ConfidentAlone(Factions.Faction host)
+	{
+		if (confidenceAt != 0 && Main.GameUpdateCount - confidenceAt < ConfidenceCacheTicks)
+			return confident;
+		var report = BossReadiness.Evaluate(host, step.Challenge, Bot);
+		confident = report.KillSeconds > 0f && report.SurviveSeconds >= report.KillSeconds * report.RequiredRatio * SoloComfort;
+		confidenceAt = Main.GameUpdateCount;
+		return confident;
 	}
 
 	const uint ArenaOutpostWaitTicks = 5 * 3600;
