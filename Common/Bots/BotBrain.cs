@@ -69,7 +69,6 @@ public sealed class BotBrain
 			new StoreTask(bot),
 			new DeliverTask(bot),
 			new TidyCampTask(bot),
-			new PlantTreesTask(bot),
 			new GardenTask(bot),
 			new WithdrawTask(bot),
 			new ReturnHomeTask(bot),

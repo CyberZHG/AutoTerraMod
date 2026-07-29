@@ -13,10 +13,7 @@ public static class Junk
 	const int OverflowCheapItemValue = 100;
 	public const int Plenty = 9999;
 
-	static readonly Dictionary<int, int> Reserves = new()
-	{
-		[ItemID.Acorn] = 20
-	};
+	static readonly Dictionary<int, int> Reserves = new();
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
@@ -373,7 +370,7 @@ public static class Junk
 			return 0;
 		if (Reserves.TryGetValue(item.type, out int reserve))
 			return reserve;
-		if (IsGrassSeed(item))
+		if (IsGrassSeed(item) || item.type == ItemID.Acorn)
 			return 0;
 		if (IsNaturalBlock(item))
 			return Plenty;

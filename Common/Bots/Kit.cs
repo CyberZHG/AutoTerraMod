@@ -53,7 +53,6 @@ public static class Kit
 				|| item.type == ItemID.TempleKey
 				|| item == recall
 				|| Explosives.IsExplosive(item)
-				|| item.type == ItemID.Acorn
 				|| fixtures.Contains(item)
 				|| Tasks.DecorateTask.IsWantedDecor(bot, item)
 				|| roomy && Tasks.NaturalistTask.StudiesCritters(bot) && item.makeNPC > 0

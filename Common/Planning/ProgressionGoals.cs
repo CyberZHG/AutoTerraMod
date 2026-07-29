@@ -1380,24 +1380,6 @@ public sealed class ShareSuppliesGoal : ProgressionGoal
 	}
 }
 
-public sealed class AcornGoal : ProgressionGoal
-{
-	public override bool MayUseWood => true;
-
-	const int Batch = 10;
-
-	public override bool NeedsSurface => true;
-
-	public override string Describe() => "Acorns";
-
-	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement is { } camp && Shops.TradesWith(bot, NPCID.Dryad) && TreePlanter.WantsSaplings(camp);
-
-	public override bool IsMet(Bot bot) => BaseStorage.Count(bot.Faction, ItemID.Acorn) > 0
-		|| BotWorldSystem.Bots.Any(member => member.FactionId == bot.FactionId && Inventory.Count(member.Avatar, ItemID.Acorn) > 0);
-
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanPurchase(bot, ItemID.Acorn, Batch);
-}
-
 public sealed class GardenGoal : ProgressionGoal
 {
 	public override bool NeedsSurface => true;
@@ -1635,7 +1617,6 @@ public static class ProgressionGoals
 		goals.Add(new StorageGoal());
 		goals.Add(new StructureGoal(settlement => StorageCrowded(settlement) ? settlement.StorageAnnexes : System.Array.Empty<HouseBlueprint>()));
 		goals.Add(new RopeGoal());
-		goals.Add(new AcornGoal());
 		goals.Add(new GardenSeedGoal());
 		goals.Add(new GardenGoal());
 		goals.Add(new DyeGoal());
