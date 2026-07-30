@@ -1351,6 +1351,34 @@ public sealed class DigShaftTask : BotTask
 	const int BombDropRows = 20;
 	const int ThrowSpotSlack = 2;
 
+	const float ThrowAtBreath = 0.5f;
+	bool diving;
+
+	bool RefillAir(Hellevator shaft, int row)
+	{
+		int water = shaft.WaterAbove(row);
+		if (water <= Hellevator.SafeDiveRows || BossRituals.BreathesUnderwater(Bot))
+			return false;
+		if (diving)
+		{
+			if (Bot.Vitals.BreathFraction >= ThrowAtBreath)
+				return false;
+			diving = false;
+		}
+		if (Bot.Vitals.BreathFraction >= 1f && Bot.Npc?.wet != true)
+		{
+			diving = true;
+			return false;
+		}
+		var surface = new Vector2((shaft.X + 1) * 16f, (row - water - 3) * 16f);
+		if (Bot.Center.Y > surface.Y + 16f)
+			Bot.Motor.MoveTo(surface, 12f);
+		else
+			Bot.Motor.Stop();
+		Bot.Watchdog.RecordProgress();
+		return true;
+	}
+
 	void BlastWater(Hellevator shaft, int row)
 	{
 		if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks)
@@ -1365,10 +1393,14 @@ public sealed class DigShaftTask : BotTask
 			IsFinished = true;
 			return;
 		}
+		bool breathLow = diving && Bot.Vitals.BreathFraction < ThrowAtBreath;
+		if (!breathLow && RefillAir(shaft, row))
+			return;
 		int waterTop = row - shaft.WaterAbove(row);
-		int throwRow = System.Math.Min(row - ThrowSpotSlack, System.Math.Max(row - BombDropRows, waterTop + Hellevator.SafeDiveRows));
+		int throwRow = row - BombDropRows;
 		var spot = new Vector2((shaft.X + 1) * 16f, throwRow * 16f - 21f);
-		if (System.Math.Abs(Bot.CenterTile.Y - throwRow) > ThrowSpotSlack || Bot.CenterTile.X < shaft.X || Bot.CenterTile.X > shaft.Right)
+		bool there = System.Math.Abs(Bot.CenterTile.Y - throwRow) <= ThrowSpotSlack && Bot.CenterTile.X >= shaft.X && Bot.CenterTile.X <= shaft.Right;
+		if (!there && !breathLow)
 		{
 			Descend(shaft, spot);
 			return;
@@ -1377,8 +1409,9 @@ public sealed class DigShaftTask : BotTask
 		{
 			shaft.WaterBlasts++;
 			shaft.LastBlastAt = Main.GameUpdateCount;
-			BotDiagnostics.Log(Bot, $"blasting the floor at {floor} under {row - waterTop} rows of water in the hellevator ({shaft.WaterBlasts}/{Hellevator.MaxWaterBlasts})");
+			BotDiagnostics.Log(Bot, $"blasting the floor at {floor} under {row - waterTop} rows of water from row {Bot.CenterTile.Y} (breath {Bot.Vitals.BreathFraction:0.00}, {shaft.WaterBlasts}/{Hellevator.MaxWaterBlasts})");
 		}
+		diving = false;
 		IsFinished = true;
 	}
 
@@ -1386,6 +1419,7 @@ public sealed class DigShaftTask : BotTask
 	{
 		base.Start();
 		viaMouth = false;
+		diving = false;
 	}
 
 	DigShaftStep step;
@@ -1416,6 +1450,8 @@ public sealed class DigShaftTask : BotTask
 			BlastWater(shaft, row);
 			return;
 		}
+		if (RefillAir(shaft, row))
+			return;
 		if (Hellevator.LavaBelow(shaft.X, row))
 		{
 			if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks)
