@@ -50,6 +50,13 @@ public sealed class Explosives
 			&& !Building.HouseInspector.IsProtected(x, y);
 	}
 
+	const int CampBlastMargin = 3;
+
+	static bool NearAnyCamp(Point center, int reach) =>
+		Systems.BotWorldSystem.Factions.Any(faction => faction.Settlement is { } camp
+			&& center.X + reach >= camp.Left - Building.Settlement.ApronWidth && center.X - reach <= camp.Right + Building.Settlement.ApronWidth
+			&& center.Y + reach >= camp.Top && center.Y - reach <= camp.Floor + reach);
+
 	static bool SpareProtected(Point center, int radius)
 	{
 		for (int x = center.X - radius; x <= center.X + radius; x++)
@@ -68,7 +75,7 @@ public sealed class Explosives
 		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
 			return false;
 		var charge = Charges.FirstOrDefault(candidate => Inventory.Count(bot.Avatar, candidate.item) > 0);
-		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius))
+		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius) || NearAnyCamp(tile, charge.radius + CampBlastMargin))
 			return false;
 		var item = Inventory.Items(bot.Avatar).First(candidate => candidate.type == charge.item);
 		string name = item.Name;
