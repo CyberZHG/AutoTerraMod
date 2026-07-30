@@ -199,7 +199,7 @@ public sealed class SummonTask : BotTask
 		LeaveOutpostIfBedside();
 		bool awayFromCamp = BelowOwnCamp() && Bot.Center.Y > faction.BaseCenter.Y + BelowCampTolerance
 			|| Vector2.Distance(Bot.Center, step.Place) > ArrivalRadius && Vector2.Distance(Bot.Center, faction.BaseCenter) > GatherRadius;
-		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > Vector2.Distance(CampLanding, faction.BaseCenter) + CampRecallReach && Main.GameUpdateCount - Bot.LastRecallAt > RecallCooldownTicks && CarriesRecall(Avatar) && RecallReachesCamp() && TryRecallToCamp())
+		if (awayFromCamp && Vector2.Distance(Bot.Center, faction.BaseCenter) > Vector2.Distance(CampLanding, faction.BaseCenter) + CampRecallReach && Main.GameUpdateCount - Bot.LastRecallAt > RecallCooldownTicks && CanRecall(Bot) && RecallReachesCamp() && TryRecallToCamp())
 			return false;
 		if (!awayFromCamp || !TravelOrTunnel(faction.BaseFeet - new Vector2(0f, 16f * 2f), 16f))
 			Bot.Motor.Stop();
@@ -634,7 +634,7 @@ public sealed class RallyTask : BotTask
 
 	bool RecallShortensTrip(Vector2 target)
 	{
-		if (!CarriesRecall(Avatar))
+		if (!CanRecall(Bot))
 			return false;
 		var tile = target.ToTileCoordinates();
 		var here = Bot.CenterTile;
@@ -1190,7 +1190,7 @@ public sealed class BuildBridgeTask : BotTask
 		{
 			if (!TravelOrTunnel(stand, 12f))
 			{
-				if (bridge is Hellbridge && Bot.CenterTile.Y > bridge.FeetRow(Bot.CenterTile.X) + 1 && CarriesRecall(Avatar) && TryRecallHome())
+				if (bridge is Hellbridge && Bot.CenterTile.Y > bridge.FeetRow(Bot.CenterTile.X) + 1 && CanRecall(Bot) && TryRecallHome())
 				{
 					BotDiagnostics.Log(Bot, $"below the Underworld bridge at {Bot.CenterTile}, recalling home to come back down the hellevator");
 					return;

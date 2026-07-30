@@ -370,7 +370,7 @@ public sealed class ExploreTask : BotTask
 		{
 			BotDiagnostics.Log(Bot, atEdge ? $"crossed to the edge at {here}" : $"crossing stalled at {here}");
 			crossDepth = null;
-			if (atEdge && CarriesRecall(Avatar))
+			if (atEdge && CanRecall(Bot))
 				TryRecallHome();
 			IsFinished = true;
 			return;
@@ -413,7 +413,7 @@ public sealed class ExploreTask : BotTask
 		{
 			BotDiagnostics.Log(Bot, $"dove to the underworld at {here}");
 			diveX = null;
-			if (CarriesRecall(Avatar))
+			if (CanRecall(Bot))
 				TryRecallHome();
 			IsFinished = true;
 			return;

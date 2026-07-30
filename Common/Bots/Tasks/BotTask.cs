@@ -49,6 +49,10 @@ public abstract class BotTask
 
 	public static bool CarriesRecall(Player avatar) => Inventory.Items(avatar).Any(item => RecallItems.Contains(item.type));
 
+	const uint RelogGapTicks = 2 * 3600;
+
+	public static bool CanRecall(Bot bot) => CarriesRecall(bot.Avatar) || bot.LastRecallAt == 0 || Main.GameUpdateCount - bot.LastRecallAt >= RelogGapTicks;
+
 	public static Item KeptRecall(Player avatar) =>
 		Inventory.Items(avatar).Where(IsRecall).MaxBy(item => item.type == ItemID.RecallPotion ? -1 : System.Array.IndexOf(RecallItems, item.type));
 
@@ -80,13 +84,15 @@ public abstract class BotTask
 	{
 		var recall = KeptRecall(Avatar);
 		var body = Bot.Npc;
-		if (recall == null || body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f
-			|| Bot.LastRecallAt != 0 && Main.GameUpdateCount - Bot.LastRecallAt < MinRecallGapTicks)
+		if (body == null || Vector2.Distance(body.Bottom, BotWorldSystem.RespawnFeet(Bot)) < PointlessRecallTiles * 16f
+			|| Bot.LastRecallAt != 0 && Main.GameUpdateCount - Bot.LastRecallAt < MinRecallGapTicks
+			|| recall == null && !CanRecall(Bot))
 			return false;
-		string name = recall.Name;
-		if (recall.consumable)
+		string name = recall?.Name ?? "a relog";
+		if (recall?.consumable == true)
 			Inventory.ConsumeOne(Avatar, recall);
-		SoundEngine.PlaySound(SoundID.Item6, body.Center);
+		if (recall != null)
+			SoundEngine.PlaySound(SoundID.Item6, body.Center);
 		var home = BotWorldSystem.RespawnFeet(Bot);
 		Bot.LastRecallAt = Main.GameUpdateCount;
 		body.position = home - new Vector2(body.width / 2f, body.height);
@@ -94,7 +100,10 @@ public abstract class BotTask
 		Bot.Vitals.Teleported(body);
 		Bot.Motor.Stop();
 		BotDiagnostics.Log(Bot, $"used {name} to return home");
-		Spectating.SpectatorSystem.AnnounceJump(Bot, "RecalledHome", Bot.Name, name);
+		if (recall != null)
+			Spectating.SpectatorSystem.AnnounceJump(Bot, "RecalledHome", Bot.Name, name);
+		else
+			Spectating.SpectatorSystem.AnnounceJump(Bot, "RelogHome", Bot.Name);
 		return true;
 	}
 
@@ -151,7 +160,7 @@ public abstract class BotTask
 
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
-		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CarriesRecall(Avatar) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
+		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CanRecall(Bot) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
 			return false;
 		if (Bot.LastRecallTarget is Vector2 earlier && Vector2.Distance(earlier, target) < SameTripReach && Main.GameUpdateCount - Bot.LastRecallAt < SameTripTicks)
 			return false;
@@ -485,7 +494,7 @@ public abstract class BotTask
 			}
 		}
 		var entryPoint = new Vector2(bestEntry.X * 16f + 8f, (best.Y + 1) * 16f - 21f);
-		if (bestDistance > HighwayEntryReach * 16f && CarriesRecall(Avatar) && Main.GameUpdateCount - Bot.LastRecallAt >= RecallCooldownTicks
+		if (bestDistance > HighwayEntryReach * 16f && CanRecall(Bot) && Main.GameUpdateCount - Bot.LastRecallAt >= RecallCooldownTicks
 			&& RecallBringsCloser(entryPoint) && TryRecallToCamp())
 		{
 			recalled = true;
@@ -568,7 +577,7 @@ public abstract class BotTask
 			return !Bot.Motor.IsStuck;
 		}
 		bool sameTrip = Bot.LastRecallTarget is Vector2 earlier && Vector2.Distance(earlier, target) < SameTripReach && Main.GameUpdateCount - Bot.LastRecallAt < SameTripTicks;
-		if (tile.Y > shaft.TopY + ShaftMouthReach && !sameTrip && CarriesRecall(Avatar) && RecallLandsAtBase() && TryRecallHome())
+		if (tile.Y > shaft.TopY + ShaftMouthReach && !sameTrip && CanRecall(Bot) && RecallLandsAtBase() && TryRecallHome())
 		{
 			Bot.LastRecallTarget = target;
 			return true;

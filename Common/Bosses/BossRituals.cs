@@ -333,7 +333,7 @@ public static class BossRituals
 	{
 		float viaHome = Vector2.Distance(bot.Faction.BaseCenter, place) / 16f;
 		return BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive)
-			.Select(member => System.Math.Min(Vector2.Distance(member.Center, place) / 16f, Bots.Tasks.BotTask.CarriesRecall(member.Avatar) ? viaHome : float.MaxValue))
+			.Select(member => System.Math.Min(Vector2.Distance(member.Center, place) / 16f, Bots.Tasks.BotTask.CanRecall(member) ? viaHome : float.MaxValue))
 			.DefaultIfEmpty(0f).Max();
 	}
 
