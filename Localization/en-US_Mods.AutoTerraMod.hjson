@@ -36,9 +36,10 @@ Configs: {
 			Label: Diagnostic logging
 			Tooltip: Log bot task and plan changes to client.log.
 		}
+
 		WorkbenchBossSummons: {
 			Label: Craft boss summons at a work bench
-			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench. Requires a reload.
+			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench.
 		}
 	}
 
@@ -241,4 +242,8 @@ Roofs: {
 	Flat: flat roof
 	Gable: gable roof
 	Shed: shed roof
+}
+
+Conditions: {
+	WorkbenchSummons: "With work bench boss summons enabled"
 }

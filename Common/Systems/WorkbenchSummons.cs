@@ -1,16 +1,17 @@
 using System.Linq;
 using Terraria;
 using Terraria.ID;
+using Terraria.Localization;
 using Terraria.ModLoader;
 
 namespace AutoTerraMod.Common.Systems;
 
 public sealed class WorkbenchSummons : ModSystem
 {
+	public static readonly Condition Enabled = new(Language.GetText("Mods.AutoTerraMod.Conditions.WorkbenchSummons"), () => ModContent.GetInstance<Config.AutoTerraConfig>().WorkbenchBossSummons);
+
 	public override void AddRecipes()
 	{
-		if (!ModContent.GetInstance<Config.AutoTerraConfig>().WorkbenchBossSummons)
-			return;
 		var altarSummons = Main.recipe.Take(Recipe.numRecipes)
 			.Where(recipe => recipe.requiredTile.Contains(TileID.DemonAltar) && ItemID.Sets.SortingPriorityBossSpawns[recipe.createItem.type] >= 0)
 			.ToList();
@@ -25,6 +26,7 @@ public sealed class WorkbenchSummons : ModSystem
 			copy.AddTile(TileID.WorkBenches);
 			foreach (var condition in original.Conditions)
 				copy.AddCondition(condition);
+			copy.AddCondition(Enabled);
 			copy.Register();
 		}
 	}

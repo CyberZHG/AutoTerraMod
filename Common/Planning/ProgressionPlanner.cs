@@ -678,6 +678,12 @@ public static class ProgressionPlanner
 	{
 		foreach (var condition in recipe.Conditions)
 		{
+			if (condition == Systems.WorkbenchSummons.Enabled)
+			{
+				if (!condition.IsMet())
+					return false;
+				continue;
+			}
 			if (condition != Condition.NearWater || World.WaterFinder.NearestShore(bot.Faction.BaseTile) == null)
 				return false;
 		}

@@ -40,7 +40,6 @@ public sealed class AutoTerraConfig : ModConfig
 	public bool DiagnosticLogging;
 
 	[DefaultValue(false)]
-	[ReloadRequired]
 	public bool WorkbenchBossSummons;
 
 	public override void OnChanged()
