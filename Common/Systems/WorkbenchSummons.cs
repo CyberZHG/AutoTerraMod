@@ -8,7 +8,7 @@ namespace AutoTerraMod.Common.Systems;
 
 public sealed class WorkbenchSummons : ModSystem
 {
-	public static readonly Condition Enabled = new(Language.GetText("Mods.AutoTerraMod.Conditions.WorkbenchSummons"), () => ModContent.GetInstance<Config.AutoTerraConfig>().WorkbenchBossSummons);
+	public static readonly Condition Enabled = new(Language.GetText("Mods.AutoTerraMod.Conditions.WorkbenchSummons"), () => ModContent.GetInstance<Config.AutoTerraConfig>().WorkbenchBossSummons && BotWorldSystem.Settings is { BotsEnabled: true });
 
 	public override void AddRecipes()
 	{

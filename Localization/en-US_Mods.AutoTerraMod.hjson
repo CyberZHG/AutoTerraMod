@@ -39,7 +39,7 @@ Configs: {
 
 		WorkbenchBossSummons: {
 			Label: Craft boss summons at a work bench
-			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench.
+			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench in worlds with bots enabled.
 		}
 	}
 
@@ -244,6 +244,4 @@ Roofs: {
 	Shed: shed roof
 }
 
-Conditions: {
-	WorkbenchSummons: "With work bench boss summons enabled"
-}
+Conditions.WorkbenchSummons: With work bench boss summons enabled

@@ -39,7 +39,7 @@ Configs: {
 
 		WorkbenchBossSummons: {
 			Label: 在工作台合成Boss召唤物
-			Tooltip: 原本需要恶魔祭坛或猩红祭坛的Boss召唤物也可以在工作台合成。
+			Tooltip: 原本需要恶魔祭坛或猩红祭坛的Boss召唤物在开启了bot的地图里也可以在工作台合成。
 		}
 	}
 
@@ -244,6 +244,4 @@ Roofs: {
 	Shed: 单坡顶
 }
 
-Conditions: {
-	WorkbenchSummons: "开启在工作台合成Boss召唤物时"
-}
+Conditions.WorkbenchSummons: 开启在工作台合成Boss召唤物时
