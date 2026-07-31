@@ -1354,11 +1354,23 @@ public sealed class DigShaftTask : BotTask
 	const float ThrowAtBreath = 0.5f;
 	bool diving;
 
+	const int SurfaceApproachRows = 8;
+
+	bool AtShaftWater(Hellevator shaft, int row) =>
+		Bot.CenterTile.X >= shaft.X && Bot.CenterTile.X <= shaft.Right && Bot.CenterTile.Y >= row - shaft.WaterAbove(row) - SurfaceApproachRows;
+
 	bool RefillAir(Hellevator shaft, int row)
 	{
 		int water = shaft.WaterAbove(row);
 		if (water <= Hellevator.SafeDiveRows || BossRituals.BreathesUnderwater(Bot))
 			return false;
+		var surface = new Vector2((shaft.X + 1) * 16f, (row - water - 3) * 16f);
+		if (!AtShaftWater(shaft, row))
+		{
+			diving = false;
+			Descend(shaft, surface);
+			return true;
+		}
 		if (diving)
 		{
 			if (Bot.Vitals.BreathFraction >= ThrowAtBreath)
@@ -1370,7 +1382,6 @@ public sealed class DigShaftTask : BotTask
 			diving = true;
 			return false;
 		}
-		var surface = new Vector2((shaft.X + 1) * 16f, (row - water - 3) * 16f);
 		if (Bot.Center.Y > surface.Y + 16f)
 			Bot.Motor.MoveTo(surface, 12f);
 		else
@@ -1393,7 +1404,7 @@ public sealed class DigShaftTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		bool breathLow = diving && Bot.Vitals.BreathFraction < ThrowAtBreath;
+		bool breathLow = diving && AtShaftWater(shaft, row) && Bot.Vitals.BreathFraction < ThrowAtBreath;
 		if (!breathLow && RefillAir(shaft, row))
 			return;
 		int waterTop = row - shaft.WaterAbove(row);
@@ -1405,7 +1416,7 @@ public sealed class DigShaftTask : BotTask
 			Descend(shaft, spot);
 			return;
 		}
-		if (shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor))
+		if (shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor, volley: Hellevator.WaterVolley))
 		{
 			shaft.WaterBlasts++;
 			shaft.LastBlastAt = Main.GameUpdateCount;

@@ -405,17 +405,25 @@ public static class BossRituals
 
 	public static Hellevator ShaftFor(Factions.Faction faction)
 	{
-		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && (shaft.Right >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
+		if (faction.Hellevator is { } shaft && faction.Settlement is { } camp && !UnderHall(shaft, camp) && (shaft.Right >= camp.Left && shaft.X <= camp.Right || shaft.TopY != camp.Floor - 1))
 			faction.Hellevator = null;
 		var planned = faction.Hellevator ??= PlanShaft(faction);
 		planned.LandingRow = faction.Hellbridge?.Y;
 		return planned;
 	}
 
+	static bool UnderHall(Hellevator shaft, Building.Settlement camp) =>
+		shaft.TopY == camp.Hall.Floor && shaft.X > camp.Hall.Left && shaft.Right < camp.Hall.Right;
+
 	static Hellevator PlanShaft(Factions.Faction faction)
 	{
 		if (faction.Settlement is { } camp)
-			return new Hellevator(camp.Right + ShaftInApron, camp.Floor - 1);
+		{
+			int hallX = (camp.Hall.Left + camp.Hall.Right) / 2 - 1;
+			return hallX > camp.Hall.Left && hallX + Hellevator.Width - 1 < camp.Hall.Right
+				? new Hellevator(hallX, camp.Hall.Floor)
+				: new Hellevator(camp.Right + ShaftInApron, camp.Floor - 1);
+		}
 		int x = faction.BaseTile.X + ShaftOffsetFromBase;
 		return new Hellevator(x, TileQuery.SurfaceY(x) - 1);
 	}
@@ -450,6 +458,7 @@ public static class BossRituals
 	}
 
 	const int BombRestock = 3;
+	const int WaterBombRestock = 15;
 	const int ShaftPlatformRestock = 20;
 
 	public static bool CanDigRow(Bot bot, Hellevator shaft, int row)
@@ -491,7 +500,7 @@ public static class BossRituals
 		if (ShaftTooFlooded(bot, shaft))
 			return PlanStep.Idle;
 		if (NeedsWaterBlast(bot, shaft) && !bot.Hands.Explosives.Carries)
-			return ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
+			return ProgressionPlanner.Obtain(bot, ItemID.Bomb, WaterBombRestock);
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
 		if (carried == 0 && !roped)

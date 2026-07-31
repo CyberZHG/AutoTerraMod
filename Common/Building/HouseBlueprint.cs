@@ -252,12 +252,21 @@ public sealed class HouseBlueprint
 
 	public IEnumerable<Point> FurnitureSpots(Point preferred)
 	{
-		yield return preferred;
+		if (!OverShaft(preferred.X))
+			yield return preferred;
 		for (int x = Left + 3; x <= Right - 2; x++)
 		{
-			if (x != preferred.X)
+			if (x != preferred.X && !OverShaft(x))
 				yield return new Point(x, Floor - 1);
 		}
+	}
+
+	bool OverShaft(int x)
+	{
+		for (int dx = -2; dx <= 2; dx++)
+			if (Hellevator.InAnyShaft(x + dx, Floor + 1))
+				return true;
+		return false;
 	}
 
 	public IEnumerable<Point> FloorSpotsNearCenter()

@@ -28,6 +28,7 @@ public sealed class Explosives
 
 	const int FuseTicks = 180;
 	const float ThrowTicks = 10f;
+	const float VolleySpread = 0.6f;
 
 	public static bool IsExplosive(Item item) => Charges.Any(charge => charge.item == item.type);
 
@@ -70,7 +71,7 @@ public sealed class Explosives
 		return true;
 	}
 
-	public bool Light(Point tile, bool spareProtected = true)
+	public bool Light(Point tile, bool spareProtected = true, int volley = 1)
 	{
 		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
 			return false;
@@ -82,17 +83,22 @@ public sealed class Explosives
 		var from = bot.Center;
 		var aim = tile.ToWorldCoordinates() - from;
 		var velocity = aim == Vector2.Zero ? Vector2.Zero : Vector2.Normalize(aim) * System.Math.Min(item.shootSpeed, aim.Length() / ThrowTicks);
-		int index;
-		using (Systems.AvatarPresence.Enter())
-			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
-		if (Main.projectile[index].timeLeft > FuseTicks)
-			Main.projectile[index].timeLeft = FuseTicks;
-		Inventory.ConsumeOne(bot.Avatar, item);
+		int index = -1;
+		int thrown = 0;
+		for (; thrown < volley && !item.IsAir && item.type == charge.item; thrown++)
+		{
+			var spread = new Vector2((thrown - (volley - 1) / 2f) * VolleySpread, 0f);
+			using (Systems.AvatarPresence.Enter())
+				index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity + spread, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
+			if (Main.projectile[index].timeLeft > FuseTicks)
+				Main.projectile[index].timeLeft = FuseTicks;
+			Inventory.ConsumeOne(bot.Avatar, item);
+		}
 		projectileIndex = index;
 		projectileIdentity = Main.projectile[index].identity;
 		target = tile;
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
-		BotDiagnostics.Log(bot, $"threw {name} at {tile} to blast through");
+		BotDiagnostics.Log(bot, $"threw {thrown} {name} at {tile} to blast through");
 		return true;
 	}
 

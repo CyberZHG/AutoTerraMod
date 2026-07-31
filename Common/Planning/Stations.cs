@@ -154,6 +154,15 @@ public static class Stations
 
 	public static IEnumerable<Point> PlacementSpots(Faction faction, Item item)
 	{
+		var spots = AllPlacementSpots(faction, item);
+		if (Building.BaseStorage.IsStorageItem(item) || faction.Settlement is not { } camp)
+			return spots;
+		var storage = camp.StorageRooms.ToList();
+		return spots.Where(spot => !storage.Any(room => spot.X >= room.Left && spot.X <= room.Right && spot.Y >= room.Top && spot.Y <= room.Floor + 1));
+	}
+
+	static IEnumerable<Point> AllPlacementSpots(Faction faction, Item item)
+	{
 		var settlement = faction.Settlement;
 		if (settlement == null)
 			yield break;
