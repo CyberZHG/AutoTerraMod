@@ -78,6 +78,8 @@ public sealed class Settlement
 		AddApron(structures.Where(structure => structure.Floor == floor).MinBy(structure => structure.Left), Left - ApronWidth, Left - 1);
 		AddApron(structures.Where(structure => structure.Floor == floor).MaxBy(structure => structure.Right), Right + 1, Right + ApronWidth);
 		Hall.AddFloorPlatforms(Hall.Left + 1, Hall.Right - 1);
+		foreach (var structure in structures)
+			structure.AddRoofHatch();
 		yardKeeper.Yard = YardTiles;
 	}
 

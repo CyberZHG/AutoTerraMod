@@ -36,6 +36,10 @@ Configs: {
 			Label: 诊断日志
 			Tooltip: 把角色任务和计划变化写入 client.log。
 		}
+		WorkbenchBossSummons: {
+			Label: 在工作台合成Boss召唤物
+			Tooltip: 原本需要恶魔祭坛或猩红祭坛的Boss召唤物也可以在工作台合成。需要重新加载。
+		}
 	}
 
 	FactionRelation: {

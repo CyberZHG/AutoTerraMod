@@ -126,6 +126,20 @@ public sealed class HouseBlueprint
 		}
 	}
 
+	public void AddRoofHatch()
+	{
+		if (hatchColumns.Any(column => platforms.Contains(new Point(column, Ceiling))) || center - 1 <= Left || center + 1 >= Right)
+			return;
+		for (int x = center - 1; x <= center + 1; x++)
+		{
+			hatchColumns.Add(x);
+			platforms.Add(new Point(x, Ceiling));
+			var step = new Point(x, Floor - StepHeight);
+			if (!platforms.Contains(step))
+				platforms.Add(step);
+		}
+	}
+
 	public void AddHatchBelow(int? at = null)
 	{
 		int start = at ?? center;

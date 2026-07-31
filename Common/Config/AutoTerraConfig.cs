@@ -39,6 +39,10 @@ public sealed class AutoTerraConfig : ModConfig
 	[DefaultValue(false)]
 	public bool DiagnosticLogging;
 
+	[DefaultValue(false)]
+	[ReloadRequired]
+	public bool WorkbenchBossSummons;
+
 	public override void OnChanged()
 	{
 		var current = Systems.BotWorldSystem.Settings;

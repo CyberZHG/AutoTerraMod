@@ -498,7 +498,7 @@ public static class ProgressionPlanner
 			return PlanStep.Blocked;
 		if (source != null)
 			return UnknownGround(context.Bot, source) is World.Landmark ground ? new ScoutStep(ground, false) : new GatherStep(itemType, amount - have, source);
-		foreach (var recipe in RecipeIndex.For(itemType).OrderBy(UsesWood))
+		foreach (var recipe in RecipeIndex.For(itemType).OrderBy(UsesWood).ThenBy(recipe => recipe.requiredTile.Contains(Terraria.ID.TileID.DemonAltar) ? 1 : 0))
 		{
 			int crafts = (amount - have + recipe.createItem.stack - 1) / Math.Max(1, recipe.createItem.stack);
 			var step = PlanRecipe(context, recipe, depth, crafts);

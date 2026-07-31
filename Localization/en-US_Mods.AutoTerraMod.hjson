@@ -36,6 +36,10 @@ Configs: {
 			Label: Diagnostic logging
 			Tooltip: Log bot task and plan changes to client.log.
 		}
+		WorkbenchBossSummons: {
+			Label: Craft boss summons at a work bench
+			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench. Requires a reload.
+		}
 	}
 
 	FactionRelation: {
