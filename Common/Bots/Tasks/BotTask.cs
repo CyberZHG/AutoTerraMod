@@ -213,6 +213,8 @@ public abstract class BotTask
 	}
 
 	const float ShaftDropMargin = 16f * 6f;
+	const int ShaftDropRoom = 3;
+	const int ShaftUsefulDepth = 20;
 	const float ShaftDropFinish = 16f;
 	const float ShaftCentring = 5f;
 	const int ShaftMouthReach = 20;
@@ -248,11 +250,11 @@ public abstract class BotTask
 
 	bool ShaftShortcut(Vector2 target)
 	{
-		if (Bot.Faction.Hellevator is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish)
+		if (Bot.Faction.Hellevator is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish || shaft.FirstImpassableRow() - shaft.TopY < ShaftUsefulDepth)
 			return false;
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
-		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow();
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || Bot.Npc?.velocity.Y > 0f))
 		{
 			CentreIn(shaft);
@@ -541,7 +543,7 @@ public abstract class BotTask
 	bool LeavesShaft(Vector2 target) =>
 		Bot.Faction.Hellevator is { } shaft && target.ToTileCoordinates() is var goal && (goal.X < shaft.X - ShaftExitMargin || goal.X > shaft.Right + ShaftExitMargin);
 
-	bool InOwnShaft() => Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow();
+	bool InOwnShaft() => Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 
 	bool DeepDetour(Vector2 target, float radius)
 	{
@@ -552,7 +554,7 @@ public abstract class BotTask
 			return false;
 		int levelRow = System.Math.Min(goal.Y, shaft.FirstImpassableRow() - 2);
 		var tile = Bot.CenterTile;
-		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow();
+		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 		if (!inShaft && goal.Y - tile.Y < DeepDetourRise)
 			return false;
 		if (!inShaft && goal.Y < Main.UnderworldLayer && (System.Math.Abs(goal.X - shaft.X) > System.Math.Abs(goal.X - tile.X) + DeepDetourRise || System.Math.Abs(goal.X - shaft.X) > MaxSidewaysTunnel))
