@@ -237,7 +237,11 @@ public static class HouseInspector
 		if (!IsDesignatedBuilder(bot) || bot.Faction.Settlement is not { } settlement)
 			return false;
 		if (!unfinishedCache.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= UnfinishedCacheTicks)
-			unfinishedCache[bot.FactionId] = cached = (Main.GameUpdateCount, settlement.Structures.Any(structure => !IsFinished(bot.Faction, structure)));
+		{
+			var materials = MaterialsFor(bot.Faction);
+			unfinishedCache[bot.FactionId] = cached = (Main.GameUpdateCount, settlement.Structures.Any(structure => !IsComplete(bot.Faction, structure)
+				|| structure.PendingOperations(materials).Any(operation => operation.Action is not (BuildAction.RenovateBlock or BuildAction.RenovateWall) && !bot.Faction.Scaffolding.Contains(operation.Tile))));
+		}
 		return cached.unfinished;
 	}
 
