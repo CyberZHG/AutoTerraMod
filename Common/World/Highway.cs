@@ -66,6 +66,8 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 			.MinBy(other => System.Math.Abs(other.BaseTile.X - faction.BaseTile.X));
 		int end;
 		int? link = null;
+		if (neighbour != null && neighbour.Id < faction.Id && NearestToward(neighbour, -direction) == faction)
+			return null;
 		if (neighbour?.Settlement is { } theirs)
 		{
 			link = direction > 0 ? theirs.Left - Building.Settlement.ApronWidth - 1 : theirs.Right + Building.Settlement.ApronWidth + 1;
@@ -79,6 +81,10 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 			return null;
 		return new Highway(faction.Id, direction, start, end, camp.Floor - 1, link);
 	}
+
+	static Faction NearestToward(Faction from, int direction) => Systems.BotWorldSystem.Factions
+		.Where(other => other != from && System.Math.Sign(other.BaseTile.X - from.BaseTile.X) == direction)
+		.MinBy(other => System.Math.Abs(other.BaseTile.X - from.BaseTile.X));
 
 	public int End(int direction) => EndX;
 

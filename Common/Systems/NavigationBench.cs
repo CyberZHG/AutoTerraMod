@@ -29,7 +29,7 @@ public sealed class NavigationBench : ModSystem
 	const int SpaceTop = 60;
 	const int SpaceScaleRows = 10;
 	const int GravityMargin = 4;
-	const int ArenaLeft = 300;
+	const int ArenaLeft = 420;
 	const int ArenaSpacing = 60;
 	const int ArenaRowHeight = 100;
 	const int TimeoutTicks = 30 * 60;
@@ -51,6 +51,29 @@ public sealed class NavigationBench : ModSystem
 			"#..............................#",
 			"#S............................G#",
 			"################################"
+		}),
+		new("DiagonalTunnel", new[]
+		{
+			"##################",
+			"#.sssssssssssssss#",
+			"#..ssssssssssssss#",
+			"#S..sssssssssssss#",
+			"#s...ssssssssssss#",
+			"#ss...sssssssssss#",
+			"#sss...ssssssssss#",
+			"#ssss...sssssssss#",
+			"#sssss...ssssssss#",
+			"#ssssss...sssssss#",
+			"#sssssss...ssssss#",
+			"#ssssssss...sssss#",
+			"#sssssssss...ssss#",
+			"#ssssssssss...sss#",
+			"#sssssssssss...ss#",
+			"#ssssssssssss...s#",
+			"#sssssssssssss..s#",
+			"#ssssssssssssssGs#",
+			"#ssssssssssssssss#",
+			"##################"
 		}),
 		new("Stairs", new[]
 		{
