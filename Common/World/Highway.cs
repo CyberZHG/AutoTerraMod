@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutoTerraMod.Common.Factions;
@@ -6,7 +7,7 @@ using Terraria.ID;
 
 namespace AutoTerraMod.Common.World;
 
-public sealed record Highway(int FactionId, int Direction, int StartX, int EndX, int Y, int? LinkX) : ICorridor
+public sealed record Highway(int FactionId, int Direction, int StartX, int EndX, int Y, int? LinkX, int? LinkY = null) : ICorridor
 {
 	public const int Clearance = 5;
 
@@ -66,11 +67,12 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 			.MinBy(other => System.Math.Abs(other.BaseTile.X - faction.BaseTile.X));
 		int end;
 		int? link = null;
-		if (neighbour != null && neighbour.Id < faction.Id && NearestToward(neighbour, -direction) == faction)
-			return null;
+		int? linkY = null;
 		if (neighbour?.Settlement is { } theirs)
 		{
-			link = direction > 0 ? theirs.Left - Building.Settlement.ApronWidth - 1 : theirs.Right + Building.Settlement.ApronWidth + 1;
+			int theirStart = direction > 0 ? theirs.Left - Building.Settlement.ApronWidth - 1 : theirs.Right + Building.Settlement.ApronWidth + 1;
+			link = (Math.Min(start, theirStart) + Math.Max(start, theirStart)) / 2;
+			linkY = theirs.Floor - 1;
 			end = link.Value - direction;
 		}
 		else
@@ -79,12 +81,8 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		}
 		if ((end - start) * direction <= 0)
 			return null;
-		return new Highway(faction.Id, direction, start, end, camp.Floor - 1, link);
+		return new Highway(faction.Id, direction, start, end, camp.Floor - 1, link, linkY);
 	}
-
-	static Faction NearestToward(Faction from, int direction) => Systems.BotWorldSystem.Factions
-		.Where(other => other != from && System.Math.Sign(other.BaseTile.X - from.BaseTile.X) == direction)
-		.MinBy(other => System.Math.Abs(other.BaseTile.X - from.BaseTile.X));
 
 	public int End(int direction) => EndX;
 
@@ -219,7 +217,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		{
 			if (LinkX is not int x)
 				return null;
-			int ground = TileQuery.SurfaceY(x) - 1;
+			int ground = LinkY ?? TileQuery.SurfaceY(x) - 1;
 			if (System.Math.Abs(ground - Y) <= 1)
 				return null;
 			return (System.Math.Min(ground, Y), System.Math.Max(ground, Y));
