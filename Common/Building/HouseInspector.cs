@@ -272,7 +272,7 @@ public static class HouseMaterials
 
 	public static BuildAction ReplacementFor(BuildAction action) => action switch
 	{
-		BuildAction.RenovateBlock => BuildAction.PlaceBlock,
+		BuildAction.RenovateBlock or BuildAction.Foundation => BuildAction.PlaceBlock,
 		BuildAction.RenovateWall => BuildAction.PlaceWall,
 		_ => action
 	};

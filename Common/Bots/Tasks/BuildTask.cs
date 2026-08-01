@@ -155,7 +155,7 @@ public sealed class BuildTask : BotTask
 	{
 		var blueprint = structure;
 		var here = Bot.CenterTile;
-		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock;
+		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock or BuildAction.Foundation;
 		var avoid = operation.Action == BuildAction.RemoveScaffold ? Bot.Faction.Scaffolding : null;
 		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile, avoid) is Point foothold)
 			return Navigation.PathFinder.BodyCenterAt(foothold);
@@ -231,6 +231,7 @@ public sealed class BuildTask : BotTask
 			case BuildAction.RemoveScaffold:
 				return Bot.Hands.Dig(tile) == ToolResult.Working;
 			case BuildAction.RenovateBlock:
+			case BuildAction.Foundation:
 				return Bot.Hands.ReplaceBlock(tool, tile) == ToolResult.Working;
 			case BuildAction.RenovateWall:
 				return Bot.Hands.ReplaceWall(tool, tile);

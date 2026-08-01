@@ -21,7 +21,8 @@ public enum BuildAction
 	RemoveScaffold,
 	RenovateBlock,
 	RenovateWall,
-	PlacePlatform
+	PlacePlatform,
+	Foundation
 }
 
 public enum StructurePurpose
@@ -42,6 +43,7 @@ public sealed class HouseBlueprint
 	const int ChestWidth = 2;
 
 	const int StepHeight = 3;
+	const int FoundationDepth = 3;
 
 	readonly List<Point> shellInBuildOrder = new();
 	readonly HashSet<Point> shell = new();
@@ -218,6 +220,10 @@ public sealed class HouseBlueprint
 			yield return Operation(BuildAction.PlaceBlock, tile);
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
+		for (int y = Floor; y <= Floor + FoundationDepth; y++)
+			for (int x = Left; x <= Right; x++)
+				if (TileQuery.IsSolid(x, y) && TileID.Sets.Falling[Main.tile[x, y].TileType] && !Hellevator.InAnyShaft(x, y))
+					yield return Operation(BuildAction.Foundation, new Point(x, y));
 		foreach (int x in new[] { Left, Right }.Where(HasDoorAt))
 		{
 			if (IsRealDoor(x, Floor - 2) && !(IsRealDoor(x, Floor - DoorHeight) && IsRealDoor(x, Floor - 1)))

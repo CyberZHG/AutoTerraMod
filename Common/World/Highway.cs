@@ -211,6 +211,8 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public bool InClearance(int x, int y) => y > Y - Headroom && y <= Y && Spans(x) || LinkX == x && LinkRows is var (top, bottom) && y >= top && y <= bottom;
 
+	const int JumpableRise = 4;
+
 	public (int top, int bottom)? LinkRows
 	{
 		get
@@ -218,9 +220,9 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 			if (LinkX is not int x)
 				return null;
 			int ground = LinkY ?? TileQuery.SurfaceY(x) - 1;
-			if (System.Math.Abs(ground - Y) <= 1)
+			if (System.Math.Abs(ground - Y) <= (LinkY == null ? 1 : JumpableRise))
 				return null;
-			return (System.Math.Min(ground, Y), System.Math.Max(ground, Y));
+			return LinkY == null ? (System.Math.Min(ground, Y), System.Math.Max(ground, Y)) : (System.Math.Min(ground, Y) + 1, System.Math.Max(ground, Y));
 		}
 	}
 
