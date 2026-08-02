@@ -55,6 +55,8 @@ public static class PathFinder
 
 	static readonly List<PathSearch> waiting = new();
 
+	public static bool Prioritized { get; set; }
+
 	static uint budgetTick;
 	static long tickDeadline;
 
@@ -82,6 +84,11 @@ public static class PathFinder
 		if (search.IsDone)
 			return true;
 		StartBudgetTick();
+		if (Prioritized)
+		{
+			waiting.Remove(search);
+			return search.Step(Stopwatch.GetTimestamp() + Ticks(SliceMilliseconds));
+		}
 		waiting.RemoveAll(other => other.IsDone || Main.GameUpdateCount - other.PolledAt > ForgetWaitingTicks);
 		int ahead = waiting.IndexOf(search);
 		long reserved = (ahead < 0 ? waiting.Count : ahead) * Ticks(SliceMilliseconds);

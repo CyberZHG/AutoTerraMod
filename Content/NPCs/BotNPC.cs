@@ -46,9 +46,11 @@ public sealed class BotNPC : ModNPC
 			NPC.active = false;
 			return;
 		}
+		Common.Navigation.PathFinder.Prioritized = bot == Common.Spectating.SpectatorSystem.Followed;
 		using (Perf.Measure(PerfSection.BotAi))
 		using (Common.World.ShrineGuard.BotActing())
 			bot.Brain.Tick(NPC);
+		Common.Navigation.PathFinder.Prioritized = false;
 	}
 
 	public override void PostAI()
