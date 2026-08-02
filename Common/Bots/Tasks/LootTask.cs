@@ -41,7 +41,8 @@ public sealed class LootTask : BotTask
 			return 0f;
 		chestAt = new Point(Main.chest[chestIndex].x, Main.chest[chestIndex].y);
 		var chestTile = Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y];
-		Detail = Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36)) ?? "";
+		string name = Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36));
+		Detail = string.IsNullOrEmpty(name) ? $"{Main.chest[chestIndex].x},{Main.chest[chestIndex].y}" : name;
 		return wanted ? WantedScore : 30f + Traits.Exploring * 40f;
 	}
 
@@ -74,8 +75,7 @@ public sealed class LootTask : BotTask
 				}
 				return;
 			}
-			Bot.Motor.MoveTo(chestTile.ToWorldCoordinates(16f, 16f), 24f);
-			if (Bot.Motor.IsStuck)
+			if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
 				Abandon("stuck on the way");
 			return;
 		}
@@ -203,7 +203,8 @@ public sealed class LootTask : BotTask
 		.First();
 
 	bool IsLootable(Chest chest) =>
-		!Chest.IsLocked(chest.x, chest.y)
+		Main.tile[chest.x, chest.y].HasTile && TileID.Sets.BasicChest[Main.tile[chest.x, chest.y].TileType]
+		&& !Chest.IsLocked(chest.x, chest.y)
 		&& !IsAtAnyBase(chest)
 		&& Main.LocalPlayer.chest != System.Array.IndexOf(Main.chest, chest);
 
