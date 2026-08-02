@@ -32,6 +32,7 @@ public sealed class BotGrapple
 	public int HookReachTiles => !Suppressed && FindHook() is Item hook ? (int)(RangeOf(hook.shoot) / 16f) - 1 : 0;
 
 	const int LatchesBeforeSuppress = 3;
+	const int MaxLatchesPerWindow = 6;
 	const uint LatchWindowTicks = 600;
 	const uint SuppressTicks = 1800;
 
@@ -56,7 +57,7 @@ public sealed class BotGrapple
 			windowLatches = 0;
 			windowStartY = body.Center.Y;
 		}
-		if (++windowLatches >= LatchesBeforeSuppress && body.Center.Y > windowStartY - 16f)
+		if (++windowLatches >= LatchesBeforeSuppress && body.Center.Y > windowStartY - 16f || windowLatches > MaxLatchesPerWindow)
 		{
 			suppressedUntil = Main.GameUpdateCount + SuppressTicks;
 			BotDiagnostics.Log(bot, "hooking keeps getting nowhere, leaving the hook alone for a while");

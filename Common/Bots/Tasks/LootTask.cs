@@ -17,6 +17,7 @@ public sealed class LootTask : BotTask
 	const float WantedScore = 90f;
 
 	int chestIndex = -1;
+	Point chestAt;
 	int openTimer;
 	bool emptied;
 	bool wanted;
@@ -38,6 +39,7 @@ public sealed class LootTask : BotTask
 			chestIndex = NearestLootable(knowledge);
 		if (chestIndex < 0 || Inventory.UsedSlots(Avatar) >= 45)
 			return 0f;
+		chestAt = new Point(Main.chest[chestIndex].x, Main.chest[chestIndex].y);
 		var chestTile = Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y];
 		Detail = Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36)) ?? "";
 		return wanted ? WantedScore : 30f + Traits.Exploring * 40f;
@@ -53,7 +55,7 @@ public sealed class LootTask : BotTask
 	public override void Tick()
 	{
 		var chest = chestIndex >= 0 ? Main.chest[chestIndex] : null;
-		if (chest == null)
+		if (chest == null || chest.x != chestAt.X || chest.y != chestAt.Y || !IsLootable(chest))
 		{
 			IsFinished = true;
 			return;
