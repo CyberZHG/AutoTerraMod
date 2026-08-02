@@ -12,6 +12,10 @@ public sealed class BotBrain
 	const int ReconsiderInterval = 30;
 	const float CurrentTaskBias = 1.15f;
 	const int MinimumCommitmentTicks = 180;
+	const float WatchedTaskBias = 1.4f;
+	const int WatchedCommitmentTicks = 480;
+
+	bool Watched => Spectating.SpectatorSystem.Followed == bot;
 	const int ObserveEveryReconsiders = 4;
 	const int GoalSuppressionTicks = 3600;
 	const int QuickFailureTicks = 30;
@@ -238,7 +242,7 @@ public sealed class BotBrain
 			using (Probes.Measure(task.EvaluateLabel))
 				score = task.Evaluate();
 			if (task == current && !task.IsFinished && !IsRoaming(task))
-				score *= CurrentTaskBias;
+				score *= Watched ? WatchedTaskBias : CurrentTaskBias;
 			if (score > bestScore)
 			{
 				best = task;
@@ -254,7 +258,7 @@ public sealed class BotBrain
 		current = best;
 		current?.Begin();
 		currentStartedAt = Main.GameUpdateCount;
-		committedUntil = Main.GameUpdateCount + MinimumCommitmentTicks;
+		committedUntil = Main.GameUpdateCount + (uint)(Watched ? WatchedCommitmentTicks : MinimumCommitmentTicks);
 		string signature = $"{current?.NameKey}|{current?.Detail}|{Plan}";
 		if (signature != lastDecisionSignature)
 			BotDiagnostics.LogDecision(bot, current, Plan);
