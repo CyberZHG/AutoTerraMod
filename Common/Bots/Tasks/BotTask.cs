@@ -420,7 +420,7 @@ public abstract class BotTask
 		if (goal.Y >= Main.UnderworldLayer || System.Math.Abs(goal.X - here.X) <= SurfaceFirstSpan || OnCorridorRow(goal))
 			return null;
 		int surface = TileQuery.SurfaceY(goal.X);
-		if (goal.Y < surface + SurfaceFirstDepth)
+		if (goal.Y < surface + SurfaceFirstDepth || here.Y >= TileQuery.SurfaceY(here.X) + SurfaceFirstDepth)
 			return null;
 		return new Vector2(goal.X * 16f + 8f, (surface - 2) * 16f);
 	}
