@@ -176,7 +176,9 @@ public sealed class BossCredit : GlobalNPC
 	static bool CanStartNow(Faction faction, BossChallenge challenge)
 	{
 		if (challenge.BossType != NPCID.SkeletronHead)
-			return SummonOnHand(faction, challenge);
+			return SummonOnHand(faction, challenge) || challenge.Triggers.OfType<SummonItemTrigger>().Any() && Systems.WorkbenchSummons.Enabled.IsMet();
+		if (Systems.BotWorldSystem.KnowledgeOf(faction).LandmarkOf(World.Landmark.Dungeon) == null)
+			return false;
 		if (skeletronReady.TryGetValue(faction.Id, out var cached) && Main.GameUpdateCount - cached.at < ReadinessCacheTicks)
 			return cached.ready;
 		bool ready = Systems.BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).MaxBy(bot => bot.Personality.Combat) is { } summoner
