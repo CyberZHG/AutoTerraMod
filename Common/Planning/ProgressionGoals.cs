@@ -1112,14 +1112,18 @@ public sealed class GatedGoal : ProgressionGoal
 
 public sealed class SurveyGoal : ProgressionGoal
 {
-	static World.Landmark[] Surveyed => new[] { World.Landmark.Jungle, World.Landmark.Snow, World.Landmark.Ocean, World.Landmarks.WorldEvil, World.Landmark.Dungeon };
+	static World.Landmark[] Surveyed => new[] { World.Landmarks.WorldEvil, World.Landmark.Dungeon, World.Landmark.Jungle, World.Landmark.Snow, World.Landmark.Ocean };
+
+	const int Surveyors = 2;
+
+	static int SurveyorRank(Bot bot) => BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive)
+		.OrderByDescending(member => member.Personality.Exploring).ThenBy(member => member.Id).ToList().IndexOf(bot);
 
 	public override bool IsExpedition => true;
 
 	public override string Describe() => "Survey";
 
-	public override bool AppliesTo(Bot bot) =>
-		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MaxBy(member => member.Personality.Exploring) == bot;
+	public override bool AppliesTo(Bot bot) => SurveyorRank(bot) is >= 0 and < Surveyors;
 
 	public override bool IsMet(Bot bot) => Unknown(bot) == null && UnexploredCave(bot, SurveyRingCells) == null;
 
@@ -1183,12 +1187,8 @@ public sealed class SurveyGoal : ProgressionGoal
 	static World.Landmark? Unknown(Bot bot)
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		foreach (var landmark in Surveyed)
-		{
-			if (knowledge.LandmarkOf(landmark) == null)
-				return landmark;
-		}
-		return null;
+		var unknown = Surveyed.Where(landmark => knowledge.LandmarkOf(landmark) == null).ToList();
+		return unknown.Count == 0 ? null : unknown[System.Math.Max(0, SurveyorRank(bot)) % unknown.Count];
 	}
 
 	public override PlanStep Plan(Bot bot) =>

@@ -171,7 +171,30 @@ public sealed class CraftTask : BotTask
 				return true;
 			}
 		}
-		BotDiagnostics.Log(Bot, $"no spot to set up a portable {name} near {feet}");
+		if (CarveNiche(feet))
+			return true;
+		if (lastNoSpot != feet)
+			BotDiagnostics.Log(Bot, $"no spot to set up a portable {name} near {feet}");
+		lastNoSpot = feet;
+		return false;
+	}
+
+	Point? lastNoSpot;
+
+	bool CarveNiche(Point feet)
+	{
+		foreach (int dx in new[] { 2, -3, 3, -4 })
+		{
+			var left = new Point(feet.X + dx, feet.Y);
+			var right = new Point(left.X + 1, left.Y);
+			if (!TileQuery.IsSolid(left.X, left.Y + 1) || !TileQuery.IsSolid(right.X, right.Y + 1))
+				continue;
+			var blocking = new[] { left, right }.Where(TileQuery.HasTile).ToList();
+			if (blocking.Count == 0 || blocking.Any(tile => Building.HouseInspector.IsProtected(tile.X, tile.Y) || !WorldGen.CanKillTile(tile.X, tile.Y)))
+				continue;
+			if (Bot.Hands.Dig(blocking[0]) is ToolResult.Working or ToolResult.Done)
+				return true;
+		}
 		return false;
 	}
 
