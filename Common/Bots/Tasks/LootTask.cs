@@ -12,7 +12,7 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class LootTask : BotTask
 {
 	const int OpenDelayTicks = 30;
-	const float MaxTravel = 16f * 200f;
+	const float MaxTravel = 16f * 80f;
 
 	const float WantedScore = 90f;
 
@@ -178,7 +178,7 @@ public sealed class LootTask : BotTask
 		int itemType = Bot.Brain.Plan is Planning.GatherStep { ItemType: int planned } ? planned : -1;
 		bool knownTemple = knowledge.LandmarkOf(World.Landmark.Temple) != null;
 		return Enumerable.Range(0, Main.maxChests)
-			.Where(index => Main.chest[index] is Chest chest && (chest.item.Any(item => item?.type == itemType && item.stack > 0) || WalkCost(chest) < SummonDetour && chest.item.Any(item => item != null && item.stack > 0 && Junk.IsBossSummon(item)))
+			.Where(index => Main.chest[index] is Chest chest && (WalkCost(chest) < GatherDetour && chest.item.Any(item => item?.type == itemType && item.stack > 0) || WalkCost(chest) < SummonDetour && chest.item.Any(item => item != null && item.stack > 0 && Junk.IsBossSummon(item)))
 				&& IsLootable(chest) && knowledge.MayLoot(index) && IsExposed(chest)
 				&& (!wantedRetryAt.TryGetValue(index, out uint retryAt) || Main.GameUpdateCount >= retryAt)
 				&& (knowledge.KnowsChest(index) || knowledge.IsExplored(chest.x / FactionKnowledge.ExploreCell, chest.y / FactionKnowledge.ExploreCell)
@@ -189,7 +189,8 @@ public sealed class LootTask : BotTask
 	}
 
 	const int ClimbCostFactor = 2;
-	const int SummonDetour = 400;
+	const int SummonDetour = 150;
+	const int GatherDetour = 300;
 
 	int WalkCost(Chest chest) => System.Math.Abs(chest.x - Bot.CenterTile.X) + ClimbCostFactor * System.Math.Abs(chest.y - Bot.CenterTile.Y);
 
