@@ -150,7 +150,6 @@ public abstract class BotTask
 
 	const float LongTripTiles = 150f;
 	const float RecallSavesTiles = 100f;
-	const int UndergroundTiles = 30;
 
 	static float Walk(Vector2 from, Vector2 to) => (System.Math.Abs(from.X - to.X) + System.Math.Abs(from.Y - to.Y)) / 16f;
 
@@ -160,7 +159,7 @@ public abstract class BotTask
 
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
-		if (Bot.CenterTile.Y < Main.worldSurface + UndergroundTiles || !CanRecall(Bot) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
+		if (!CanRecall(Bot) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
 			return false;
 		if (Bot.LastRecallTarget is Vector2 earlier && Vector2.Distance(earlier, target) < SameTripReach && Main.GameUpdateCount - Bot.LastRecallAt < SameTripTicks)
 			return false;

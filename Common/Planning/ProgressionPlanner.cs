@@ -543,6 +543,19 @@ public static class ProgressionPlanner
 	static bool FarmedFromBoss(Bot bot, int itemType) =>
 		Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss);
 
+	static bool LockedBehindBoss(Context context, Recipe recipe, int crafts)
+	{
+		foreach (var required in recipe.requiredItem)
+		{
+			var accepted = RecipeIndex.AcceptedTypes(recipe, required);
+			if (context.CountAny(accepted) >= required.stack * crafts)
+				continue;
+			if (accepted.All(type => Bosses.BossDrops.SourceOf(type) is { } boss && !Bosses.BossCredit.HasDefeated(context.Bot.Faction, boss) && Building.BaseStorage.Count(context.Bot.Faction, type) == 0 && RecipeIndex.For(type).Count == 0))
+				return true;
+		}
+		return false;
+	}
+
 	static void WishBossDrop(Bot bot, int itemType)
 	{
 		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss) && Building.BaseStorage.Count(bot.Faction, itemType) == 0)
@@ -587,6 +600,8 @@ public static class ProgressionPlanner
 				return new ScoutStep(World.Landmarks.WorldEvil, true, Terraria.ID.TileID.DemonAltar);
 			return stationItems.Count == 0 ? PlanStep.Blocked : PlanStation(context, stationItems, depth + 1);
 		}
+		if (LockedBehindBoss(context, recipe, crafts))
+			return PlanStep.Blocked;
 		bool atStations = recipe.requiredTile.All(tile => tile < 0 || StationWithin(context.Bot, tile, HandsOnReach));
 		for (int pass = 0; pass < 2; pass++)
 		{
