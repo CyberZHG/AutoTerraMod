@@ -284,13 +284,13 @@ public abstract class BotTask
 		deepTunnel = null;
 		if (TempleApproach(target) is Vector2 approach)
 			target = approach;
-		var road = HighwayRoute(target, out bool recalled);
-		if (recalled)
+		if (RecallBeatsLongTrip(target) && TryRecallHome())
 		{
 			Bot.LastRecallTarget = target;
 			return true;
 		}
-		if (road == null && RecallBeatsLongTrip(target) && TryRecallHome())
+		var road = HighwayRoute(target, out bool recalled);
+		if (recalled)
 		{
 			Bot.LastRecallTarget = target;
 			return true;
