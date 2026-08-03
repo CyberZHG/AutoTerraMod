@@ -1189,10 +1189,21 @@ public sealed class BotMotor
 				RopeTile = new Point(centerX, body.Top - 1);
 			return true;
 		}
-		if (!grounded || !MayPlaceRope || Main.tile[centerX, body.Bottom].HasTile)
+		if (!grounded || !MayPlaceRope || Main.tile[centerX, body.Bottom].HasTile || RopeNearby(centerX, body.Top, body.Bottom))
 			return false;
 		RopeTile = new Point(centerX, body.Bottom);
 		return true;
+	}
+
+	const int RopeSpacing = 3;
+
+	static bool RopeNearby(int x, int top, int bottom)
+	{
+		for (int dx = -RopeSpacing; dx <= RopeSpacing; dx++)
+			for (int y = top - 1; y <= bottom; y++)
+				if (dx != 0 && IsRope(x + dx, y))
+					return true;
+		return false;
 	}
 
 	uint climbingRopeAt;

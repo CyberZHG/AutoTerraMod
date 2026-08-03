@@ -119,6 +119,7 @@ public sealed class SummonTask : BotTask
 		{
 			BossCredit.RecordSummoner(step.Challenge, Bot);
 			BotDiagnostics.Log(Bot, $"summoned {step.Challenge.Name} via {step.Trigger.GetType().Name}");
+			Main.NewText(Terraria.Localization.Language.GetTextValue("Mods.AutoTerraMod.UI.BossSummoned", Bot.Name, Bot.Faction.Name, step.Challenge.Name), Bot.Faction.Color);
 		}
 		IsFinished = true;
 	}
@@ -775,7 +776,7 @@ public sealed class ScoutTask : BotTask
 	public override void Start()
 	{
 		base.Start();
-		if (step == destinationFor && Main.GameUpdateCount - destinationChosenAt < KeepDestinationTicks && Vector2.Distance(Bot.Center, destination) > 48f)
+		if (step == destinationFor && Main.GameUpdateCount - destinationChosenAt < KeepDestinationTicks * Planning.ProgressionPlanner.WorldScale && Vector2.Distance(Bot.Center, destination) > 48f)
 			return;
 		destination = ChooseDestination();
 		destinationFor = step;

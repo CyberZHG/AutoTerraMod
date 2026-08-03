@@ -232,6 +232,8 @@ public sealed class BuildTask : BotTask
 				return Bot.Hands.Chop(tile) == ToolResult.Working;
 			case BuildAction.RemoveScaffold:
 				return Bot.Hands.Dig(tile) == ToolResult.Working;
+			case BuildAction.Foundation when TileQuery.HoldsRemovableTop(tile.X, tile.Y):
+				return Bot.Hands.Dig(tile) == ToolResult.Working;
 			case BuildAction.RenovateBlock:
 			case BuildAction.Foundation:
 				return Bot.Hands.ReplaceBlock(tool, tile) == ToolResult.Working;

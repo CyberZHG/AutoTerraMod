@@ -203,6 +203,7 @@ UI: {
 	NowFollowing: 正在观战：{0}（{1}）
 	FreeCameraOn: 自由镜头：开
 	FreeCameraOff: 自由镜头：关
+	BossSummoned: "{1}的{0}召唤了{2}。"
 	BotDied: "{1}的{0}阵亡了。"
 	RecalledHome: "{0}使用{1}回到了基地。"
 	RelogHome: "{0}退出并重新进入世界，回到了基地。"

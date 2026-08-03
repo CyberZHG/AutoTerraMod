@@ -26,6 +26,9 @@ public static class ProgressionPlanner
 	}
 
 	const int ExpeditionCommitmentTicks = 3 * 3600;
+	const int SmallWorldWidth = 4200;
+
+	public static float WorldScale => System.Math.Max(1f, Main.maxTilesX / (float)SmallWorldWidth);
 
 	static readonly Dictionary<int, (ProgressionGoal goal, uint until)> expeditions = new();
 
@@ -110,9 +113,9 @@ public static class ProgressionPlanner
 			if (step is not BlockedStep and not IdleStep)
 			{
 				if (goal.IsExpedition)
-					expeditions[bot.Id] = (goal, Main.GameUpdateCount + ExpeditionCommitmentTicks);
+					expeditions[bot.Id] = (goal, Main.GameUpdateCount + (uint)(ExpeditionCommitmentTicks * WorldScale));
 				else if (!commitments.TryGetValue(bot.Id, out var held) || held.goal != goal)
-					commitments[bot.Id] = (goal, Main.GameUpdateCount + CommitmentTicks);
+					commitments[bot.Id] = (goal, Main.GameUpdateCount + (uint)(CommitmentTicks * WorldScale));
 				source = goal;
 				return step;
 			}
@@ -558,7 +561,8 @@ public static class ProgressionPlanner
 
 	static void WishBossDrop(Bot bot, int itemType)
 	{
-		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss) && Building.BaseStorage.Count(bot.Faction, itemType) == 0)
+		if (Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss) && Building.BaseStorage.Count(bot.Faction, itemType) == 0
+			&& !Systems.BotWorldSystem.Bots.Any(member => member.FactionId == bot.FactionId && Inventory.Count(member.Avatar, itemType) > 0))
 		{
 			if (!bot.Faction.WantsRefight(boss.BossType))
 				BotDiagnostics.Log(bot, $"wants to refight {boss.Name} for {Lang.GetItemNameValue(itemType)} (goal {ProgressionGoals.Unwrap(planning)?.Describe()})");

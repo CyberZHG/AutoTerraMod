@@ -203,6 +203,7 @@ UI: {
 	NowFollowing: Now following {0} ({1})
 	FreeCameraOn: Free camera on
 	FreeCameraOff: Free camera off
+	BossSummoned: "{0} of {1} summoned {2}."
 	BotDied: "{0} of {1} has died."
 	RecalledHome: "{0} used {1} to return home."
 	RelogHome: "{0} left and rejoined the world to return home."
