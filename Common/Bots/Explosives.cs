@@ -52,6 +52,9 @@ public sealed class Explosives
 	}
 
 	const int CampBlastMargin = 3;
+	public const int ThrowRangeTiles = 20;
+
+	public bool InThrowRange(Point tile) => Vector2.Distance(bot.Center, tile.ToWorldCoordinates()) <= ThrowRangeTiles * 16f;
 
 	static bool NearAnyCamp(Point center, int reach) =>
 		Systems.BotWorldSystem.Factions.Any(faction => faction.Settlement is { } camp
@@ -76,7 +79,8 @@ public sealed class Explosives
 		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
 			return false;
 		var charge = Charges.FirstOrDefault(candidate => Inventory.Count(bot.Avatar, candidate.item) > 0);
-		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius) || NearAnyCamp(tile, charge.radius + CampBlastMargin))
+		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius) || NearAnyCamp(tile, charge.radius + CampBlastMargin)
+			|| !InThrowRange(tile) || NearAnyCamp(bot.CenterTile, charge.radius + CampBlastMargin))
 			return false;
 		var item = Inventory.Items(bot.Avatar).First(candidate => candidate.type == charge.item);
 		string name = item.Name;

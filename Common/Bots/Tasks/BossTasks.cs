@@ -1416,6 +1416,11 @@ public sealed class DigShaftTask : BotTask
 			Descend(shaft, spot);
 			return;
 		}
+		if (shaft.LavaFloor(row) is Point waterFloor && !Bot.Hands.Explosives.InThrowRange(waterFloor) && !breathLow)
+		{
+			Descend(shaft, spot);
+			return;
+		}
 		if (shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor, volley: Hellevator.WaterVolley))
 		{
 			shaft.WaterBlasts++;
@@ -1470,6 +1475,11 @@ public sealed class DigShaftTask : BotTask
 				if (!Bot.Hands.Explosives.IsFused)
 					Bot.Motor.Stop();
 				Bot.Watchdog.RecordProgress();
+				return;
+			}
+			if (shaft.LavaBlasts < Hellevator.MaxLavaBlasts && shaft.LavaFloor(row) is Point lavaFloor && !Bot.Hands.Explosives.InThrowRange(lavaFloor))
+			{
+				Descend(shaft, new Vector2((shaft.X + 1) * 16f, (row - 2) * 16f - 21f));
 				return;
 			}
 			if (shaft.LavaBlasts < Hellevator.MaxLavaBlasts && shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor))
