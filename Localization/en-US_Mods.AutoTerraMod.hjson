@@ -231,6 +231,7 @@ BuildActions: {
 	PlaceTorch: torch
 	PlaceTable: table
 	RemoveScaffold: remove scaffolding
+	Foundation: lay foundation
 	RenovateBlock: renovate walls/roof
 	RenovateWall: renovate background walls
 	PlaceBed: bed

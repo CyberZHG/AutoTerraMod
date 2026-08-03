@@ -43,7 +43,7 @@ public sealed class HouseBlueprint
 	const int ChestWidth = 2;
 
 	const int StepHeight = 3;
-	const int FoundationDepth = 3;
+	const int FoundationDepth = 2;
 
 	readonly List<Point> shellInBuildOrder = new();
 	readonly HashSet<Point> shell = new();

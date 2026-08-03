@@ -231,6 +231,7 @@ BuildActions: {
 	PlaceTorch: 火把
 	PlaceTable: 桌子
 	RemoveScaffold: 拆除脚手架
+	Foundation: 打地基
 	RenovateBlock: 翻新墙体屋顶
 	RenovateWall: 翻新背景墙
 	PlaceBed: 床

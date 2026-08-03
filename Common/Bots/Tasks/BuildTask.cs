@@ -157,7 +157,7 @@ public sealed class BuildTask : BotTask
 		var here = Bot.CenterTile;
 		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock or BuildAction.Foundation;
 		var avoid = operation.Action == BuildAction.RemoveScaffold ? Bot.Faction.Scaffolding : null;
-		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile, avoid) is Point foothold)
+		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile, avoid, operation.Action == BuildAction.Foundation ? FoundationFootholdMin : FootholdBelowMin) is Point foothold)
 			return Navigation.PathFinder.BodyCenterAt(foothold);
 		if (operation.Tile.Y < blueprint.Ceiling)
 		{
@@ -177,11 +177,13 @@ public sealed class BuildTask : BotTask
 	const int FootholdBelowMin = -2;
 	const int FootholdBelowMax = 5;
 
-	static Point? FootholdNear(Point tile, System.Collections.Generic.ISet<Point> avoid = null)
+	const int FoundationFootholdMin = -4;
+
+	static Point? FootholdNear(Point tile, System.Collections.Generic.ISet<Point> avoid = null, int belowMin = FootholdBelowMin)
 	{
 		Point? best = null;
 		int bestScore = int.MaxValue;
-		for (int dy = FootholdBelowMin; dy <= FootholdBelowMax; dy++)
+		for (int dy = belowMin; dy <= FootholdBelowMax; dy++)
 		{
 			for (int dx = -FootholdReachX; dx <= FootholdReachX; dx++)
 			{
