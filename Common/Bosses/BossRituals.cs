@@ -454,10 +454,13 @@ public static class BossRituals
 		var shaft = ShaftFor(bot.Faction);
 		if (shaft.IsFinished || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
+		if (bot.Hands.HasRope && HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1, DiggerRopeTrip) is { } hang)
+			return hang;
 		return ShaftWork(bot, shaft);
 	}
 
 	const int BombRestock = 3;
+	const int DiggerRopeTrip = 200;
 	const int WaterBombRestock = 15;
 	const int ShaftPlatformRestock = 20;
 

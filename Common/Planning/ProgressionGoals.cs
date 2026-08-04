@@ -716,8 +716,10 @@ public sealed class ShaftRopeGoal : ProgressionGoal
 
 	public override string Describe() => "ShaftRope";
 
+	const int RopeAfterRows = 20;
+
 	public override bool AppliesTo(Bot bot) =>
-		bot.Faction.Hellevator is { } shaft && shaft.IsComplete && IsRoper(bot);
+		bot.Faction.Hellevator is { } shaft && shaft.FirstImpassableRow() - shaft.TopY >= RopeAfterRows && IsRoper(bot);
 
 	static bool IsRoper(Bot bot) =>
 		BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && !HouseInspector.BuildingDuty(member)).MaxBy(member => member.Personality.Building) == bot;
