@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoTerraMod.Common.Navigation;
 using AutoTerraMod.Common.Planning;
 using AutoTerraMod.Common.World;
@@ -62,13 +63,16 @@ public sealed class RopeColumnTask : BotTask
 		return null;
 	}
 
+	static bool InShaftRopeColumn(int x, int y) =>
+		!World.Highway.ProtectsAnyDeck(x, y) && Systems.BotWorldSystem.Factions.Any(faction => faction.Hellevator is { } shaft && shaft.RopeX == x && shaft.Contains(x, y));
+
 	public static int? MissingRow(int x, int top, int bottom)
 	{
 		for (int y = top; y <= bottom; y++)
 		{
 			if (!Main.tile[x, y].HasTile || !Main.tileRope[Main.tile[x, y].TileType])
 			{
-				if (TileQuery.IsPlatform(x, y))
+				if (TileQuery.IsPlatform(x, y) && !InShaftRopeColumn(x, y))
 					continue;
 				return y;
 			}

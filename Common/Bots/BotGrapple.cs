@@ -103,6 +103,7 @@ public sealed class BotGrapple
 	{
 		if (Suppressed || FindHook() == null)
 			return false;
+		NoteLatch(body);
 		Anchor = hold;
 		pullTo = bodyCenter;
 		hangMode = true;
