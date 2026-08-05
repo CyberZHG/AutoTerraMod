@@ -323,7 +323,7 @@ public sealed class RopeGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => RopeCount(bot.Avatar) >= Minimum;
 
-	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope, ItemID.VineRope, ItemID.SilkRope };
+	static readonly int[] Ropes = { ItemID.Rope, ItemID.VineRope, ItemID.SilkRope };
 	static readonly HashSet<int> restocking = new();
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAnyAmount(bot, Ropes, RestockTo);
@@ -918,7 +918,7 @@ public sealed class HighwayGoal : ProgressionGoal
 	const int PlatformRestock = 200;
 	const int PlatformLow = 20;
 	const int RopeRestock = 50;
-	static readonly int[] Ropes = { ItemID.Rope, ItemID.WebRope, ItemID.VineRope, ItemID.SilkRope };
+	static readonly int[] Ropes = { ItemID.Rope, ItemID.VineRope, ItemID.SilkRope };
 	static readonly HashSet<int> restocking = new();
 	static readonly HashSet<int> restockingStone = new();
 

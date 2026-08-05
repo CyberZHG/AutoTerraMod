@@ -585,7 +585,7 @@ public static class ProgressionPlanner
 
 	static PlanStep PlanRecipe(Context context, Recipe recipe, int depth, int crafts)
 	{
-		if (!ConditionsAchievable(context.Bot, recipe))
+		if (!ConditionsAchievable(context.Bot, recipe) || recipe.createItem.type == Terraria.ID.ItemID.WebRope)
 			return PlanStep.Blocked;
 		var avatar = context.Bot.Avatar;
 		bool deep = Outpost.IsAfield(context.Bot);
