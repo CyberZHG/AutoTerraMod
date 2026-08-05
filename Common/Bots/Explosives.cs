@@ -15,8 +15,8 @@ public sealed class Explosives
 
 	static readonly (int item, int radius)[] Charges =
 	{
-		(ItemID.Bomb, 4), (ItemID.StickyBomb, 4), (ItemID.BouncyBomb, 4),
-		(ItemID.Dynamite, 7), (ItemID.StickyDynamite, 7), (ItemID.BouncyDynamite, 7)
+		(ItemID.StickyBomb, 4), (ItemID.StickyDynamite, 7), (ItemID.Bomb, 4), (ItemID.Dynamite, 7),
+		(ItemID.BouncyBomb, 4), (ItemID.BouncyDynamite, 7)
 	};
 
 	readonly Bot bot;

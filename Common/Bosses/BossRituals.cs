@@ -479,6 +479,17 @@ public static class BossRituals
 
 	static readonly HashSet<int> platformRestock = new();
 
+	static PlanStep ObtainBombs(Bot bot, int amount) =>
+		ProgressionPlanner.Obtain(bot, ItemID.StickyBomb, amount) is var sticky and not (BlockedStep or IdleStep) ? sticky : ProgressionPlanner.Obtain(bot, ItemID.Bomb, amount);
+
+	static bool RowTouchesLava(Hellevator shaft, int row)
+	{
+		for (int x = shaft.X; x <= shaft.Right; x++)
+			if (TileQuery.IsSolid(x, row) && TileQuery.TouchesLava(x, row))
+				return true;
+		return false;
+	}
+
 	public static bool BreathesUnderwater(Bot bot) => bot.Avatar.gills || bot.Avatar.accMerman || bot.Avatar.accDivingHelm;
 
 	public static bool NeedsWaterBlast(Bot bot, Hellevator shaft) =>
@@ -503,7 +514,9 @@ public static class BossRituals
 		if (ShaftTooFlooded(bot, shaft))
 			return PlanStep.Idle;
 		if (NeedsWaterBlast(bot, shaft) && !bot.Hands.Explosives.Carries)
-			return ProgressionPlanner.Obtain(bot, ItemID.Bomb, WaterBombRestock);
+			return ObtainBombs(bot, WaterBombRestock);
+		if (RowTouchesLava(shaft, shaft.FirstUnfinishedRow()) && !bot.Hands.Explosives.Carries && ObtainBombs(bot, BombRestock) is var lavaBombs and not (BlockedStep or IdleStep))
+			return lavaBombs;
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
 		if (carried == 0 && !roped)
@@ -516,7 +529,7 @@ public static class BossRituals
 			return new DigShaftStep(shaft);
 		if (shaft.LavaBlasts >= Hellevator.MaxLavaBlasts)
 			return PlanStep.Idle;
-		return bot.Hands.Explosives.Carries ? new DigShaftStep(shaft) : ProgressionPlanner.Obtain(bot, ItemID.Bomb, BombRestock);
+		return bot.Hands.Explosives.Carries ? new DigShaftStep(shaft) : ObtainBombs(bot, BombRestock);
 	}
 
 	static bool IsChiefDigger(Bot bot, Hellevator shaft)
