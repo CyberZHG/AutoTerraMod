@@ -39,7 +39,7 @@ public sealed class BotStatusReport : ModSystem
 	static string DescribeBridge(Factions.Faction faction)
 	{
 		var shaft = faction.Hellevator;
-		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstImpassableRow()} (tidy to {shaft.FirstUnfinishedRow()}) of {Main.UnderworldLayer}, rope missing at {Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1)?.ToString() ?? "none"}";
+		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstImpassableRow()} (tidy to {shaft.FirstUnfinishedRow()}) of {Main.UnderworldLayer}, rope missing at {Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom())?.ToString() ?? "none"}";
 		foreach (var highway in World.Highway.For(faction))
 			shaftText += $"\n    highway {(highway.Direction > 0 ? "east" : "west")} y={highway.Y} {highway.StartX}->{highway.EndX}: frontier {highway.Frontier(highway.Direction)}{(highway.BlockReason is string reason ? " blocked by " + reason : "")}, link row missing {highway.MissingLinkRow()?.ToString() ?? "none"}";
 		var bridge = faction.Hellbridge;
@@ -53,7 +53,9 @@ public sealed class BotStatusReport : ModSystem
 		if (challenge == null || summoner == null)
 			return "";
 		var report = Bosses.BossReadiness.Evaluate(faction, challenge, summoner);
-		return $"\n    next boss {challenge.Name}: kill~{report.KillSeconds:0}s survive~{report.SurviveSeconds:0}s need x{report.RequiredRatio:0.0} ready={report.IsReady}";
+		var site = challenge.Arena ?? challenge.DistantArena;
+		string siteText = site is World.Landmark landmark ? $" site={landmark}:{(BotWorldSystem.KnowledgeOf(faction).LandmarkOf(landmark) != null ? "found" : "unknown")}" : " site=camp";
+		return $"\n    next boss {challenge.Name}: kill~{report.KillSeconds:0}s survive~{report.SurviveSeconds:0}s need x{report.RequiredRatio:0.0} ready={report.IsReady}{siteText}";
 	}
 
 	static string DescribeConstruction(Factions.Faction faction)

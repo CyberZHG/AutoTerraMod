@@ -204,7 +204,9 @@ public sealed class SpectatorHud : ModSystem
 			if (challenge != null && summoner != null)
 			{
 				var report = Bosses.BossReadiness.Evaluate(faction, challenge, summoner);
-				lines.Add((Text("UI.BossReadiness", challenge.Name, (int)(report.Confidence * 100)), report.IsReady ? Color.LightGreen : Color.LightGray));
+				var site = challenge.Arena ?? challenge.DistantArena;
+				string siteText = site is World.Landmark landmark ? Text(Systems.BotWorldSystem.KnowledgeOf(faction).LandmarkOf(landmark) != null ? "UI.BossSiteFound" : "UI.BossSiteUnknown", Text($"Landmarks.{landmark}")) : "";
+				lines.Add((Text("UI.BossReadiness", challenge.Name, (int)(report.Confidence * 100)) + siteText, report.IsReady ? Color.LightGreen : Color.LightGray));
 			}
 		}
 	}

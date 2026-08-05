@@ -727,13 +727,13 @@ public sealed class ShaftRopeGoal : ProgressionGoal
 	public override bool IsMet(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
+		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
 	}
 
 	public override PlanStep Plan(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1, RopeTrip);
+		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom(), RopeTrip);
 		if (step == null && !bot.Hands.HasRope && bot.CenterTile.Y > Main.worldSurface + UndergroundMargin)
 			return new TravelStep(bot.Faction.BaseFeet);
 		return step ?? PlanStep.Idle;
@@ -935,7 +935,7 @@ public sealed class HighwayGoal : ProgressionGoal
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
 		if (!shaft.IsFinished && (Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Hands.Explosives.Carries) && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
 			return dig;
-		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) ?? PlanStep.Idle;
+		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom()) ?? PlanStep.Idle;
 	}
 
 	internal static PlanStep PlanHighways(Bot bot, IEnumerable<World.Highway> highways)

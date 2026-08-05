@@ -45,7 +45,7 @@ public sealed record Hellevator(int X, int TopY)
 
 	public bool HasRope(int y) => Main.tile[RopeX, y].HasTile && Main.tileRope[Main.tile[RopeX, y].TileType];
 
-	public bool NeedsCleanup(int x, int y) => x != RopeX && (TileQuery.IsPlatform(x, y) && HasRope(y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]);
+	public bool NeedsCleanup(int x, int y) => x != RopeX && !Building.HouseInspector.IsProtected(x, y) && (TileQuery.IsPlatform(x, y) && HasRope(y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]);
 
 	public Microsoft.Xna.Framework.Point? LavaFloor(int row)
 	{
@@ -166,6 +166,26 @@ public sealed record Hellevator(int X, int TopY)
 	{
 		Scan();
 		return firstImpassable;
+	}
+
+	uint ropeBottomAt;
+	int ropeBottom;
+
+	public int RopeBottom()
+	{
+		if (ropeBottomAt == Main.GameUpdateCount)
+			return ropeBottom;
+		ropeBottomAt = Main.GameUpdateCount;
+		ropeBottom = FirstImpassableRow() - 1;
+		for (int y = TopY + 1; y < ropeBottom; y++)
+		{
+			if (Main.tile[RopeX, y].LiquidAmount > 0)
+			{
+				ropeBottom = y - 1;
+				break;
+			}
+		}
+		return ropeBottom;
 	}
 
 	const int CompletionSlack = 6;

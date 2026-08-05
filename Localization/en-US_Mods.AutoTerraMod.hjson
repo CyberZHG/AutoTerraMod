@@ -185,6 +185,8 @@ Plans: {
 }
 
 UI: {
+	BossSiteFound: " ({0} found)"
+	BossSiteUnknown: " ({0} not found yet)"
 	BossReadiness: "  Next boss {0}: readiness {1}%"
 	FactionBosses: "  Bosses defeated by this faction: {0}/{1}"
 	BossCredited: "{0} defeated {1}! Damage: {2}"

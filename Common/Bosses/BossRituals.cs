@@ -454,7 +454,7 @@ public static class BossRituals
 		var shaft = ShaftFor(bot.Faction);
 		if (shaft.IsFinished || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
-		if (bot.Hands.HasRope && HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1, DiggerRopeTrip) is { } hang)
+		if (bot.Hands.HasRope && HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom(), DiggerRopeTrip) is { } hang)
 			return hang;
 		return ShaftWork(bot, shaft);
 	}
@@ -505,7 +505,7 @@ public static class BossRituals
 		if (NeedsWaterBlast(bot, shaft) && !bot.Hands.Explosives.Carries)
 			return ProgressionPlanner.Obtain(bot, ItemID.Bomb, WaterBombRestock);
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
-		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.FirstImpassableRow() - 1) == null;
+		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
 		if (carried == 0 && !roped)
 			platformRestock.Add(bot.Id);
 		else if (carried >= ShaftPlatformRestock || roped)

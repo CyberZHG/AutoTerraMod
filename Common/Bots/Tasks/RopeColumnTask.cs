@@ -64,7 +64,7 @@ public sealed class RopeColumnTask : BotTask
 	}
 
 	static bool InShaftRopeColumn(int x, int y) =>
-		!World.Highway.ProtectsAnyDeck(x, y) && Systems.BotWorldSystem.Factions.Any(faction => faction.Hellevator is { } shaft && shaft.RopeX == x && shaft.Contains(x, y));
+		!World.Highway.ProtectsAnyDeck(x, y) && !Building.HouseInspector.IsProtected(x, y) && Systems.BotWorldSystem.Factions.Any(faction => faction.Hellevator is { } shaft && shaft.RopeX == x && shaft.Contains(x, y));
 
 	public static int? MissingRow(int x, int top, int bottom)
 	{
