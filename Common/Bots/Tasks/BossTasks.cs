@@ -1352,6 +1352,41 @@ public sealed class DigShaftTask : BotTask
 	const int BombDropRows = 20;
 	const int ThrowSpotSlack = 2;
 
+	const int LavaThrowMinRows = 6;
+
+	void BlastLavaWall(Hellevator shaft, int row)
+	{
+		if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks || Bot.Hands.Explosives.IsFused)
+		{
+			Bot.Watchdog.RecordProgress();
+			return;
+		}
+		Point? wall = null;
+		for (int x = shaft.X; x <= shaft.Right && wall == null; x++)
+			if (TileQuery.IsSolid(x, row) && TileQuery.TouchesLava(x, row))
+				wall = new Point(x, row);
+		if (wall is not Point cell)
+			return;
+		bool highEnough = Bot.CenterTile.Y <= row - LavaThrowMinRows;
+		if (!highEnough || !Bot.Hands.Explosives.InThrowRange(cell))
+		{
+			if (highEnough)
+				Descend(shaft, new Vector2((shaft.X + 1) * 16f, (row - LavaThrowMinRows) * 16f - 21f));
+			else
+				Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, (row - LavaThrowMinRows - 4) * 16f), 16f);
+			return;
+		}
+		if (Bot.Hands.Explosives.Light(cell))
+		{
+			shaft.LavaBlasts++;
+			shaft.LastBlastAt = Main.GameUpdateCount;
+			BotDiagnostics.Log(Bot, $"blasting rock holding back lava at {cell} from row {Bot.CenterTile.Y} ({shaft.LavaBlasts}/{Hellevator.MaxLavaBlasts})");
+		}
+		else
+			shaft.LavaBlasts = Hellevator.MaxLavaBlasts;
+		IsFinished = true;
+	}
+
 	const float ThrowAtBreath = 0.5f;
 	bool diving;
 
@@ -1456,7 +1491,7 @@ public sealed class DigShaftTask : BotTask
 	public override void Tick()
 	{
 		var shaft = step.Shaft;
-		int row = shaft.FirstUnfinishedRow();
+		int row = shaft.WorkRow();
 		if (shaft.IsFinished || BossRituals.ShaftTooFlooded(Bot, shaft))
 		{
 			IsFinished = true;
@@ -1469,6 +1504,11 @@ public sealed class DigShaftTask : BotTask
 		}
 		if (RefillAir(shaft, row))
 			return;
+		if (BossRituals.RowTouchesLava(shaft, row) && Bot.Hands.Explosives.Carries && shaft.LavaBlasts < Hellevator.MaxLavaBlasts)
+		{
+			BlastLavaWall(shaft, row);
+			return;
+		}
 		if (Hellevator.LavaBelow(shaft.X, row))
 		{
 			if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks)

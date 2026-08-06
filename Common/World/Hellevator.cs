@@ -162,6 +162,32 @@ public sealed record Hellevator(int X, int TopY)
 		return firstUnfinished;
 	}
 
+	public int Cursor { get; set; }
+
+	public int WorkRow()
+	{
+		int top = FirstUnfinishedRow();
+		if (top >= Cursor || FirstImpassableRow() < Cursor)
+		{
+			Cursor = top;
+			return top;
+		}
+		int below = FirstUnfinishedRowFrom(Cursor);
+		Cursor = below >= BottomRow ? top : below;
+		return Cursor;
+	}
+
+	int FirstUnfinishedRowFrom(int from)
+	{
+		int end = System.Math.Max(Main.UnderworldLayer, BottomRow);
+		for (int y = System.Math.Max(from, TopY); y < end; y++)
+		{
+			if (!RowDone(y) || !IsPassableRow(y))
+				return y;
+		}
+		return end;
+	}
+
 	public int FirstImpassableRow()
 	{
 		Scan();

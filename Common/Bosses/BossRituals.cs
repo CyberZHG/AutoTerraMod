@@ -482,7 +482,7 @@ public static class BossRituals
 	static PlanStep ObtainBombs(Bot bot, int amount) =>
 		ProgressionPlanner.Obtain(bot, ItemID.StickyBomb, amount) is var sticky and not (BlockedStep or IdleStep) ? sticky : ProgressionPlanner.Obtain(bot, ItemID.Bomb, amount);
 
-	static bool RowTouchesLava(Hellevator shaft, int row)
+	public static bool RowTouchesLava(Hellevator shaft, int row)
 	{
 		for (int x = shaft.X; x <= shaft.Right; x++)
 			if (TileQuery.IsSolid(x, row) && TileQuery.TouchesLava(x, row))
@@ -493,7 +493,7 @@ public static class BossRituals
 	public static bool BreathesUnderwater(Bot bot) => bot.Avatar.gills || bot.Avatar.accMerman || bot.Avatar.accDivingHelm;
 
 	public static bool NeedsWaterBlast(Bot bot, Hellevator shaft) =>
-		!BreathesUnderwater(bot) && shaft.WaterAbove(shaft.FirstUnfinishedRow()) > Hellevator.DesperateDiveRows;
+		!BreathesUnderwater(bot) && shaft.WaterAbove(shaft.WorkRow()) > Hellevator.DesperateDiveRows;
 
 	public static bool ShaftTooFlooded(Bot bot, Hellevator shaft)
 	{
@@ -503,19 +503,19 @@ public static class BossRituals
 			return false;
 		shaft.FloodedUntil = Main.GameUpdateCount + Hellevator.FloodPauseTicks;
 		shaft.WaterBlasts = 0;
-		BotDiagnostics.Log(bot, $"hellevator at x={shaft.X} is still flooded {shaft.WaterAbove(shaft.FirstUnfinishedRow())} rows deep after {Hellevator.MaxWaterBlasts} blasts, leaving it for a while");
+		BotDiagnostics.Log(bot, $"hellevator at x={shaft.X} is still flooded {shaft.WaterAbove(shaft.WorkRow())} rows deep after {Hellevator.MaxWaterBlasts} blasts, leaving it for a while");
 		return true;
 	}
 
 	public static PlanStep ShaftWork(Bot bot, Hellevator shaft)
 	{
-		if (!CanDigRow(bot, shaft, shaft.FirstUnfinishedRow()))
+		if (!CanDigRow(bot, shaft, shaft.WorkRow()))
 			return PlanStep.Blocked;
 		if (ShaftTooFlooded(bot, shaft))
 			return PlanStep.Idle;
 		if (NeedsWaterBlast(bot, shaft) && !bot.Hands.Explosives.Carries)
 			return ObtainBombs(bot, WaterBombRestock);
-		if (RowTouchesLava(shaft, shaft.FirstUnfinishedRow()) && !bot.Hands.Explosives.Carries && ObtainBombs(bot, BombRestock) is var lavaBombs and not (BlockedStep or IdleStep))
+		if (RowTouchesLava(shaft, shaft.WorkRow()) && !bot.Hands.Explosives.Carries && ObtainBombs(bot, BombRestock) is var lavaBombs and not (BlockedStep or IdleStep))
 			return lavaBombs;
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
 		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
@@ -525,7 +525,7 @@ public static class BossRituals
 			platformRestock.Remove(bot.Id);
 		if (platformRestock.Contains(bot.Id) && ProgressionPlanner.ObtainPlatforms(bot, ShaftPlatformRestock) is var platforms and not BlockedStep and not IdleStep)
 			return platforms;
-		if (!Hellevator.LavaBelow(shaft.X, shaft.FirstUnfinishedRow()))
+		if (!Hellevator.LavaBelow(shaft.X, shaft.WorkRow()))
 			return new DigShaftStep(shaft);
 		if (shaft.LavaBlasts >= Hellevator.MaxLavaBlasts)
 			return PlanStep.Idle;
@@ -534,7 +534,7 @@ public static class BossRituals
 
 	static bool IsChiefDigger(Bot bot, Hellevator shaft)
 	{
-		int row = shaft.FirstUnfinishedRow();
+		int row = shaft.WorkRow();
 		return BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && CanDigRow(member, shaft, row))
 			.MaxBy(member => member.Personality.Mining) == bot;
 	}

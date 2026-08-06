@@ -28,7 +28,6 @@ public sealed class Explosives
 
 	const int FuseTicks = 180;
 	const float ThrowTicks = 10f;
-	const float VolleySpread = 0.6f;
 
 	public static bool IsExplosive(Item item) => Charges.Any(charge => charge.item == item.type);
 
@@ -36,7 +35,7 @@ public sealed class Explosives
 
 	Projectile Fused => projectileIndex >= 0 && Main.projectile[projectileIndex] is { active: true } projectile && projectile.identity == projectileIdentity ? projectile : null;
 
-	public bool IsFused => Fused != null;
+	public bool IsFused => Fused != null || volleyLeft > 0;
 
 	public Vector2? BlastCenter => Fused?.Center;
 
@@ -84,30 +83,50 @@ public sealed class Explosives
 			return false;
 		var item = Inventory.Items(bot.Avatar).First(candidate => candidate.type == charge.item);
 		string name = item.Name;
+		ThrowOne(item, tile);
+		target = tile;
+		volleyLeft = volley - 1;
+		volleyCharge = charge.item;
+		nextVolleyAt = Main.GameUpdateCount + VolleyGapTicks;
+		BotDiagnostics.Log(bot, $"threw {name} at {tile} to blast through{(volley > 1 ? $" ({volley - 1} more to follow)" : "")}");
+		return true;
+	}
+
+	const uint VolleyGapTicks = 40;
+	int volleyLeft;
+	int volleyCharge;
+	uint nextVolleyAt;
+
+	void ThrowOne(Item item, Point tile)
+	{
 		var from = bot.Center;
 		var aim = tile.ToWorldCoordinates() - from;
 		var velocity = aim == Vector2.Zero ? Vector2.Zero : Vector2.Normalize(aim) * System.Math.Min(item.shootSpeed, aim.Length() / ThrowTicks);
-		int index = -1;
-		int thrown = 0;
-		for (; thrown < volley && !item.IsAir && item.type == charge.item; thrown++)
-		{
-			var spread = new Vector2((thrown - (volley - 1) / 2f) * VolleySpread, 0f);
-			using (Systems.AvatarPresence.Enter())
-				index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity + spread, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
-			if (Main.projectile[index].timeLeft > FuseTicks)
-				Main.projectile[index].timeLeft = FuseTicks;
-			Inventory.ConsumeOne(bot.Avatar, item);
-		}
+		int index;
+		using (Systems.AvatarPresence.Enter())
+			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
+		if (Main.projectile[index].timeLeft > FuseTicks)
+			Main.projectile[index].timeLeft = FuseTicks;
+		Inventory.ConsumeOne(bot.Avatar, item);
 		projectileIndex = index;
 		projectileIdentity = Main.projectile[index].identity;
-		target = tile;
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
-		BotDiagnostics.Log(bot, $"threw {thrown} {name} at {tile} to blast through");
-		return true;
 	}
 
 	public void Tick()
 	{
+		if (volleyLeft > 0 && Main.GameUpdateCount >= nextVolleyAt)
+		{
+			var next = Inventory.Items(bot.Avatar).FirstOrDefault(candidate => candidate.type == volleyCharge);
+			if (next == null || !InThrowRange(target) || NearAnyCamp(target, CampBlastMargin + 7) || NearAnyCamp(bot.CenterTile, CampBlastMargin + 7))
+				volleyLeft = 0;
+			else
+			{
+				ThrowOne(next, target);
+				volleyLeft--;
+				nextVolleyAt = Main.GameUpdateCount + VolleyGapTicks;
+			}
+		}
 		if (projectileIndex >= 0 && Fused == null)
 		{
 			projectileIndex = -1;
