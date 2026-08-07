@@ -396,6 +396,15 @@ public sealed class ClaimOutpostTask : BotTask
 
 	public ClaimOutpostTask(Bot bot) : base(bot) { }
 
+	const uint ClaimPatienceTicks = 45 * 60;
+	uint startedAt;
+
+	public override void Start()
+	{
+		base.Start();
+		startedAt = Main.GameUpdateCount;
+	}
+
 	public override string NameKey => "Outpost";
 
 	public override float Evaluate()
@@ -417,8 +426,12 @@ public sealed class ClaimOutpostTask : BotTask
 		var spot = new Vector2(bed.X * 16f + 8f, bed.Y * 16f - 13f);
 		if (Vector2.Distance(Bot.Center, spot) > BedsideReach)
 		{
-			if (!TravelOrTunnel(spot, 16f))
+			if (!TravelOrTunnel(spot, 16f) || Main.GameUpdateCount - startedAt > ClaimPatienceTicks * Planning.ProgressionPlanner.WorldScale)
+			{
+				BotDiagnostics.Log(Bot, $"giving up claiming the outpost bed {bed} for a while");
+				Outpost.ClaimFailed(Bot, bed);
 				IsFinished = true;
+			}
 			return;
 		}
 		Bot.OutpostBed = bed;

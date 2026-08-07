@@ -42,6 +42,8 @@ public abstract class BotTask
 	public virtual void Stop() => Bot.Motor.Stop();
 
 	const float MaxTunnelDistance = 16f * 200f;
+	const float TunnelLegPixels = 16f * 40f;
+	(Vector2 leg, Vector2 target)? legTunnel;
 
 	static readonly int[] RecallItems = { ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone, ItemID.RecallPotion };
 
@@ -282,6 +284,10 @@ public abstract class BotTask
 		if (deepTunnel is Vector2 tunnel && Vector2.DistanceSquared(tunnel, target) < 32f * 32f && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		deepTunnel = null;
+		if (legTunnel is var (_, forTarget) && Vector2.DistanceSquared(forTarget, target) < 32f * 32f && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck
+			&& Main.GameUpdateCount - tunnelingSince <= TunnelPathRetryTicks)
+			return true;
+		legTunnel = null;
 		if (TempleApproach(target) is Vector2 approach)
 			target = approach;
 		if (RecallBeatsLongTrip(target) && TryRecallHome())
@@ -320,8 +326,11 @@ public abstract class BotTask
 			return true;
 		if (!beneath && Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
-			Bot.Motor.Stop();
-			Bot.Motor.MoveTo(target, radius);
+			var tunnelLeg = Bot.Center + Vector2.Normalize(target - Bot.Center) * TunnelLegPixels;
+			BotDiagnostics.Log(Bot, $"stuck far from {target.ToTileCoordinates()}, tunneling a leg toward {tunnelLeg.ToTileCoordinates()}");
+			legTunnel = (tunnelLeg, target);
+			tunnelingSince = Main.GameUpdateCount;
+			Bot.Motor.TunnelTo(tunnelLeg, 24f);
 			return true;
 		}
 		if (CampExitAbove(target) is Vector2 exit)

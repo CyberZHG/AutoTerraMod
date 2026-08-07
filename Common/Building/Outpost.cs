@@ -203,11 +203,22 @@ public static class Outpost
 		return near.Count == 0 ? null : near.MinBy(bed => Vector2.DistanceSquared(bed.ToWorldCoordinates(), temple.ToWorldCoordinates()));
 	}
 
+	static readonly Dictionary<(int bot, Point bed), uint> failedClaims = new();
+	const uint FailedClaimTicks = 10 * 3600;
+
+	public static void ClaimFailed(Bot bot, Point bed)
+	{
+		if (failedClaims.Count > 256)
+			failedClaims.Clear();
+		failedClaims[(bot.Id, bed)] = Main.GameUpdateCount + FailedClaimTicks;
+	}
+
 	public static Point? ClaimableBed(Bot bot)
 	{
 		if (!IsAfield(bot) || HeadingHome(bot) || bot.OutpostBed is Point held && held == ArenaBedFor(bot.Faction))
 			return null;
-		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed) && !Bosses.BossRituals.InPillarZone(bed.ToWorldCoordinates())).ToList();
+		var beds = FactionBeds(bot.Faction).Where(bed => bed != bot.OutpostBed && !NearCamp(bot.Faction, bed) && !Bosses.BossRituals.InPillarZone(bed.ToWorldCoordinates())
+			&& !(failedClaims.TryGetValue((bot.Id, bed), out uint until) && Main.GameUpdateCount < until)).ToList();
 		if (beds.Count == 0)
 			return null;
 		var nearest = beds.MinBy(bed => Vector2.DistanceSquared(bed.ToWorldCoordinates(), bot.Center));
