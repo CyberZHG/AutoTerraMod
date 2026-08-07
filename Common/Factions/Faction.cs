@@ -27,6 +27,10 @@ public sealed class Faction
 	public bool RallyAssembled { get; set; }
 	public int RallyBossType { get; set; }
 	public uint RallyLeaderSeenAt { get; set; }
+	public System.Collections.Generic.List<World.Highway> RallyRoute { get; set; }
+	public World.Hellevator RallyShaft { get; set; }
+	public uint RallyRouteUntil { get; set; }
+	public bool RallyBuilding => RallyRoute != null && Terraria.Main.GameUpdateCount < RallyRouteUntil;
 	public uint PoolUntil { get; set; }
 	public Vector2? ArenaPoint { get; set; }
 	public Point? ArenaBed { get; set; }

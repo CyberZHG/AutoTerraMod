@@ -75,7 +75,7 @@ public sealed class Explosives
 
 	public bool Light(Point tile, bool spareProtected = true, int volley = 1)
 	{
-		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y))
+		if (IsFused || bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true || !CanBlast(tile.X, tile.Y) || Resisted(tile))
 			return false;
 		var charge = Charges.FirstOrDefault(candidate => Inventory.Count(bot.Avatar, candidate.item) > 0);
 		if (charge.item == 0 || spareProtected && !SpareProtected(tile, charge.radius) || NearAnyCamp(tile, charge.radius + CampBlastMargin)
@@ -93,6 +93,11 @@ public sealed class Explosives
 	}
 
 	const uint VolleyGapTicks = 40;
+	const int BlastsBeforeGivingUp = 2;
+	const uint ResistTicks = 10 * 3600;
+	readonly System.Collections.Generic.Dictionary<Point, (int count, uint at)> survived = new();
+
+	bool Resisted(Point tile) => survived.TryGetValue(tile, out var seen) && seen.count >= BlastsBeforeGivingUp && Main.GameUpdateCount - seen.at < ResistTicks;
 	int volleyLeft;
 	int volleyCharge;
 	uint nextVolleyAt;
@@ -131,6 +136,8 @@ public sealed class Explosives
 		{
 			projectileIndex = -1;
 			BotDiagnostics.Log(bot, $"bomb at {target} went off; the tile there is now {TileQuery.TypeAt(target)}");
+			if (TileQuery.IsSolid(target.X, target.Y))
+				survived[target] = (survived.TryGetValue(target, out var seen) && Main.GameUpdateCount - seen.at < ResistTicks ? seen.count + 1 : 1, Main.GameUpdateCount);
 			bot.Watchdog.RecordProgress();
 		}
 	}

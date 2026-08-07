@@ -1308,6 +1308,34 @@ public sealed class StockpileGoal : ProgressionGoal
 	}
 }
 
+public sealed class RallyRouteGoal : ProgressionGoal
+{
+	const uint RallyKeepTicks = 2 * 3600;
+
+	public override string Describe() => "RallyRoute";
+
+	public override bool AppliesTo(Bot bot) => bot.Faction.RallyBuilding && bot.Faction.Rally != null;
+
+	public override bool IsUrgent(Bot bot) => AppliesTo(bot);
+
+	public override bool IsMet(Bot bot) => !bot.Faction.RallyBuilding;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		var faction = bot.Faction;
+		if (faction.Rally is { } rally)
+			faction.Rally = (rally.point, System.Math.Max(rally.until, Terraria.Main.GameUpdateCount + RallyKeepTicks));
+		if (HighwayGoal.PlanHighways(bot, faction.RallyRoute) is { } road)
+			return road;
+		if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
+			return dig;
+		BotDiagnostics.Log(bot, "rally route is built, setting out");
+		faction.RallyRoute = null;
+		faction.RallyShaft = null;
+		return PlanStep.Idle;
+	}
+}
+
 public sealed class HandSummonGoal : ProgressionGoal
 {
 	const float HandOverTrip = 16f * 30f;
@@ -1587,6 +1615,7 @@ public static class ProgressionGoals
 			new ArenaKitGoal(),
 			new SkyArenaGoal(),
 			new RoadFirstGoal(),
+			new RallyRouteGoal(),
 			new BossGoal(),
 			new BossSupportGoal(),
 			new ArenaOutpostGoal(),

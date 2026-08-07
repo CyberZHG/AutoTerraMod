@@ -131,7 +131,9 @@ public sealed record Hellevator(int X, int TopY)
 		}
 	}
 
-	int BottomRow => LandingRow is int landing ? System.Math.Max(landing + 1, Main.UnderworldLayer - CompletionSlack) : Main.UnderworldLayer - CompletionSlack;
+	public int? StopRow { get; init; }
+
+	int BottomRow => StopRow ?? (LandingRow is int landing ? System.Math.Max(landing + 1, Main.UnderworldLayer - CompletionSlack) : Main.UnderworldLayer - CompletionSlack);
 
 	uint scannedAt = uint.MaxValue;
 	int firstUnfinished, firstImpassable;
@@ -141,7 +143,7 @@ public sealed record Hellevator(int X, int TopY)
 		if (scannedAt == Main.GameUpdateCount)
 			return;
 		scannedAt = Main.GameUpdateCount;
-		int end = System.Math.Max(Main.UnderworldLayer, BottomRow);
+		int end = StopRow ?? System.Math.Max(Main.UnderworldLayer, BottomRow);
 		firstImpassable = end;
 		firstUnfinished = end;
 		for (int y = TopY; y < end; y++)
@@ -179,7 +181,7 @@ public sealed record Hellevator(int X, int TopY)
 
 	int FirstUnfinishedRowFrom(int from)
 	{
-		int end = System.Math.Max(Main.UnderworldLayer, BottomRow);
+		int end = StopRow ?? System.Math.Max(Main.UnderworldLayer, BottomRow);
 		for (int y = System.Math.Max(from, TopY); y < end; y++)
 		{
 			if (!RowDone(y) || !IsPassableRow(y))

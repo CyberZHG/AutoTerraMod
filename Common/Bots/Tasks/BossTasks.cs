@@ -195,6 +195,7 @@ public sealed class SummonTask : BotTask
 			faction.RallyAssembled = true;
 			faction.Rally = (GatherPoint, Main.GameUpdateCount + DistantRallyTicks);
 			BotDiagnostics.Log(Bot, $"calling the team to {step.Place.ToTileCoordinates()} for {step.Challenge.Name}");
+			ChooseRallyRoute(faction, step.Place);
 			return true;
 		}
 		LeaveOutpostIfBedside();
@@ -217,7 +218,51 @@ public sealed class SummonTask : BotTask
 		faction.RallyAssembled = true;
 		faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyTicks);
 		BotDiagnostics.Log(Bot, $"set out for {step.Challenge.Name} with {present}/{team.Count} teammates");
+		ChooseRallyRoute(faction, step.Place);
 		return true;
+	}
+
+	const float RouteWorthTiles = 150f;
+	const int UndergroundRallyDepth = 30;
+	const uint RallyRouteTicks = 5 * 3600;
+
+	void ChooseRallyRoute(Factions.Faction faction, Vector2 place)
+	{
+		faction.RallyRoute = null;
+		faction.RallyShaft = null;
+		if (step.Trigger is PillarsTrigger || Vector2.Distance(place, faction.BaseCenter) < RouteWorthTiles * 16f)
+			return;
+		var goal = place.ToTileCoordinates();
+		bool underground = goal.Y > Main.worldSurface + UndergroundRallyDepth;
+		bool shaftReaches = underground && faction.Hellevator is { } own && own.FirstImpassableRow() > goal.Y + 1;
+		int choice = Main.rand.Next(shaftReaches ? 3 : 2);
+		var route = new System.Collections.Generic.List<Highway>();
+		Hellevator shaft = null;
+		string strategy;
+		if (choice == 1)
+		{
+			int low = System.Math.Min(faction.BaseTile.X, goal.X), high = System.Math.Max(faction.BaseTile.X, goal.X);
+			route.AddRange(Highway.All.Where(highway => !highway.IsComplete && highway.Y < Main.worldSurface + UndergroundRallyDepth
+				&& System.Math.Min(highway.StartX, highway.EndX) < high && System.Math.Max(highway.StartX, highway.EndX) > low));
+			if (underground)
+				shaft = new Hellevator(goal.X - 1, TileQuery.SurfaceY(goal.X) - 1) { StopRow = goal.Y + 1 };
+			strategy = $"building {route.Count} highways{(shaft != null ? " and a shaft down" : "")} on the way";
+		}
+		else if (choice == 2 && faction.Hellevator is { } hellevator)
+		{
+			int direction = System.Math.Sign(goal.X - hellevator.RopeX);
+			if (direction != 0)
+				route.Add(new Highway(faction.Id, direction, hellevator.RopeX + direction * 2, goal.X, goal.Y + 1, null));
+			strategy = "going down the hellevator and building a tunnel across";
+		}
+		else
+			strategy = "heading straight there";
+		BotDiagnostics.Log(Bot, $"rally route to {goal}: {strategy}");
+		if (route.Count == 0 && shaft == null)
+			return;
+		faction.RallyRoute = route;
+		faction.RallyShaft = shaft;
+		faction.RallyRouteUntil = Main.GameUpdateCount + (uint)(RallyRouteTicks * Planning.ProgressionPlanner.WorldScale);
 	}
 
 	bool GiveUpRally(int present, int teamSize)
@@ -664,6 +709,8 @@ public sealed class RallyTask : BotTask
 
 	public override float Evaluate()
 	{
+		if (Bot.Faction.RallyBuilding)
+			return 0f;
 		if (Bot.Faction.Rally is not { } rally || Main.GameUpdateCount >= rally.until || Bot.Brain.Plan is SummonBossStep && !Hosted(Bot.Faction, Bot.Faction.RallyBossType))
 			return 0f;
 		bool leading = BotWorldSystem.FindBot(Bot.Faction.RallyLeaderId) is { IsAlive: true } leader && (leader.Brain.Plan is SummonBossStep or BuildOutpostStep || leader.Brain.Current is SummonTask);
