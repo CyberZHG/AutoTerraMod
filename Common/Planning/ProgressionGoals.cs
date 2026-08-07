@@ -1329,6 +1329,10 @@ public sealed class RallyRouteGoal : ProgressionGoal
 			return road;
 		if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
 			return dig;
+		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
+		bool roadsDone = faction.RallyRoute.All(highway => highway.IsComplete || highway.BlockedAt(highway.Frontier(highway.Direction), bestPick));
+		if (!roadsDone || faction.RallyShaft is { IsFinished: false })
+			return PlanStep.Idle;
 		BotDiagnostics.Log(bot, "rally route is built, setting out");
 		faction.RallyRoute = null;
 		faction.RallyShaft = null;
