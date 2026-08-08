@@ -96,6 +96,8 @@ public abstract class BotTask
 		if (recall != null)
 			SoundEngine.PlaySound(SoundID.Item6, body.Center);
 		var home = BotWorldSystem.RespawnFeet(Bot);
+		if (Bot.Grapple.IsAttached)
+			Bot.Grapple.Release(body, jump: false);
 		Bot.LastRecallAt = Main.GameUpdateCount;
 		body.position = home - new Vector2(body.width / 2f, body.height);
 		body.velocity = Vector2.Zero;

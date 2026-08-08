@@ -1311,6 +1311,7 @@ public sealed class StockpileGoal : ProgressionGoal
 public sealed class RallyRouteGoal : ProgressionGoal
 {
 	const uint RallyKeepTicks = 2 * 3600;
+	const float CampCheckInPixels = 16f * 40f;
 
 	public override string Describe() => "RallyRoute";
 
@@ -1325,6 +1326,12 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		var faction = bot.Faction;
 		if (faction.Rally is { } rally)
 			faction.Rally = (rally.point, System.Math.Max(rally.until, Terraria.Main.GameUpdateCount + RallyKeepTicks));
+		if (!faction.RallyCheckedIn.Contains(bot.Id))
+		{
+			if (Microsoft.Xna.Framework.Vector2.Distance(bot.Center, faction.BaseCenter) > CampCheckInPixels)
+				return new TravelStep(faction.BaseFeet - new Microsoft.Xna.Framework.Vector2(0f, 32f));
+			faction.RallyCheckedIn.Add(bot.Id);
+		}
 		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX)).ToList();
 		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
 		bool blocked = open.Any(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick))
@@ -1333,7 +1340,7 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		{
 			if (HighwayGoal.PlanHighways(bot, open) is { } road)
 				return road;
-			if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
+			if (open.Count == 0 && faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
 				return dig;
 			if (open.Count > 0 || faction.RallyShaft is { IsFinished: false })
 				return PlanStep.Idle;

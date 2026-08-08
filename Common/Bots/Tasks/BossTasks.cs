@@ -262,6 +262,7 @@ public sealed class SummonTask : BotTask
 			return;
 		faction.RallyRoute = route;
 		faction.RallyShaft = shaft;
+		faction.RallyCheckedIn.Clear();
 		faction.RallyRouteUntil = Main.GameUpdateCount + (uint)(RallyRouteTicks * Planning.ProgressionPlanner.WorldScale);
 	}
 
