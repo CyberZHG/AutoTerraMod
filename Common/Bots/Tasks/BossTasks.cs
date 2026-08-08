@@ -40,7 +40,9 @@ public sealed class SummonTask : BotTask
 
 	const float WallGatherInset = 16f * 40f;
 
-	Vector2 GatherPoint => step.Trigger is VoodooDollTrigger
+	Vector2? relocated;
+
+	Vector2 GatherPoint => relocated is Vector2 here ? here : step.Trigger is VoodooDollTrigger
 		? step.Place + new Vector2(step.Place.X / 16f > Main.maxTilesX / 2 ? -WallGatherInset : WallGatherInset, 0f)
 		: step.Place;
 	string headcount;
@@ -67,6 +69,7 @@ public sealed class SummonTask : BotTask
 		lacewing = null;
 		extensions = 0;
 		headcount = null;
+		relocated = null;
 		var faction = Bot.Faction;
 		if (faction.Rally is { } rally && Main.GameUpdateCount < rally.until && faction.RallyLeaderId == Bot.Id)
 			return;
@@ -281,6 +284,8 @@ public sealed class SummonTask : BotTask
 
 	bool ReachedPlace()
 	{
+		if (relocated != null)
+			return true;
 		float distance = Vector2.Distance(Bot.Center, step.Place);
 		bool noWayCloser = Bot.Motor.IsStalled || Bot.Motor.Tunneling || Bot.Motor.HasNoRoute;
 		bool inUnderworld = Bot.CenterTile.Y >= Main.UnderworldLayer && step.Place.Y >= Main.UnderworldLayer * 16f;
@@ -290,6 +295,13 @@ public sealed class SummonTask : BotTask
 			closestApproachAt = Main.GameUpdateCount;
 		}
 		bool noLongerApproaching = Main.GameUpdateCount - closestApproachAt > ApproachPatienceTicks;
+		if ((noWayCloser || noLongerApproaching) && step.Trigger is SummonItemTrigger { CanUseHere: { } canUseHere } && canUseHere(Avatar))
+		{
+			relocated = Bot.Center;
+			Bot.Faction.Rally = (relocated.Value, Main.GameUpdateCount + RallyTicks);
+			BotDiagnostics.Log(Bot, $"cannot get closer to {step.Place.ToTileCoordinates()}, summoning {step.Challenge.Name} here at {Bot.CenterTile} instead");
+			return true;
+		}
 		if (distance <= ArrivalRadius || (noWayCloser || noLongerApproaching) && distance <= StuckAcceptRadius || inUnderworld && distance <= UnderworldAcceptRadius)
 			return true;
 		if (!noLongerApproaching)
