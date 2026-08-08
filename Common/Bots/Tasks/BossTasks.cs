@@ -1214,7 +1214,7 @@ public sealed class BuildBridgeTask : BotTask
 	{
 		var bridge = step.Bridge;
 		int direction = step.Direction;
-		int frontier = bridge.Frontier(direction);
+		int frontier = bridge is World.Highway road && direction == road.Direction ? road.WorkFrontier() : bridge.Frontier(direction);
 		if (frontier == bridge.End(direction) && bridge.IsBuilt(frontier) || bridge.RequiresPlatform(frontier) && !bridge.IsDeck(frontier) && !Bot.Hands.HasPlatform)
 		{
 			BotDiagnostics.Log(Bot, $"corridor work at {frontier} ends: built={bridge.IsBuilt(frontier)} needsPlatform={bridge.RequiresPlatform(frontier)} hasPlatform={Bot.Hands.HasPlatform}");

@@ -950,7 +950,7 @@ public sealed class HighwayGoal : ProgressionGoal
 					return link;
 				continue;
 			}
-			int frontier = highway.Frontier(highway.Direction);
+			int frontier = highway.WorkFrontier();
 			if (highway.BlockedAt(frontier, pick))
 				continue;
 			int stone = Inventory.Count(bot.Avatar, ItemID.StoneBlock);
@@ -1325,12 +1325,13 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		var faction = bot.Faction;
 		if (faction.Rally is { } rally)
 			faction.Rally = (rally.point, System.Math.Max(rally.until, Terraria.Main.GameUpdateCount + RallyKeepTicks));
-		if (HighwayGoal.PlanHighways(bot, faction.RallyRoute) is { } road)
+		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX)).ToList();
+		if (HighwayGoal.PlanHighways(bot, open) is { } road)
 			return road;
 		if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
 			return dig;
 		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
-		bool roadsDone = faction.RallyRoute.All(highway => highway.IsComplete || highway.BlockedAt(highway.Frontier(highway.Direction), bestPick));
+		bool roadsDone = open.All(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick));
 		if (!roadsDone || faction.RallyShaft is { IsFinished: false })
 			return PlanStep.Idle;
 		BotDiagnostics.Log(bot, "rally route is built, setting out");

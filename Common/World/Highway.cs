@@ -175,6 +175,21 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public bool IsComplete => Frontier(Direction) == EndX && IsBuilt(EndX);
 
+	int? cursor;
+
+	public int WorkFrontier()
+	{
+		int frontier = Frontier(Direction);
+		if (cursor is not int at || (frontier - at) * Direction >= 0)
+			return (cursor = frontier).Value;
+		for (int x = at; x != EndX; x += Direction)
+		{
+			if (!IsBuilt(x))
+				return (cursor = x).Value;
+		}
+		return (cursor = frontier).Value;
+	}
+
 	public string BlockReason { get; private set; }
 
 	public bool BlockedAt(int x, int pickPower)
