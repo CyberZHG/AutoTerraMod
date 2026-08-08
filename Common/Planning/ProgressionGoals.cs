@@ -1329,7 +1329,14 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		if (!faction.RallyCheckedIn.Contains(bot.Id))
 		{
 			if (Microsoft.Xna.Framework.Vector2.Distance(bot.Center, faction.BaseCenter) > CampCheckInPixels)
+			{
+				if (bot.OutpostBed != null)
+				{
+					BotDiagnostics.Log(bot, $"giving up the outpost spawn at {bot.OutpostBed} to recall home for the rally");
+					bot.OutpostBed = null;
+				}
 				return new TravelStep(faction.BaseFeet - new Microsoft.Xna.Framework.Vector2(0f, 32f));
+			}
 			faction.RallyCheckedIn.Add(bot.Id);
 		}
 		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX)).ToList();
