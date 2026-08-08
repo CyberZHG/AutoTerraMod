@@ -464,9 +464,10 @@ public static class BossRituals
 	const int WaterBombRestock = 15;
 	const int ShaftPlatformRestock = 20;
 
-	public static bool CanDigRow(Bot bot, Hellevator shaft, int row)
+	public static bool CanDigRow(Bot bot, Hellevator shaft, int row) => CanDigRowWith(bot.Hands.BestPickaxe?.pick ?? 0, shaft, row);
+
+	public static bool CanDigRowWith(int pick, Hellevator shaft, int row)
 	{
-		int pick = bot.Hands.BestPickaxe?.pick ?? 0;
 		for (int column = shaft.X; column <= shaft.X + 1; column++)
 		{
 			if (!TileQuery.IsSolid(column, row))

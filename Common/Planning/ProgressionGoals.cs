@@ -1326,15 +1326,19 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		if (faction.Rally is { } rally)
 			faction.Rally = (rally.point, System.Math.Max(rally.until, Terraria.Main.GameUpdateCount + RallyKeepTicks));
 		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX)).ToList();
-		if (HighwayGoal.PlanHighways(bot, open) is { } road)
-			return road;
-		if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
-			return dig;
 		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
-		bool roadsDone = open.All(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick));
-		if (!roadsDone || faction.RallyShaft is { IsFinished: false })
-			return PlanStep.Idle;
-		BotDiagnostics.Log(bot, "rally route is built, setting out");
+		bool blocked = open.Any(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick))
+			|| faction.RallyShaft is { IsFinished: false } dug && !Bosses.BossRituals.CanDigRowWith(bestPick, dug, dug.WorkRow());
+		if (!blocked)
+		{
+			if (HighwayGoal.PlanHighways(bot, open) is { } road)
+				return road;
+			if (faction.RallyShaft is { IsFinished: false } shaft && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not (IdleStep or BlockedStep))
+				return dig;
+			if (open.Count > 0 || faction.RallyShaft is { IsFinished: false })
+				return PlanStep.Idle;
+		}
+		BotDiagnostics.Log(bot, blocked ? "rally route is blocked by tiles nobody can dig, heading straight there" : "rally route is built, setting out");
 		faction.RallyRoute = null;
 		faction.RallyShaft = null;
 		return PlanStep.Idle;
