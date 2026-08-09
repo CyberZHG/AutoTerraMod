@@ -88,7 +88,8 @@ public sealed class RopeColumnTask : BotTask
 			return;
 		}
 		var cell = new Point(step.X, row);
-		var spot = new Vector2(PathFinder.CenterXOf(step.X), row * 16f + 8f);
+		bool rightWall = TileQuery.IsSolid(step.X + 1, row) || TileQuery.IsSolid(step.X + 1, row - 1) || TileQuery.IsSolid(step.X + 1, row - 2);
+		var spot = new Vector2(PathFinder.CenterXOf(rightWall ? step.X - 1 : step.X), row * 16f + 8f);
 		if (!Bot.Hands.CanReach(null, cell))
 		{
 			if (Main.GameUpdateCount % 600 == 0)
