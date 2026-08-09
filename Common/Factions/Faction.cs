@@ -37,6 +37,28 @@ public sealed class Faction
 	public Point? ArenaBed { get; set; }
 
 	public List<Point> Outposts { get; } = new();
+	readonly Dictionary<Point, uint> outpostUsedAt = new();
+
+	public static int MaxOutposts => (int)(3 * Planning.ProgressionPlanner.WorldScale);
+
+	public void TouchOutpost(Point bed) => outpostUsedAt[bed] = Terraria.Main.GameUpdateCount;
+
+	public void AddOutpost(Point bed)
+	{
+		TouchOutpost(bed);
+		if (!Outposts.Contains(bed))
+			Outposts.Add(bed);
+		while (Outposts.Count > MaxOutposts)
+		{
+			var stale = Outposts.MinBy(outpost => outpostUsedAt.GetValueOrDefault(outpost));
+			Outposts.Remove(stale);
+			outpostUsedAt.Remove(stale);
+			foreach (var member in Systems.BotWorldSystem.Bots)
+				if (member.FactionId == Id && member.OutpostBed == stale)
+					member.OutpostBed = null;
+			Bots.BotDiagnostics.LogWorld($"[{Name}] dropped the least recently used outpost at {stale} ({MaxOutposts} at most)");
+		}
+	}
 
 	public Dictionary<Point, Point> OutpostFrames { get; } = new();
 	public Dictionary<int, (uint until, bool forGear)> RefightWishes { get; } = new();

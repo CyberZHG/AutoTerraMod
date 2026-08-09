@@ -378,8 +378,7 @@ public sealed class OutpostTask : BotTask
 		else if (usable)
 		{
 			Bot.OutpostBed = bed;
-			if (!Bot.Faction.Outposts.Contains(bed))
-				Bot.Faction.Outposts.Add(bed);
+			Bot.Faction.AddOutpost(bed);
 		}
 		Outpost.Invalidate();
 		BotDiagnostics.Log(Bot, usable ? $"outpost ready, respawning at the bed {bed}" : $"outpost at {bed} is not a valid room: {WorldGen.roomCheckFailureReason}");
@@ -435,6 +434,7 @@ public sealed class ClaimOutpostTask : BotTask
 			return;
 		}
 		Bot.OutpostBed = bed;
+		Bot.Faction.TouchOutpost(bed);
 		BotDiagnostics.Log(Bot, $"respawning at the faction outpost bed {bed}");
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;

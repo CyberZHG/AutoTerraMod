@@ -221,7 +221,11 @@ public sealed class BotWorldSystem : ModSystem
 		foreach (var bot in Bots)
 		{
 			if (!bot.IsAlive && --bot.RespawnTicks <= 0)
+			{
+				if (bot.OutpostBed is Point outpost)
+					bot.Faction.TouchOutpost(outpost);
 				Spawn(bot, RespawnFeet(bot));
+			}
 		}
 		Navigation.DangerSpots.Prune();
 	}

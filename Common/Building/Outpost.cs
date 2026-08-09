@@ -184,7 +184,7 @@ public static class Outpost
 		foreach (var member in BotWorldSystem.Bots)
 		{
 			if (member.FactionId == faction.Id && member.OutpostBed is Point bed && BedStands(bed) && !InUnderworld(bed) && !faction.Outposts.Contains(bed))
-				faction.Outposts.Add(bed);
+				faction.AddOutpost(bed);
 		}
 		return faction.Outposts;
 	}
