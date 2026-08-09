@@ -343,6 +343,12 @@ public abstract class BotTask
 			return true;
 		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
 			return false;
+		if (InAnyCamp(Bot.CenterTile) || InAnyCamp(target.ToTileCoordinates()))
+		{
+			Bot.Motor.Stop();
+			Bot.Motor.MoveTo(target, radius);
+			return true;
+		}
 		bool beneath = BelowWithinReach(target);
 		if (!beneath && (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance || InOwnShaft()) && DeepDetour(target, radius))
 			return true;
@@ -573,6 +579,11 @@ public abstract class BotTask
 
 	bool LeavesShaft(Vector2 target) =>
 		Bot.Faction.Hellevator is { } shaft && target.ToTileCoordinates() is var goal && (goal.X < shaft.X - ShaftExitMargin || goal.X > shaft.Right + ShaftExitMargin);
+
+	const int CampTunnelMargin = 4;
+
+	static bool InAnyCamp(Point tile) => BotWorldSystem.Factions.Any(faction => faction.Settlement is { } camp
+		&& tile.X >= camp.Left - CampTunnelMargin && tile.X <= camp.Right + CampTunnelMargin && tile.Y >= camp.Top - CampTunnelMargin && tile.Y <= camp.Floor + CampTunnelMargin);
 
 	bool InOwnShaft() => Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 
