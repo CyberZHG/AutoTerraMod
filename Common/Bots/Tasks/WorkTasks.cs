@@ -468,6 +468,7 @@ public sealed class GatherTask : BotTask
 	}
 
 	const float TeleportChance = 0.3f;
+	const float FarProspectPixels = 16f * 100f;
 
 	public override void Tick()
 	{
@@ -557,7 +558,8 @@ public sealed class GatherTask : BotTask
 			prospectTarget = destination;
 			Bot.Motor.Stop();
 		}
-		bool moving = DeepOre() || Tiles.Ground == Landmark.Underworld ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
+		bool farGround = Tiles.Ground is Landmark && (!Grounds.IsInside(BotWorldSystem.KnowledgeOf(Bot.Faction), Tiles.Ground.Value, Bot.CenterTile) || Vector2.Distance(Bot.Center, destination) > FarProspectPixels);
+		bool moving = DeepOre() || Tiles.Ground == Landmark.Underworld || farGround ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
 		if (moving)
 			return;
 		prospectDirection = -prospectDirection;
