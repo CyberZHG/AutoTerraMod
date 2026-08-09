@@ -228,6 +228,26 @@ public abstract class BotTask
 	const int ShaftCatchment = 80;
 	const int ShaftCatchmentDepth = 60;
 
+	const int LavaSafetyRows = 4;
+
+	protected static bool LavaBelow(World.Hellevator shaft, int feetRow)
+	{
+		for (int y = feetRow; y <= feetRow + LavaSafetyRows; y++)
+			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
+				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava)
+					return true;
+		return false;
+	}
+
+	protected static int AboveLava(World.Hellevator shaft, int row)
+	{
+		for (int y = shaft.TopY + 1; y <= row + LavaSafetyRows; y++)
+			for (int x = shaft.X; x <= shaft.Right; x++)
+				if (Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava)
+					return System.Math.Min(row, y - LavaSafetyRows - 1);
+		return row;
+	}
+
 	protected void CentreIn(World.Hellevator shaft)
 	{
 		Bot.Motor.Stop();
@@ -238,7 +258,7 @@ public abstract class BotTask
 		float offset = (shaft.X + 1) * 16f - Bot.Center.X;
 		if (System.Math.Abs(offset) >= ShaftCentring)
 			body.position.X += System.Math.Clamp(offset, -NudgePerTick, NudgePerTick);
-		else if (body.velocity.Y == 0f)
+		else if (body.velocity.Y == 0f && !LavaBelow(shaft, (int)((body.position.Y + body.height) / 16f)))
 		{
 			Bot.Motor.DropThroughPlatform();
 			int footRow = (int)((body.position.Y + body.height + ShaftSlide) / 16f);
@@ -459,7 +479,8 @@ public abstract class BotTask
 		recalled = false;
 		var here = Bot.CenterTile;
 		var goal = target.ToTileCoordinates();
-		if (System.Math.Abs(goal.X - here.X) < HighwayTripTiles || goal.Y > Main.worldSurface + HighwaySurfaceDepth)
+		bool deepGoal = goal.Y > Main.worldSurface + HighwaySurfaceDepth;
+		if (System.Math.Abs(goal.X - here.X) < HighwayTripTiles || deepGoal && here.Y > Main.worldSurface + HighwaySurfaceDepth)
 			return null;
 		int baseX = Bot.Faction.BaseTile.X;
 		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0;

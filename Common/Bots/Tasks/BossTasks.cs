@@ -1431,7 +1431,7 @@ public sealed class DigShaftTask : BotTask
 		if (!highEnough || !Bot.Hands.Explosives.InThrowRange(cell))
 		{
 			if (highEnough)
-				Descend(shaft, new Vector2((shaft.X + 1) * 16f, (row - LavaThrowMinRows) * 16f - 21f));
+				Descend(shaft, new Vector2((shaft.X + 1) * 16f, AboveLava(shaft, row - LavaThrowMinRows) * 16f - 21f));
 			else
 				Bot.Motor.MoveTo(new Vector2((shaft.X + 1) * 16f, (row - LavaThrowMinRows - 4) * 16f), 16f);
 			return;
@@ -1580,7 +1580,7 @@ public sealed class DigShaftTask : BotTask
 			}
 			if (shaft.LavaBlasts < Hellevator.MaxLavaBlasts && shaft.LavaFloor(row) is Point lavaFloor && !Bot.Hands.Explosives.InThrowRange(lavaFloor))
 			{
-				Descend(shaft, new Vector2((shaft.X + 1) * 16f, (row - 2) * 16f - 21f));
+				Descend(shaft, new Vector2((shaft.X + 1) * 16f, AboveLava(shaft, row - 2) * 16f - 21f));
 				return;
 			}
 			if (shaft.LavaBlasts < Hellevator.MaxLavaBlasts && shaft.LavaFloor(row) is Point floor && Bot.Hands.Explosives.Light(floor))
