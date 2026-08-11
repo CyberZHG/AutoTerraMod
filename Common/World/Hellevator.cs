@@ -45,7 +45,7 @@ public sealed record Hellevator(int X, int TopY)
 
 	public bool HasRope(int y) => Main.tile[RopeX, y].HasTile && Main.tileRope[Main.tile[RopeX, y].TileType];
 
-	public bool NeedsCleanup(int x, int y) => x != RopeX && !Building.HouseInspector.IsProtected(x, y) && (TileQuery.IsPlatform(x, y) && HasRope(y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]);
+	public bool NeedsCleanup(int x, int y) => x != RopeX && (TileQuery.IsPlatform(x, y) && HasRope(y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]) && !Building.HouseInspector.IsProtected(x, y);
 
 	public Microsoft.Xna.Framework.Point? LavaFloor(int row)
 	{
@@ -136,11 +136,12 @@ public sealed record Hellevator(int X, int TopY)
 	int BottomRow => StopRow ?? (LandingRow is int landing ? System.Math.Max(landing + 1, Main.UnderworldLayer - CompletionSlack) : Main.UnderworldLayer - CompletionSlack);
 
 	uint scannedAt = uint.MaxValue;
+	const uint ScanRecheckTicks = 10;
 	int firstUnfinished, firstImpassable;
 
 	void Scan()
 	{
-		if (scannedAt == Main.GameUpdateCount)
+		if (scannedAt <= Main.GameUpdateCount && Main.GameUpdateCount - scannedAt < ScanRecheckTicks)
 			return;
 		scannedAt = Main.GameUpdateCount;
 		int end = StopRow ?? System.Math.Max(Main.UnderworldLayer, BottomRow);
