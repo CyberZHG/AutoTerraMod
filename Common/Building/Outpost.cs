@@ -33,7 +33,15 @@ public static class Outpost
 
 	public static int StoneBlocks(Player avatar) => Inventory.Count(avatar, ItemID.StoneBlock) + Inventory.Count(avatar, ItemID.GrayBrick);
 
-	public static bool CarriesKit(Player avatar) => Count(avatar, IsBed) > 0 && Count(avatar, IsDoor) > 0 && Count(avatar, IsHouseWall) >= WallsNeeded;
+	public const int DoorsNeeded = 2;
+	public const int HatchWidth = 3;
+	public const int PlatformsNeeded = 2 * HatchWidth;
+
+	public static bool IsPlatform(Item item) => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile];
+
+	public static int DoorStack(Player avatar) => Inventory.Items(avatar).Where(IsDoor).Select(item => item.stack).DefaultIfEmpty(0).Max();
+
+	public static bool CarriesKit(Player avatar) => Count(avatar, IsBed) > 0 && DoorStack(avatar) >= DoorsNeeded && Count(avatar, IsHouseWall) >= WallsNeeded && Count(avatar, IsPlatform) >= PlatformsNeeded;
 
 	public static bool InUnderworld(Point bed) => bed.Y >= Main.UnderworldLayer - 10;
 
@@ -161,9 +169,8 @@ public static class Outpost
 		return false;
 	}
 
-	public static bool ExitBlocked(int right, int floor)
+	public static bool ExitBlocked(int x, int floor)
 	{
-		int x = right + 1;
 		for (int y = floor - 3; y < floor; y++)
 		{
 			if (WorldGen.InWorld(x, y, 2) && World.TileQuery.IsSolid(x, y) && !WorldGen.CanKillTile(x, y))
@@ -342,10 +349,14 @@ public static class Outpost
 		public int Floor { get; }
 		public int Ceiling => Floor - Height + 1;
 		public int WallColumn => Left + Width / 2;
-		public Point DoorTile => new(Right, Floor - 2);
+		public Point[] DoorTiles => new[] { new Point(Left, Floor - 2), new Point(Right, Floor - 2) };
+		public int HatchLeft => Right - 1 - HatchWidth;
+		public int BedX => Left + 2;
+
+		public bool IsHatch(int x, int y) => (y == Floor || y == Ceiling) && x >= HatchLeft && x < HatchLeft + HatchWidth;
 		public Point StandingNear(Point tile) => new(System.Math.Clamp(tile.X, Left + 1, Right - 2), Floor - 1);
 
-		public bool IsDoorway(int x, int y) => x == Right && y >= Floor - 3 && y < Floor;
+		public bool IsDoorway(int x, int y) => (x == Left || x == Right) && y >= Floor - 3 && y < Floor;
 
 		public IEnumerable<Point> Interior()
 		{
@@ -359,7 +370,8 @@ public static class Outpost
 			for (int x = Left; x <= Right; x++)
 				yield return new Point(x, Floor);
 			for (int y = Floor - 1; y > Ceiling; y--)
-				yield return new Point(Left, y);
+				if (!IsDoorway(Left, y))
+					yield return new Point(Left, y);
 			for (int x = Left; x <= Right; x++)
 				yield return new Point(x, Ceiling);
 			for (int y = Ceiling + 1; y < Floor; y++)
@@ -376,7 +388,10 @@ public static class Outpost
 		public IEnumerable<Point> Doorway()
 		{
 			for (int y = Floor - 3; y < Floor; y++)
+			{
+				yield return new Point(Left, y);
 				yield return new Point(Right, y);
+			}
 		}
 
 		public IEnumerable<Point> WallSpots() => Interior();
@@ -410,7 +425,7 @@ public static class Outpost
 		{
 			if (!WorldGen.InWorld(Left, Ceiling, 20) || !WorldGen.InWorld(Right, Floor, 20))
 				return false;
-			if (ExitBlocked(Right, Floor))
+			if (ExitBlocked(Right + 1, Floor) || ExitBlocked(Left - 1, Floor))
 				return false;
 			var interior = Interior().ToHashSet();
 			foreach (var tile in interior.Concat(Shell()))

@@ -229,10 +229,12 @@ public abstract class BotTask
 	const int ShaftCatchmentDepth = 60;
 
 	const int LavaSafetyRows = 4;
+	protected const int SealingSafetyRows = 2;
+	protected bool sealingLava;
 
-	protected static bool LavaBelow(World.Hellevator shaft, int feetRow)
+	protected static bool LavaBelow(World.Hellevator shaft, int feetRow, int rows = LavaSafetyRows)
 	{
-		for (int y = feetRow; y <= feetRow + LavaSafetyRows; y++)
+		for (int y = feetRow; y <= feetRow + rows; y++)
 			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
 				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava)
 					return true;
@@ -258,7 +260,7 @@ public abstract class BotTask
 		float offset = (shaft.X + 1) * 16f - Bot.Center.X;
 		if (System.Math.Abs(offset) >= ShaftCentring)
 			body.position.X += System.Math.Clamp(offset, -NudgePerTick, NudgePerTick);
-		else if (body.velocity.Y == 0f && !LavaBelow(shaft, (int)((body.position.Y + body.height) / 16f)))
+		else if (body.velocity.Y == 0f && !LavaBelow(shaft, (int)((body.position.Y + body.height) / 16f), sealingLava ? SealingSafetyRows : LavaSafetyRows))
 		{
 			Bot.Motor.DropThroughPlatform();
 			int footRow = (int)((body.position.Y + body.height + ShaftSlide) / 16f);

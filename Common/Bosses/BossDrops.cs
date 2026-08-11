@@ -16,9 +16,9 @@ public static class BossDrops
 
 	public static BossChallenge SourceOf(int itemType)
 	{
-		if (sourceByItem == null || builtForCrimson != WorldGen.crimson)
+		if (sourceByItem == null || builtForCrimson != World.Landmarks.EvilIsCrimson)
 		{
-			builtForCrimson = WorldGen.crimson;
+			builtForCrimson = World.Landmarks.EvilIsCrimson;
 			sourceByItem = Build();
 		}
 		return sourceByItem.GetValueOrDefault(itemType);

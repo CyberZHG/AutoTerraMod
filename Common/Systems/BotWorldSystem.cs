@@ -32,6 +32,7 @@ public sealed class BotWorldSystem : ModSystem
 	public static WorldFactionSettings Settings { get; private set; }
 	static FactionKnowledge sharedKnowledge = new();
 	static bool initialized;
+	static bool configShowsWorld;
 	static int nextBotId;
 
 	public static bool IsRunning => initialized && Main.netMode != NetmodeID.MultiplayerClient && Settings?.BotsEnabled != false;
@@ -76,6 +77,8 @@ public sealed class BotWorldSystem : ModSystem
 		Relation = FactionRelation.Race;
 		Settings = null;
 		initialized = false;
+		configShowsWorld = false;
+		World.Landmarks.DrunkCrimson = null;
 		nextBotId = 0;
 		Stations.Reset();
 		HouseInspector.Reset();
@@ -91,6 +94,7 @@ public sealed class BotWorldSystem : ModSystem
 		ProgressionPlanner.Reset();
 		Bosses.BossCredit.Reset();
 		World.Highway.Forget();
+		Planning.SurveyRoadGoal.Forget();
 		World.WaterFinder.Reset();
 		Navigation.DangerSpots.Reset();
 	}
@@ -99,6 +103,8 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		if (Settings != null)
 			tag["settings"] = Settings.Save();
+		if (World.Landmarks.DrunkCrimson is bool drunkCrimson)
+			tag["drunkCrimson"] = drunkCrimson;
 		if (Factions.Count == 0)
 			return;
 		tag["relation"] = (int)Relation;
@@ -112,6 +118,8 @@ public sealed class BotWorldSystem : ModSystem
 
 	public override void LoadWorldData(TagCompound tag)
 	{
+		if (tag.ContainsKey("drunkCrimson"))
+			World.Landmarks.DrunkCrimson = tag.GetBool("drunkCrimson");
 		Relation = (FactionRelation)tag.GetInt("relation");
 		nextBotId = tag.GetInt("nextBotId");
 		Factions.AddRange(tag.GetList<TagCompound>("factions").Select(Faction.Load));
@@ -210,6 +218,15 @@ public sealed class BotWorldSystem : ModSystem
 		if (Main.netMode == NetmodeID.MultiplayerClient || initialized)
 			return;
 		Settings ??= WorldFactionSettings.ForNewWorld(ModContent.GetInstance<AutoTerraConfig>());
+		if (!configShowsWorld)
+		{
+			configShowsWorld = true;
+			var config = ModContent.GetInstance<AutoTerraConfig>();
+			config.BotsEnabled = Settings.BotsEnabled;
+			config.FactionCount = Settings.FactionCount;
+			config.BotsPerFaction = Settings.BotsPerFaction;
+			config.Relation = Settings.Relation;
+		}
 		if (Settings.BotsEnabled)
 			Initialize();
 	}

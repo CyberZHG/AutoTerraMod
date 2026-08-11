@@ -153,8 +153,8 @@ public static class BossCatalog
 
 	public static bool AppliesToThisWorld(BossChallenge challenge) => challenge.BossType switch
 	{
-		NPCID.EaterofWorldsHead => !WorldGen.crimson,
-		NPCID.BrainofCthulhu => WorldGen.crimson,
+		NPCID.EaterofWorldsHead => !Landmarks.EvilIsCrimson,
+		NPCID.BrainofCthulhu => Landmarks.EvilIsCrimson,
 		_ => true
 	};
 

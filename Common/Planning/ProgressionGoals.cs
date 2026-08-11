@@ -883,8 +883,17 @@ public sealed class OutpostKitGoal : ProgressionGoal
 		var avatar = bot.Avatar;
 		if (Outpost.Count(avatar, Outpost.IsBed) == 0)
 			return ProgressionPlanner.ObtainAny(bot, HouseDesign.Beds);
-		if (Outpost.Count(avatar, Outpost.IsDoor) == 0)
-			return ProgressionPlanner.ObtainAny(bot, HouseDesign.Doors);
+		if (Outpost.DoorStack(avatar) < Outpost.DoorsNeeded)
+		{
+			var held = Inventory.Items(avatar).Where(Outpost.IsDoor).MaxBy(item => item.stack);
+			return held != null ? ProgressionPlanner.Obtain(bot, held.type, Outpost.DoorsNeeded) : ProgressionPlanner.ObtainAnyAmount(bot, HouseDesign.Doors, Outpost.DoorsNeeded);
+		}
+		int platforms = Outpost.Count(avatar, Outpost.IsPlatform);
+		if (platforms < Outpost.PlatformsNeeded)
+		{
+			int type = HouseMaterials.PlatformToObtain(bot);
+			return ProgressionPlanner.Obtain(bot, type, Inventory.Count(avatar, type) + Outpost.PlatformsNeeded - platforms);
+		}
 		int walls = Outpost.Count(avatar, Outpost.IsHouseWall);
 		return ProgressionPlanner.Obtain(bot, ItemID.StoneWall, Inventory.Count(avatar, ItemID.StoneWall) + Outpost.WallsNeeded - walls);
 	}
@@ -1198,6 +1207,72 @@ public sealed class SurveyGoal : ProgressionGoal
 		: Unknown(bot) is World.Landmark landmark ? new ScoutStep(landmark, false)
 		: UnexploredCave(bot, SurveyRingCells) is Microsoft.Xna.Framework.Point cave ? new SurveyStep(cave)
 		: PlanStep.Idle;
+}
+
+public sealed class SurveyRoadGoal : ProgressionGoal
+{
+	static readonly Dictionary<(int faction, World.Landmark landmark), bool> roadChosen = new();
+
+	public static void Forget() => roadChosen.Clear();
+
+	public override string Describe() => "SurveyRoad";
+
+	public override bool AppliesTo(Bot bot) => Road(bot) != null;
+
+	public override bool IsMet(Bot bot) => false;
+
+	public override PlanStep Plan(Bot bot) => Road(bot) is { } road ? HighwayGoal.PlanHighways(bot, road) ?? PlanStep.Blocked : PlanStep.Blocked;
+
+	static readonly World.Landmark[] SurfaceLandmarks = { World.Landmark.Dungeon, World.Landmark.Jungle, World.Landmark.Snow, World.Landmark.Ocean };
+
+	static List<World.Highway> Road(Bot bot)
+	{
+		var faction = bot.Faction;
+		if (faction.Settlement is not { } camp || faction.Rally != null)
+			return null;
+		var knowledge = BotWorldSystem.KnowledgeOf(faction);
+		var unknown = new[] { World.Landmarks.WorldEvil }.Concat(SurfaceLandmarks).Where(landmark => knowledge.LandmarkOf(landmark) == null).Cast<World.Landmark?>().FirstOrDefault();
+		if (unknown is not World.Landmark landmark)
+			return null;
+		var key = (faction.Id, landmark);
+		if (!roadChosen.TryGetValue(key, out bool road))
+		{
+			roadChosen[key] = road = Terraria.Main.rand.NextBool();
+			BotDiagnostics.LogWorld($"[{faction.Name}] surveying for {landmark} {(road ? "by building the surface highway together" : "with scouts")}");
+		}
+		if (!road)
+			return null;
+		int direction = Heading(knowledge, landmark, camp);
+		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
+		int middle = (camp.Left + camp.Right) / 2;
+		var open = new List<World.Highway>();
+		foreach (var highway in World.Highway.All.Where(highway => (System.Math.Max(highway.StartX, highway.EndX) - middle) * direction > 0)
+			.OrderBy(highway => System.Math.Min(System.Math.Abs(highway.StartX - middle), System.Math.Abs(highway.EndX - middle))))
+		{
+			if (highway.IsComplete)
+				continue;
+			if (highway.BlockedAt(highway.WorkFrontier(), bestPick))
+				break;
+			open.Add(highway);
+		}
+		if (open.Count == 0)
+		{
+			roadChosen[key] = false;
+			BotDiagnostics.LogWorld($"[{faction.Name}] the highway toward {landmark} is done or blocked, sending scouts instead");
+			return null;
+		}
+		return open;
+	}
+
+	static int Heading(Factions.FactionKnowledge knowledge, World.Landmark landmark, Building.Settlement camp)
+	{
+		int middle = (camp.Left + camp.Right) / 2;
+		if (landmark == World.Landmark.Dungeon && knowledge.LandmarkOf(World.Landmark.Jungle) is Microsoft.Xna.Framework.Point jungle)
+			return jungle.X > Terraria.Main.maxTilesX / 2 ? -1 : 1;
+		if (landmark == World.Landmark.Ocean)
+			return middle < Terraria.Main.maxTilesX / 2 ? -1 : 1;
+		return knowledge.ScoutDirection == 0 ? 1 : knowledge.ScoutDirection;
+	}
 }
 
 public sealed class SmashAltarsGoal : ProgressionGoal
@@ -1705,6 +1780,7 @@ public static class ProgressionGoals
 			staffs: new int[] { ItemID.RubyStaff, ItemID.DiamondStaff },
 			armor: new (int, int, int)[] { (ItemID.GoldHelmet, ItemID.GoldChainmail, ItemID.GoldGreaves), (ItemID.PlatinumHelmet, ItemID.PlatinumChainmail, ItemID.PlatinumGreaves) },
 			leapWhen: BeatenEvilBoss);
+		goals.Add(new SurveyRoadGoal());
 		goals.Add(new SurveyGoal());
 		goals.Add(new OwnGoal(ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone, ItemID.Shellphone));
 		AddOreTier(goals,

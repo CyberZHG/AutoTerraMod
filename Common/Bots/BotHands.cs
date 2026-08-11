@@ -333,11 +333,11 @@ public sealed class BotHands
 		return Main.getGoodWorld ? (int)(damage * 1.3) : damage;
 	}
 
-	public bool Place(Item item, Point tile)
+	public bool Place(Item item, Point tile, bool intoShaft = false)
 	{
 		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
 			return false;
-		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || World.Hellevator.InAnyShaft(tile.X, tile.Y)))
+		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || !intoShaft && World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;
 		ClearReplaceableTile(tile);
 		if (!CanPlaceAt(item, tile) && CanPlaceClearingRopes(item, tile))

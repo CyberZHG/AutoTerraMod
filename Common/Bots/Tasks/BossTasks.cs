@@ -1414,6 +1414,64 @@ public sealed class DigShaftTask : BotTask
 
 	const int LavaThrowMinRows = 6;
 
+	const int SealScanAbove = 3;
+	const int MaxSealFailures = 30;
+	int sealFailures;
+
+	static bool HoldsLava(int x, int y) => WorldGen.InWorld(x, y, 2) && !TileQuery.HasTile(new Point(x, y)) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava;
+
+	static bool LeaksLava(Hellevator shaft, int x, int y) => (x == shaft.X - 1 || x == shaft.Right + 1) && !TileQuery.IsSolid(x, y) && TileQuery.TouchesLava(x, y);
+
+	Point? LavaToSeal(Hellevator shaft, int row)
+	{
+		int feet = PathFinder.FeetOf(Bot.Npc).Y;
+		int from = System.Math.Max(shaft.TopY + 1, System.Math.Min(feet, row) - SealScanAbove);
+		for (int y = from; y <= row + 1; y++)
+		{
+			Point? loose = null;
+			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
+			{
+				if (!HoldsLava(x, y) && !LeaksLava(shaft, x, y))
+					continue;
+				var cell = new Point(x, y);
+				if (BotHands.Anchored(cell))
+					return cell;
+				loose ??= cell;
+			}
+			if (loose != null)
+				return loose;
+		}
+		return null;
+	}
+
+	bool SealLava(Hellevator shaft, int row)
+	{
+		if (Bot.Hands.Explosives.IsFused)
+			return false;
+		var block = Inventory.Items(Avatar).Where(Building.Outpost.IsBlock).OrderBy(item => item.type == ItemID.StoneBlock ? 0 : 1).FirstOrDefault();
+		if (block == null || sealFailures >= MaxSealFailures || LavaToSeal(shaft, row) is not Point cell)
+			return false;
+		Bot.Watchdog.RecordProgress();
+		if (Bot.Hands.CanReach(block, cell))
+		{
+			Bot.Motor.Stop();
+			if (!Bot.Hands.Ready)
+				return true;
+			if (Bot.Hands.Place(block, cell, intoShaft: true))
+			{
+				sealFailures = 0;
+				BotDiagnostics.Log(Bot, $"sealed lava at {cell} in the hellevator with {block.Name}");
+			}
+			else if (++sealFailures >= MaxSealFailures)
+				BotDiagnostics.Log(Bot, $"cannot seal lava at {cell}: {Bot.Hands.PlaceFailure(block, cell)}");
+			return true;
+		}
+		sealingLava = true;
+		Descend(shaft, new Vector2((shaft.X + 1) * 16f, (cell.Y - 2) * 16f - 21f));
+		sealingLava = false;
+		return true;
+	}
+
 	void BlastLavaWall(Hellevator shaft, int row)
 	{
 		if (shaft.LastBlastAt > 0 && Main.GameUpdateCount - shaft.LastBlastAt < Hellevator.DrainTicks || Bot.Hands.Explosives.IsFused)
@@ -1532,6 +1590,7 @@ public sealed class DigShaftTask : BotTask
 		base.Start();
 		viaMouth = false;
 		diving = false;
+		sealFailures = 0;
 	}
 
 	DigShaftStep step;
@@ -1563,6 +1622,8 @@ public sealed class DigShaftTask : BotTask
 			return;
 		}
 		if (RefillAir(shaft, row))
+			return;
+		if (SealLava(shaft, row))
 			return;
 		if (BossRituals.RowTouchesLava(shaft, row) && Bot.Hands.Explosives.Carries && shaft.LavaBlasts < Hellevator.MaxLavaBlasts)
 		{

@@ -251,11 +251,14 @@ public sealed class OutpostTask : BotTask
 			if (IsRope(tile))
 				return (tile, Bot.Hands.BestPickaxe, () => StandingInside() && Clear(tile));
 		}
-		if (!site.Doorway().Any(IsDoor))
-			return (site.DoorTile, Find(Outpost.IsDoor), () => Bot.Hands.Place(Find(Outpost.IsDoor), site.DoorTile));
+		foreach (var door in site.DoorTiles)
+		{
+			if (!site.Doorway().Any(tile => tile.X == door.X && IsDoor(tile)))
+				return (door, Find(Outpost.IsDoor), () => Bot.Hands.Place(Find(Outpost.IsDoor), door));
+		}
 		if (FindBed() == null)
 		{
-			var spot = new Point(site.Left + 2, site.Floor - 1);
+			var spot = new Point(site.BedX, site.Floor - 1);
 			return (spot, Find(item => item.createTile == TileID.Beds), PlaceBed);
 		}
 		return null;
@@ -287,6 +290,14 @@ public sealed class OutpostTask : BotTask
 
 	(Point, Item, System.Func<bool>)? ShellJob(Point tile)
 	{
+		if (site.IsHatch(tile.X, tile.Y))
+		{
+			if (TileQuery.IsPlatform(tile.X, tile.Y))
+				return null;
+			if (TileQuery.HasTile(tile))
+				return (tile, Bot.Hands.BestPickaxe, () => Clear(tile));
+			return (tile, Find(Outpost.IsPlatform), () => Bot.Hands.Place(Find(Outpost.IsPlatform), tile));
+		}
 		if (TileQuery.HasTile(tile) && !TileQuery.IsSolid(tile))
 			return (tile, Bot.Hands.BestPickaxe, () => Clear(tile));
 		if (!TileQuery.HasTile(tile))
@@ -323,13 +334,8 @@ public sealed class OutpostTask : BotTask
 	bool PlaceBed()
 	{
 		var bed = Find(item => item.createTile == TileID.Beds);
-		for (int x = site.Left + 2; x <= site.Right - 3; x++)
-		{
-			var spot = new Point(x, site.Floor - 1);
-			if (Bot.Hands.CanReach(bed, spot) && Bot.Hands.Place(bed, spot))
-				return true;
-		}
-		return false;
+		var spot = new Point(site.BedX, site.Floor - 1);
+		return Bot.Hands.CanReach(bed, spot) && Bot.Hands.Place(bed, spot);
 	}
 
 	static readonly int[] StoneMaterials = { ItemID.StoneBlock, ItemID.GrayBrick, ItemID.StoneWall, ItemID.GrayBrickWall };

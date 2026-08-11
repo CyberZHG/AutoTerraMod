@@ -52,7 +52,7 @@ public static class BossRituals
 		});
 
 	public static bool CanMineEvilStone(Bot bot) =>
-		(bot.Hands.BestPickaxe?.pick ?? 0) >= Navigation.PickRequirement.MinimumPick(WorldGen.crimson ? TileID.Crimstone : TileID.Ebonstone, 0, 0);
+		(bot.Hands.BestPickaxe?.pick ?? 0) >= Navigation.PickRequirement.MinimumPick(Landmarks.EvilIsCrimson ? TileID.Crimstone : TileID.Ebonstone, 0, 0);
 
 	public static PlanStep Plan(Bot bot, BossChallenge challenge, BossTrigger trigger) =>
 		bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until && bot.Faction.RallyBossType != challenge.BossType

@@ -38,5 +38,9 @@ public static class Landmarks
 		};
 	}
 
-	public static Landmark WorldEvil => WorldGen.crimson ? Landmark.Crimson : Landmark.Corruption;
+	public static bool? DrunkCrimson;
+
+	public static bool EvilIsCrimson => Main.drunkWorld ? DrunkCrimson ??= WorldGen.crimson : WorldGen.crimson;
+
+	public static Landmark WorldEvil => EvilIsCrimson ? Landmark.Crimson : Landmark.Corruption;
 }
