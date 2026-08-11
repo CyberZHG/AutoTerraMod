@@ -41,7 +41,7 @@ public sealed class LootTask : BotTask
 			return 0f;
 		chestAt = new Point(Main.chest[chestIndex].x, Main.chest[chestIndex].y);
 		var chestTile = Main.tile[Main.chest[chestIndex].x, Main.chest[chestIndex].y];
-		string name = Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36));
+		string name = Main.dedServ ? null : Lang.GetMapObjectName(Terraria.Map.MapHelper.TileToLookup(chestTile.TileType, chestTile.TileFrameX / 36));
 		Detail = string.IsNullOrEmpty(name) ? $"{Main.chest[chestIndex].x},{Main.chest[chestIndex].y}" : name;
 		return wanted ? WantedScore : 30f + Traits.Exploring * 40f;
 	}
