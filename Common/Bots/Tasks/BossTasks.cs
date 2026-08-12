@@ -1415,31 +1415,35 @@ public sealed class DigShaftTask : BotTask
 	const int LavaThrowMinRows = 6;
 
 	const int SealScanAbove = 3;
+	const int SealScanBelow = 6;
+	const int MaxFloorDrop = 4;
 	const int MaxSealFailures = 30;
+	const int MaxSealApproachTicks = 180;
+	const int SealApproachRadius = 8;
+	const uint SealSkipTicks = 900;
 	int sealFailures;
+	int approachTicks;
+	Point approaching;
+	readonly System.Collections.Generic.Dictionary<Point, uint> sealSkipped = new();
 
-	static bool HoldsLava(int x, int y) => WorldGen.InWorld(x, y, 2) && !TileQuery.HasTile(new Point(x, y)) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava;
+	static bool HoldsLava(int x, int y) => WorldGen.InWorld(x, y, 2) && Sealable(x, y) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava;
 
-	static bool LeaksLava(Hellevator shaft, int x, int y) => (x == shaft.X - 1 || x == shaft.Right + 1) && !TileQuery.IsSolid(x, y) && TileQuery.TouchesLava(x, y);
+	static bool LeaksLava(Hellevator shaft, int x, int y) => (x == shaft.X - 1 || x == shaft.Right + 1) && Sealable(x, y) && TileQuery.TouchesLava(x, y);
+
+	static bool Sealable(int x, int y) => !TileQuery.IsSolid(x, y) && !(Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType]);
 
 	Point? LavaToSeal(Hellevator shaft, int row)
 	{
 		int feet = PathFinder.FeetOf(Bot.Npc).Y;
 		int from = System.Math.Max(shaft.TopY + 1, System.Math.Min(feet, row) - SealScanAbove);
-		for (int y = from; y <= row + 1; y++)
+		for (int y = from; y <= row + SealScanBelow; y++)
 		{
-			Point? loose = null;
 			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
 			{
-				if (!HoldsLava(x, y) && !LeaksLava(shaft, x, y))
-					continue;
 				var cell = new Point(x, y);
-				if (BotHands.Anchored(cell))
+				if ((HoldsLava(x, y) || LeaksLava(shaft, x, y)) && BotHands.Anchored(cell) && !(sealSkipped.TryGetValue(cell, out uint until) && Main.GameUpdateCount < until))
 					return cell;
-				loose ??= cell;
 			}
-			if (loose != null)
-				return loose;
 		}
 		return null;
 	}
@@ -1457,8 +1461,16 @@ public sealed class DigShaftTask : BotTask
 			Bot.Motor.Stop();
 			if (!Bot.Hands.Ready)
 				return true;
+			if (TileQuery.HasTile(cell))
+			{
+				if (Bot.Hands.Dig(cell) is ToolResult.Unbreakable or ToolResult.NoTool)
+					sealFailures++;
+				return true;
+			}
 			if (Bot.Hands.Place(block, cell, intoShaft: true))
 			{
+				Main.tile[cell.X, cell.Y].LiquidAmount = 0;
+				Liquid.AddWater(cell.X, cell.Y);
 				sealFailures = 0;
 				BotDiagnostics.Log(Bot, $"sealed lava at {cell} in the hellevator with {block.Name}");
 			}
@@ -1466,10 +1478,67 @@ public sealed class DigShaftTask : BotTask
 				BotDiagnostics.Log(Bot, $"cannot seal lava at {cell}: {Bot.Hands.PlaceFailure(block, cell)}");
 			return true;
 		}
+		if (DigFloorTowardLava(shaft, cell))
+			return true;
+		if (cell != approaching)
+		{
+			approaching = cell;
+			approachTicks = 0;
+		}
+		if (WorldScan.DistanceSq(Bot.CenterTile, cell) <= SealApproachRadius * SealApproachRadius && ++approachTicks > MaxSealApproachTicks)
+		{
+			sealSkipped[cell] = Main.GameUpdateCount + SealSkipTicks;
+			BotDiagnostics.Log(Bot, $"cannot get within reach of lava at {cell}, digging on for now; feet={PathFinder.FeetOf(Bot.Npc)}{TerrainDump.Around(cell, 6, 6)}");
+			return false;
+		}
 		sealingLava = true;
 		Descend(shaft, new Vector2((shaft.X + 1) * 16f, (cell.Y - 2) * 16f - 21f));
 		sealingLava = false;
 		return true;
+	}
+
+	bool DigFloorTowardLava(Hellevator shaft, Point lava)
+	{
+		var feet = PathFinder.FeetOf(Bot.Npc);
+		if (!PathFinder.IsSupportedNow(feet.X, feet.Y) || Bot.CenterTile.X < shaft.X || Bot.CenterTile.X > shaft.Right)
+			return false;
+		int floor = feet.Y + 1;
+		if (floor >= lava.Y || LavaInRows(shaft, floor, floor))
+			return false;
+		int landing = floor + 1;
+		while (landing < lava.Y && !RowHasSolid(shaft, landing))
+			landing++;
+		if (!RowHasSolid(shaft, landing) || LavaInRows(shaft, floor + 1, landing - 1) || landing - floor > MaxFloorDrop)
+			return false;
+		for (int x = shaft.X; x <= shaft.Right; x++)
+		{
+			if (!TileQuery.IsSolid(x, floor))
+				continue;
+			Bot.Motor.Stop();
+			var dug = Bot.Hands.Dig(new Point(x, floor));
+			if (dug is ToolResult.Unbreakable or ToolResult.NoTool or ToolResult.OutOfReach)
+				return false;
+			Bot.Watchdog.RecordProgress();
+			return true;
+		}
+		return false;
+	}
+
+	static bool RowHasSolid(Hellevator shaft, int y)
+	{
+		for (int x = shaft.X; x <= shaft.Right; x++)
+			if (TileQuery.IsSolid(x, y))
+				return true;
+		return false;
+	}
+
+	static bool LavaInRows(Hellevator shaft, int from, int to)
+	{
+		for (int y = from; y <= to; y++)
+			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
+				if (Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == LiquidID.Lava && !TileQuery.IsSolid(x, y))
+					return true;
+		return false;
 	}
 
 	void BlastLavaWall(Hellevator shaft, int row)

@@ -229,14 +229,14 @@ public abstract class BotTask
 	const int ShaftCatchmentDepth = 60;
 
 	const int LavaSafetyRows = 4;
-	protected const int SealingSafetyRows = 2;
+	protected const int SealingSafetyRows = 1;
 	protected bool sealingLava;
 
 	protected static bool LavaBelow(World.Hellevator shaft, int feetRow, int rows = LavaSafetyRows)
 	{
 		for (int y = feetRow; y <= feetRow + rows; y++)
 			for (int x = shaft.X - 1; x <= shaft.Right + 1; x++)
-				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava)
+				if (WorldGen.InWorld(x, y, 2) && Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava && !World.TileQuery.IsSolid(x, y))
 					return true;
 		return false;
 	}
@@ -245,7 +245,7 @@ public abstract class BotTask
 	{
 		for (int y = shaft.TopY + 1; y <= row + LavaSafetyRows; y++)
 			for (int x = shaft.X; x <= shaft.Right; x++)
-				if (Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava)
+				if (Main.tile[x, y].LiquidAmount > 0 && Main.tile[x, y].LiquidType == Terraria.ID.LiquidID.Lava && !World.TileQuery.IsSolid(x, y))
 					return System.Math.Min(row, y - LavaSafetyRows - 1);
 		return row;
 	}

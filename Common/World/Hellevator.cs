@@ -230,7 +230,7 @@ public sealed record Hellevator(int X, int TopY)
 			for (int dy = 0; dy <= 2; dy++)
 			{
 				var tile = Main.tile[x + dx, y + dy];
-				if (tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava)
+				if (tile.LiquidAmount > 0 && tile.LiquidType == LiquidID.Lava && !TileQuery.IsSolid(x + dx, y + dy))
 					return true;
 			}
 		}

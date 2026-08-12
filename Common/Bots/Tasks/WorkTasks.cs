@@ -704,7 +704,7 @@ public sealed class PickupTask : BotTask
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsAbandoned(i) || Junk.IsUnwanted(Bot, item))
+			if (!item.active || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsAbandoned(i) || Junk.IsUnwanted(Bot, item) || InLava(item))
 				continue;
 			if (!Inventory.HasRoomFor(Avatar, item) && !Bot.Brain.PlannedItemTypes.Contains(item.type))
 				continue;
@@ -718,6 +718,12 @@ public sealed class PickupTask : BotTask
 		if (nearest >= 0 && !Inventory.HasRoomFor(Avatar, Main.item[nearest]) && !Junk.MakeRoomFor(Bot, Main.item[nearest]))
 			return -1;
 		return nearest;
+	}
+
+	static bool InLava(Item item)
+	{
+		var tile = item.Center.ToTileCoordinates();
+		return item.lavaWet || TileQuery.TouchesLava(tile.X, tile.Y) || TileQuery.TouchesLava(tile.X, tile.Y + 1);
 	}
 
 	int NearestVisibleFallenStar()

@@ -116,8 +116,16 @@ public sealed class PathFollower
 		if (Main.GameUpdateCount - plannedAt > ReplanIntervalTicks || stepTicks > StepTimeoutTicks)
 			return true;
 		var next = path.Nodes[index].Feet;
+		if (grounded && DugAwayFooting(feet, path.Nodes[index]))
+		{
+			failedSteps.Add((feet, next));
+			return true;
+		}
 		return grounded && (Math.Abs(next.X - feet.X) > OffPathTolerance || Math.Abs(next.Y - feet.Y) > OffPathTolerance);
 	}
+
+	static bool DugAwayFooting(Point feet, PathNode node) =>
+		node.Arrival == MoveKind.Dig && node.Feet.Y < feet.Y && !PathFinder.IsSupportedNow(node.Feet.X, node.Feet.Y) && FirstSolidToDig(feet, node.Feet) == null;
 
 	void RememberFailedStep(Point feet)
 	{

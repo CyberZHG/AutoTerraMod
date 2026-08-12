@@ -581,8 +581,15 @@ public sealed class PathSearch
 		if (solids == 0 || Hazardous(to.X, to.Y) || Hazardous(to.X + 1, to.Y))
 			return;
 		var landing = Supported(to.X, to.Y) ? to : FallAfterDigging(to);
-		if (landing is Point destination)
+		if (landing is Point destination && (destination.Y >= from.Y || SupportedOutsideBody(destination, from)))
 			edges.Add(new Edge(destination, MoveKind.Dig, 1f + solids * DigCostPerTile + (destination.Y - to.Y) * 0.3f + (loosensSand ? LooseSandPenalty : 0f)));
+	}
+
+	static bool SupportedOutsideBody(Point feet, Point body)
+	{
+		int row = feet.Y + 1;
+		bool insideBody(int column) => column >= body.X && column <= body.X + 1 && row >= body.Y - 2 && row <= body.Y;
+		return TileQuery.CanStandOn(feet.X, row) && !insideBody(feet.X) || TileQuery.CanStandOn(feet.X + 1, row) && !insideBody(feet.X + 1);
 	}
 
 	bool CountDiggable(int x, int y, ref int solids, ref bool loosensSand)
