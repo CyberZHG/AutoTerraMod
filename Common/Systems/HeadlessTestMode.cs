@@ -609,6 +609,21 @@ public sealed class HeadlessTestMode : ModSystem
 		ModContent.GetInstance<AutoTerraMod>().Logger.Info($"headless test saved the world after {saveAfterSeconds}s");
 	}
 
+	static readonly string dumpSpec = Environment.GetEnvironmentVariable("AUTOTERRA_DUMP");
+	static bool dumped;
+
+	static void DumpWhenAsked()
+	{
+		if (dumped || string.IsNullOrEmpty(dumpSpec) || Main.GameUpdateCount < 120)
+			return;
+		dumped = true;
+		foreach (var spec in dumpSpec.Split(';'))
+		{
+			var parts = spec.Split(',').Select(int.Parse).ToArray();
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"dump around {parts[0]},{parts[1]}:{World.TerrainDump.Around(new Microsoft.Xna.Framework.Point(parts[0], parts[1]), parts[2], parts[3])}");
+		}
+	}
+
 	public override void PostUpdateWorld()
 	{
 		if (Enabled)
@@ -616,6 +631,7 @@ public sealed class HeadlessTestMode : ModSystem
 			ApplyStartTime();
 			DeliverGift();
 			SaveWhenDue();
+			DumpWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 		{

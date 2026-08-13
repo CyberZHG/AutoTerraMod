@@ -297,9 +297,9 @@ public sealed class SummonTask : BotTask
 		bool noLongerApproaching = Main.GameUpdateCount - closestApproachAt > ApproachPatienceTicks;
 		if ((noWayCloser || noLongerApproaching) && step.Trigger is SummonItemTrigger { CanUseHere: { } canUseHere } && canUseHere(Avatar))
 		{
-			relocated = Bot.Center;
+			relocated = GroundBelow();
 			Bot.Faction.Rally = (relocated.Value, Main.GameUpdateCount + RallyTicks);
-			BotDiagnostics.Log(Bot, $"cannot get closer to {step.Place.ToTileCoordinates()}, summoning {step.Challenge.Name} here at {Bot.CenterTile} instead");
+			BotDiagnostics.Log(Bot, $"cannot get closer to {step.Place.ToTileCoordinates()}, summoning {step.Challenge.Name} here at {relocated.Value.ToTileCoordinates()} instead");
 			return true;
 		}
 		if (distance <= ArrivalRadius || (noWayCloser || noLongerApproaching) && distance <= StuckAcceptRadius || inUnderworld && distance <= UnderworldAcceptRadius)
@@ -313,6 +313,35 @@ public sealed class SummonTask : BotTask
 			return Abandon($"cannot reach {step.Place.ToTileCoordinates()}");
 		Bot.Motor.Stop();
 		return false;
+	}
+
+	const int GroundSearchRows = 15;
+	const int GroundSearchColumns = 6;
+
+	Vector2 GroundBelow()
+	{
+		if (Bot.Npc is not NPC body)
+			return Bot.Center;
+		var feet = PathFinder.FeetOf(body);
+		for (int y = feet.Y; y <= feet.Y + GroundSearchRows; y++)
+		{
+			for (int offset = 0; offset <= GroundSearchColumns * 2; offset++)
+			{
+				int x = feet.X + (offset % 2 == 0 ? offset / 2 : -(offset + 1) / 2);
+				if (PathFinder.IsSupportedNow(x, y) && BodyFits(x, y))
+					return new Vector2((x + 1) * 16f, (y + 1) * 16f - body.height / 2f);
+			}
+		}
+		return Bot.Center;
+	}
+
+	static bool BodyFits(int x, int feetY)
+	{
+		for (int column = x; column <= x + 1; column++)
+			for (int row = feetY - 2; row <= feetY; row++)
+				if (TileQuery.IsSolid(column, row))
+					return false;
+		return true;
 	}
 
 	bool ApproachRitual(out Vector2 ritualTarget)

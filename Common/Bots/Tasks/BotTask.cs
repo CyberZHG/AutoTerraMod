@@ -61,10 +61,20 @@ public abstract class BotTask
 	protected bool TryRecallToCamp()
 	{
 		bool viaOutpost = Bot.OutpostBed != null && !RecallLandsAtBase();
+		uint previousRecall = Bot.LastRecallAt;
 		if (!TryRecallHome())
 			return false;
 		if (viaOutpost)
+		{
 			LeaveOutpostIfBedside();
+			if (Bot.OutpostBed == null)
+			{
+				uint firstRecall = Bot.LastRecallAt;
+				Bot.LastRecallAt = previousRecall;
+				if (!TryRecallHome())
+					Bot.LastRecallAt = firstRecall;
+			}
+		}
 		return true;
 	}
 

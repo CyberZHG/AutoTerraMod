@@ -48,6 +48,8 @@ public sealed class EscapeTask : BotTask
 	const int LocalEscapeTiles = 20;
 	const int RepeatEscapeTiles = 40;
 	const uint RepeatEscapeTicks = 7200;
+	const int TrappedEscapesBeforeLeavingOutpost = 2;
+	int repeatedEscapes;
 
 	public EscapeTask(Bot bot) : base(bot) { }
 
@@ -62,9 +64,20 @@ public sealed class EscapeTask : BotTask
 		startedAt = Main.GameUpdateCount;
 		start = Bot.Center;
 		campExit = CampExitAbove(Bot.Faction.BaseCenter);
-		climbAllTheWay = campExit != null || lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
+		bool repeated = lastEscapeAt != 0 && Main.GameUpdateCount - lastEscapeAt < RepeatEscapeTicks && Vector2.Distance(Bot.Center, lastEscapeStart) < RepeatEscapeTiles * 16f;
+		repeatedEscapes = repeated ? repeatedEscapes + 1 : 0;
+		climbAllTheWay = campExit != null || repeated;
 		lastEscapeStart = Bot.Center;
 		lastEscapeAt = Main.GameUpdateCount;
+		if (repeatedEscapes >= TrappedEscapesBeforeLeavingOutpost && Building.Outpost.GiveUpTrappingBed(Bot))
+		{
+			repeatedEscapes = 0;
+			if (TryRecallHome())
+			{
+				Finish();
+				return;
+			}
+		}
 		startedForAir = Bot.Npc is NPC swimmer && (swimmer.wet || Bot.Vitals.BreathFraction < 1f);
 		climbStartedAt = 0;
 		routedAt = Main.GameUpdateCount;

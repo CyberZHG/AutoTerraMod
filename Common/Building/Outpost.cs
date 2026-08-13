@@ -220,6 +220,26 @@ public static class Outpost
 		failedClaims[(bot.Id, bed)] = Main.GameUpdateCount + FailedClaimTicks;
 	}
 
+	public static bool GiveUpTrappingBed(Bot bot)
+	{
+		if (bot.OutpostBed is not Point bed || bed == bot.Faction.ArenaBed && bot.Faction.Rally != null
+			|| System.Math.Abs(bot.CenterTile.X - bed.X) > Width || System.Math.Abs(bot.CenterTile.Y - bed.Y) > Height)
+			return false;
+		var faction = bot.Faction;
+		faction.Outposts.Remove(bed);
+		faction.OutpostFrames.Remove(bed);
+		foreach (var member in BotWorldSystem.Bots)
+		{
+			if (member.FactionId != faction.Id || member.OutpostBed != bed)
+				continue;
+			member.OutpostBed = null;
+			ClaimFailed(member, bed);
+		}
+		Invalidate();
+		BotDiagnostics.Log(bot, $"trapped in the outpost at {bed}, dropping it as a respawn point and heading back to camp");
+		return true;
+	}
+
 	public static Point? ClaimableBed(Bot bot)
 	{
 		if (!IsAfield(bot) || HeadingHome(bot) || bot.OutpostBed is Point held && held == ArenaBedFor(bot.Faction))
