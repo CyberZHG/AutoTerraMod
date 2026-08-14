@@ -174,6 +174,8 @@ public sealed class SummonTask : BotTask
 		if (step.Trigger is LacewingTrigger || !Building.Outpost.IsDistantArena(faction, step.Place) || Building.Outpost.ArenaBedFor(faction) != null
 			|| OutpostTask.ArenaRecentlyRejected(Bot))
 			return false;
+		if (!OutpostTask.ArenaUnderway(faction) && !BotWorldSystem.Bots.Any(member => member.FactionId == faction.Id && member.IsAlive && Building.Outpost.WantsArenaOutpost(member)))
+			return false;
 		if (arenaWaitStarted == 0 || Main.GameUpdateCount - arenaWaitStarted > ArenaOutpostWaitTicks * 2)
 		{
 			arenaWaitStarted = Main.GameUpdateCount;

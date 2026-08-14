@@ -192,6 +192,9 @@ public sealed class OutpostTask : BotTask
 
 	public static bool InActiveFrame(int x, int y) => ActiveSites.Any(site => Outpost.InFrame(new Point(site.Left, site.Floor), x, y));
 
+	public static bool ArenaUnderway(Factions.Faction faction) =>
+		arenaBuilders.TryGetValue(faction.Id, out int builder) && Systems.BotWorldSystem.FindBot(builder) is { IsAlive: true };
+
 	public static bool ArenaTakenByOther(Bot bot) =>
 		arenaBuilders.TryGetValue(bot.FactionId, out int builder) && builder != bot.Id && Systems.BotWorldSystem.FindBot(builder) is { IsAlive: true };
 
