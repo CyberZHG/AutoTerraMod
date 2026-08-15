@@ -102,6 +102,14 @@ public sealed class PathFollower
 		return lastIntent;
 	}
 
+	static bool SameFloor(Point feet, Point node)
+	{
+		for (int x = Math.Min(feet.X, node.X); x <= Math.Max(feet.X, node.X); x++)
+			if (!PathFinder.IsSupportedNow(x, feet.Y))
+				return false;
+		return true;
+	}
+
 	static bool BodyFitsLevel(int x, int feetY)
 	{
 		for (int column = x; column <= x + 1; column++)
@@ -356,6 +364,9 @@ public sealed class PathFollower
 			case MoveKind.Walk when grounded && body.position.Y + body.height - (node.Feet.Y + 1) * 16f > StepUpPixels:
 				intent.Jump = true;
 				intent.JumpHoldTicks = HoldTicksForRise(2);
+				break;
+			case MoveKind.Jump when grounded && rise == 0 && SameFloor(feet, node.Feet):
+				intent.Creep = true;
 				break;
 			case MoveKind.Jump:
 				intent.Jump = grounded && body.velocity.X * intent.MoveDirection > -TurnAroundSpeed || body.velocity.Y < 0f || rise > abilities.SingleJumpRise

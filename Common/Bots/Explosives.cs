@@ -99,6 +99,7 @@ public sealed class Explosives
 
 	bool Resisted(Point tile) => survived.TryGetValue(tile, out var seen) && seen.count >= BlastsBeforeGivingUp && Main.GameUpdateCount - seen.at < ResistTicks;
 	int volleyLeft;
+	Vector2 lastBlast;
 	int volleyCharge;
 	uint nextVolleyAt;
 
@@ -107,6 +108,11 @@ public sealed class Explosives
 		var from = bot.Center;
 		var aim = tile.ToWorldCoordinates() - from;
 		var velocity = aim == Vector2.Zero ? Vector2.Zero : Vector2.Normalize(aim) * System.Math.Min(item.shootSpeed, aim.Length() / ThrowTicks);
+		if (OpenCellBefore(tile, from) is Vector2 beside)
+		{
+			from = beside;
+			velocity = Vector2.Zero;
+		}
 		int index;
 		using (Systems.AvatarPresence.Enter())
 			index = Projectile.NewProjectile(new Terraria.DataStructures.EntitySource_ItemUse(bot.Avatar, item), from, velocity, item.shoot, item.damage, item.knockBack, bot.Avatar.whoAmI);
@@ -116,6 +122,24 @@ public sealed class Explosives
 		projectileIndex = index;
 		projectileIdentity = Main.projectile[index].identity;
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
+	}
+
+	static Vector2? OpenCellBefore(Point tile, Vector2 thrower)
+	{
+		var start = tile.ToWorldCoordinates();
+		var toward = thrower - start;
+		float length = toward.Length();
+		if (length < 1f)
+			return null;
+		toward /= length;
+		for (float step = 8f; step < length; step += 8f)
+		{
+			var spot = start + toward * step;
+			var cell = spot.ToTileCoordinates();
+			if (!TileQuery.IsSolid(cell.X, cell.Y))
+				return cell.ToWorldCoordinates();
+		}
+		return null;
 	}
 
 	public void Tick()
@@ -132,10 +156,12 @@ public sealed class Explosives
 				nextVolleyAt = Main.GameUpdateCount + VolleyGapTicks;
 			}
 		}
+		if (Fused is { } live)
+			lastBlast = live.Center;
 		if (projectileIndex >= 0 && Fused == null)
 		{
 			projectileIndex = -1;
-			BotDiagnostics.Log(bot, $"bomb at {target} went off; the tile there is now {TileQuery.TypeAt(target)}");
+			BotDiagnostics.Log(bot, $"bomb at {target} went off at {lastBlast.ToTileCoordinates()}; the tile there is now {TileQuery.TypeAt(target)}");
 			if (TileQuery.IsSolid(target.X, target.Y))
 				survived[target] = (survived.TryGetValue(target, out var seen) && Main.GameUpdateCount - seen.at < ResistTicks ? seen.count + 1 : 1, Main.GameUpdateCount);
 			bot.Watchdog.RecordProgress();

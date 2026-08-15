@@ -416,12 +416,12 @@ public sealed class PathSearch
 		int arc = y - 2;
 		for (int direction = -1; direction <= 1; direction += 2)
 		{
-			if (Supported(x + direction, y) || !BodyClear(x + direction, y) || !BodyClear(x, arc))
+			if (Supported(x + direction, y) || !BodyClear(x + direction, y) || !BodyClear(x, arc) || PlatformInArc(x, y) || PlatformInArc(x + direction, y))
 				continue;
 			for (int dx = 2; dx <= reach; dx++)
 			{
 				int nx = x + direction * dx;
-				if (!BodyClear(nx, arc) || RopeInArc(nx, arc))
+				if (!BodyClear(nx, arc) || RopeInArc(nx, arc) || PlatformInArc(nx, y))
 					break;
 				for (int ny = y - 1; ny <= y + LeapDropTiles && BodyClear(nx, ny); ny++)
 				{
@@ -432,6 +432,14 @@ public sealed class PathSearch
 				}
 			}
 		}
+	}
+
+	bool PlatformInArc(int x, int y)
+	{
+		for (int row = y - abilities.SingleJumpRise; row < y; row++)
+			if (TileQuery.IsPlatform(x, row) || TileQuery.IsPlatform(x + 1, row))
+				return true;
+		return false;
 	}
 
 	const int HookColumnSpan = 10;

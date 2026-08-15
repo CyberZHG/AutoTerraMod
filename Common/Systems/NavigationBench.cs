@@ -1970,7 +1970,7 @@ public sealed class NavigationBench : ModSystem
 		if (!toolless)
 		{
 			if (runner.Hands.BestPickaxe == null)
-				TopUp(runner, ItemID.CopperPickaxe, 1);
+				TopUp(runner, bench.Name.StartsWith("Stuck") ? ItemID.PlatinumPickaxe : ItemID.CopperPickaxe, 1);
 			if (runner.Hands.BestAxe == null)
 				TopUp(runner, ItemID.CopperAxe, 1);
 			TopUp(runner, ItemID.DirtBlock, BuildingBlocks);
