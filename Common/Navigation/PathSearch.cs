@@ -277,6 +277,8 @@ public sealed class PathSearch
 			{
 				edges.Add(new Edge(new Point(nx, y - 1), MoveKind.Walk, 1.5f));
 			}
+			else if (IsPlatformBelow(x, y) && SideDropLanding(x, nx, y) is Point under)
+				edges.Add(new Edge(under, MoveKind.Drop, 1.5f + (under.Y - y) * 0.3f));
 			if (abilities.CanDig && anchored)
 			{
 				TryDig(node, new Point(nx, y));
@@ -679,6 +681,22 @@ public sealed class PathSearch
 		if (Flag(x, feetY, SupportKnown, SupportBit, out int index))
 			return (cells[index] & SupportBit) != 0;
 		return Remember(index, SupportKnown, SupportBit, PathFinder.IsSupportedNow(x, feetY));
+	}
+
+	const int MaxSideDrop = 4;
+
+	Point? SideDropLanding(int x, int nx, int y)
+	{
+		for (int below = y + 1; below <= y + MaxSideDrop; below++)
+		{
+			if (!BodyClear(x, below))
+				return null;
+			if (BodyClear(nx, below) && Supported(nx, below))
+				return new Point(nx, below);
+			if (Supported(x, below) && !IsPlatformBelow(x, below))
+				return null;
+		}
+		return null;
 	}
 
 	static bool IsPlatformBelow(int x, int feetY) =>

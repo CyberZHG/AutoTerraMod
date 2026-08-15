@@ -8,17 +8,20 @@ WORLDS="$HOME/Library/Application Support/Terraria/tModLoader/Worlds"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$(mktemp -t autoterra-serverconfig)"
 { echo "world=$WORLDS/AutoTest.wld"; cat "$HERE/serverconfig.txt"; } > "$CONFIG"
+MODS="$(mktemp -d -t autoterra-mods)"
+cp "$HOME/Library/Application Support/Terraria/tModLoader/Mods/AutoTerraMod.tmod" "$MODS/"
+echo '["AutoTerraMod"]' > "$MODS/enabled.json"
 if [[ "$2" == "--fresh" ]]; then
 	rm -f "$WORLDS"/AutoTest.wld "$WORLDS"/AutoTest.twld "$WORLDS"/AutoTest.wld.bak "$WORLDS"/AutoTest.twld.bak
 fi
 STOP_PATTERN=${AUTOTERRA_STOP_PATTERN:-}
 if [[ -z "$STOP_PATTERN" && "$AUTOTERRA_SCENARIO" == "nav" ]]; then
-	STOP_PATTERN="nav bench done"
+	STOP_PATTERN="AutoTerraMod]: nav bench done"
 fi
 LOG="$TML/tModLoader-Logs/server.log"
 cd "$TML" || exit 1
 [[ -n "$STOP_PATTERN" && -f "$LOG" ]] && mv "$LOG" "$LOG.prev"
-(tail -f /dev/null | AUTOTERRA_HEADLESS=1 "$TML/dotnet/dotnet" tModLoader.dll -server -config "$CONFIG" -nosteam > "$HERE/server-console.txt" 2>&1) &
+(tail -f /dev/null | AUTOTERRA_HEADLESS=1 "$TML/dotnet/dotnet" tModLoader.dll -server -config "$CONFIG" -modpath "$MODS" -nosteam > "$HERE/server-console.txt" 2>&1) &
 SERVER_SHELL=$!
 WAITED=0
 while (( WAITED < SECONDS_TO_RUN )); do
@@ -34,4 +37,5 @@ sleep 3
 pkill -P "$SERVER_SHELL" 2>/dev/null
 kill "$SERVER_SHELL" 2>/dev/null
 rm -f "$CONFIG"
+rm -rf "$MODS"
 echo "server stopped after ${WAITED} s; see $TML/tModLoader-Logs/server.log"

@@ -102,6 +102,15 @@ public sealed class PathFollower
 		return lastIntent;
 	}
 
+	static bool BodyFitsLevel(int x, int feetY)
+	{
+		for (int column = x; column <= x + 1; column++)
+			for (int row = feetY - 2; row <= feetY; row++)
+				if (TileQuery.IsSolid(column, row))
+					return false;
+		return true;
+	}
+
 	bool OutOfMaterial(NavigationAbilities abilities) =>
 		index < path.Nodes.Count && (path.Nodes[index].Arrival == MoveKind.Pillar && !abilities.CanPillar || path.Nodes[index].Arrival == MoveKind.Bridge && !abilities.CanBridge);
 
@@ -365,7 +374,7 @@ public sealed class PathFollower
 				Leap(body, feet, grounded, node, abilities, ref intent);
 				break;
 			case MoveKind.Drop:
-				intent.DropThroughPlatforms = grounded && overNode;
+				intent.DropThroughPlatforms = grounded && (overNode || node.Feet.Y > feet.Y && Math.Abs(node.Feet.X - feet.X) == 1 && !BodyFitsLevel(node.Feet.X, feet.Y));
 				break;
 			case MoveKind.Dig:
 				intent.DigTile ??= FirstSolidToDig(feet, node.Feet);
