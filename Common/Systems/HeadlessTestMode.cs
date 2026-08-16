@@ -630,6 +630,17 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 	}
 
+	static readonly string importSource = Environment.GetEnvironmentVariable("AUTOTERRA_IMPORT");
+	static bool imported;
+
+	static void ImportWhenAsked()
+	{
+		if (imported || string.IsNullOrEmpty(importSource) || Main.GameUpdateCount < 300)
+			return;
+		imported = true;
+		BotImport.Run(importSource, ModContent.GetInstance<Config.AutoTerraConfig>());
+	}
+
 	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
 
 	static void TraceWhenAsked()
@@ -649,6 +660,7 @@ public sealed class HeadlessTestMode : ModSystem
 			SaveWhenDue();
 			DumpWhenAsked();
 			TraceWhenAsked();
+			ImportWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 		{

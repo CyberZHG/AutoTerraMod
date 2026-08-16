@@ -41,6 +41,15 @@ Configs: {
 			Label: Craft boss summons at a work bench
 			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench in worlds with bots enabled.
 		}
+
+		ImportBotsFrom: {
+			Label: Import bots from world
+			Tooltip:
+				'''
+				Click to pick another world (right-click goes back), then save. Copies every visible faction and bot of that world, with their inventories and equipment, into this one.
+				This world's factions, bots and faction records are replaced and the faction and member counts change to match. Storage chests are not copied, and the other world is not changed.
+				'''
+		}
 	}
 
 	FactionRelation: {
@@ -181,6 +190,19 @@ Plans: {
 	BuildBridge: Build the hellbridge
 	BuildHighway: Build a highway
 	HangRope: Hang a rope
+}
+
+Import: {
+	None: (none)
+	NoFile: Cannot find {0}.
+	Unreadable: Cannot read {0}; see the log.
+	NoBots: World {0} has no bots to import.
+	Done: Imported {0} bots in {1} factions.
+	HiddenSkipped: "{0} bots hidden by that world's settings were not imported."
+	Replaced: Replaced this world's {0} bots and {1} factions.
+	HardmodeGear: Warning: those bots beat the Wall of Flesh and may carry hardmode gear into this pre-hardmode world.
+	UnloadedItems: Warning: {0} items belong to mods that are not loaded and stay as unloaded items.
+	OldBuildings: Note: the old factions' houses and chests stay in the world; the new camps may take them over.
 }
 
 UI: {

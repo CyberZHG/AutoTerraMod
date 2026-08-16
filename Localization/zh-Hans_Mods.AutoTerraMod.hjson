@@ -41,6 +41,15 @@ Configs: {
 			Label: 在工作台合成Boss召唤物
 			Tooltip: 原本需要恶魔祭坛或猩红祭坛的Boss召唤物在开启了bot的地图里也可以在工作台合成。
 		}
+
+		ImportBotsFrom: {
+			Label: 从其他地图导入bot
+			Tooltip:
+				'''
+				点击选择另一个地图（右键往回选），然后保存。把那个地图里所有显示中的阵营和bot连同物品栏和装备复制到当前地图。
+				当前地图原有的阵营、bot和阵营记录会被替换，阵营数和每队人数改成和来源一致。不复制仓库箱子，也不会改动来源地图。
+				'''
+		}
 	}
 
 	FactionRelation: {
@@ -181,6 +190,19 @@ Plans: {
 	BuildBridge: 修地狱桥
 	BuildHighway: 修水平通道
 	HangRope: 挂绳子
+}
+
+Import: {
+	None: （无）
+	NoFile: 找不到 {0}。
+	Unreadable: 无法读取 {0}，详见日志。
+	NoBots: 地图 {0} 里没有可导入的bot。
+	Done: 已导入 {1} 个阵营共 {0} 个bot。
+	HiddenSkipped: 来源地图设置中隐藏的 {0} 个bot没有导入。
+	Replaced: 已替换当前地图原有的 {0} 个bot和 {1} 个阵营。
+	HardmodeGear: 警告：这些bot打败过血肉墙，可能把困难模式装备带进当前的肉前世界。
+	UnloadedItems: 警告：有 {0} 件物品属于未加载的模组，保留为未加载物品。
+	OldBuildings: 提示：原阵营的房屋和箱子仍留在地图里，新营地可能直接接手使用。
 }
 
 UI: {

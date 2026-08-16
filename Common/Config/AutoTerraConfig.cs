@@ -42,8 +42,22 @@ public sealed class AutoTerraConfig : ModConfig
 	[DefaultValue(false)]
 	public bool WorkbenchBossSummons;
 
+	[CustomModConfigItem(typeof(WorldPickerElement))]
+	[DefaultValue("")]
+	public string ImportBotsFrom;
+
 	public override void OnChanged()
 	{
+		if (!string.IsNullOrEmpty(ImportBotsFrom))
+		{
+			string source = ImportBotsFrom;
+			ImportBotsFrom = "";
+			if (!Terraria.Main.gameMenu && Systems.BotWorldSystem.Settings != null)
+			{
+				Systems.BotImport.Run(source, this);
+				return;
+			}
+		}
 		var current = Systems.BotWorldSystem.Settings;
 		if (current == null)
 			return;

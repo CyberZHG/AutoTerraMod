@@ -133,6 +133,68 @@ public sealed class BotWorldSystem : ModSystem
 			: null;
 	}
 
+	public static List<string> ImportFrom(TagCompound data)
+	{
+		var notes = new List<string>();
+		var source = data.ContainsKey("settings") ? WorldFactionSettings.Load(data.GetCompound("settings")) : null;
+		var sourceFactions = data.GetList<TagCompound>("factions").OrderBy(tag => tag.GetInt("id")).ToList();
+		int factionLimit = source?.FactionCount ?? sourceFactions.Count;
+		var keptFactions = sourceFactions.Where(tag => tag.GetInt("id") < factionLimit).ToList();
+		int memberLimit = source?.BotsPerFaction ?? int.MaxValue;
+		var allBots = data.GetList<TagCompound>("bots").OrderBy(tag => tag.GetInt("id")).ToList();
+		var keptBots = allBots.Where(tag => keptFactions.Any(faction => faction.GetInt("id") == tag.GetInt("faction")))
+			.GroupBy(tag => tag.GetInt("faction")).SelectMany(group => group.Take(memberLimit)).ToList();
+		if (keptFactions.Count == 0 || keptBots.Count == 0)
+		{
+			notes.Add(BotImport.Text("NoBots", ""));
+			return notes;
+		}
+		if (allBots.Count > keptBots.Count)
+			notes.Add(BotImport.Text("HiddenSkipped", allBots.Count - keptBots.Count));
+		int previous = Bots.Count + dormantBots.Count;
+		if (previous > 0)
+			notes.Add(BotImport.Text("Replaced", previous, Factions.Count + dormantFactions.Count));
+		if (!Main.hardMode && keptFactions.Any(tag => tag.ContainsKey("bosses") && tag.GetList<int>("bosses").Contains(NPCID.WallofFlesh)))
+			notes.Add(BotImport.Text("HardmodeGear"));
+
+		foreach (var bot in Bots.Where(bot => bot.Npc != null))
+			Hide(bot);
+		ReleaseAvatarSlots();
+		var relation = source?.Relation ?? Relation;
+		int materials = Settings?.MaterialMultiplier ?? 1;
+		Clear();
+		int perFaction = keptFactions.Max(faction => keptBots.Count(bot => bot.GetInt("faction") == faction.GetInt("id")));
+		Settings = new WorldFactionSettings(keptFactions.Count, perFaction, relation, true, materials);
+		Relation = HeadlessTestMode.RelationOverride ?? relation;
+		var factionIds = new Dictionary<int, int>();
+		foreach (var tag in keptFactions)
+		{
+			int id = Factions.Count;
+			factionIds[tag.GetInt("id")] = id;
+			Factions.Add(new Faction
+			{
+				Id = id,
+				BaseTile = FindBaseTile(id, keptFactions.Count),
+				HouseDesign = tag.ContainsKey("house") ? HouseDesign.Load(tag.GetCompound("house")) : null
+			});
+		}
+		int unloadedItems = 0;
+		foreach (var tag in keptBots)
+		{
+			var avatar = AvatarStorage.Load(tag.GetCompound("avatar"));
+			unloadedItems += avatar.inventory.Concat(avatar.armor).Concat(avatar.miscEquips).Count(item => item?.ModItem is Terraria.ModLoader.Default.UnloadedItem);
+			Bots.Add(new Bot(nextBotId++, factionIds[tag.GetInt("faction")], tag.GetString("name"), Personality.Load(tag.GetCompound("personality")), avatar));
+		}
+		if (unloadedItems > 0)
+			notes.Add(BotImport.Text("UnloadedItems", unloadedItems));
+		if (previous > 0)
+			notes.Add(BotImport.Text("OldBuildings"));
+		configShowsWorld = true;
+		Initialize();
+		notes.Insert(0, BotImport.Text("Done", Bots.Count, Factions.Count));
+		return notes;
+	}
+
 	static int MembersOf(Faction faction) => Bots.Count(bot => bot.FactionId == faction.Id);
 
 	public static void ChangeSettings(WorldFactionSettings settings)
