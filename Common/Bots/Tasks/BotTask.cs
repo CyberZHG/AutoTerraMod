@@ -491,6 +491,7 @@ public abstract class BotTask
 	const int HighwaySurfaceDepth = 60;
 	const int HighwayExitSlack = 3;
 	const int HighwayEntryArrival = 10;
+	const int HighwayLegKeep = 30;
 
 	Vector2? HighwayRoute(Vector2 target, out bool recalled)
 	{
@@ -499,6 +500,8 @@ public abstract class BotTask
 		var goal = target.ToTileCoordinates();
 		bool deepGoal = goal.Y > Main.worldSurface + HighwaySurfaceDepth;
 		if (System.Math.Abs(goal.X - here.X) < HighwayTripTiles || deepGoal && here.Y > Main.worldSurface + HighwaySurfaceDepth)
+			return null;
+		if (goal.Y >= Main.UnderworldLayer && here.Y < Main.UnderworldLayer && Bot.Faction.Hellevator is { IsComplete: true })
 			return null;
 		int baseX = Bot.Faction.BaseTile.X;
 		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0;
@@ -535,7 +538,8 @@ public abstract class BotTask
 		}
 		if (best == null)
 			return null;
-		if (bossSide && bestDistance <= HighwayEntryArrival * 16f)
+		bool onLeg = roadRow is var (kept, at) && kept == best && Main.GameUpdateCount - at <= RoadMemoryTicks && bestDistance <= HighwayLegKeep * 16f;
+		if (bossSide && (bestDistance <= HighwayEntryArrival * 16f || onLeg))
 		{
 			int exit = Utils.Clamp(goal.X, bestSpan.low, bestSpan.high);
 			if (System.Math.Abs(exit - bestEntry.X) > HighwayExitSlack)

@@ -619,9 +619,25 @@ public sealed class HeadlessTestMode : ModSystem
 		dumped = true;
 		foreach (var spec in dumpSpec.Split(';'))
 		{
+			if (spec.StartsWith("capture:"))
+			{
+				var at = spec["capture:".Length..].Split(',').Select(int.Parse).ToArray();
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info(World.TerrainDump.Capture(new Microsoft.Xna.Framework.Point(at[0], at[1]), new Microsoft.Xna.Framework.Vector2(at[2] * 16f, at[3] * 16f)));
+				continue;
+			}
 			var parts = spec.Split(',').Select(int.Parse).ToArray();
 			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"dump around {parts[0]},{parts[1]}:{World.TerrainDump.Around(new Microsoft.Xna.Framework.Point(parts[0], parts[1]), parts[2], parts[3])}");
 		}
+	}
+
+	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
+
+	static void TraceWhenAsked()
+	{
+		if (string.IsNullOrEmpty(traceBot) || Main.GameUpdateCount % 20 != 0)
+			return;
+		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == traceBot && bot.IsAlive))
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"trace {bot.Name}: task={bot.Brain.Current?.NameKey} {bot.Motor.Describe()}");
 	}
 
 	public override void PostUpdateWorld()
@@ -632,6 +648,7 @@ public sealed class HeadlessTestMode : ModSystem
 			DeliverGift();
 			SaveWhenDue();
 			DumpWhenAsked();
+			TraceWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 		{

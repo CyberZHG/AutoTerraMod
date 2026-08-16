@@ -349,7 +349,10 @@ public sealed class BotMotor
 		if ((BridgeTile ?? RopeTile ?? ScaffoldTile) is Point support && World.Highway.InAnyClearance(support.X, support.Y))
 			return;
 		if (BridgeTile is Point bridge)
-			bot.Hands.PlaceBridge(bridge);
+		{
+			if (bot.Hands.PlaceBridge(bridge) && TileQuery.IsPlatform(bridge.X, bridge.Y))
+				World.RopeLedger.Note(bridge);
+		}
 		else if (RopeTile is Point rope && bot.Hands.PlaceRope(rope))
 			World.RopeLedger.Note(rope);
 		else if (ScaffoldTile is Point scaffold)
@@ -599,8 +602,8 @@ public sealed class BotMotor
 		bool insideSettlement = bot.Faction.Settlement?.Contains(tile.X, tile.Y) == true;
 		if (insideSettlement)
 			bot.Hands.PlaceScaffold(tile);
-		else
-			bot.Hands.PlaceBridge(tile);
+		else if (bot.Hands.PlaceBridge(tile) && TileQuery.IsPlatform(tile.X, tile.Y))
+			World.RopeLedger.Note(tile);
 	}
 
 	bool HasTempleKey => NPC.downedPlantBoss && Inventory.Count(bot.Avatar, ItemID.TempleKey) > 0;
