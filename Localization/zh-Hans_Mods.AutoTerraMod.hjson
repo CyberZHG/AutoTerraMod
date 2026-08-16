@@ -74,7 +74,6 @@ Commands: {
 
 Keybinds: {
 	PlayInPerson.DisplayName: 切换观战 / 亲自游玩
-	BotInventory.DisplayName: 显示/隐藏角色背包
 	NextBot.DisplayName: 观战下一个角色
 	PreviousBot.DisplayName: 观战上一个角色
 	FreeCamera.DisplayName: 切换自由镜头
@@ -211,7 +210,7 @@ UI: {
 	RelogHome: "{0}退出并重新进入世界，回到了基地。"
 	PylonHop: "{0}通过传送晶塔传送了。"
 	FreeCamera: 自由镜头
-	Controls: "{0}/{1} 切换角色   {2} 自由镜头   {3} 背包   {4} 观战/亲自玩"
+	Controls: "{0}/{1} 切换角色   {2} 自由镜头   {3} 观战/亲自玩"
 	Watching: "{0}  [{1}]  {2} / {3}"
 	Vitals: 生命 {0}/{1}   魔力 {2}/{3}   防御 {4}
 	Task: 任务：{0} {1}

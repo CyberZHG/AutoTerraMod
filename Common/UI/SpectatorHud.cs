@@ -27,7 +27,6 @@ public sealed class SpectatorHud : ModSystem
 		int index = layers.FindIndex(IsMouseText);
 		if (index < 0)
 			index = layers.Count;
-		layers.Insert(index, inventoryLayer);
 		if (ModContent.GetInstance<Config.AutoTerraConfig>().ShowInfoPanel)
 			layers.Insert(index, panelLayer);
 		layers.Insert(index, labelLayer);
@@ -36,7 +35,6 @@ public sealed class SpectatorHud : ModSystem
 
 	static readonly System.Predicate<GameInterfaceLayer> IsMouseText = layer => layer.Name == "Vanilla: Mouse Text";
 
-	static readonly GameInterfaceLayer inventoryLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Inventory", BotInventoryPanel.Draw, InterfaceScaleType.UI);
 	static readonly GameInterfaceLayer panelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Spectator Panel", DrawPanel, InterfaceScaleType.UI);
 	static readonly GameInterfaceLayer hookLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Hooks", DrawHooks, InterfaceScaleType.Game);
 
@@ -137,7 +135,6 @@ public sealed class SpectatorHud : ModSystem
 			SpectatorSystem.KeysOf(SpectatorSystem.PreviousBotKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.NextBotKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.FreeCameraKey),
-			SpectatorSystem.KeysOf(SpectatorSystem.InventoryKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.PlayInPersonKey)), Color.Gray));
 		panelWidth = lines.Select(line => Terraria.GameContent.FontAssets.MouseText.Value.MeasureString(line.text).X * PanelTextScale).DefaultIfEmpty(0f).Max();
 	}

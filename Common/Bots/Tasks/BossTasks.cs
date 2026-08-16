@@ -898,12 +898,30 @@ public sealed class ScoutTask : BotTask
 		if (step.Landmark == Landmark.Dungeon && knowledge.LandmarkOf(Landmark.Jungle) is Point jungle)
 			knowledge.ScoutDirection = jungle.X > Main.maxTilesX / 2 ? -1 : 1;
 		int x = here.X + knowledge.ScoutDirection * SurfaceLeg;
-		if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
+		if (AtShore(here.X, knowledge.ScoutDirection) || x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 		{
 			knowledge.ScoutDirection = -knowledge.ScoutDirection;
-			x = Utils.Clamp(x, WorldEdgeMargin, Main.maxTilesX - WorldEdgeMargin);
+			x = UnsurveyedColumn(knowledge, Bot.Faction.BaseTile.X, knowledge.ScoutDirection) ?? here.X + knowledge.ScoutDirection * SurfaceLeg;
+			BotDiagnostics.Log(Bot, $"reached the shore at {here.X}, scouting the other way from {x}");
 		}
+		x = Utils.Clamp(x, WorldGen.beachDistance, Main.maxTilesX - WorldGen.beachDistance);
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+	}
+
+	static bool AtShore(int x, int direction) =>
+		direction > 0 ? x >= Main.maxTilesX - WorldGen.beachDistance - ShoreSlack : x <= WorldGen.beachDistance + ShoreSlack;
+
+	const int ShoreSlack = 10;
+
+	static int? UnsurveyedColumn(Factions.FactionKnowledge knowledge, int fromX, int direction)
+	{
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		for (int x = fromX; x > WorldGen.beachDistance && x < Main.maxTilesX - WorldGen.beachDistance; x += direction * cell / 2)
+		{
+			if (!knowledge.IsExplored(x / cell, TileQuery.SurfaceY(x) / cell))
+				return x;
+		}
+		return null;
 	}
 
 	const int CavernSpotTries = 80;
@@ -1432,6 +1450,11 @@ public sealed class DigShaftTask : BotTask
 		}
 		if (!viaMouth && TravelOrTunnel(workSpot, 12f))
 			return;
+		if (tile.Y > shaft.TopY + ShaftMouthReach)
+		{
+			IsFinished = true;
+			return;
+		}
 		viaMouth = true;
 		var mouth = new Vector2(centerX, shaft.TopY * 16f - 21f);
 		if (!TravelOrTunnel(mouth, 12f))

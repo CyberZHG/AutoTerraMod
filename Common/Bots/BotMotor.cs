@@ -1208,6 +1208,9 @@ public sealed class BotMotor
 
 	uint climbingRopeAt;
 	uint ropeHeldAt;
+	uint ropeGripAskedAt;
+
+	public void GripRope() => ropeGripAskedAt = Main.GameUpdateCount;
 
 	public bool HoldsRope => (climbingRopeAt == Main.GameUpdateCount || ropeHeldAt == Main.GameUpdateCount) && bot.Npc is NPC body && OnRope(body);
 
@@ -1216,7 +1219,7 @@ public sealed class BotMotor
 		if (climbingRopeAt == Main.GameUpdateCount || wantsJump || npc.velocity.Y < 0f || !OnRope(npc))
 			return;
 		var body = BodyTiles.Of(npc);
-		if (Math.Min(DropDepth(body.Left, body.Bottom), DropDepth(body.Right, body.Bottom)) <= AffordableFall)
+		if (Main.GameUpdateCount - ropeGripAskedAt > 1 && Math.Min(DropDepth(body.Left, body.Bottom), DropDepth(body.Right, body.Bottom)) <= AffordableFall)
 			return;
 		ropeHeldAt = Main.GameUpdateCount;
 		npc.velocity.Y = 0f;

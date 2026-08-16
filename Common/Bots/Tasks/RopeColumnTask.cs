@@ -101,6 +101,7 @@ public sealed class RopeColumnTask : BotTask
 			return;
 		}
 		Bot.Motor.Stop();
+		Bot.Motor.GripRope();
 		if (ShaftPlatformAbove(row) is Point platform)
 		{
 			Bot.Hands.Dig(platform);

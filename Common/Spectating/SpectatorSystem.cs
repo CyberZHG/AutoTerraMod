@@ -17,7 +17,6 @@ public sealed class SpectatorSystem : ModSystem
 	public static ModKeybind NextBotKey { get; private set; }
 	public static ModKeybind PreviousBotKey { get; private set; }
 	public static ModKeybind FreeCameraKey { get; private set; }
-	public static ModKeybind InventoryKey { get; private set; }
 	public static ModKeybind PlayInPersonKey { get; private set; }
 	public static bool PlayingInPerson { get; private set; }
 
@@ -46,7 +45,6 @@ public sealed class SpectatorSystem : ModSystem
 		NextBotKey = KeybindLoader.RegisterKeybind(Mod, "NextBot", "OemCloseBrackets");
 		PreviousBotKey = KeybindLoader.RegisterKeybind(Mod, "PreviousBot", "OemOpenBrackets");
 		FreeCameraKey = KeybindLoader.RegisterKeybind(Mod, "FreeCamera", "OemQuestion");
-		InventoryKey = KeybindLoader.RegisterKeybind(Mod, "BotInventory", "I");
 		PlayInPersonKey = KeybindLoader.RegisterKeybind(Mod, "PlayInPerson", "P");
 	}
 
@@ -55,7 +53,6 @@ public sealed class SpectatorSystem : ModSystem
 		NextBotKey = null;
 		PreviousBotKey = null;
 		FreeCameraKey = null;
-		InventoryKey = null;
 		PlayInPersonKey = null;
 	}
 
@@ -135,8 +132,6 @@ public sealed class SpectatorPlayer : ModPlayer
 			SpectatorSystem.Cycle(-1);
 		if (SpectatorSystem.FreeCameraKey.JustPressed)
 			SpectatorSystem.ToggleFreeCamera();
-		if (SpectatorSystem.InventoryKey.JustPressed)
-			UI.BotInventoryPanel.Visible = !UI.BotInventoryPanel.Visible;
 	}
 
 	public override void PreUpdate()

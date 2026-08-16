@@ -74,7 +74,6 @@ Commands: {
 
 Keybinds: {
 	PlayInPerson.DisplayName: Toggle spectating / playing in person
-	BotInventory.DisplayName: Toggle followed bot inventory
 	NextBot.DisplayName: Follow next bot
 	PreviousBot.DisplayName: Follow previous bot
 	FreeCamera.DisplayName: Toggle free camera
@@ -211,7 +210,7 @@ UI: {
 	RelogHome: "{0} left and rejoined the world to return home."
 	PylonHop: "{0} teleported through a pylon."
 	FreeCamera: Free camera
-	Controls: "{0}/{1} switch bot   {2} free camera   {3} inventory   {4} spectate/play"
+	Controls: "{0}/{1} switch bot   {2} free camera   {3} spectate/play"
 	Watching: "{0}  [{1}]  {2} / {3}"
 	Vitals: HP {0}/{1}   MP {2}/{3}   Defense {4}
 	Task: Task: {0} {1}
