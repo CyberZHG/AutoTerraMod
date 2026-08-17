@@ -895,17 +895,55 @@ public sealed class ScoutTask : BotTask
 			var spot = OpenTileNear(new Point(column, Main.rand.Next(shallowest, deepest)));
 			return new Vector2(spot.X * 16f + 8f, spot.Y * 16f);
 		}
-		if (step.Landmark == Landmark.Dungeon && knowledge.LandmarkOf(Landmark.Jungle) is Point jungle)
-			knowledge.ScoutDirection = jungle.X > Main.maxTilesX / 2 ? -1 : 1;
-		int x = here.X + knowledge.ScoutDirection * SurfaceLeg;
-		if (AtShore(here.X, knowledge.ScoutDirection) || x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
+		int direction = Heading(knowledge, step.Landmark, Bot.Faction.BaseTile.X, here.X);
+		int x = here.X + direction * SurfaceLeg;
+		if (AtShore(here.X, direction) || x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 		{
-			knowledge.ScoutDirection = -knowledge.ScoutDirection;
-			x = UnsurveyedColumn(knowledge, Bot.Faction.BaseTile.X, knowledge.ScoutDirection) ?? here.X + knowledge.ScoutDirection * SurfaceLeg;
+			direction = -direction;
+			x = UnsurveyedColumn(knowledge, Bot.Faction.BaseTile.X, direction) ?? here.X + direction * SurfaceLeg;
 			BotDiagnostics.Log(Bot, $"reached the shore at {here.X}, scouting the other way from {x}");
 		}
+		else if (UnsurveyedColumn(knowledge, Bot.Faction.BaseTile.X, direction) is int frontier && (frontier - here.X) * direction > SurfaceLeg)
+			x = frontier;
+		knowledge.ScoutDirection = direction;
 		x = Utils.Clamp(x, WorldGen.beachDistance, Main.maxTilesX - WorldGen.beachDistance);
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+	}
+
+	public static int Heading(Factions.FactionKnowledge knowledge, Landmark landmark, int campX, int fromX)
+	{
+		if (InferredSide(knowledge, landmark) is int side)
+			return side;
+		int middle = Main.maxTilesX / 2;
+		if (landmark == Landmark.Ocean)
+			return campX < middle ? -1 : 1;
+		var east = UnsurveyedColumn(knowledge, campX, 1);
+		var west = UnsurveyedColumn(knowledge, campX, -1);
+		if (east is int right && west is int left)
+			return System.Math.Abs(right - fromX) <= System.Math.Abs(fromX - left) ? 1 : -1;
+		if (east != null || west != null)
+			return east != null ? 1 : -1;
+		return knowledge.ScoutDirection == 0 ? 1 : knowledge.ScoutDirection;
+	}
+
+	static int? InferredSide(Factions.FactionKnowledge knowledge, Landmark landmark)
+	{
+		var sides = new System.Collections.Generic.Dictionary<Landmark, int>
+		{
+			[Landmark.Dungeon] = 1,
+			[Landmark.Snow] = Main.drunkWorld ? -1 : 1,
+			[Landmark.Jungle] = -1
+		};
+		if (!sides.TryGetValue(landmark, out int wanted))
+			return null;
+		foreach (var (known, relative) in sides)
+		{
+			if (known == landmark || knowledge.LandmarkOf(known) is not Point spot)
+				continue;
+			int knownSide = spot.X > Main.maxTilesX / 2 ? 1 : -1;
+			return knownSide * relative * wanted;
+		}
+		return null;
 	}
 
 	static bool AtShore(int x, int direction) =>
@@ -913,7 +951,7 @@ public sealed class ScoutTask : BotTask
 
 	const int ShoreSlack = 10;
 
-	static int? UnsurveyedColumn(Factions.FactionKnowledge knowledge, int fromX, int direction)
+	public static int? UnsurveyedColumn(Factions.FactionKnowledge knowledge, int fromX, int direction)
 	{
 		int cell = Factions.FactionKnowledge.ExploreCell;
 		for (int x = fromX; x > WorldGen.beachDistance && x < Main.maxTilesX - WorldGen.beachDistance; x += direction * cell / 2)

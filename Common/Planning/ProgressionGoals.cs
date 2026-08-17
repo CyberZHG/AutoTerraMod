@@ -1213,7 +1213,11 @@ public sealed class SurveyRoadGoal : ProgressionGoal
 {
 	static readonly Dictionary<(int faction, World.Landmark landmark), bool> roadChosen = new();
 
-	public static void Forget() => roadChosen.Clear();
+	public static void Forget()
+	{
+		roadChosen.Clear();
+		headingChosen.Clear();
+	}
 
 	public override string Describe() => "SurveyRoad";
 
@@ -1242,7 +1246,7 @@ public sealed class SurveyRoadGoal : ProgressionGoal
 		}
 		if (!road)
 			return null;
-		int direction = Heading(knowledge, landmark, camp);
+		int direction = Heading(knowledge, landmark, camp, faction.Id);
 		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
 		int middle = (camp.Left + camp.Right) / 2;
 		var open = new List<World.Highway>();
@@ -1264,14 +1268,17 @@ public sealed class SurveyRoadGoal : ProgressionGoal
 		return open;
 	}
 
-	static int Heading(Factions.FactionKnowledge knowledge, World.Landmark landmark, Building.Settlement camp)
+	static readonly Dictionary<(int, World.Landmark), int> headingChosen = new();
+
+	static int Heading(Factions.FactionKnowledge knowledge, World.Landmark landmark, Building.Settlement camp, int factionId)
 	{
-		int middle = (camp.Left + camp.Right) / 2;
-		if (landmark == World.Landmark.Dungeon && knowledge.LandmarkOf(World.Landmark.Jungle) is Microsoft.Xna.Framework.Point jungle)
-			return jungle.X > Terraria.Main.maxTilesX / 2 ? -1 : 1;
-		if (landmark == World.Landmark.Ocean)
-			return middle < Terraria.Main.maxTilesX / 2 ? -1 : 1;
-		return knowledge.ScoutDirection == 0 ? 1 : knowledge.ScoutDirection;
+		var key = (factionId, landmark);
+		if (!headingChosen.TryGetValue(key, out int direction))
+		{
+			int middle = (camp.Left + camp.Right) / 2;
+			headingChosen[key] = direction = Bots.Tasks.ScoutTask.Heading(knowledge, landmark, middle, middle);
+		}
+		return direction;
 	}
 }
 
