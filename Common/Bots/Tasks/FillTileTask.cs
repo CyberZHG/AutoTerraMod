@@ -17,7 +17,7 @@ public sealed class FillTileTask : BotTask
 	public override string NameKey => "Build";
 
 	public static bool IsFiller(Item item) =>
-		item.createTile >= 0 && Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && !Main.tileFrameImportant[item.createTile] && !Main.tileSand[item.createTile];
+		item.createTile >= 0 && Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && !Main.tileFrameImportant[item.createTile] && !Main.tileSand[item.createTile] && item.createTile != Terraria.ID.TileID.HellstoneBrick;
 
 	public override float Evaluate() => Bot.Brain.Plan is FillTileStep ? FillPriority : 0f;
 

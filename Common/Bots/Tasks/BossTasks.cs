@@ -1294,6 +1294,27 @@ public sealed class BuildBridgeTask : BotTask
 
 	public BuildBridgeTask(Bot bot) : base(bot) { }
 
+	bool HoldUpSand(ICorridor bridge, int column, int feet)
+	{
+		var ceiling = new Point(column, feet - bridge.Headroom);
+		if (!TileQuery.HasTile(ceiling) || !TileID.Sets.Falling[TileQuery.TypeAt(ceiling)])
+			return false;
+		bool digging = false;
+		for (int y = feet - bridge.Headroom + 1; y <= feet && !digging; y++)
+			digging = TileQuery.IsSolid(column, y);
+		if (!digging)
+			return false;
+		var result = Bot.Hands.ReplaceWithBlock(ceiling);
+		if (result == ToolResult.OutOfReach)
+		{
+			Bot.Motor.MoveTo(ceiling.ToWorldCoordinates(), 24f);
+			return !Bot.Motor.IsStuck;
+		}
+		if (result == ToolResult.Working && !TileID.Sets.Falling[TileQuery.TypeAt(ceiling)])
+			BotDiagnostics.Log(Bot, $"holding up the sand over the corridor at {ceiling} with {TileQuery.TypeAt(ceiling)}");
+		return result == ToolResult.Working;
+	}
+
 	public override void Start()
 	{
 		base.Start();
@@ -1353,6 +1374,8 @@ public sealed class BuildBridgeTask : BotTask
 		foreach (int column in new[] { frontier, frontier + direction })
 		{
 			int feet = bridge.FeetRow(column);
+			if (HoldUpSand(bridge, column, feet))
+				return;
 			for (int y = feet - bridge.Headroom + 1; y <= feet; y++)
 			{
 				if (Blocks(bridge, column, y))

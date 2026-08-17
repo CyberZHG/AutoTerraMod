@@ -132,9 +132,12 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public static IEnumerable<Highway> All => Systems.BotWorldSystem.Factions.SelectMany(For);
 
-	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, Y + 1, Y + 1)) && HeadroomClear(x);
+	public bool IsBuilt(int x) => Skipped(x) || (IsDeck(x) || ICorridor.HoldsChest(x, Y + 1, Y + 1)) && HeadroomClear(x);
 
-	readonly HashSet<int> skipped = new();
+	readonly System.Collections.Generic.Dictionary<int, uint> skipped = new();
+	const uint SkipRetryTicks = 10 * 3600;
+
+	bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
 	readonly HashSet<(int, int)> tolerated = new();
 
 	public bool IsTolerated(int x, int y) => tolerated.Contains((x, y));
@@ -147,7 +150,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	public void Skip(int x)
 	{
-		skipped.Add(x);
+		skipped[x] = Terraria.Main.GameUpdateCount;
 		frontierAt = 0;
 	}
 
@@ -157,7 +160,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 
 	uint frontierAt;
 	int frontierCache;
-	const uint FrontierRecheckTicks = 30;
+	const uint FrontierRecheckTicks = 300;
 
 	public int Frontier(int direction)
 	{

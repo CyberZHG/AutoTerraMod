@@ -335,7 +335,7 @@ public sealed class BotHands
 
 	public bool Place(Item item, Point tile, bool intoShaft = false)
 	{
-		if (item == null || item.IsAir || item.createTile < 0 || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
+		if (item == null || item.IsAir || item.createTile < 0 || item.createTile == TileID.HellstoneBrick || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
 			return false;
 		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || !intoShaft && World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;
@@ -351,6 +351,26 @@ public sealed class BotHands
 			bot.Motor.RefreshGear();
 		bot.Watchdog.RecordProgress();
 		return true;
+	}
+
+	public ToolResult ReplaceWithBlock(Point tile)
+	{
+		var block = Inventory.Items(Avatar).FirstOrDefault(item => IsExpendableBlock(item) && !TileID.Sets.Falling[item.createTile] && !Main.tileSand[item.createTile]
+			&& Building.PlacementRules.Allows(bot, item) && !bot.Brain.PlannedItemTypes.Contains(item.type));
+		if (block == null)
+			return ToolResult.NoTool;
+		if (!CanReach(block, tile))
+			return ToolResult.OutOfReach;
+		if (!Ready)
+			return ToolResult.Working;
+		if (!Avatar.HasEnoughPickPowerToHurtTile(tile.X, tile.Y) || !WorldGen.ReplaceTile(tile.X, tile.Y, (ushort)block.createTile, block.placeStyle))
+			return ToolResult.Unbreakable;
+		if (Main.netMode == NetmodeID.Server)
+			NetMessage.SendTileSquare(-1, tile.X, tile.Y);
+		Swing(block, CombinedHooks.TotalUseTime(block.useTime, Avatar, block), tile.ToWorldCoordinates());
+		Inventory.ConsumeOne(Avatar, block);
+		bot.Watchdog.RecordProgress();
+		return ToolResult.Working;
 	}
 
 	public string PlaceFailure(Item item, Point tile)
@@ -583,7 +603,8 @@ public sealed class BotHands
 		&& Main.tileSolid[item.createTile]
 		&& !Main.tileSolidTop[item.createTile]
 		&& !Main.tileFrameImportant[item.createTile]
-		&& !TileID.Sets.Ore[item.createTile];
+		&& !TileID.Sets.Ore[item.createTile]
+		&& item.createTile != TileID.HellstoneBrick;
 
 	const float CloseMeleeAgainstFlierFactor = 0.25f;
 

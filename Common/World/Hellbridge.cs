@@ -49,7 +49,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int BuiltLength => Frontier(1) - Frontier(-1);
 
-	public bool IsBuilt(int x) => skipped.Contains(x) || (IsDeck(x) || ICorridor.HoldsChest(x, FeetRow(x) + 1, FeetRow(x) + 1)) && HeadroomClear(x);
+	public bool IsBuilt(int x) => Skipped(x) || (IsDeck(x) || ICorridor.HoldsChest(x, FeetRow(x) + 1, FeetRow(x) + 1)) && HeadroomClear(x);
 
 	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || !RequiresPlatform(x) && TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
 
@@ -74,11 +74,14 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int Headroom => 5;
 
-	readonly System.Collections.Generic.HashSet<int> skipped = new();
+	readonly System.Collections.Generic.Dictionary<int, uint> skipped = new();
+	const uint SkipRetryTicks = 10 * 3600;
+
+	bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
 
 	public void Skip(int x)
 	{
-		skipped.Add(x);
+		skipped[x] = Terraria.Main.GameUpdateCount;
 		frontierAt[0] = frontierAt[1] = 0;
 	}
 
@@ -94,7 +97,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	readonly uint[] frontierAt = new uint[2];
 	readonly int[] frontierCache = new int[2];
-	const uint FrontierRecheckTicks = 30;
+	const uint FrontierRecheckTicks = 300;
 
 	public int Frontier(int direction)
 	{

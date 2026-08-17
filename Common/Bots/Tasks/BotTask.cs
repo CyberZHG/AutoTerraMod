@@ -171,6 +171,31 @@ public abstract class BotTask
 	const uint SameTripTicks = 18000;
 	const float SameTripReach = 16f * 32f;
 
+	const uint RecallCheckTicks = 60;
+	const uint RoadCheckTicks = 20;
+	const float SameTargetPixels = 32f;
+	(Vector2 target, uint at, bool beats)? recallChecked;
+	(Vector2 target, uint at, Vector2? road)? roadChecked;
+
+	bool CachedRecallBeats(Vector2 target)
+	{
+		if (recallChecked is var (checkedTarget, at, beats) && Main.GameUpdateCount - at < RecallCheckTicks && Vector2.DistanceSquared(checkedTarget, target) < SameTargetPixels * SameTargetPixels)
+			return beats;
+		bool result = RecallBeatsLongTrip(target);
+		recallChecked = (target, Main.GameUpdateCount, result);
+		return result;
+	}
+
+	Vector2? CachedHighwayRoute(Vector2 target, out bool recalled)
+	{
+		recalled = false;
+		if (roadChecked is var (checkedTarget, at, road) && Main.GameUpdateCount - at < RoadCheckTicks && Vector2.DistanceSquared(checkedTarget, target) < SameTargetPixels * SameTargetPixels)
+			return road;
+		var result = HighwayRoute(target, out recalled);
+		roadChecked = recalled ? null : (target, Main.GameUpdateCount, result);
+		return result;
+	}
+
 	bool RecallBeatsLongTrip(Vector2 target)
 	{
 		if (!CanRecall(Bot) || Main.GameUpdateCount - Bot.LastRecallAt < RecallCooldownTicks)
@@ -324,12 +349,12 @@ public abstract class BotTask
 		legTunnel = null;
 		if (TempleApproach(target) is Vector2 approach)
 			target = approach;
-		if (RecallBeatsLongTrip(target) && TryRecallHome())
+		if (CachedRecallBeats(target) && TryRecallHome())
 		{
 			Bot.LastRecallTarget = target;
 			return true;
 		}
-		var road = HighwayRoute(target, out bool recalled);
+		var road = CachedHighwayRoute(target, out bool recalled);
 		if (recalled)
 		{
 			Bot.LastRecallTarget = target;
@@ -348,6 +373,12 @@ public abstract class BotTask
 			Bot.Motor.Stop();
 		if (InOwnShaft() && LeavesShaft(target) && System.Math.Abs(target.ToTileCoordinates().Y - Bot.CenterTile.Y) > ShaftLevelRows && DeepDetour(target, radius))
 			return true;
+		if (InOwnShaft() && LeavesShaft(target) && target.ToTileCoordinates().Y < Bot.CenterTile.Y - ShaftClimbLeg / 2 && Bot.Faction.Hellevator is { } climbed)
+		{
+			int row = System.Math.Max(climbed.TopY - 2, Bot.CenterTile.Y - ShaftClimbLeg);
+			Bot.Motor.MoveTo(new Vector2((climbed.X + 1) * 16f, row * 16f), 16f);
+			return !Bot.Motor.IsStuck;
+		}
 		if (target.Y >= Main.UnderworldLayer * 16f && Bot.CenterTile.Y < Main.UnderworldLayer && !InOwnShaft() && Bot.Faction.Hellevator is { IsComplete: true } && DeepDetour(target, radius))
 			return true;
 		Bot.Motor.MoveTo(target, radius);
@@ -588,6 +619,7 @@ public abstract class BotTask
 	Vector2? deepTunnel;
 	const int DeepDetourRows = 60;
 	const int ShaftLevelRows = 3;
+	const int ShaftClimbLeg = 120;
 	const int DeepDetourRise = 40;
 	const int MaxSidewaysTunnel = 300;
 

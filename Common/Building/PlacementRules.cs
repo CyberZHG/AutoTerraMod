@@ -19,7 +19,7 @@ public static class PlacementRules
 	public static bool IsEvil(int tileType) => TileID.Sets.Corrupt[tileType] || TileID.Sets.Crimson[tileType] || EvilBricks.Contains(tileType);
 
 	public static bool Allows(Faction faction, Item item) =>
-		item.createTile < 0 || !IsEvil(item.createTile) && Navigation.PickRequirement.MinimumPick(item.createTile, 0, Main.maxTilesY / 2) <= WeakestPick(faction);
+		item.createTile < 0 || !IsEvil(item.createTile) && item.createTile != TileID.HellstoneBrick && Navigation.PickRequirement.MinimumPick(item.createTile, 0, Main.maxTilesY / 2) <= WeakestPick(faction);
 
 	public static bool Allows(Bot bot, Item item) => Allows(bot.Faction, item);
 
