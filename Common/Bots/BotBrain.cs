@@ -10,6 +10,8 @@ namespace AutoTerraMod.Common.Bots;
 public sealed class BotBrain
 {
 	const int ReconsiderInterval = 30;
+	const uint ReflexSearchTicks = 3;
+	(NPC target, Item weapon, bool close)? lastReflex;
 	const float CurrentTaskBias = 1.15f;
 	const int MinimumCommitmentTicks = 180;
 	const float WatchedTaskBias = 1.4f;
@@ -141,7 +143,8 @@ public sealed class BotBrain
 		{
 			using (Probes.Measure("Reflex"))
 			{
-				reflex = Engagement.ReflexTarget(bot);
+				reflex = (Main.GameUpdateCount + (uint)bot.Id) % ReflexSearchTicks == 0 || lastReflex is { target.active: true } ? Engagement.ReflexTarget(bot) : null;
+				lastReflex = reflex;
 				if (reflex is { close: true } near)
 					Engagement.Reflex(bot, near.target, near.weapon);
 			}

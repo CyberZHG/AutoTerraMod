@@ -27,7 +27,7 @@ public struct MotorIntent
 
 public sealed class PathFollower
 {
-	const int ReplanIntervalTicks = 180;
+	const int ReplanIntervalTicks = 300;
 	const int StepTimeoutTicks = 120;
 	const int MaxLeapTicks = 600;
 	const int ForgetFailedStepsTicks = 1800;

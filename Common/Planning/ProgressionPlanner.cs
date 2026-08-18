@@ -96,7 +96,7 @@ public static class ProgressionPlanner
 	}
 
 	const uint JoinWindowTicks = 2 * 3600;
-	const int JoinChancePercent = 30;
+	const int JoinChancePercent = 10;
 
 	static PlanStep JoinWatchedWork(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
 	{

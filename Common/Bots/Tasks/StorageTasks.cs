@@ -75,6 +75,8 @@ public sealed class StoreTask : ChestVisitTask
 	public override float Evaluate()
 	{
 		int used = Inventory.UsedSlots(Avatar);
+		if (used < OpportunisticSlots && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) >= NearBase && !StatBoosters.CarriesBoostersToShare(Bot))
+			return 0f;
 		if (!BaseStorage.HasRoom(Bot.Faction) && (used < FullishSlots || !Junk.StorageHasClutter(Bot, BaseStorage.Chests(Bot.Faction))))
 			return 0f;
 		if (StatBoosters.CarriesBoostersToShare(Bot))
