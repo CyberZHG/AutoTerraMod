@@ -1394,6 +1394,7 @@ public sealed class RallyRouteGoal : ProgressionGoal
 {
 	const uint RallyKeepTicks = 2 * 3600;
 	const float CampCheckInPixels = 16f * 40f;
+	const int WorkCheckInTiles = 80;
 
 	public override string Describe() => "RallyRoute";
 
@@ -1408,9 +1409,12 @@ public sealed class RallyRouteGoal : ProgressionGoal
 		var faction = bot.Faction;
 		if (faction.Rally is { } rally)
 			faction.Rally = (rally.point, System.Math.Max(rally.until, Terraria.Main.GameUpdateCount + RallyKeepTicks));
+		int goalX = faction.Rally is { } target ? (int)(target.point.X / 16f) : bot.CenterTile.X;
+		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX) && (goalX - highway.Frontier(highway.Direction)) * highway.Direction > 0).ToList();
 		if (!faction.RallyCheckedIn.Contains(bot.Id))
 		{
-			if (Microsoft.Xna.Framework.Vector2.Distance(bot.Center, faction.BaseCenter) > CampCheckInPixels)
+			bool atWork = open.Any(highway => System.Math.Abs(highway.Frontier(highway.Direction) - bot.CenterTile.X) < WorkCheckInTiles && System.Math.Abs(highway.Y - bot.CenterTile.Y) < WorkCheckInTiles);
+			if (!atWork && Microsoft.Xna.Framework.Vector2.Distance(bot.Center, faction.BaseCenter) > CampCheckInPixels)
 			{
 				if (bot.OutpostBed != null)
 				{
@@ -1421,7 +1425,6 @@ public sealed class RallyRouteGoal : ProgressionGoal
 			}
 			faction.RallyCheckedIn.Add(bot.Id);
 		}
-		var open = faction.RallyRoute.Where(highway => !highway.IsBuilt(highway.EndX)).ToList();
 		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).Max(member => member.Hands.BestPickaxe?.pick ?? 0);
 		bool blocked = open.Any(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick))
 			|| faction.RallyShaft is { IsFinished: false } dug && !Bosses.BossRituals.CanDigRowWith(bestPick, dug, dug.WorkRow());

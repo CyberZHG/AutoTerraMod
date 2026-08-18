@@ -31,6 +31,7 @@ public sealed class BotBrain
 	int quickFailures;
 	string lastDecisionSignature;
 	ProgressionGoal currentGoal;
+	public ProgressionGoal CurrentGoal => currentGoal;
 	readonly System.Collections.Generic.Dictionary<ProgressionGoal, uint> suppressedGoals = new();
 	int reconsiderCount;
 	bool frameFailureLogged;
@@ -135,12 +136,22 @@ public sealed class BotBrain
 			bot.Watchdog.Tick();
 		if ((--reconsiderTimer <= 0 || current == null || current.IsFinished) && !TryReconsider())
 			reconsiderTimer = 1;
+		(NPC target, Item weapon, bool close)? reflex = null;
+		if (current is not FightTask)
+		{
+			using (Probes.Measure("Reflex"))
+			{
+				reflex = Engagement.ReflexTarget(bot);
+				if (reflex is { close: true } near)
+					Engagement.Reflex(bot, near.target, near.weapon);
+			}
+		}
 		if (current is { IsFinished: false })
 			using (Probes.Measure(current.ProbeLabel))
 				current.Tick();
-		if (current is not FightTask)
+		if (reflex is { close: false } far)
 			using (Probes.Measure("Reflex"))
-				Engagement.Reflex(bot);
+				Engagement.Reflex(bot, far.target, far.weapon);
 		using (Probes.Measure("Motor"))
 			bot.Motor.Tick(body);
 		using (Probes.Measure("Collect"))

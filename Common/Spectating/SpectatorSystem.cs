@@ -40,6 +40,27 @@ public sealed class SpectatorSystem : ModSystem
 		}
 	}
 
+	const uint SteadyWatchTicks = 3600;
+	static int watchedId = -1;
+	static uint watchedSince;
+
+	public static Bot SteadilyFollowed
+	{
+		get
+		{
+			var bot = Followed;
+			int id = bot?.Id ?? -1;
+			if (id != watchedId)
+			{
+				watchedId = id;
+				watchedSince = Main.GameUpdateCount;
+			}
+			return bot != null && Main.GameUpdateCount - watchedSince >= SteadyWatchTicks ? bot : null;
+		}
+	}
+
+	public override void PostUpdateEverything() => _ = SteadilyFollowed;
+
 	public override void Load()
 	{
 		NextBotKey = KeybindLoader.RegisterKeybind(Mod, "NextBot", "OemCloseBrackets");

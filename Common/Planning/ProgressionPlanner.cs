@@ -72,6 +72,8 @@ public static class ProgressionPlanner
 				return chore;
 			bot.UpgradeAfterDeath = false;
 		}
+		if (JoinWatchedWork(bot, isSuppressed, out source) is PlanStep joined)
+			return joined;
 		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
 		{
 			source = expeditions[bot.Id].goal;
@@ -91,6 +93,27 @@ public static class ProgressionPlanner
 			return any;
 		source = null;
 		return PlanStep.Idle;
+	}
+
+	const uint JoinWindowTicks = 2 * 3600;
+	const int JoinChancePercent = 30;
+
+	static PlanStep JoinWatchedWork(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
+	{
+		source = null;
+		if (Spectating.SpectatorSystem.SteadilyFollowed is not { } watched || watched == bot || watched.FactionId != bot.FactionId || !watched.IsAlive
+			|| watched.Brain.CurrentGoal is not { } goal || goal is BossGoal || goal.IsUrgent(watched))
+			return null;
+		uint window = Main.GameUpdateCount / JoinWindowTicks;
+		if ((int)((uint)(bot.Id * 7919 + window * 104729) % 100) >= JoinChancePercent)
+			return null;
+		if (isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot) || goal.IsExpedition && Building.HouseInspector.BuildingDuty(bot))
+			return null;
+		var step = PlanUnlessStuck(bot, goal);
+		if (step is BlockedStep or IdleStep)
+			return null;
+		source = goal;
+		return step;
 	}
 
 	const uint TrackTurnTicks = 7200;

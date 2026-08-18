@@ -93,18 +93,28 @@ public static class Engagement
 
 	const float ReflexFireRange = 16f * 12f;
 	const float ReflexMeleeSlack = 32f;
+	const float CloseReflexRange = 16f * 4f;
 	public const float BossTruceRange = 16f * 100f;
 
-	public static void Reflex(Bot bot)
+	public static (NPC target, Item weapon, bool close)? ReflexTarget(Bot bot)
 	{
 		if (!bot.Hands.Ready || bot.Npc == null || bot.Hands.BestWeapon() is not Item weapon)
-			return;
+			return null;
 		bool ranged = BotHands.IsProjectileWeapon(weapon);
 		bool bossNear = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossTruceRange) != null;
-		var target = NearestHostile(bot, ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack, ranged, bossNear);
+		float reach = ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack;
+		var target = NearestHostile(bot, reach, ranged, bossNear);
 		if (target == null)
+			return null;
+		bool close = !ranged || Vector2.Distance(bot.Center, target.Center) < CloseReflexRange;
+		return (target, weapon, close);
+	}
+
+	public static void Reflex(Bot bot, NPC target, Item weapon)
+	{
+		if (!bot.Hands.Ready || !target.active)
 			return;
-		if (ranged)
+		if (BotHands.IsProjectileWeapon(weapon))
 			bot.Hands.Fire(target, weapon);
 		else
 			bot.Hands.Strike(target, weapon);
