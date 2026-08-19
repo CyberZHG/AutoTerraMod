@@ -111,6 +111,8 @@ public sealed class BotHands
 			return ToolResult.Unbreakable;
 		if (InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
+		if (Main.tileAxe[Main.tile[tile.X, tile.Y].TileType])
+			return Chop(tile);
 		var pickaxe = BestPickaxe;
 		if (pickaxe == null)
 			return ToolResult.NoTool;

@@ -45,7 +45,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 		foreach (var (owner, highways) in planned)
 			if (owner != factionId)
 				foreach (var highway in highways)
-					if (highway.ProtectsDeck(x, y) || highway.LinkX == x && highway.LinkRows is var (top, bottom) && y >= top && y <= bottom + 1)
+					if (highway.ProtectsDeck(x, y) || highway.LinkX == x && highway.LinkRows is var (top, bottom) && (y == bottom + 1 || y >= top && y <= bottom && !TileQuery.IsSolid(x, y)))
 						return true;
 		return false;
 	}

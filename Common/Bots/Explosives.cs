@@ -124,8 +124,40 @@ public sealed class Explosives
 		SoundEngine.PlaySound(SoundID.Item1, tile.ToWorldCoordinates());
 	}
 
+	const int RestReach = 3;
+	const int MaxRestDrop = 10;
+
+	static Point? RestingCell(Point tile, Vector2 thrower)
+	{
+		Point? best = null;
+		float bestDistance = float.MaxValue;
+		for (int dx = -1; dx <= 1; dx++)
+		{
+			for (int dy = -1; dy <= 1; dy++)
+			{
+				var open = new Point(tile.X + dx, tile.Y + dy);
+				if (dx == 0 && dy == 0 || TileQuery.IsSolid(open.X, open.Y))
+					continue;
+				int y = open.Y;
+				while (y < open.Y + MaxRestDrop && !TileQuery.IsSolid(open.X, y + 1) && !TileQuery.IsPlatform(open.X, y + 1))
+					y++;
+				if (System.Math.Abs(y - tile.Y) > RestReach)
+					continue;
+				float distance = Vector2.DistanceSquared(open.ToWorldCoordinates(), thrower);
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					best = open;
+				}
+			}
+		}
+		return best;
+	}
+
 	static Vector2? OpenCellBefore(Point tile, Vector2 thrower)
 	{
+		if (RestingCell(tile, thrower) is Point resting)
+			return resting.ToWorldCoordinates();
 		var start = tile.ToWorldCoordinates();
 		var toward = thrower - start;
 		float length = toward.Length();
