@@ -245,6 +245,8 @@ public sealed class BotBrain
 		using (Systems.Perf.Measure(Systems.PerfSection.Planner))
 		using (Probes.Measure("Planner"))
 			Plan = ProgressionPlanner.NextStep(bot, IsSuppressed, out currentGoal);
+			if (Plan is GatherStep { Source: NpcSource { Ground: not null } })
+				bot.BiomeHuntAt = Main.GameUpdateCount;
 		using (Probes.Measure("PlannedItems"))
 			PlannedItemTypes = Kit.ComputePlannedItemTypes(bot);
 

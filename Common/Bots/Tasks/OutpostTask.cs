@@ -43,6 +43,8 @@ public sealed class OutpostTask : BotTask
 
 	Outpost.Site site;
 	int failures;
+	uint siteChosenAt;
+	const uint BuildTimeoutTicks = 90 * 60;
 	uint siteRejectedAt;
 
 	public OutpostTask(Bot bot) : base(bot) { }
@@ -73,9 +75,9 @@ public sealed class OutpostTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		if (failures >= FailuresBeforeGivingUp || Vector2.Distance(Bot.Center, Navigation.PathFinder.BodyCenterAt(site.StandingNear(new Point(site.WallColumn, site.Floor)))) > AbandonDistance)
+		if (failures >= FailuresBeforeGivingUp || Main.GameUpdateCount - siteChosenAt > BuildTimeoutTicks || Vector2.Distance(Bot.Center, Navigation.PathFinder.BodyCenterAt(site.StandingNear(new Point(site.WallColumn, site.Floor)))) > AbandonDistance)
 		{
-			BotDiagnostics.Log(Bot, $"gave up the outpost at {site.Left},{site.Floor} (failures={failures}, at {Navigation.PathFinder.FeetOf(Bot.Npc)})");
+			BotDiagnostics.Log(Bot, $"gave up the outpost at {site.Left},{site.Floor} (failures={failures}, {(Main.GameUpdateCount - siteChosenAt) / 60}s, at {Navigation.PathFinder.FeetOf(Bot.Npc)})");
 			RejectSite();
 			return;
 		}
@@ -165,6 +167,7 @@ public sealed class OutpostTask : BotTask
 			return false;
 		}
 		site = found;
+		siteChosenAt = Main.GameUpdateCount;
 		ActiveSites.Add(site);
 		if (arenaSite)
 			arenaBuilders[Bot.FactionId] = Bot.Id;

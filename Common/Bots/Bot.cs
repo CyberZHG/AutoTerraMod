@@ -67,6 +67,7 @@ public sealed class Bot
 	public Point? OutpostBed { get; set; }
 
 	public uint LastRecallAt { get; set; }
+	public uint BiomeHuntAt { get; set; }
 
 	public Vector2? LastRecallTarget { get; set; }
 

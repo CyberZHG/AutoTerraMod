@@ -1082,7 +1082,10 @@ public sealed class OutpostGoal : ProgressionGoal
 
 	public override string Describe() => "Outpost";
 
-	public override bool AppliesTo(Bot bot) => Outpost.CarriesKit(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
+	const uint HuntOutpostTicks = 2 * 3600;
+
+	public override bool AppliesTo(Bot bot) => bot.BiomeHuntAt != 0 && Terraria.Main.GameUpdateCount - bot.BiomeHuntAt < HuntOutpostTicks
+		&& Outpost.CarriesKit(bot.Avatar) && Outpost.WantsNew(bot) && bot.Faction.Rally == null && !ArenaKitGoal.Reserves(bot);
 
 	public override bool IsMet(Bot bot) => false;
 
