@@ -145,26 +145,26 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	public void Tolerate(int x, int y)
 	{
 		tolerated.Add((x, y));
-		frontierAt = 0;
+		frontierAt = null;
 	}
 
 	public void Skip(int x)
 	{
 		skipped[x] = Terraria.Main.GameUpdateCount;
-		frontierAt = 0;
+		frontierAt = null;
 	}
 
 	public bool WantsPlatform(int x) => x != StartX && (x - StartX) % PlatformEvery == 0 || !TileQuery.IsSolid(x, Y + 2);
 
 	public bool RequiresPlatform(int x) => WantsPlatform(x);
 
-	uint frontierAt;
+	uint? frontierAt;
 	int frontierCache;
 	const uint FrontierRecheckTicks = 300;
 
 	public int Frontier(int direction)
 	{
-		bool fresh = Main.GameUpdateCount - frontierAt < FrontierRecheckTicks;
+		bool fresh = frontierAt is uint at && Main.GameUpdateCount - at < FrontierRecheckTicks;
 		int from = fresh ? frontierCache : StartX;
 		if (!fresh)
 			frontierAt = Main.GameUpdateCount;

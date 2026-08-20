@@ -61,7 +61,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	public void Tolerate(int x, int y)
 	{
 		tolerated.Add(new Point(x, y));
-		frontierAt[0] = frontierAt[1] = 0;
+		frontierAt[0] = frontierAt[1] = null;
 	}
 
 	public int FeetRow(int x) => Y + (dips.TryGetValue(x, out int dip) ? dip : 0);
@@ -69,7 +69,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	public void Dip(int x, int rows)
 	{
 		dips[x] = System.Math.Max(rows, dips.TryGetValue(x, out int dip) ? dip : 0);
-		frontierAt[0] = frontierAt[1] = 0;
+		frontierAt[0] = frontierAt[1] = null;
 	}
 
 	public int Headroom => 5;
@@ -82,7 +82,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	public void Skip(int x)
 	{
 		skipped[x] = Terraria.Main.GameUpdateCount;
-		frontierAt[0] = frontierAt[1] = 0;
+		frontierAt[0] = frontierAt[1] = null;
 	}
 
 	public bool HeadroomClear(int x)
@@ -95,7 +95,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 		return true;
 	}
 
-	readonly uint[] frontierAt = new uint[2];
+	readonly uint?[] frontierAt = new uint?[2];
 	readonly int[] frontierCache = new int[2];
 	const uint FrontierRecheckTicks = 300;
 
@@ -103,7 +103,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	{
 		int side = direction > 0 ? 1 : 0;
 		int end = direction > 0 ? RightEnd : LeftEnd;
-		bool fresh = Main.GameUpdateCount - frontierAt[side] < FrontierRecheckTicks;
+		bool fresh = frontierAt[side] is uint at && Main.GameUpdateCount - at < FrontierRecheckTicks;
 		int from = fresh ? frontierCache[side] : CenterX;
 		if (!fresh)
 			frontierAt[side] = Main.GameUpdateCount;

@@ -259,6 +259,16 @@ public sealed class OutpostTask : BotTask
 		}
 		foreach (var door in site.DoorTiles)
 		{
+			int outside = door.X == site.Left ? door.X - 1 : door.X + 1;
+			for (int y = door.Y - 1; y <= door.Y + 1; y++)
+			{
+				var swing = new Point(outside, y);
+				if (TileQuery.IsSolid(swing.X, swing.Y) && !Building.HouseInspector.IsProtected(swing.X, swing.Y))
+					return (swing, Bot.Hands.BestPickaxe, () => Clear(swing));
+			}
+		}
+		foreach (var door in site.DoorTiles)
+		{
 			if (!site.Doorway().Any(tile => tile.X == door.X && IsDoor(tile)))
 				return (door, Find(Outpost.IsDoor), () => Bot.Hands.Place(Find(Outpost.IsDoor), door));
 		}
