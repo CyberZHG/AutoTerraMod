@@ -142,12 +142,20 @@ public sealed class OpportunisticMineTask : BotTask
 
 	int PickPower() => Bot.Hands.BestPickaxe?.pick ?? 0;
 
+	const int OrbsBeforeBoss = 2;
+
+	bool SmashableOrb(int x, int y) =>
+		Bot.Hands.BestHammer != null && (Main.hardMode || WorldGen.shadowOrbCount < OrbsBeforeBoss) && !unreachable.Contains(new Point(x, y))
+		&& !HouseInspector.IsProtected(x, y) && WorldGen.CanKillTile(x, y);
+
 	bool Worthwhile(int x, int y, int power, int pickTier)
 	{
 		var tile = Main.tile[x, y];
 		if (!tile.HasTile)
 			return false;
 		int type = tile.TileType;
+		if (type == TileID.ShadowOrbs)
+			return SmashableOrb(x, y);
 		if (!TileQuery.IsChoppableTree(type) && type != TileID.Pots && type != TileID.Tombstones && !Hazards.Contains(type) && !Salvage.Contains(type) && !OreTiers.ContainsKey(type) && !GemDrops.ContainsKey(type))
 			return false;
 		if (unreachable.Contains(new Point(x, y)) || HouseInspector.IsProtected(x, y) || Navigation.PathFinder.InsideMaze(new Point(x, y)))
@@ -280,13 +288,17 @@ public sealed class OpportunisticMineTask : BotTask
 		int type = Main.tile[tile.X, tile.Y].TileType;
 		bool pot = type == TileID.Pots;
 		bool tree = TileQuery.IsChoppableTree(type);
-		var tool = pot ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : tree ? Bot.Hands.BestAxe : Bot.Hands.BestPickaxe;
+		bool orb = type == TileID.ShadowOrbs;
+		var tool = pot ? Bot.Hands.BestWeapon() ?? Bot.Hands.BestPickaxe : tree ? Bot.Hands.BestAxe : orb ? Bot.Hands.BestHammer : Bot.Hands.BestPickaxe;
 		if (tool != null && Bot.Hands.CanReach(tool, tile))
 		{
 			Bot.Motor.Stop();
 			Bot.Motor.Face(tile.ToWorldCoordinates());
 			bool spikes = type is TileID.Spikes or TileID.WoodenSpikes;
-			var result = pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : Bot.Hands.Dig(tile);
+			bool heart = orb && Main.tile[tile.X, tile.Y].TileFrameX >= 36;
+			var result = pot ? Bot.Hands.Cut(tile) : tree ? Bot.Hands.Chop(tile) : orb ? Bot.Hands.Smash(tile) : Bot.Hands.Dig(tile);
+			if (orb && result == ToolResult.Done)
+				BotDiagnostics.Log(Bot, $"smashed the {(heart ? "crimson heart" : "shadow orb")} at {tile} on the way");
 			if (spikes)
 				cover = (tile, Main.GameUpdateCount);
 			if (result is ToolResult.Unbreakable or ToolResult.NoTool)

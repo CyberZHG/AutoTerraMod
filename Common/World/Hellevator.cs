@@ -200,6 +200,8 @@ public sealed record Hellevator(int X, int TopY)
 	uint ropeBottomAt;
 	int ropeBottom;
 
+	public int RopeTop => TopY + 1;
+
 	public int RopeBottom()
 	{
 		if (ropeBottomAt == Main.GameUpdateCount)

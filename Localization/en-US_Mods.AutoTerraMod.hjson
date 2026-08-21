@@ -209,7 +209,7 @@ UI: {
 	BossSiteFound: " ({0} found)"
 	BossSiteUnknown: " ({0} not found yet)"
 	BossReadiness: "  Next boss {0}: readiness {1}%"
-	FactionBosses: "  Bosses defeated by this faction: {0}/{1}"
+	FactionBosses: bosses {0}/{1}
 	BossCredited: "{0} defeated {1}! Damage: {2}"
 	Unbound: unbound
 	PlayingInPerson: You join the game. Press again to spectate.
@@ -217,7 +217,7 @@ UI: {
 	BossProgress: Bosses defeated {0}/{1} - next: {2}
 	AllBossesDefeated: all defeated
 	Stalled: No progress for {0}s
-	SettlementProgress: "{0}/{1} buildings ({2})"
+	SettlementProgress: ", {0}/{1} buildings ({2})"
 	InventoryOf: "{0}'s inventory (read-only)"
 	SharingBoosters: bringing boosters home
 	Respawning: Dead, respawning in {0}s
@@ -241,7 +241,7 @@ UI: {
 	RelationRace: Mode: Race
 	RelationCooperate: Mode: Cooperate
 	RelationWar: Mode: War
-	FactionLine: "{0}: {1}/{2} alive, best pickaxe {3}%, house {4}"
+	FactionLine: "{0}: best pickaxe {1}%{2}, {3}"
 	HouseDone: done ({0}, {1})
 	HousePending: building ({0}, {1})
 }

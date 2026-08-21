@@ -72,6 +72,11 @@ public static class ProgressionPlanner
 				return chore;
 			bot.UpgradeAfterDeath = false;
 		}
+		if (BuildersBuild(bot, isSuppressed, out source) is PlanStep building)
+		{
+			expeditions.Remove(bot.Id);
+			return building;
+		}
 		if (JoinWatchedWork(bot, isSuppressed, out source) is PlanStep joined)
 			return joined;
 		if (ContinueExpedition(bot, isSuppressed) is PlanStep ongoing)
@@ -93,6 +98,25 @@ public static class ProgressionPlanner
 			return any;
 		source = null;
 		return PlanStep.Idle;
+	}
+
+	static PlanStep BuildersBuild(Bot bot, System.Func<ProgressionGoal, bool> isSuppressed, out ProgressionGoal source)
+	{
+		source = null;
+		if (!Building.HouseInspector.BuildingDuty(bot))
+			return null;
+		foreach (var goal in ladder)
+		{
+			if (goal is not (StructureGoal or FurnishBedroomsGoal) || isSuppressed(goal) || !goal.AppliesTo(bot) || goal.IsMet(bot))
+				continue;
+			using var probe = Probes.Measure(goal.ProbeLabel);
+			var step = PlanUnlessStuck(bot, goal);
+			if (step is BlockedStep or IdleStep)
+				continue;
+			source = goal;
+			return step;
+		}
+		return null;
 	}
 
 	const uint JoinWindowTicks = 2 * 3600;
@@ -422,6 +446,20 @@ public static class ProgressionPlanner
 	static int resolveCalls;
 	static bool woodAllowed = true;
 
+	public static PlanStep ObtainAnyWithWood(Bot bot, IEnumerable<int> options)
+	{
+		bool outer = woodAllowed;
+		woodAllowed = true;
+		try
+		{
+			return ObtainAny(bot, options);
+		}
+		finally
+		{
+			woodAllowed = outer;
+		}
+	}
+
 	static PlanStep PlanGoal(Bot bot, ProgressionGoal goal)
 	{
 		bool outer = woodAllowed;
@@ -501,7 +539,7 @@ public static class ProgressionPlanner
 		finally
 		{
 			context.Visiting.Remove(itemType);
-			if (result is BlockedStep && context.Resolves <= ResolveBudget)
+			if (result is BlockedStep && context.Resolves <= ResolveBudget && woodAllowed)
 				context.Blocked.Add(itemType);
 		}
 	}
@@ -685,7 +723,7 @@ public static class ProgressionPlanner
 	}
 
 	const int EasyPurchaseShare = 4;
-	const int UndergroundMargin = 20;
+	public const int UndergroundMargin = 20;
 	const int NearbyTreeTiles = 40;
 	static readonly HashSet<Point> NoExclusions = new();
 

@@ -397,6 +397,24 @@ public sealed class StructureGoal : ProgressionGoal
 
 	public StructureGoal(System.Func<Settlement, IEnumerable<HouseBlueprint>> select) => this.select = select;
 
+	static readonly HashSet<int> WoodFurniture = new()
+	{
+		ItemID.WoodenDoor, ItemID.BorealWoodDoor, ItemID.PalmWoodDoor, ItemID.RichMahoganyDoor, ItemID.EbonwoodDoor, ItemID.ShadewoodDoor,
+		ItemID.WoodenTable, ItemID.BorealWoodTable, ItemID.PalmWoodTable, ItemID.RichMahoganyTable, ItemID.EbonwoodTable, ItemID.ShadewoodTable,
+		ItemID.WoodenChair, ItemID.BorealWoodChair, ItemID.PalmWoodChair, ItemID.RichMahoganyChair, ItemID.EbonwoodChair, ItemID.ShadewoodChair,
+		ItemID.Bed
+	};
+
+	static PlanStep ObtainFurniture(Bot bot, int[] options)
+	{
+		var wooden = options.Where(WoodFurniture.Contains).ToArray();
+		if (wooden.Length > 0 && ProgressionPlanner.ObtainAnyWithWood(bot, wooden) is var woodStep and not BlockedStep)
+			return woodStep;
+		if (wooden.Length > 0 && bot.CenterTile.Y > World.TileQuery.SurfaceY(bot.CenterTile.X) + ProgressionPlanner.UndergroundMargin - 5)
+			return new TravelStep(bot.Faction.BaseFeet - new Microsoft.Xna.Framework.Vector2(0f, 32f));
+		return ProgressionPlanner.ObtainAny(bot, options);
+	}
+
 	public override bool AppliesTo(Bot bot) => bot.Faction.Settlement != null && HouseInspector.IsDesignatedBuilder(bot) && !ProgressionGoals.OnGearBreak(bot);
 
 	public override bool IsMet(Bot bot) => NextUnfinished(bot) == null;
@@ -430,12 +448,12 @@ public sealed class StructureGoal : ProgressionGoal
 			return new BuildHouseStep(operation);
 		if (ConstructionBill.For(structure, materials, bot).Where(entry => entry.Placement == placement).Select(entry => (BillLine?)entry).FirstOrDefault() is not BillLine line)
 			return HouseMaterials.Find(bot.Avatar, placement, materials) == null
-				? ProgressionPlanner.ObtainAny(bot, HouseMaterials.Options(placement, materials))
+				? ObtainFurniture(bot, HouseMaterials.Options(placement, materials))
 				: new BuildHouseStep(operation);
 		int batch = Math.Min(line.Amount, MaterialBatch);
 		if (HouseMaterials.Find(bot.Avatar, placement, materials) == null)
 			return placement is BuildAction.PlaceDoor or BuildAction.PlaceTable or BuildAction.PlaceChair or BuildAction.PlaceBed
-				? ProgressionPlanner.ObtainAny(bot, HouseMaterials.Options(placement, materials))
+				? ObtainFurniture(bot, HouseMaterials.Options(placement, materials))
 				: ProgressionPlanner.Obtain(bot, line.ItemType, batch);
 		if (HouseMaterials.CountAvailable(bot.Avatar, placement, materials) < batch && ProgressionPlanner.Obtain(bot, line.ItemType, batch) is CraftStep craft)
 			return craft;
@@ -727,13 +745,13 @@ public sealed class ShaftRopeGoal : ProgressionGoal
 	public override bool IsMet(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
+		return Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.RopeTop, shaft.RopeBottom()) == null;
 	}
 
 	public override PlanStep Plan(Bot bot)
 	{
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
-		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom(), RopeTrip);
+		var step = HighwayGoal.Hang(bot, shaft.RopeX, shaft.RopeTop, shaft.RopeBottom(), RopeTrip);
 		if (step == null && !bot.Hands.HasRope && bot.CenterTile.Y > Main.worldSurface + UndergroundMargin)
 			return new TravelStep(bot.Faction.BaseFeet);
 		return step ?? PlanStep.Idle;
@@ -791,6 +809,15 @@ public sealed class OwnGoal : ProgressionGoal
 		options.Any(option => Inventory.Count(bot.Avatar, option) > 0 || bot.Avatar.armor.Any(worn => worn.type == option));
 
 	public override PlanStep Plan(Bot bot) => ProgressionPlanner.ObtainAny(bot, options);
+}
+
+public sealed class HammerGoal : ProgressionGoal
+{
+	public override string Describe() => "Hammer";
+
+	public override bool IsMet(Bot bot) => bot.Hands.BestHammer != null;
+
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.Obtain(bot, ItemID.WoodenHammer, 1);
 }
 
 public sealed class CageGoal : ProgressionGoal
@@ -944,7 +971,7 @@ public sealed class HighwayGoal : ProgressionGoal
 		var shaft = Bosses.BossRituals.ShaftFor(bot.Faction);
 		if (!shaft.IsFinished && (Bosses.BossRituals.PreparingForWall(bot.Faction) || bot.Hands.Explosives.Carries) && Bosses.BossRituals.ShaftWork(bot, shaft) is var dig and not IdleStep and not BlockedStep)
 			return dig;
-		return Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom()) ?? PlanStep.Idle;
+		return Hang(bot, shaft.RopeX, shaft.RopeTop, shaft.RopeBottom()) ?? PlanStep.Idle;
 	}
 
 	internal static PlanStep PlanHighways(Bot bot, IEnumerable<World.Highway> highways)
@@ -1713,6 +1740,7 @@ public static class ProgressionGoals
 			new ClaimBoostersGoal(),
 			new ManaCrystalGoal(),
 			new StationGoal(TileID.WorkBenches, HouseDesign.WorkBenches),
+			new HammerGoal(),
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new HealingPotionGoal(),
 			new GatedGoal(new ReserveGoal(ItemID.IronskinPotion, 2, 5), () => Terraria.Main.hardMode),

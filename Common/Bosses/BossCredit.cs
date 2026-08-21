@@ -153,7 +153,9 @@ public sealed class BossCredit : GlobalNPC
 	}
 
 	public static bool HasDefeated(Faction faction, BossChallenge challenge) =>
-		BotWorldSystem.Relation == FactionRelation.Cooperate ? challenge.IsDefeated() : faction.DefeatedBosses.Contains(challenge.BossType);
+		BotWorldSystem.Relation != FactionRelation.Cooperate ? faction.DefeatedBosses.Contains(challenge.BossType)
+		: Main.drunkWorld && challenge.BossType is NPCID.EaterofWorldsHead or NPCID.BrainofCthulhu ? BotWorldSystem.Factions.Any(any => any.DefeatedBosses.Contains(challenge.BossType))
+		: challenge.IsDefeated();
 
 	public static IEnumerable<BossChallenge> OpenChallengesFor(Faction faction)
 	{

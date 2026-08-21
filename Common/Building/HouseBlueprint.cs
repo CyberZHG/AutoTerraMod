@@ -242,6 +242,11 @@ public sealed class HouseBlueprint
 				if (Main.tile[x, y].HasTile && !IsRealDoor(x, y) && !TileQuery.IsSolid(x, y))
 					yield return Operation(BuildAction.ClearTile, new Point(x, y));
 			}
+			for (int y = Top + 1; y < Floor - DoorHeight; y++)
+			{
+				if (!TileQuery.IsSolid(x, y) && !IsPlatformSpot(new Point(x, y)))
+					yield return Operation(BuildAction.PlaceBlock, new Point(x, y));
+			}
 			yield return Operation(BuildAction.PlaceDoor, new Point(x, Floor - 2));
 		}
 		if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsTorch))

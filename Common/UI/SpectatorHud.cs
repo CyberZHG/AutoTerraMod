@@ -19,6 +19,7 @@ public sealed class SpectatorHud : ModSystem
 	const float PanelTop = 110f;
 	const float MinimapGap = 60f;
 	const float PanelTextScale = 0.85f;
+	const float SpacerFraction = 0.4f;
 
 	public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
 	{
@@ -115,6 +116,11 @@ public sealed class SpectatorHud : ModSystem
 		var position = new Vector2(Main.screenWidth - PanelMargin - panelWidth, top);
 		foreach (var (text, color) in lines)
 		{
+			if (text == null)
+			{
+				position.Y += LineHeight * SpacerFraction;
+				continue;
+			}
 			Utils.DrawBorderString(Main.spriteBatch, text, position, color, PanelTextScale);
 			position.Y += LineHeight;
 		}
@@ -136,7 +142,7 @@ public sealed class SpectatorHud : ModSystem
 			SpectatorSystem.KeysOf(SpectatorSystem.NextBotKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.FreeCameraKey),
 			SpectatorSystem.KeysOf(SpectatorSystem.PlayInPersonKey)), Color.Gray));
-		panelWidth = lines.Select(line => Terraria.GameContent.FontAssets.MouseText.Value.MeasureString(line.text).X * PanelTextScale).DefaultIfEmpty(0f).Max();
+		panelWidth = lines.Where(line => line.text != null).Select(line => Terraria.GameContent.FontAssets.MouseText.Value.MeasureString(line.text).X * PanelTextScale).DefaultIfEmpty(0f).Max();
 	}
 
 	static void DescribeBot(Bot bot, List<(string, Color)> lines)
@@ -182,20 +188,20 @@ public sealed class SpectatorHud : ModSystem
 
 	static void DescribeFactions(List<(string, Color)> lines)
 	{
-		lines.Add((Text($"UI.Relation{BotWorldSystem.Relation}"), Color.Gold));
-		var nextBoss = WorldBosses.NextUndefeated;
-		lines.Add((Text("UI.BossProgress", WorldBosses.DefeatedCount, WorldBosses.InProgressionOrder.Count, nextBoss?.Name ?? Text("UI.AllBossesDefeated")), Color.Gold));
+		int bossTotal = Bosses.BossCatalog.Challenges.Count(Bosses.BossCatalog.AppliesToThisWorld);
+		bool first = true;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
+			if (!first)
+				lines.Add((null, Color.White));
+			first = false;
 			var members = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).ToList();
-			int alive = members.Count(bot => bot.IsAlive);
 			int bestPick = members.Select(bot => Equipment.BestPower(bot.Avatar, GearKind.Pickaxe)).DefaultIfEmpty(0).Max();
-			string house = faction.Settlement == null ? "-" : Text("UI.SettlementProgress",
-				faction.Settlement.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)),
-				faction.Settlement.Structures.Count,
-				Text($"Roofs.{faction.HouseDesign.Roof}"));
-			lines.Add((Text("UI.FactionLine", faction.Name, alive, members.Count, bestPick, house), faction.Color));
-			lines.Add((Text("UI.FactionBosses", faction.DefeatedBosses.Count, WorldBosses.InProgressionOrder.Count), faction.Color));
+			int built = faction.Settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
+			int planned = faction.Settlement?.Structures.Count ?? 0;
+			string house = faction.Settlement == null || built >= planned ? "" : Text("UI.SettlementProgress", built, planned, Text($"Roofs.{faction.HouseDesign.Roof}"));
+			string bosses = Text("UI.FactionBosses", Bosses.BossCredit.DefeatedCount(faction), bossTotal);
+			lines.Add((Text("UI.FactionLine", faction.Name, bestPick, house, bosses), faction.Color));
 			var challenge = Bosses.BossCredit.NextChallengeFor(faction);
 			var summoner = members.Where(bot => bot.IsAlive).MaxBy(bot => bot.Personality.Combat);
 			if (challenge != null && summoner != null)

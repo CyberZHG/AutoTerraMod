@@ -32,7 +32,7 @@ while (( WAITED < SECONDS_TO_RUN )); do
 		break
 	fi
 done
-pkill -f "$CONFIG"
+pkill -9 -f "$CONFIG"
 sleep 3
 pkill -P "$SERVER_SHELL" 2>/dev/null
 kill "$SERVER_SHELL" 2>/dev/null

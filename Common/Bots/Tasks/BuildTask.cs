@@ -156,7 +156,7 @@ public sealed class BuildTask : BotTask
 		var blueprint = structure;
 		var here = Bot.CenterTile;
 		bool solidTarget = operation.Action is BuildAction.ClearTile or BuildAction.RemoveScaffold or BuildAction.RenovateBlock or BuildAction.Foundation;
-		var avoid = operation.Action == BuildAction.RemoveScaffold ? Bot.Faction.Scaffolding : null;
+		var avoid = operation.Action == BuildAction.RemoveScaffold ? new System.Collections.Generic.HashSet<Point> { operation.Tile } : null;
 		if ((operation.Tile.Y < blueprint.Ceiling || solidTarget) && FootholdNear(operation.Tile, avoid, operation.Action == BuildAction.Foundation ? FoundationFootholdMin : FootholdBelowMin) is Point foothold)
 			return Navigation.PathFinder.BodyCenterAt(foothold);
 		if (operation.Tile.Y < blueprint.Ceiling)
@@ -262,7 +262,7 @@ public sealed class BuildTask : BotTask
 				Flatten(tile.X, tile.Y + 2);
 				return TileQuery.IsSolid(tile.X, tile.Y - 2) && TileQuery.IsSolid(tile.X, tile.Y + 2) && Bot.Hands.Place(tool, tile);
 			case BuildAction.PlaceBlock when Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsSolid(tile) && !Main.tileCut[Main.tile[tile.X, tile.Y].TileType]:
-				if (TileQuery.IsPlatform(tile.X, tile.Y) || !Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType])
+				if (TileQuery.IsPlatform(tile.X, tile.Y) || !Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] || TileID.Sets.Torch[Main.tile[tile.X, tile.Y].TileType])
 					return Bot.Hands.Dig(tile) == ToolResult.Working;
 				return false;
 			default:

@@ -151,10 +151,17 @@ public static class BossCatalog
 
 	static bool Hardmode() => Main.hardMode;
 
+	public static Landmark EvilOf(BossChallenge challenge) => challenge.BossType switch
+	{
+		NPCID.EaterofWorldsHead => Landmark.Corruption,
+		NPCID.BrainofCthulhu => Landmark.Crimson,
+		_ => Landmarks.WorldEvil
+	};
+
 	public static bool AppliesToThisWorld(BossChallenge challenge) => challenge.BossType switch
 	{
-		NPCID.EaterofWorldsHead => !Landmarks.EvilIsCrimson,
-		NPCID.BrainofCthulhu => Landmarks.EvilIsCrimson,
+		NPCID.EaterofWorldsHead => Main.drunkWorld || !Landmarks.EvilIsCrimson,
+		NPCID.BrainofCthulhu => Main.drunkWorld || Landmarks.EvilIsCrimson,
 		_ => true
 	};
 

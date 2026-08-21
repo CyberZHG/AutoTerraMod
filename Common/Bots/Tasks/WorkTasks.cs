@@ -93,15 +93,24 @@ public sealed class CraftTask : BotTask
 		}
 		if (++craftTimer < CraftDelayTicks)
 			return;
-		if (Crafting.TryCraft(Avatar, recipe))
+		int crafted = 0;
+		int batch = IsBulk(recipe.createItem) ? BulkCraftBatch : 1;
+		while (crafted < batch && Crafting.HasIngredients(Avatar, recipe) && (crafted == 0 || Inventory.HasRoomFor(Avatar, recipe.createItem)) && Crafting.TryCraft(Avatar, recipe))
+			crafted++;
+		if (crafted > 0)
 		{
 			Bot.Watchdog.RecordProgress();
 			Accomplished = true;
 		}
-		BotDiagnostics.Log(Bot, $"crafted {recipe.createItem.Name}");
+		BotDiagnostics.Log(Bot, crafted > 1 ? $"crafted {recipe.createItem.Name} x{crafted}" : $"crafted {recipe.createItem.Name}");
 		PackUpPortableStations();
 		IsFinished = true;
 	}
+
+	const int BulkCraftBatch = 10;
+	const int BulkStack = 99;
+
+	static bool IsBulk(Item item) => item.maxStack >= BulkStack && item.damage <= 0 && !item.accessory && item.pick <= 0 && item.axe <= 0 && item.hammer <= 0 && item.createTile >= -1;
 
 	const float PortableStationDistance = 16f * 40f;
 	const int PortableDepth = 3;

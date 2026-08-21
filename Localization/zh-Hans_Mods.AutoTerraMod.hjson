@@ -209,7 +209,7 @@ UI: {
 	BossSiteFound: "（已找到{0}）"
 	BossSiteUnknown: "（尚未找到{0}）"
 	BossReadiness: "  下一个 Boss {0}：准备度 {1}%"
-	FactionBosses: "  本阵营击败 Boss：{0}/{1}"
+	FactionBosses: Boss {0}/{1}
 	BossCredited: "{0}击败了{1}！伤害占比：{2}"
 	Unbound: 未绑定
 	PlayingInPerson: 你亲自下场了，再按一次回到观战。
@@ -217,7 +217,7 @@ UI: {
 	BossProgress: 世界 Boss {0}/{1}，下一个：{2}
 	AllBossesDefeated: 全部击败
 	Stalled: 已 {0} 秒无进展
-	SettlementProgress: 已建成 {0}/{1} 栋（{2}）
+	SettlementProgress: ，已建成 {0}/{1} 栋（{2}）
 	InventoryOf: "{0} 的背包（只读）"
 	SharingBoosters: 带回营地给队友
 	Respawning: 已阵亡，{0} 秒后复活
@@ -241,7 +241,7 @@ UI: {
 	RelationRace: 模式：竞速
 	RelationCooperate: 模式：合作
 	RelationWar: 模式：敌对
-	FactionLine: "{0}：存活 {1}/{2}，最好的镐 {3}%，房子 {4}"
+	FactionLine: "{0}：最好的镐 {1}%{2}，{3}"
 	HouseDone: 已建成（{0}，{1}）
 	HousePending: 建造中（{0}，{1}）
 }

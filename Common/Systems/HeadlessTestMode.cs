@@ -641,6 +641,22 @@ public sealed class HeadlessTestMode : ModSystem
 		BotImport.Run(importSource, ModContent.GetInstance<Config.AutoTerraConfig>());
 	}
 
+	static bool blueprintsLogged;
+
+	static void LogBlueprints()
+	{
+		if (blueprintsLogged || Main.GameUpdateCount < 180 || Environment.GetEnvironmentVariable("AUTOTERRA_BLUEPRINTS") != "1")
+			return;
+		blueprintsLogged = true;
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (faction.Settlement is not { } camp)
+				continue;
+			foreach (var structure in camp.Structures)
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"[{faction.Name}] blueprint #{structure.Index} {structure.Purpose} x={structure.Left}..{structure.Right} y={structure.Top}..{structure.Floor} finished={Building.HouseInspector.IsFinished(faction, structure)} next={Building.HouseInspector.NextOperation(faction, structure)?.ToString() ?? "none"}");
+		}
+	}
+
 	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
 
 	static void TraceWhenAsked()
@@ -660,6 +676,7 @@ public sealed class HeadlessTestMode : ModSystem
 			SaveWhenDue();
 			DumpWhenAsked();
 			TraceWhenAsked();
+			LogBlueprints();
 			ImportWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)

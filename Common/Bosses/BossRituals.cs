@@ -37,7 +37,24 @@ public static class BossRituals
 
 	public static bool KnowsTile(Bot bot, int tileType) => KnownTile(bot, new HashSet<int> { tileType }) != null;
 
-	static Point? KnownShrine(Bot bot, Landmark landmark) => KnownTile(bot, ShrineTilesOf(landmark));
+	static Point? KnownShrine(Bot bot, Landmark landmark)
+	{
+		if (!Main.drunkWorld || landmark is not (Landmark.Corruption or Landmark.Crimson))
+			return KnownTile(bot, ShrineTilesOf(landmark));
+		var skipped = new HashSet<Point>();
+		for (int tries = 0; tries < DrunkShrineTries; tries++)
+		{
+			if (BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, OrbTiles, skipped, ShrineSearchRadius) is not Point orb)
+				return null;
+			if (Main.tile[orb.X, orb.Y].TileFrameX >= CrimsonHeartFrame == (landmark == Landmark.Crimson))
+				return orb;
+			skipped.Add(orb);
+		}
+		return null;
+	}
+
+	const int DrunkShrineTries = 12;
+	const int CrimsonHeartFrame = 36;
 
 	static Point? KnownTile(Bot bot, HashSet<int> tiles) =>
 		BotWorldSystem.KnowledgeOf(bot.Faction).NearestKnown(bot.Faction.BaseTile, tiles, new HashSet<Point>(), ShrineSearchRadius);
@@ -342,12 +359,12 @@ public static class BossRituals
 		if (bot.Hands.BestHammer == null)
 			return ProgressionPlanner.ObtainAny(bot, Hammers);
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		var orb = KnownShrine(bot, Landmarks.WorldEvil);
+		var evil = BossCatalog.EvilOf(challenge);
+		var orb = KnownShrine(bot, evil);
 		if (orb is not Point shrine)
 		{
 			if (knowledge.FruitlessShrineSearches >= ShrineSearchesBeforeGivingUp)
 				return PlanStep.Blocked;
-			var evil = Landmarks.WorldEvil;
 			return new ScoutStep(evil, knowledge.LandmarkOf(evil) != null);
 		}
 		bool final = WorldGen.shadowOrbCount >= 2;
@@ -454,7 +471,7 @@ public static class BossRituals
 		var shaft = ShaftFor(bot.Faction);
 		if (shaft.IsFinished || !IsChiefDigger(bot, shaft))
 			return PlanStep.Idle;
-		if (bot.Hands.HasRope && HighwayGoal.Hang(bot, shaft.RopeX, shaft.TopY, shaft.RopeBottom(), DiggerRopeTrip) is { } hang)
+		if (bot.Hands.HasRope && HighwayGoal.Hang(bot, shaft.RopeX, shaft.RopeTop, shaft.RopeBottom(), DiggerRopeTrip) is { } hang)
 			return hang;
 		return ShaftWork(bot, shaft);
 	}
@@ -519,7 +536,7 @@ public static class BossRituals
 		if (RowTouchesLava(shaft, shaft.WorkRow()) && !bot.Hands.Explosives.Carries && ObtainBombs(bot, BombRestock) is var lavaBombs and not (BlockedStep or IdleStep))
 			return lavaBombs;
 		int carried = Inventory.Items(bot.Avatar).Where(item => item.createTile >= 0 && TileID.Sets.Platforms[item.createTile]).Sum(item => item.stack);
-		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.TopY, shaft.RopeBottom()) == null;
+		bool roped = Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.RopeTop, shaft.RopeBottom()) == null;
 		if (carried == 0 && !roped)
 			platformRestock.Add(bot.Id);
 		else if (carried >= ShaftPlatformRestock || roped)

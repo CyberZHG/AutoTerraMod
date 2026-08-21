@@ -24,6 +24,7 @@ public static class HouseInspector
 		completion.Clear();
 		operationCache.Clear();
 		skipped.Clear();
+		scaffoldOffered.Clear();
 		reportedFailures.Clear();
 	}
 
@@ -110,6 +111,16 @@ public static class HouseInspector
 
 	public static void Skip(Bot bot, BuildOperation operation)
 	{
+		if (operation.Action == BuildAction.RemoveScaffold)
+		{
+			bot.Faction.Scaffolding.Remove(operation.Tile);
+			WorldGen.KillTile(operation.Tile.X, operation.Tile.Y, noItem: true);
+			if (Main.netMode == Terraria.ID.NetmodeID.Server)
+				NetMessage.SendTileSquare(-1, operation.Tile.X, operation.Tile.Y);
+			ForgetPlannedOperations(bot.Faction);
+			BotDiagnostics.Log(bot, $"removed out-of-reach scaffolding at {operation.Tile}");
+			return;
+		}
 		Skipped(bot.Faction).Add(operation.Tile);
 		ForgetPlannedOperations(bot.Faction);
 		BotDiagnostics.Log(bot, $"skipping {operation.Action} at {operation.Tile} (structure {operation.Structure}) from {bot.CenterTile}; motor: {bot.Motor.Describe()}{World.TerrainDump.Around(operation.Tile, 12, 7)}");
@@ -149,10 +160,30 @@ public static class HouseInspector
 			if (!excluded.Contains(operation.Tile))
 				return operation;
 		}
-		foreach (var tile in ScaffoldToRemove(faction))
-			return new BuildOperation(BuildAction.RemoveScaffold, tile, structure.Index);
+		foreach (var tile in ScaffoldToRemove(faction).ToList())
+		{
+			if (!faction.Scaffolding.Contains(tile))
+				continue;
+			if (!scaffoldOffered.TryGetValue(tile, out uint since))
+				scaffoldOffered[tile] = since = Main.GameUpdateCount;
+			if (Main.GameUpdateCount - since < ScaffoldPatienceTicks)
+				return new BuildOperation(BuildAction.RemoveScaffold, tile, structure.Index);
+			var column = faction.Scaffolding.Where(other => other.X == tile.X).ToList();
+			foreach (var piece in column)
+			{
+				faction.Scaffolding.Remove(piece);
+				scaffoldOffered.Remove(piece);
+				WorldGen.KillTile(piece.X, piece.Y, noItem: true);
+				if (Main.netMode == Terraria.ID.NetmodeID.Server)
+					NetMessage.SendTileSquare(-1, piece.X, piece.Y);
+			}
+			BotDiagnostics.LogWorld($"[{faction.Name}] removed {column.Count} scaffolding tiles at column {tile.X} that nobody cleared in {ScaffoldPatienceTicks / 60}s");
+		}
 		return null;
 	}
+
+	static readonly Dictionary<Point, uint> scaffoldOffered = new();
+	const uint ScaffoldPatienceTicks = 30 * 60;
 
 	static IEnumerable<Point> ScaffoldToRemove(Faction faction)
 	{
@@ -222,7 +253,7 @@ public static class HouseInspector
 		uint shift = Main.GameUpdateCount / BuilderShiftTicks;
 		if (!builders.TryGetValue(bot.FactionId, out var cached) || Main.GameUpdateCount - cached.at >= BuilderCacheTicks)
 		{
-			bool keep = cached.shift == shift && BotWorldSystem.Bots.FirstOrDefault(member => member.Id == cached.botId) is { IsAlive: true, CommittedToMining: false } current
+			bool keep = cached.shift == shift && BotWorldSystem.Bots.FirstOrDefault(member => member.Id == cached.botId) is { IsAlive: true } current
 				&& current.FactionId == bot.FactionId;
 			builders[bot.FactionId] = cached = (Main.GameUpdateCount, shift, keep ? cached.botId : PickBuilder(bot.FactionId));
 		}
@@ -322,7 +353,8 @@ public static class HouseMaterials
 			BuildAction.PlaceBed => Beds,
 			_ => System.Array.Empty<int>()
 		};
-		return item.createTile >= 0 && tiles.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile];
+		return item.createTile >= 0 && tiles.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile]
+			&& !(placement == BuildAction.PlaceChair && item.createTile == TileID.Beds);
 	}
 
 	static Item Preferring(Player avatar, int[] itemTypes, int preferred) =>
@@ -400,5 +432,6 @@ public static class HouseMaterials
 	}
 
 	static Item FindPlacing(Player avatar, int[] tileTypes) =>
-		Inventory.Items(avatar).FirstOrDefault(item => item.createTile >= 0 && tileTypes.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile]);
+		Inventory.Items(avatar).FirstOrDefault(item => item.createTile >= 0 && tileTypes.Contains(item.createTile) && !TileID.Sets.Platforms[item.createTile]
+			&& !(tileTypes == TileID.Sets.RoomNeeds.CountsAsChair && item.createTile == TileID.Beds));
 }
