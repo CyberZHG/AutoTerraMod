@@ -36,6 +36,30 @@ public static class WorldScan
 		return best;
 	}
 
+	public static Point? NearestBuriedTile(Point origin, int radius, ISet<int> tileTypes, Func<int, int, bool> accept, ISet<Point> excluded)
+	{
+		using var _ = Systems.Perf.Measure(Systems.PerfSection.WorldScans);
+		Point? best = null;
+		long bestDistance = long.MaxValue;
+		for (int x = Math.Max(origin.X - radius, 5); x <= Math.Min(origin.X + radius, Main.maxTilesX - 5); x++)
+		{
+			for (int y = Math.Max(origin.Y - radius, 5); y <= Math.Min(origin.Y + radius, Main.maxTilesY - 5); y++)
+			{
+				var tile = Main.tile[x, y];
+				if (!tile.HasTile || !tileTypes.Contains(tile.TileType))
+					continue;
+				var candidate = new Point(x, y);
+				long distance = DistanceSq(origin, candidate);
+				if (distance < bestDistance && !excluded.Contains(candidate) && accept(x, y))
+				{
+					bestDistance = distance;
+					best = candidate;
+				}
+			}
+		}
+		return best;
+	}
+
 	public static void Observe(Point origin, FactionKnowledge knowledge)
 	{
 		knowledge.MarkExplored(origin);

@@ -110,7 +110,7 @@ public sealed class CraftTask : BotTask
 	const int BulkCraftBatch = 10;
 	const int BulkStack = 99;
 
-	static bool IsBulk(Item item) => item.maxStack >= BulkStack && item.damage <= 0 && !item.accessory && item.pick <= 0 && item.axe <= 0 && item.hammer <= 0 && item.createTile >= -1;
+	static bool IsBulk(Item item) => item.maxStack >= BulkStack && item.damage <= 0 && !item.accessory && item.pick <= 0 && item.axe <= 0 && item.hammer <= 0 && (item.createTile < 0 || Main.tileSolid[item.createTile] && !Main.tileFrameImportant[item.createTile]);
 
 	const float PortableStationDistance = 16f * 40f;
 	const int PortableDepth = 3;
@@ -472,6 +472,11 @@ public sealed class GatherTask : BotTask
 		prospectTarget = null;
 		searchCooldown = 0;
 		prospectDirection = Main.rand.NextBool() ? 1 : -1;
+		if (prospectedItem != step.ItemType)
+		{
+			prospectedItem = step.ItemType;
+			prospectingSince = Main.GameUpdateCount;
+		}
 		if (!Tiles.IsTree && Main.rand.NextFloat() < TeleportChance && Shops.WithinShoppingTrip(Bot, Bot.Faction.BaseCenter))
 			TryRandomTeleport();
 	}
@@ -516,6 +521,12 @@ public sealed class GatherTask : BotTask
 				Abandon(tile);
 			return;
 		}
+		if (!TileQuery.IsExposed(tile.X, tile.Y))
+		{
+			if (!TravelOrTunnel(tile.ToWorldCoordinates(), 24f))
+				Abandon(tile);
+			return;
+		}
 		Bot.Motor.MoveTo(tile.ToWorldCoordinates(), 24f);
 		if (Bot.Motor.IsStuck)
 			Abandon(tile);
@@ -551,13 +562,21 @@ public sealed class GatherTask : BotTask
 		for (int attempt = 0; attempt < KnownCandidates; attempt++)
 		{
 			if (knowledge.NearestKnown(origin, Tiles.TileTypes, rejected, KnowledgeSearchRadius) is not Point tile)
-				return null;
+				break;
 			if (accept(tile.X, tile.Y))
 				return tile;
 			rejected.Add(tile);
 		}
-		return null;
+		return SensesBuriedOre ? WorldScan.NearestBuriedTile(origin, BuriedSenseRadius, Tiles.TileTypes, accept, unreachable) : null;
 	}
+
+	const int BuriedSenseAfterTicks = 2 * 60 * 60;
+	const int BuriedSenseRadius = 30;
+
+	int prospectedItem = -1;
+	uint prospectingSince;
+
+	bool SensesBuriedOre => !Tiles.IsTree && !Tiles.OnSurface && Main.GameUpdateCount - prospectingSince > BuriedSenseAfterTicks;
 
 	void Prospect()
 	{

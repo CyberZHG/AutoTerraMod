@@ -344,6 +344,11 @@ public sealed class StorageGoal : ProgressionGoal
 
 	const int SpareSlots = 20;
 
+	static readonly int[] WoodChests =
+	{
+		ItemID.Chest, ItemID.RichMahoganyChest, ItemID.BorealWoodChest, ItemID.PalmWoodChest, ItemID.EbonwoodChest, ItemID.ShadewoodChest, ItemID.PearlwoodChest
+	};
+
 	public override bool IsMet(Bot bot)
 	{
 		int chests = BaseStorage.ChestIndices(bot.Faction).Count;
@@ -356,7 +361,7 @@ public sealed class StorageGoal : ProgressionGoal
 	public override PlanStep Plan(Bot bot)
 	{
 		var held = Inventory.Items(bot.Avatar).FirstOrDefault(BaseStorage.IsStorageItem);
-		return held != null ? new PlaceStationStep(held.type) : ProgressionPlanner.Obtain(bot, ItemID.Chest, 1);
+		return held != null ? new PlaceStationStep(held.type) : ProgressionPlanner.ObtainAnyWithWood(bot, WoodChests);
 	}
 }
 

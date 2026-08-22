@@ -1,6 +1,7 @@
 using Terraria.DataStructures;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
@@ -657,6 +658,35 @@ public sealed class HeadlessTestMode : ModSystem
 		}
 	}
 
+	static bool tilesCounted;
+
+	static void CountTilesWhenAsked()
+	{
+		string spec = Environment.GetEnvironmentVariable("AUTOTERRA_COUNT_TILE");
+		if (tilesCounted || string.IsNullOrEmpty(spec) || Main.GameUpdateCount < 120)
+			return;
+		tilesCounted = true;
+		foreach (string part in spec.Split(','))
+		{
+			if (!int.TryParse(part, out int type))
+				continue;
+			var columns = new SortedDictionary<int, int>();
+			var spots = new List<string>();
+			int total = 0, shallowest = Main.maxTilesY;
+			for (int x = 0; x < Main.maxTilesX; x++)
+				for (int y = 0; y < Main.maxTilesY; y++)
+					if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == type)
+					{
+						total++;
+						columns[x / 200 * 200] = columns.GetValueOrDefault(x / 200 * 200) + 1;
+						shallowest = Math.Min(shallowest, y);
+						if (x >= 2500 && x <= 3300 && (total & 1) == 0)
+							spots.Add($"{x},{y}");
+					}
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"tile count {type}: total={total} shallowest={shallowest} rockLayer={(int)Main.rockLayer} byColumn={string.Join(" ", columns.Select(kv => $"{kv.Key}:{kv.Value}"))} spots={string.Join(" ", spots)}");
+		}
+	}
+
 	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
 
 	static void TraceWhenAsked()
@@ -677,6 +707,7 @@ public sealed class HeadlessTestMode : ModSystem
 			DumpWhenAsked();
 			TraceWhenAsked();
 			LogBlueprints();
+			CountTilesWhenAsked();
 			ImportWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
