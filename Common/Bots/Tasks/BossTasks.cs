@@ -465,7 +465,9 @@ public sealed class SummonTask : BotTask
 		var gathered = team.Where(member => member == Bot || RallyTask.Joined(member, GatherPoint, GatherRadius)).ToList();
 		int present = gathered.Count;
 		bool stillWaiting = Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
-		if (present == team.Count || BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot, gathered).IsReady)
+		var withGuests = gathered.Concat(BotWorldSystem.Bots.Where(guest => guest.FactionId != Bot.FactionId && guest.Faction.RallyLeaderId == Bot.Id
+			&& RallyTask.Joined(guest, GatherPoint, GatherRadius))).ToList();
+		if (present == team.Count || BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot, withGuests).IsReady)
 			return true;
 		if (!stillWaiting && extensions < MaxRallyExtensions && team.Any(member => member.IsAlive && !gathered.Contains(member) && member.Brain.Current is RallyTask))
 		{

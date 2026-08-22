@@ -186,12 +186,16 @@ public abstract class BotTask
 		return result;
 	}
 
+	const float ReachedWaypointPixels = 16f * 6f;
+
 	Vector2? CachedHighwayRoute(Vector2 target, out bool recalled)
 	{
 		recalled = false;
 		if (roadChecked is var (checkedTarget, at, road) && Main.GameUpdateCount - at < RoadCheckTicks && Vector2.DistanceSquared(checkedTarget, target) < SameTargetPixels * SameTargetPixels)
 			return road;
 		var result = HighwayRoute(target, out recalled);
+		if (result is Vector2 waypoint && Vector2.Distance(waypoint, Bot.Center) < ReachedWaypointPixels)
+			result = null;
 		roadChecked = recalled ? null : (target, Main.GameUpdateCount, result);
 		return result;
 	}

@@ -102,6 +102,14 @@ public static class Junk
 
 	static void TrashBeyondPlenty(Bot bot)
 	{
+		foreach (var item in Inventory.Items(bot.Avatar))
+		{
+			if (item.stack > item.maxStack)
+			{
+				BotDiagnostics.Log(bot, $"clamped an oversized {item.Name} stack of {item.stack} to {item.maxStack}");
+				item.stack = item.maxStack;
+			}
+		}
 		Inventory.MergeStacks(bot.Avatar);
 		foreach (var group in Inventory.Items(bot.Avatar).GroupBy(item => item.type).ToList())
 		{

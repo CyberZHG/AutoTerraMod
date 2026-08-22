@@ -472,11 +472,7 @@ public sealed class GatherTask : BotTask
 		prospectTarget = null;
 		searchCooldown = 0;
 		prospectDirection = Main.rand.NextBool() ? 1 : -1;
-		if (prospectedItem != step.ItemType)
-		{
-			prospectedItem = step.ItemType;
-			prospectingSince = Main.GameUpdateCount;
-		}
+		prospectingSince.TryAdd(step.ItemType, Main.GameUpdateCount);
 		if (!Tiles.IsTree && Main.rand.NextFloat() < TeleportChance && Shops.WithinShoppingTrip(Bot, Bot.Faction.BaseCenter))
 			TryRandomTeleport();
 	}
@@ -571,12 +567,11 @@ public sealed class GatherTask : BotTask
 	}
 
 	const int BuriedSenseAfterTicks = 2 * 60 * 60;
-	const int BuriedSenseRadius = 30;
+	const int BuriedSenseRadius = 50;
 
-	int prospectedItem = -1;
-	uint prospectingSince;
+	readonly Dictionary<int, uint> prospectingSince = new();
 
-	bool SensesBuriedOre => !Tiles.IsTree && !Tiles.OnSurface && Main.GameUpdateCount - prospectingSince > BuriedSenseAfterTicks;
+	bool SensesBuriedOre => !Tiles.IsTree && !Tiles.OnSurface && prospectingSince.TryGetValue(step.ItemType, out uint since) && Main.GameUpdateCount - since > BuriedSenseAfterTicks;
 
 	void Prospect()
 	{
