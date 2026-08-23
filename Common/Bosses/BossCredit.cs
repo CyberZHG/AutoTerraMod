@@ -326,8 +326,9 @@ public sealed class BossCredit : GlobalNPC
 			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
 		long best = byFaction.Values.Max();
+		float share = System.Math.Min(CreditShare, 1f / (byFaction.Count + 1));
 		var credited = byFaction
-			.Where(entry => entry.Value >= total * CreditShare || entry.Value == best)
+			.Where(entry => entry.Value >= total * share || entry.Value == best)
 			.Select(entry => FactionById(entry.Key))
 			.Where(faction => faction != null)
 			.ToList();

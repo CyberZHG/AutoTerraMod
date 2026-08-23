@@ -35,7 +35,7 @@ public sealed class MacroRoute
 
 	public Vector2? LegToward(Point feet, Point target, int goalRadius, NavigationAbilities abilities, bool straightLineFailed)
 	{
-		bool maze = PathFinder.InsideMaze(target);
+		bool maze = PathFinder.InsideWalledMaze(target);
 		if (!maze && !straightLineFailed || Distance(feet, target) <= (maze ? LegTiles : LegReachedTiles))
 		{
 			Clear();

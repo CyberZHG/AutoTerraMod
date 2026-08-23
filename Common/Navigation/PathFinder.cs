@@ -128,7 +128,7 @@ public static class PathFinder
 	{
 		int maxExpanded = MaxExpandedNodes * searchMultiplier;
 		int searchRadius = MaxSearchRadius;
-		if (InsideMaze(goal))
+		if (InsideWalledMaze(goal))
 		{
 			maxExpanded *= MazeSearchMultiplier;
 			searchRadius = MazeSearchRadius;
@@ -152,6 +152,8 @@ public static class PathFinder
 
 	public static PathResult FindLongRoute(Point start, Point goal, int goalRadius, NavigationAbilities abilities, int maxNodes) =>
 		BeginLongRoute(start, goal, goalRadius, abilities, maxNodes).RunToEnd();
+
+	public static bool InsideWalledMaze(Point tile) => InsideMaze(tile) || WorldGen.InWorld(tile.X, tile.Y) && Main.wallDungeon[Main.tile[tile.X, tile.Y].WallType];
 
 	public static bool InsideMaze(Point tile) => WorldGen.InWorld(tile.X, tile.Y) && Main.tile[tile.X, tile.Y].WallType == WallID.LihzahrdBrickUnsafe;
 

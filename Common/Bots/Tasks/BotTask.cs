@@ -388,7 +388,7 @@ public abstract class BotTask
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
 			return true;
-		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
+		if (Bot.Motor.Tunneling || Bot.Hands.BestPickaxe == null || Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()))
 			return false;
 		if ((InAnyCamp(Bot.CenterTile) || InAnyCamp(target.ToTileCoordinates())) && ++campRetries <= CampRetriesBeforeTunnel)
 		{
