@@ -326,6 +326,7 @@ public sealed class CraftTask : BotTask
 		return null;
 	}
 
+	const float NearSpotPixels = 16f * 40f;
 	const uint FailedSpotTicks = 7200;
 	static readonly Dictionary<Point, uint> failedSpots = new();
 
@@ -409,6 +410,12 @@ public sealed class CraftTask : BotTask
 		}
 		if (!Bot.Hands.CanReach(item, target))
 		{
+			if (Vector2.Distance(Bot.Center, target.ToWorldCoordinates()) > NearSpotPixels)
+			{
+				if (!TravelOrTunnel(target.ToWorldCoordinates(), BaseArrivalRadius))
+					IsFinished = true;
+				return;
+			}
 			Bot.Motor.MoveTo(target.ToWorldCoordinates(), BaseArrivalRadius);
 			if (Bot.Motor.IsStuck)
 			{

@@ -403,6 +403,8 @@ public abstract class BotTask
 		if (!beneath && Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
 			var tunnelLeg = Bot.Center + Vector2.Normalize(target - Bot.Center) * TunnelLegPixels;
+			if (!Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()) && CrossesWalledMaze(Bot.Center, tunnelLeg))
+				tunnelLeg = new Vector2(Bot.Center.X, (TileQuery.SurfaceY(Bot.CenterTile.X) - 2) * 16f);
 			BotDiagnostics.Log(Bot, $"stuck far from {target.ToTileCoordinates()}, tunneling a leg toward {tunnelLeg.ToTileCoordinates()}");
 			legTunnel = (tunnelLeg, target);
 			tunnelingSince = Main.GameUpdateCount;
@@ -420,6 +422,17 @@ public abstract class BotTask
 		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);
 		return true;
+	}
+
+	static bool CrossesWalledMaze(Vector2 from, Vector2 to)
+	{
+		int samples = (int)(Vector2.Distance(from, to) / (16f * 4f)) + 1;
+		for (int index = 0; index <= samples; index++)
+		{
+			if (Navigation.PathFinder.InsideWalledMaze(Vector2.Lerp(from, to, index / (float)samples).ToTileCoordinates()))
+				return true;
+		}
+		return false;
 	}
 
 	const int TempleArrival = 6;
