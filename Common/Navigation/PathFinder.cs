@@ -49,7 +49,7 @@ public static class PathFinder
 	public const int BaseJumpRise = 5;
 	public const int BaseLeapReach = 6;
 	const int SwimmableLiquid = 64;
-	const double TickBudgetMilliseconds = 3.0;
+	const double TickBudgetMilliseconds = 2.0;
 	const double SliceMilliseconds = 1.0;
 	const uint ForgetWaitingTicks = 60;
 
@@ -58,7 +58,7 @@ public static class PathFinder
 	public static bool Prioritized { get; set; }
 
 	static uint budgetTick;
-	static long tickDeadline;
+	static long spentThisTick;
 
 	static long Ticks(double milliseconds) => (long)(milliseconds * Stopwatch.Frequency / 1000.0);
 
@@ -67,16 +67,26 @@ public static class PathFinder
 		if (budgetTick == Main.GameUpdateCount)
 			return;
 		budgetTick = Main.GameUpdateCount;
-		tickDeadline = Stopwatch.GetTimestamp() + Ticks(TickBudgetMilliseconds);
+		spentThisTick = 0;
 	}
+
+	static long Remaining => Ticks(TickBudgetMilliseconds) - spentThisTick;
 
 	public static bool HasBudget
 	{
 		get
 		{
 			StartBudgetTick();
-			return Stopwatch.GetTimestamp() < tickDeadline;
+			return Remaining > 0;
 		}
+	}
+
+	static bool StepTimed(PathSearch search, long slice)
+	{
+		long began = Stopwatch.GetTimestamp();
+		bool done = search.Step(began + slice);
+		spentThisTick += Stopwatch.GetTimestamp() - began;
+		return done;
 	}
 
 	public static bool Advance(PathSearch search)
@@ -87,21 +97,21 @@ public static class PathFinder
 		if (Prioritized)
 		{
 			waiting.Remove(search);
-			return search.Step(Stopwatch.GetTimestamp() + Ticks(SliceMilliseconds));
+			return StepTimed(search, Ticks(SliceMilliseconds));
 		}
 		waiting.RemoveAll(other => other.IsDone || Main.GameUpdateCount - other.PolledAt > ForgetWaitingTicks);
 		int ahead = waiting.IndexOf(search);
 		long reserved = (ahead < 0 ? waiting.Count : ahead) * Ticks(SliceMilliseconds);
-		long now = Stopwatch.GetTimestamp();
 		search.PolledAt = Main.GameUpdateCount;
-		if (now + reserved >= tickDeadline)
+		long available = Remaining - reserved;
+		if (available <= 0)
 		{
 			if (ahead < 0)
 				waiting.Add(search);
 			return false;
 		}
 		waiting.Remove(search);
-		return search.Step(Math.Min(tickDeadline - reserved, now + Ticks(SliceMilliseconds)));
+		return StepTimed(search, Math.Min(available, Ticks(SliceMilliseconds)));
 	}
 
 	public static Point FeetOf(Entity body)

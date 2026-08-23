@@ -66,8 +66,9 @@ public static class Junk
 
 	static void DropHardestToUse(Bot bot)
 	{
+		var hammer = bot.Hands.BestHammer;
 		var victim = Kit.ItemsToStore(bot)
-			.Where(item => !IsBossSummon(item) && !CraftingBlocks.Contains(item.type) && !BotHands.IsBattlePotion(item.type) && !(item.potion && item.healLife > 0) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
+			.Where(item => item != hammer && !IsStorageContainer(item) && !IsBossSummon(item) && !CraftingBlocks.Contains(item.type) && !BotHands.IsBattlePotion(item.type) && !(item.potion && item.healLife > 0) && item.fishingPole <= 0 && !bot.Brain.PlannedItemTypes.Contains(item.type) && !DyeTaste.IsFavorite(bot.Faction, item))
 			.OrderBy(Usefulness)
 			.ThenBy(item => (long)item.value * item.stack)
 			.FirstOrDefault();
@@ -82,6 +83,8 @@ public static class Junk
 		abandoned[index] = (Main.item[index].type, Main.GameUpdateCount);
 		BotDiagnostics.Log(bot, $"dropped {name} x{stack} on the ground (inventory and storage full)");
 	}
+
+	static bool IsStorageContainer(Item item) => item.createTile >= 0 && TileID.Sets.BasicChest[item.createTile];
 
 	static int Usefulness(Item item)
 	{
