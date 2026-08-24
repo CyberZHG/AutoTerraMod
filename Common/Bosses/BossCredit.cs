@@ -202,7 +202,7 @@ public sealed class BossCredit : GlobalNPC
 
 	public static bool IsOptional(BossChallenge challenge) => OptionalBosses.Contains(challenge.BossType);
 
-	static bool Deferred(Faction faction, BossChallenge challenge) => IsOptional(challenge) ||
+	public static bool Deferred(Faction faction, BossChallenge challenge) => IsOptional(challenge) ||
 		challenge.BossType == NPCID.SkeletronHead && !NPC.AnyNPCs(NPCID.OldMan)
 		&& !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0);
 

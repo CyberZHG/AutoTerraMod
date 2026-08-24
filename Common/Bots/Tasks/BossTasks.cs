@@ -892,8 +892,10 @@ public sealed class ScoutTask : BotTask
 		{
 			int column = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
 			int surface = TileQuery.SurfaceY(column);
-			int deepest = step.SeekTile == TileID.PlanteraBulb ? Main.UnderworldLayer - UnderworldMargin : Math.Min(Math.Max(surface + MaxShrineDepth, (int)Main.rockLayer + ShrineDepthBelowRock), Main.UnderworldLayer - UnderworldMargin);
-			int shallowest = step.SeekTile == TileID.PlanteraBulb ? Math.Max(surface + MinShrineDepth, (int)Main.rockLayer) : surface + MinShrineDepth;
+			bool bulb = step.SeekTile == TileID.PlanteraBulb;
+			bool hive = step.Landmark == Landmark.Jungle && !bulb;
+			int deepest = bulb || hive ? Main.UnderworldLayer - UnderworldMargin : Math.Min(Math.Max(surface + MaxShrineDepth, (int)Main.rockLayer + ShrineDepthBelowRock), Main.UnderworldLayer - UnderworldMargin);
+			int shallowest = bulb ? Math.Max(surface + MinShrineDepth, (int)Main.rockLayer) : hive ? Math.Max(surface + MinShrineDepth, (int)Main.worldSurface) : surface + MinShrineDepth;
 			var spot = OpenTileNear(new Point(column, Main.rand.Next(shallowest, deepest)));
 			return new Vector2(spot.X * 16f + 8f, spot.Y * 16f);
 		}

@@ -551,10 +551,13 @@ public sealed class BossGoal : ProgressionGoal
 		if (Bosses.BossRituals.LeftoverPillars(bot) is { } pillars)
 			return pillars;
 		PlanStep preparation = null;
+		bool waiting = false;
 		foreach (var challenge in Bosses.BossCredit.OpenChallengesFor(bot.Faction))
 		{
 			if (Bosses.BossCatalog.IsBossAlive(challenge))
 				return PlanStep.Idle;
+			if ((waiting || preparation != null) && Bosses.BossCredit.Deferred(bot.Faction, challenge))
+				break;
 			if (bot.Faction.Rally != null && bot.Faction.RallyBossType != challenge.BossType)
 				continue;
 			var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot);
@@ -565,6 +568,7 @@ public sealed class BossGoal : ProgressionGoal
 					preparation ??= Prepare(bot, challenge);
 				continue;
 			}
+			var outcomes = new List<string>();
 			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
 			{
 				var step = Bosses.BossRituals.Plan(bot, challenge, trigger);
@@ -572,7 +576,10 @@ public sealed class BossGoal : ProgressionGoal
 					return pillar;
 				if (step is not BlockedStep and not IdleStep)
 					return step;
+				outcomes.Add($"{trigger.GetType().Name}={(step is IdleStep ? "idle" : "blocked")}");
+				waiting |= step is IdleStep;
 			}
+			LogStalled(bot, challenge, outcomes);
 		}
 		if (preparation != null && GearRefight.AppliesTo(bot) && !GearRefight.IsMet(bot) && GearRefight.Plan(bot) is not (BlockedStep or IdleStep))
 			return PlanStep.Idle;
@@ -595,6 +602,15 @@ public sealed class BossGoal : ProgressionGoal
 	}
 
 	readonly Dictionary<int, uint> lastReadinessLog = new();
+	readonly Dictionary<int, uint> lastStallLog = new();
+
+	void LogStalled(Bot bot, Bosses.BossChallenge challenge, List<string> outcomes)
+	{
+		if (lastStallLog.TryGetValue(challenge.BossType, out uint loggedAt) && Terraria.Main.GameUpdateCount - loggedAt < ReadinessLogIntervalTicks)
+			return;
+		lastStallLog[challenge.BossType] = Terraria.Main.GameUpdateCount;
+		BotDiagnostics.Log(bot, $"boss {challenge.Name} ready but not started: {string.Join(", ", outcomes)}");
+	}
 
 	void LogReadiness(Bot bot, Bosses.BossChallenge challenge, Bosses.ReadinessReport report)
 	{
