@@ -30,7 +30,25 @@ public sealed class FactionKnowledge
 
 	public int ResourceCount => resourceTiles.Count;
 	public int ScoutDirection { get; set; } = 1;
-	public int FruitlessShrineSearches { get; set; }
+	readonly Dictionary<Landmark, (int count, uint since)> fruitlessShrineSearches = new();
+
+	public void ShrineSearchFailed(Landmark landmark)
+	{
+		fruitlessShrineSearches.TryGetValue(landmark, out var record);
+		fruitlessShrineSearches[landmark] = (record.count + 1, Terraria.Main.GameUpdateCount);
+	}
+
+	public void ShrineFound(Landmark landmark) => fruitlessShrineSearches.Remove(landmark);
+
+	public bool ShrineSearchExhausted(Landmark landmark, int limit, uint retryTicks)
+	{
+		if (!fruitlessShrineSearches.TryGetValue(landmark, out var record) || record.count < limit)
+			return false;
+		if (Terraria.Main.GameUpdateCount - record.since < retryTicks)
+			return true;
+		fruitlessShrineSearches.Remove(landmark);
+		return false;
+	}
 
 	public void RememberLandmark(Landmark landmark, Point tile)
 	{

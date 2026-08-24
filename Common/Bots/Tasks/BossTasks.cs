@@ -1110,7 +1110,7 @@ public sealed class ScoutTask : BotTask
 		}
 		destinationFor = null;
 		if (SearchingShrines)
-			BotWorldSystem.KnowledgeOf(Bot.Faction).FruitlessShrineSearches++;
+			BotWorldSystem.KnowledgeOf(Bot.Faction).ShrineSearchFailed(step.Landmark);
 		IsFinished = true;
 	}
 
@@ -1123,7 +1123,7 @@ public sealed class ScoutTask : BotTask
 		{
 			bool found = step.SeekTile >= 0 ? BossRituals.KnowsTile(Bot, step.SeekTile) : BossRituals.KnowsShrine(Bot, step.Landmark);
 			if (found)
-				knowledge.FruitlessShrineSearches = 0;
+				knowledge.ShrineFound(step.Landmark);
 			return found;
 		}
 		return knowledge.LandmarkOf(step.Landmark) != null;

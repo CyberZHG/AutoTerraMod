@@ -14,6 +14,7 @@ public static class BossRituals
 {
 	const int ShrineSearchRadius = 3000;
 	const int ShrineSearchesBeforeGivingUp = 10;
+	const uint ShrineRetryTicks = 20 * 60 * 60;
 
 	public static readonly int[] Hammers =
 	{
@@ -363,7 +364,7 @@ public static class BossRituals
 		var orb = KnownShrine(bot, evil);
 		if (orb is not Point shrine)
 		{
-			if (knowledge.FruitlessShrineSearches >= ShrineSearchesBeforeGivingUp)
+			if (knowledge.ShrineSearchExhausted(evil, ShrineSearchesBeforeGivingUp, ShrineRetryTicks))
 				return PlanStep.Blocked;
 			return new ScoutStep(evil, knowledge.LandmarkOf(evil) != null);
 		}
@@ -376,7 +377,7 @@ public static class BossRituals
 		if (KnownShrine(bot, Landmark.Jungle) is Point larva)
 			return new SummonBossStep(challenge, trigger, larva.ToWorldCoordinates(), larva);
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		if (knowledge.FruitlessShrineSearches >= ShrineSearchesBeforeGivingUp)
+		if (knowledge.ShrineSearchExhausted(Landmark.Jungle, ShrineSearchesBeforeGivingUp, ShrineRetryTicks))
 			return PlanStep.Blocked;
 		return new ScoutStep(Landmark.Jungle, knowledge.LandmarkOf(Landmark.Jungle) != null);
 	}

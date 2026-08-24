@@ -561,7 +561,8 @@ public sealed class BossGoal : ProgressionGoal
 			LogReadiness(bot, challenge, report);
 			if (!report.IsReady)
 			{
-				preparation ??= Prepare(bot, challenge);
+				if (!Bosses.BossCredit.IsOptional(challenge))
+					preparation ??= Prepare(bot, challenge);
 				continue;
 			}
 			foreach (var trigger in Bosses.BossRituals.InPreferredOrder(bot, challenge))
