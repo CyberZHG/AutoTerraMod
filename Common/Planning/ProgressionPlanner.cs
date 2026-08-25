@@ -320,7 +320,10 @@ public static class ProgressionPlanner
 	public static PlanStep Obtain(Bot bot, int itemType, int amount)
 	{
 		var context = Context.Rent(bot);
-		return context.Release(Resolve(context, itemType, amount, 0) ?? PlanStep.Idle);
+		var step = Resolve(context, itemType, amount, 0) ?? PlanStep.Idle;
+		if (step is BlockedStep)
+			NoteBlockedGear(bot, new[] { itemType }, context.Blocked);
+		return context.Release(step);
 	}
 
 	public static PlanStep ObtainAny(Bot bot, IEnumerable<int> options)

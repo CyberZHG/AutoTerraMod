@@ -29,6 +29,12 @@ public static class ResourceSources
 
 	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh, TileID.VanityTreeSakura, TileID.VanityTreeYellowWillow, TileID.LivingWood }, true);
 
+	const int GelatinCrystalFrameX = 324;
+
+	static readonly TileSource GelatinCrystals = new(new HashSet<int> { TileID.Crystals }, false, (x, y) => Main.tile[x, y].TileFrameX >= GelatinCrystalFrameX, Ground: Landmark.Hallow);
+
+	static readonly TileSource CrystalShards = new(new HashSet<int> { TileID.Crystals }, false, (x, y) => Main.tile[x, y].TileFrameX < GelatinCrystalFrameX, Ground: Landmark.Hallow);
+
 	static readonly TileSource Cacti = new(new HashSet<int> { TileID.Cactus }, false, OnSurface: true);
 
 	static readonly HashSet<int> HerbTiles = new() { TileID.MatureHerbs, TileID.BloomingHerbs };
@@ -64,6 +70,7 @@ public static class ResourceSources
 	static readonly Dictionary<int, NpcSource> RareDrops = new()
 	{
 		[ItemID.ClothierVoodooDoll] = new NpcSource(new HashSet<int> { NPCID.AngryBones, NPCID.AngryBonesBig, NPCID.AngryBonesBigMuscle, NPCID.AngryBonesBigHelmet, NPCID.ShortBones }, Landmark.Dungeon),
+		[ItemID.FlinxFur] = new NpcSource(new HashSet<int> { NPCID.SnowFlinx }, Landmark.Snow) { Underground = true },
 		[ItemID.TruffleWorm] = new NpcSource(new HashSet<int> { NPCID.TruffleWorm, NPCID.TruffleWormDigger }) { Critter = true },
 		[ItemID.EmpressButterfly] = new NpcSource(new HashSet<int> { NPCID.EmpressButterfly }, Landmark.Hallow) { Critter = true }
 	};
@@ -102,6 +109,8 @@ public static class ResourceSources
 			return SkySoul;
 		if (BiomeSouls.TryGetValue(itemType, out var soul))
 			return soulSources.TryGetValue(itemType, out var cachedSoul) ? cachedSoul : soulSources[itemType] = new NpcSource(NpcsLivingIn(soul.bestiaryKeys), soul.ground()) { Underground = true };
+		if (itemType is ItemID.QueenSlimeCrystal or ItemID.CrystalShard)
+			return itemType == ItemID.QueenSlimeCrystal ? GelatinCrystals : CrystalShards;
 		if (FurnitureLoot.TryGetValue(itemType, out var furniture))
 			return new TileSource(new HashSet<int> { furniture.tileType }, false, null, false, furniture.ground);
 		tileSources ??= BuildTileSources();

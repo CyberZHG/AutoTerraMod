@@ -681,13 +681,31 @@ public sealed class HeadlessTestMode : ModSystem
 						columns[x / 200 * 200] = columns.GetValueOrDefault(x / 200 * 200) + 1;
 						shallowest = Math.Min(shallowest, y);
 						if (x >= 2500 && x <= 3300 && (total & 1) == 0)
-							spots.Add($"{x},{y}");
+							spots.Add($"{x},{y}f{Main.tile[x, y].TileFrameX}");
 					}
 			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"tile count {type}: total={total} shallowest={shallowest} rockLayer={(int)Main.rockLayer} byColumn={string.Join(" ", columns.Select(kv => $"{kv.Key}:{kv.Value}"))} spots={string.Join(" ", spots)}");
 		}
 	}
 
 	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
+
+	static int probeObtainTicks;
+
+	static void ProbeObtainWhenAsked()
+	{
+		string spec = Environment.GetEnvironmentVariable("AUTOTERRA_PROBE_OBTAIN");
+		if (string.IsNullOrEmpty(spec) || ++probeObtainTicks % 1800 != 600)
+			return;
+		var parts = spec.Split(':');
+		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
+		{
+			foreach (string name in parts[1].Split(','))
+			{
+				int item = ItemID.Search.GetId(name);
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe obtain {bot.Name} {name}: {Planning.ProgressionPlanner.Obtain(bot, item, 1)} source={Planning.ResourceSources.For(item)}");
+			}
+		}
+	}
 
 	static void TraceWhenAsked()
 	{
@@ -709,6 +727,7 @@ public sealed class HeadlessTestMode : ModSystem
 			LogBlueprints();
 			CountTilesWhenAsked();
 			ImportWhenAsked();
+			ProbeObtainWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 		{
