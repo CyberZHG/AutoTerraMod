@@ -29,11 +29,9 @@ public static class ResourceSources
 
 	static readonly TileSource Trees = new(new HashSet<int> { TileID.Trees, TileID.PalmTree, TileID.TreeAsh, TileID.VanityTreeSakura, TileID.VanityTreeYellowWillow, TileID.LivingWood }, true);
 
-	const int GelatinCrystalFrameX = 324;
+	static readonly TileSource GelatinCrystals = new(new HashSet<int> { TileID.Crystals }, false, WorldScan.IsGelatinCrystal, Ground: Landmark.Hallow) { Cavern = true };
 
-	static readonly TileSource GelatinCrystals = new(new HashSet<int> { TileID.Crystals }, false, (x, y) => Main.tile[x, y].TileFrameX >= GelatinCrystalFrameX, Ground: Landmark.Hallow);
-
-	static readonly TileSource CrystalShards = new(new HashSet<int> { TileID.Crystals }, false, (x, y) => Main.tile[x, y].TileFrameX < GelatinCrystalFrameX, Ground: Landmark.Hallow);
+	static readonly TileSource CrystalShards = new(new HashSet<int> { TileID.Crystals }, false, (x, y) => !WorldScan.IsGelatinCrystal(x, y), Ground: Landmark.Hallow) { Cavern = true };
 
 	static readonly TileSource Cacti = new(new HashSet<int> { TileID.Cactus }, false, OnSurface: true);
 

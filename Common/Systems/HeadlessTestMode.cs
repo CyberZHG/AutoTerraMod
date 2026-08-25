@@ -672,6 +672,7 @@ public sealed class HeadlessTestMode : ModSystem
 				continue;
 			var columns = new SortedDictionary<int, int>();
 			var spots = new List<string>();
+			var frames = new SortedDictionary<int, int>();
 			int total = 0, shallowest = Main.maxTilesY;
 			for (int x = 0; x < Main.maxTilesX; x++)
 				for (int y = 0; y < Main.maxTilesY; y++)
@@ -680,10 +681,11 @@ public sealed class HeadlessTestMode : ModSystem
 						total++;
 						columns[x / 200 * 200] = columns.GetValueOrDefault(x / 200 * 200) + 1;
 						shallowest = Math.Min(shallowest, y);
-						if (x >= 2500 && x <= 3300 && (total & 1) == 0)
+						frames[Main.tile[x, y].TileFrameX] = frames.GetValueOrDefault(Main.tile[x, y].TileFrameX) + 1;
+						if (spots.Count < 20 && (total & 1) == 0)
 							spots.Add($"{x},{y}f{Main.tile[x, y].TileFrameX}");
 					}
-			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"tile count {type}: total={total} shallowest={shallowest} rockLayer={(int)Main.rockLayer} byColumn={string.Join(" ", columns.Select(kv => $"{kv.Key}:{kv.Value}"))} spots={string.Join(" ", spots)}");
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"tile count {type}: total={total} shallowest={shallowest} rockLayer={(int)Main.rockLayer} byColumn={string.Join(" ", columns.Select(kv => $"{kv.Key}:{kv.Value}"))} frames={string.Join(" ", frames.Select(kv => $"{kv.Key}:{kv.Value}"))} spots={string.Join(" ", spots)}");
 		}
 	}
 

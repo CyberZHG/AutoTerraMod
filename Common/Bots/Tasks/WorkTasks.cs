@@ -610,7 +610,7 @@ public sealed class GatherTask : BotTask
 		TileID.Cobalt, TileID.Palladium, TileID.Mythril, TileID.Orichalcum, TileID.Adamantite, TileID.Titanium
 	};
 
-	bool DeepOre() => Tiles.TileTypes.Overlaps(DeepOres);
+	bool DeepOre() => Tiles.Cavern || Tiles.TileTypes.Overlaps(DeepOres);
 
 	Vector2 ChooseProspectTarget()
 	{

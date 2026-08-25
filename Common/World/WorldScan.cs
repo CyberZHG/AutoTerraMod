@@ -19,7 +19,7 @@ public static class WorldScan
 		long bestDistance = long.MaxValue;
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || IsForage(x, y, tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || IsForage(x, y, tileType) || tileType == TileID.Crystals && IsGelatinCrystal(x, y))
 				knowledge?.Remember(new Point(x, y), tileType);
 			if (!tileTypes.Contains(tileType) || !accept(x, y))
 				return;
@@ -65,7 +65,7 @@ public static class WorldScan
 		knowledge.MarkExplored(origin);
 		ForEachVisibleTile(origin, (x, y, tileType) =>
 		{
-			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType))
+			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType) || tileType == TileID.Crystals && IsGelatinCrystal(x, y))
 				knowledge.Remember(new Point(x, y), tileType);
 			if (tileType == TileID.Tombstones)
 				knowledge.Remember(new Point(x, y), tileType);
@@ -92,6 +92,10 @@ public static class WorldScan
 			}
 		}
 	}
+
+	const int GelatinCrystalFrameX = 324;
+
+	public static bool IsGelatinCrystal(int x, int y) => Main.tile[x, y].TileFrameX >= GelatinCrystalFrameX;
 
 	public static readonly HashSet<int> TreasureTiles = new() { TileID.Heart, TileID.LifeFruit };
 

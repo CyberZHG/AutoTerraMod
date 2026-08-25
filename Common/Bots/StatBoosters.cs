@@ -36,7 +36,9 @@ public static class StatBoosters
 		&& Systems.BotWorldSystem.Bots.Any(mate => mate != bot && mate.FactionId == bot.FactionId && isNeedier(mate.Avatar) && Inventory.Count(mate.Avatar, itemType) == 0);
 
 	public static bool CarriesBoostersToShare(Bot bot) =>
-		Inventory.Items(bot.Avatar).Any(item => IsBooster(item.type) && !KeepsForSelf(bot, item.type) && SomeMateWants(bot, item.type));
+		Inventory.Items(bot.Avatar).Any(item => Shareable(bot, item)) && Kit.ItemsToStore(bot).Any(item => Shareable(bot, item));
+
+	static bool Shareable(Bot bot, Item item) => IsBooster(item.type) && !KeepsForSelf(bot, item.type) && SomeMateWants(bot, item.type);
 
 	static bool SomeMateWants(Bot bot, int itemType) =>
 		Systems.BotWorldSystem.Bots.Any(mate => mate != bot && mate.FactionId == bot.FactionId && itemType switch

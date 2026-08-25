@@ -57,6 +57,8 @@ public abstract record ResourceSource;
 public sealed record TileSource(ISet<int> TileTypes, bool IsTree, Func<int, int, bool> Accept = null, bool OnSurface = false, World.Landmark? Ground = null) : ResourceSource
 {
 	public bool Accepts(int x, int y) => Accept?.Invoke(x, y) ?? true;
+
+	public bool Cavern { get; init; }
 }
 
 public sealed record NpcSource(ISet<int> NpcTypes, World.Landmark? Ground = null) : ResourceSource
