@@ -218,10 +218,8 @@ public static class PathFinder
 			if (!TileQuery.CanStandOn(tileX, supportRow))
 				continue;
 			int hang = side != 0 ? side : tileX == ledge.X ? -1 : 1;
-			if (!HangRoom(tileX + hang, supportRow, hang))
-				continue;
 			var hold = new Vector2(tileX * 16f + (hang > 0 ? 16f : 0f), supportRow * 16f + 8f);
-			if (Vector2.Distance(origin, hold) > reach * 16f)
+			if (Vector2.DistanceSquared(origin, hold) > reach * reach * 256f || !HangRoom(tileX + hang, supportRow, hang))
 				continue;
 			if (Collision.CanHitLine(origin, 1, 1, hold + new Vector2(hang * 4f, 0f), 1, 1))
 				return hold;

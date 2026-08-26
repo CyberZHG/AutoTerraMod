@@ -75,11 +75,12 @@ public sealed class StoreTask : ChestVisitTask
 	public override float Evaluate()
 	{
 		int used = Inventory.UsedSlots(Avatar);
-		if (used < OpportunisticSlots && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) >= NearBase && !StatBoosters.CarriesBoostersToShare(Bot))
+		bool sharing = StatBoosters.CarriesBoostersToShare(Bot);
+		if (used < OpportunisticSlots && Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) >= NearBase && !sharing)
 			return 0f;
 		if (!BaseStorage.HasRoom(Bot.Faction) && (used < FullishSlots || !Junk.StorageHasClutter(Bot, BaseStorage.Chests(Bot.Faction))))
 			return 0f;
-		if (StatBoosters.CarriesBoostersToShare(Bot))
+		if (sharing)
 		{
 			Detail = Terraria.Localization.Language.GetTextValue("Mods.AutoTerraMod.UI.SharingBoosters");
 			return 55f;

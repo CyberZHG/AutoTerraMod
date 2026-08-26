@@ -10,6 +10,7 @@ namespace AutoTerraMod.Common.Bots;
 public sealed class BotBrain
 {
 	const int ReconsiderInterval = 30;
+	const double SlowMotorMilliseconds = 8.0;
 	const uint ReflexSearchTicks = 3;
 	(NPC target, Item weapon, bool close)? lastReflex;
 	const float CurrentTaskBias = 1.15f;
@@ -155,8 +156,12 @@ public sealed class BotBrain
 		if (reflex is { close: false } far)
 			using (Probes.Measure("Reflex"))
 				Engagement.Reflex(bot, far.target, far.weapon);
+		long motorBegan = System.Diagnostics.Stopwatch.GetTimestamp();
 		using (Probes.Measure("Motor"))
 			bot.Motor.Tick(body);
+		double motorMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - motorBegan) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+		if (motorMilliseconds > SlowMotorMilliseconds)
+			BotDiagnostics.Log(bot, $"slow motor tick {motorMilliseconds:0.0}ms: {bot.Motor.Describe()}");
 		using (Probes.Measure("Collect"))
 			bot.Hands.CollectNearbyItems();
 		using (Probes.Measure("Animate"))

@@ -65,7 +65,7 @@ public sealed class PathSearch
 	Dictionary<Point, float> costSoFar => frontier.CostSoFar;
 	readonly List<Edge> edges = new(32);
 	const int ScanMargin = 130;
-	const ushort BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128, HangKnown = 256, HangBit = 512;
+	const ushort BodyKnown = 1, BodyClearBit = 2, SupportKnown = 4, SupportBit = 8, HazardKnown = 16, HazardBit = 32, DigKnown = 64, DigBit = 128, HangKnown = 256, HangBit = 512, ClosedBit = 1024;
 
 	ushort[] cells;
 	readonly int originX;
@@ -182,6 +182,13 @@ public sealed class PathSearch
 				Result = best == start ? PathResult.None : new PathResult(Reconstruct(best), false);
 				return true;
 			}
+			int cell = Cell(current.X, current.Y);
+			if (cell >= 0)
+			{
+				if ((cells[cell] & ClosedBit) != 0)
+					continue;
+				cells[cell] |= ClosedBit;
+			}
 			expanded++;
 			Systems.Perf.CountPathNodes(1);
 			if (isGoal(current))
@@ -222,6 +229,9 @@ public sealed class PathSearch
 				continue;
 			costSoFar[edge.To] = cost;
 			cameFrom[edge.To] = (current, edge.Kind);
+			int cell = Cell(edge.To.X, edge.To.Y);
+			if (cell >= 0)
+				cells[cell] &= unchecked((ushort)~ClosedBit);
 			open.Enqueue(edge.To, cost + HeuristicWeight * heuristic(edge.To));
 		}
 	}
