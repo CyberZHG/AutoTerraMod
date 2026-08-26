@@ -862,6 +862,15 @@ public sealed class ScoutTask : BotTask
 		return 50f + Traits.Exploring * 30f;
 	}
 
+	int UnderworldShaftColumn(Point here)
+	{
+		if (Bot.Faction.Hellevator is { IsComplete: true } own)
+			return own.RopeX;
+		var open = BotWorldSystem.Factions.Select(faction => faction.Hellevator).Where(shaft => shaft is { IsComplete: true })
+			.MinBy(shaft => Math.Abs(shaft.RopeX - here.X));
+		return open?.RopeX ?? Bot.Faction.Hellevator?.RopeX ?? here.X;
+	}
+
 	ScoutStep destinationFor;
 	uint destinationChosenAt;
 	const uint KeepDestinationTicks = 10 * 3600;
@@ -882,7 +891,7 @@ public sealed class ScoutTask : BotTask
 		var here = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
 		if (step.Landmark == Landmark.Underworld)
-			return new Vector2((Bot.Faction.Hellevator is { } shaft ? shaft.RopeX : here.X) * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
+			return new Vector2(UnderworldShaftColumn(here) * 16f, (Main.UnderworldLayer + UnderworldDepth) * 16f);
 		if (step.Landmark == Landmark.Temple && knowledge.LandmarkOf(Landmark.Temple) is Point temple)
 			return (TempleEntrance(temple, here) ?? TempleSpot(knowledge, temple)).ToWorldCoordinates(8f, 0f);
 		bool jungleCaverns = step.SeekTile == TileID.PlanteraBulb || step.Landmark == Landmark.Temple;
