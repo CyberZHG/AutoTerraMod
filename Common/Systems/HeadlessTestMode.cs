@@ -698,13 +698,15 @@ public sealed class HeadlessTestMode : ModSystem
 		string spec = Environment.GetEnvironmentVariable("AUTOTERRA_PROBE_OBTAIN");
 		if (string.IsNullOrEmpty(spec) || ++probeObtainTicks % 1800 != 600)
 			return;
-		var parts = spec.Split(':');
-		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
+		foreach (var parts in spec.Split(';').Select(entry => entry.Split(':')))
 		{
-			foreach (string name in parts[1].Split(','))
+			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
 			{
-				int item = ItemID.Search.GetId(name);
-				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe obtain {bot.Name} {name}: {Planning.ProgressionPlanner.Obtain(bot, item, 1)} {Planning.ProgressionPlanner.ExplainTileSource(bot, item)}");
+				foreach (string name in parts[1].Split(','))
+				{
+					int item = ItemID.Search.GetId(name);
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe obtain {bot.Name} {name}: {Planning.ProgressionPlanner.Obtain(bot, item, 1)} carried={Bots.Inventory.Count(bot.Avatar, item)} stored={Building.BaseStorage.Count(bot.Faction, item)} {Planning.ProgressionPlanner.ExplainTileSource(bot, item)}");
+				}
 			}
 		}
 	}

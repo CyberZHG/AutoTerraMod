@@ -115,7 +115,7 @@ public static class BossRituals
 	static (uint at, bool locked) templeLock;
 	const uint TempleLockRecheckTicks = 600;
 
-	static bool TempleLocked(Point temple)
+	public static bool TempleLocked(Point temple)
 	{
 		if (templeLock.at == 0 || Main.GameUpdateCount - templeLock.at >= TempleLockRecheckTicks)
 			templeLock = (Main.GameUpdateCount | 1, Bots.Tasks.ScoutTask.LockedTempleDoor(temple) != null);

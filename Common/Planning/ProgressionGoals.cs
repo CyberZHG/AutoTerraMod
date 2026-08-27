@@ -747,6 +747,23 @@ public sealed class BridgeKitGoal : ProgressionGoal
 		Platforms(bot) < KitPlatforms ? ProgressionPlanner.ObtainPlatforms(bot, KitPlatforms) : ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, KitStone);
 }
 
+public sealed class TempleDoorGoal : ProgressionGoal
+{
+	public override string Describe() => "TempleDoor";
+
+	static Microsoft.Xna.Framework.Point? Temple =>
+		BotWorldSystem.Factions.Select(faction => BotWorldSystem.KnowledgeOf(faction).LandmarkOf(World.Landmark.Temple)).FirstOrDefault(spot => spot != null);
+
+	public override bool AppliesTo(Bot bot) =>
+		Terraria.NPC.downedPlantBoss && BotWorldSystem.Relation != Config.FactionRelation.War && Inventory.Count(bot.Avatar, ItemID.TempleKey) > 0
+		&& Temple is { } temple && Bosses.BossRituals.TempleLocked(temple)
+		&& BotWorldSystem.Factions.Any(faction => faction.Id != bot.FactionId && Bosses.BossCredit.NextChallengeFor(faction)?.BossType == NPCID.Golem);
+
+	public override bool IsMet(Bot bot) => Temple is not { } temple || !Bosses.BossRituals.TempleLocked(temple);
+
+	public override PlanStep Plan(Bot bot) => new ScoutStep(World.Landmark.Temple, true);
+}
+
 public sealed class ShaftRopeGoal : ProgressionGoal
 {
 	const int RopeTrip = 200;
@@ -1765,6 +1782,7 @@ public static class ProgressionGoals
 			new HammerGoal(),
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new HealingPotionGoal(),
+			new TempleDoorGoal(),
 			new GatedGoal(new ReserveGoal(ItemID.IronskinPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.RegenerationPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.InfernoPotion, 2, 5), () => Terraria.NPC.downedGolemBoss),
