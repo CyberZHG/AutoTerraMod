@@ -99,12 +99,27 @@ public static class BossRituals
 		if (trigger.Place == Landmark.Temple && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0 && Building.BaseStorage.Count(bot.Faction, ItemID.TempleKey) > 0)
 			return new WithdrawStep(ItemID.TempleKey, 1);
 		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null && !LearnAltarOfOpenTemple(bot))
+		{
+			bool locked = KnownLandmark(bot, Landmark.Temple) is Point temple && TempleLocked(temple);
+			if (locked && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0)
+				return ProgressionPlanner.Obtain(bot, ItemID.TempleKey, 1) is var key and not IdleStep ? key : PlanStep.Blocked;
 			return new ScoutStep(trigger.Place, true);
+		}
 		if (Inventory.Count(bot.Avatar, trigger.Item) == 0)
 			return ProgressionPlanner.Obtain(bot, trigger.Item, 1);
 		if (KnownTile(bot, AltarTiles) is not Point altar)
 			return new ScoutStep(trigger.Place, true);
 		return new SummonBossStep(challenge, trigger, altar.ToWorldCoordinates(), altar);
+	}
+
+	static (uint at, bool locked) templeLock;
+	const uint TempleLockRecheckTicks = 600;
+
+	static bool TempleLocked(Point temple)
+	{
+		if (templeLock.at == 0 || Main.GameUpdateCount - templeLock.at >= TempleLockRecheckTicks)
+			templeLock = (Main.GameUpdateCount | 1, Bots.Tasks.ScoutTask.LockedTempleDoor(temple) != null);
+		return templeLock.locked;
 	}
 
 	const int TempleAltarReachX = 300;

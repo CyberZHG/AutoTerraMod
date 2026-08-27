@@ -627,7 +627,7 @@ public sealed class HeadlessTestMode : ModSystem
 				continue;
 			}
 			var parts = spec.Split(',').Select(int.Parse).ToArray();
-			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"dump around {parts[0]},{parts[1]}:{World.TerrainDump.Around(new Microsoft.Xna.Framework.Point(parts[0], parts[1]), parts[2], parts[3])}\n  column types: {string.Join(" ", Enumerable.Range(parts[1] - parts[3], parts[3] * 2 + 1).Select(y => $"{y}:{(Main.tile[parts[0], y].HasTile ? Main.tile[parts[0], y].TileType : -1)}/{(Main.tile[parts[0], y].LiquidAmount > 0 ? Main.tile[parts[0], y].LiquidType : -1)}"))}");
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"dump around {parts[0]},{parts[1]}:{World.TerrainDump.Around(new Microsoft.Xna.Framework.Point(parts[0], parts[1]), parts[2], parts[3])}\n  column types: {string.Join(" ", Enumerable.Range(parts[1] - parts[3], parts[3] * 2 + 1).Select(y => $"{y}:{(Main.tile[parts[0], y].HasTile ? Main.tile[parts[0], y].TileType : -1)}/{(Main.tile[parts[0], y].LiquidAmount > 0 ? Main.tile[parts[0], y].LiquidType : -1)}"))}\n  row walls: {string.Join(" ", Enumerable.Range(parts[0] - parts[2], parts[2] * 2 + 1).Select(x => $"{x}:{Main.tile[x, parts[1]].WallType}"))}");
 		}
 	}
 
@@ -704,7 +704,7 @@ public sealed class HeadlessTestMode : ModSystem
 			foreach (string name in parts[1].Split(','))
 			{
 				int item = ItemID.Search.GetId(name);
-				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe obtain {bot.Name} {name}: {Planning.ProgressionPlanner.Obtain(bot, item, 1)} source={Planning.ResourceSources.For(item)}");
+				ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe obtain {bot.Name} {name}: {Planning.ProgressionPlanner.Obtain(bot, item, 1)} {Planning.ProgressionPlanner.ExplainTileSource(bot, item)}");
 			}
 		}
 	}

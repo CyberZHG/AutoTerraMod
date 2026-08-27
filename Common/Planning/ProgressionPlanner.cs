@@ -552,6 +552,9 @@ public static class ProgressionPlanner
 		if (CanAffordEasily(context.Bot, itemType, amount - have))
 			return PlanPurchase(context.Bot, itemType, amount - have);
 		var source = ResourceSources.For(itemType);
+		if (source is TileSource { IsTree: false } blastable && NeedsBombsFor(context.Bot, blastable)
+			&& Resolve(context, Terraria.ID.ItemID.Bomb, HellstoneBombs, depth + 1) is { } bombs and not BlockedStep and not IdleStep)
+			return bombs;
 		if (source is TileSource { IsTree: false } tiles && (!CanMineAny(context.Bot, tiles) || !World.TilePresence.AnyExists(tiles.TileTypes) || FarmedFromBoss(context.Bot, itemType)
 			|| World.WorldScan.HerbStyles.TryGetValue(itemType, out int herb) && World.TilePresence.HerbCount(herb) < amount - have))
 		{
@@ -607,6 +610,11 @@ public static class ProgressionPlanner
 		}
 	}
 
+	public static string ExplainTileSource(Bot bot, int itemType) =>
+		ResourceSources.For(itemType) is TileSource tiles
+			? $"pick={bot.Hands.BestPickaxe?.pick ?? 0} canMine={CanMineAny(bot, tiles)} exists={World.TilePresence.AnyExists(tiles.TileTypes)} farmed={FarmedFromBoss(bot, itemType)} unknownGround={UnknownGround(bot, tiles)} bombs={bot.Hands.Explosives.Carries}"
+			: "";
+
 	static bool FarmedFromBoss(Bot bot, int itemType) =>
 		Bosses.BossDrops.SourceOf(itemType) is { } boss && Bosses.BossCredit.HasDefeated(bot.Faction, boss);
 
@@ -633,6 +641,12 @@ public static class ProgressionPlanner
 			bot.Faction.WishRefight(boss.BossType, gearPlanning > 0);
 		}
 	}
+
+	const int HellstoneBombs = 10;
+
+	static bool NeedsBombsFor(Bot bot, TileSource tiles) =>
+		Main.hardMode && tiles.TileTypes.Contains(Terraria.ID.TileID.Hellstone) && !bot.Hands.Explosives.Carries
+		&& Navigation.PickRequirement.MinimumPick(Terraria.ID.TileID.Hellstone, 0, Main.maxTilesY) > (bot.Hands.BestPickaxe?.pick ?? 0);
 
 	static bool CanMineAny(Bot bot, TileSource tiles)
 	{
