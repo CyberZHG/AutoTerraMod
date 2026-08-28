@@ -22,6 +22,7 @@ public static class TempleDoor
 	{
 		cache.Clear();
 		guides.Clear();
+		entrances.Clear();
 	}
 
 	public static Point? Near(Point tile)
@@ -56,28 +57,61 @@ public static class TempleDoor
 			&& tile.TileFrameY >= LihzahrdDoorTop && tile.TileFrameY <= UnlockedDoorBottom;
 	}
 
-	public static Point? Mouth(Point door)
+	const int EntranceSearchCells = 40000;
+	const int DoorHeight = 3;
+
+	sealed record Entrance(Point Mouth, int Side, HashSet<Point> Tunnel);
+
+	static readonly Dictionary<Point, Entrance> entrances = new();
+
+	public static Point? Mouth(Point door) => EntranceOf(door)?.Mouth;
+
+	public static int? OutsideSide(Point door) => EntranceOf(door)?.Side;
+
+	public static Point InsideStep(Point door, int side, int stepInside) => new(door.X - side * stepInside, door.Y + 1);
+
+	public static bool InTunnel(Point door, Point here) =>
+		EntranceOf(door) is { } entrance && (entrance.Tunnel.Contains(here) || entrance.Tunnel.Contains(new Point(here.X, here.Y + 1)) || entrance.Tunnel.Contains(new Point(here.X, here.Y - 1)));
+
+	static Entrance EntranceOf(Point door)
 	{
-		int row = door.Y + 1;
-		Point? mouth = null;
-		foreach (int direction in new[] { -1, 1 })
+		if (entrances.TryGetValue(door, out var known))
+			return known;
+		Entrance found = null;
+		foreach (int side in new[] { -1, 1 })
 		{
-			for (int offset = 1; offset < MouthSearch; offset++)
+			if (FloodToOutside(door, side) is { } entrance)
 			{
-				int x = door.X + direction * offset;
-				if (!WorldGen.InWorld(x, row, 10))
-					break;
-				bool maze = Main.tile[x, row].WallType == WallID.LihzahrdBrickUnsafe;
-				if (maze && TileQuery.IsSolid(x, row) && !IsLihzahrdDoor(x, row))
-					break;
-				if (maze)
-					continue;
-				if (mouth is not Point best || offset < Math.Abs(best.X - door.X))
-					mouth = new Point(x, row);
+				found = entrance;
 				break;
 			}
 		}
-		return mouth;
+		entrances[door] = found;
+		return found;
+	}
+
+	static Entrance FloodToOutside(Point door, int side)
+	{
+		var start = new Point(door.X + side, door.Y + DoorHeight - 1);
+		if (TileQuery.IsSolid(start.X, start.Y))
+			return null;
+		var seen = new HashSet<Point> { start };
+		var queue = new Queue<Point>();
+		queue.Enqueue(start);
+		while (queue.Count > 0 && seen.Count < EntranceSearchCells)
+		{
+			var tile = queue.Dequeue();
+			if (Main.tile[tile.X, tile.Y].WallType != WallID.LihzahrdBrickUnsafe)
+				return new Entrance(tile, side, seen);
+			foreach (var (dx, dy) in Neighbors)
+			{
+				var next = new Point(tile.X + dx, tile.Y + dy);
+				if (!WorldGen.InWorld(next.X, next.Y, 10) || next.X == door.X && next.Y >= door.Y && next.Y < door.Y + DoorHeight || TileQuery.IsSolid(next.X, next.Y) || !seen.Add(next))
+					continue;
+				queue.Enqueue(next);
+			}
+		}
+		return null;
 	}
 
 	const int GuideReach = 300;

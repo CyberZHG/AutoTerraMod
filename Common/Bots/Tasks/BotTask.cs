@@ -445,6 +445,9 @@ public abstract class BotTask
 		var here = Bot.CenterTile;
 		if (!Navigation.PathFinder.InsideMaze(goal))
 			return null;
+		if (World.TempleDoor.Near(goal) is Point tunnelDoor && World.TempleDoor.InTunnel(tunnelDoor, here) && World.TempleDoor.OutsideSide(tunnelDoor) is int tunnelSide
+			&& Main.tile[tunnelDoor.X, tunnelDoor.Y].TileType == TileID.ClosedDoor)
+			return World.TempleDoor.InsideStep(tunnelDoor, tunnelSide, DoorStepInside).ToWorldCoordinates(8f, 0f);
 		if (Navigation.PathFinder.InsideMaze(here))
 		{
 			if (System.Math.Abs(goal.X - here.X) + System.Math.Abs(goal.Y - here.Y) <= GuideHop)
@@ -460,13 +463,13 @@ public abstract class BotTask
 		}
 		if (door is not Point doorTile || mouth is not Point mouthTile)
 			return null;
-		return TempleLeg(here, doorTile, mouthTile);
+		return TempleLeg(here, doorTile, mouthTile, World.TempleDoor.OutsideSide(doorTile) ?? System.Math.Sign(mouthTile.X - doorTile.X));
 	}
 
 	uint templeLoggedAt;
 	const uint TempleLogTicks = 3600;
 
-	static Vector2 TempleLeg(Point here, Point door, Point mouth)
+	static Vector2 TempleLeg(Point here, Point door, Point mouth, int side)
 	{
 		Point leg;
 		if (System.Math.Abs(mouth.X - here.X) > TempleArrival && here.Y < mouth.Y - TempleArrival)
@@ -474,7 +477,7 @@ public abstract class BotTask
 		else if (System.Math.Abs(mouth.X - here.X) + System.Math.Abs(mouth.Y - here.Y) > TempleArrival)
 			leg = mouth;
 		else
-			leg = new Point(door.X - System.Math.Sign(mouth.X - door.X) * DoorStepInside, mouth.Y);
+			leg = World.TempleDoor.InsideStep(door, side, DoorStepInside);
 		return leg.ToWorldCoordinates(8f, 0f);
 	}
 

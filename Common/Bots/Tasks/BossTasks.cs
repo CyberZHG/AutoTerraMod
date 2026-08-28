@@ -1036,44 +1036,11 @@ public sealed class ScoutTask : BotTask
 	{
 		if (LockedTempleDoor(temple) is not Point door)
 			return null;
-		int row = door.Y + 1;
-		Point? mouth = null;
-		int shortest = int.MaxValue;
-		foreach (int direction in new[] { -1, 1 })
-		{
-			for (int offset = 1; offset < DoorSearchWidth; offset++)
-			{
-				int x = door.X + direction * offset;
-				if (!WorldGen.InWorld(x, row, 10))
-					break;
-				if (Main.tile[x, row].WallType == WallID.LihzahrdBrickUnsafe)
-					continue;
-				if (offset < shortest)
-				{
-					shortest = offset;
-					mouth = new Point(x, row);
-				}
-				break;
-			}
-		}
-		if (mouth is not Point outside)
+		if (World.TempleDoor.Mouth(door) is not Point outside || World.TempleDoor.OutsideSide(door) is not int side)
 			return null;
-		if (Math.Abs(here.X - outside.X) <= EntranceArrival && Math.Abs(here.Y - outside.Y) <= EntranceArrival)
-			return new Point(door.X - Math.Sign(outside.X - door.X) * DoorStepInside, row);
-		int outward = Math.Sign(outside.X - door.X);
-		if ((here.X - outside.X) * outward < 0)
-			return new Point(outside.X + outward * PorchOffset, RoofRow(door) - PorchOffset);
+		if (World.TempleDoor.InTunnel(door, here) || Math.Abs(here.X - outside.X) <= EntranceArrival && Math.Abs(here.Y - outside.Y) <= EntranceArrival)
+			return World.TempleDoor.InsideStep(door, side, DoorStepInside);
 		return outside;
-	}
-
-	const int PorchOffset = 4;
-
-	static int RoofRow(Point door)
-	{
-		int y = door.Y - 1;
-		while (y > door.Y - DoorSearchHeight && WorldGen.InWorld(door.X, y, 10) && Main.tile[door.X, y].HasTile && Main.tile[door.X, y].TileType == TileID.LihzahrdBrick)
-			y--;
-		return y;
 	}
 
 	public static Point? LockedTempleDoor(Point temple)
