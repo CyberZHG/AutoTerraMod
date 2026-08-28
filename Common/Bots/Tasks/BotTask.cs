@@ -314,7 +314,7 @@ public abstract class BotTask
 
 	bool ShaftShortcut(Vector2 target)
 	{
-		if (Bot.Faction.Hellevator is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish || shaft.FirstImpassableRow() - shaft.TopY < ShaftUsefulDepth)
+		if (TravelShaft is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish || shaft.FirstImpassableRow() - shaft.TopY < ShaftUsefulDepth)
 			return false;
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
@@ -340,8 +340,22 @@ public abstract class BotTask
 		return !TravelOrTunnel(Building.Outpost.Bedside(arena), Building.Outpost.BedsideReach * 0.5f);
 	}
 
+	World.Hellevator borrowedShaft;
+
+	World.Hellevator TravelShaft => borrowedShaft ?? Bot.Faction.Hellevator;
+
+	void ChooseTravelShaft(Vector2 target)
+	{
+		borrowedShaft = null;
+		if (Bot.Faction.Hellevator is { IsComplete: true } || target.Y < Main.UnderworldLayer * 16f)
+			return;
+		int x = Bot.CenterTile.X;
+		borrowedShaft = BotWorldSystem.Factions.Select(faction => faction.Hellevator).Where(shaft => shaft is { IsComplete: true }).MinBy(shaft => System.Math.Abs(shaft.RopeX - x));
+	}
+
 	protected bool TravelOrTunnel(Vector2 target, float radius)
 	{
+		ChooseTravelShaft(target);
 		if (campExit != null && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
 			return true;
 		if (deepTunnel is Vector2 tunnel && Vector2.DistanceSquared(tunnel, target) < 32f * 32f && Bot.Motor.Tunneling && !Bot.Motor.HasArrived && !Bot.Motor.IsStuck)
@@ -377,13 +391,13 @@ public abstract class BotTask
 			Bot.Motor.Stop();
 		if (InOwnShaft() && LeavesShaft(target) && System.Math.Abs(target.ToTileCoordinates().Y - Bot.CenterTile.Y) > ShaftLevelRows && DeepDetour(target, radius))
 			return true;
-		if (InOwnShaft() && LeavesShaft(target) && target.ToTileCoordinates().Y < Bot.CenterTile.Y - ShaftClimbLeg / 2 && Bot.Faction.Hellevator is { } climbed)
+		if (InOwnShaft() && LeavesShaft(target) && target.ToTileCoordinates().Y < Bot.CenterTile.Y - ShaftClimbLeg / 2 && TravelShaft is { } climbed)
 		{
 			int row = System.Math.Max(climbed.TopY - 2, Bot.CenterTile.Y - ShaftClimbLeg);
 			Bot.Motor.MoveTo(new Vector2((climbed.X + 1) * 16f, row * 16f), 16f);
 			return !Bot.Motor.IsStuck;
 		}
-		if (target.Y >= Main.UnderworldLayer * 16f && Bot.CenterTile.Y < Main.UnderworldLayer && !InOwnShaft() && Bot.Faction.Hellevator is { IsComplete: true } && DeepDetour(target, radius))
+		if (target.Y >= Main.UnderworldLayer * 16f && Bot.CenterTile.Y < Main.UnderworldLayer && !InOwnShaft() && TravelShaft is { IsComplete: true } && DeepDetour(target, radius))
 			return true;
 		Bot.Motor.MoveTo(target, radius);
 		if (!Bot.Motor.IsStuck)
@@ -553,7 +567,7 @@ public abstract class BotTask
 		bool deepGoal = goal.Y > Main.worldSurface + HighwaySurfaceDepth;
 		if (System.Math.Abs(goal.X - here.X) < HighwayTripTiles || deepGoal && here.Y > Main.worldSurface + HighwaySurfaceDepth)
 			return null;
-		if (goal.Y >= Main.UnderworldLayer && here.Y < Main.UnderworldLayer && Bot.Faction.Hellevator is { IsComplete: true })
+		if (goal.Y >= Main.UnderworldLayer && here.Y < Main.UnderworldLayer && TravelShaft is { IsComplete: true })
 			return null;
 		int baseX = Bot.Faction.BaseTile.X;
 		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0;
@@ -647,7 +661,7 @@ public abstract class BotTask
 	const int ShaftExitMargin = 3;
 
 	bool LeavesShaft(Vector2 target) =>
-		Bot.Faction.Hellevator is { } shaft && target.ToTileCoordinates() is var goal && (goal.X < shaft.X - ShaftExitMargin || goal.X > shaft.Right + ShaftExitMargin);
+		TravelShaft is { } shaft && target.ToTileCoordinates() is var goal && (goal.X < shaft.X - ShaftExitMargin || goal.X > shaft.Right + ShaftExitMargin);
 
 	const int CampTunnelMargin = 4;
 	const int CampRetriesBeforeTunnel = 3;
@@ -656,11 +670,11 @@ public abstract class BotTask
 	static bool InAnyCamp(Point tile) => BotWorldSystem.Factions.Any(faction => faction.Settlement is { } camp
 		&& tile.X >= camp.Left - CampTunnelMargin && tile.X <= camp.Right + CampTunnelMargin && tile.Y >= camp.Top - CampTunnelMargin && tile.Y <= camp.Floor + CampTunnelMargin);
 
-	bool InOwnShaft() => Bot.Faction.Hellevator is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
+	bool InOwnShaft() => TravelShaft is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 
 	bool DeepDetour(Vector2 target, float radius)
 	{
-		if (Bot.Faction.Hellevator is not { } shaft)
+		if (TravelShaft is not { } shaft)
 			return false;
 		var goal = target.ToTileCoordinates();
 		if (goal.Y < shaft.TopY + DeepDetourRows)

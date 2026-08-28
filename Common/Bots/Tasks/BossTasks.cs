@@ -239,8 +239,8 @@ public sealed class SummonTask : BotTask
 			return;
 		var goal = place.ToTileCoordinates();
 		bool underground = goal.Y > Main.worldSurface + UndergroundRallyDepth;
-		bool shaftReaches = underground && faction.Hellevator is { } own && own.FirstImpassableRow() > goal.Y + 1;
-		int choice = Main.rand.Next(shaftReaches ? 3 : 2);
+		bool shaftReaches = underground && faction.Hellevator is { } own && own.FirstImpassableRow() > goal.Y + 1 && TunnelDiggable(faction, own.RopeX, goal);
+		int choice = underground ? (shaftReaches ? 1 + Main.rand.Next(2) : 1) : Main.rand.Next(2);
 		var route = new System.Collections.Generic.List<Highway>();
 		Hellevator shaft = null;
 		string strategy;
@@ -269,6 +269,21 @@ public sealed class SummonTask : BotTask
 		faction.RallyShaft = shaft;
 		faction.RallyCheckedIn.Clear();
 		faction.RallyRouteUntil = Main.GameUpdateCount + (uint)(RallyRouteTicks * Planning.ProgressionPlanner.WorldScale);
+	}
+
+	static bool TunnelDiggable(Factions.Faction faction, int fromX, Point goal)
+	{
+		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).Select(member => member.Hands.BestPickaxe?.pick ?? 0).DefaultIfEmpty(0).Max();
+		int low = Math.Min(fromX, goal.X), high = Math.Max(fromX, goal.X);
+		for (int x = low; x <= high; x++)
+		{
+			for (int y = goal.Y - 2; y <= goal.Y + 1; y++)
+			{
+				if (TileQuery.IsSolid(x, y) && Navigation.PickRequirement.MinimumPick(Main.tile[x, y].TileType, x, y) > bestPick)
+					return false;
+			}
+		}
+		return true;
 	}
 
 	bool GiveUpRally(int present, int teamSize)
