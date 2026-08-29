@@ -122,14 +122,19 @@ public static class BossRituals
 		return templeLock.locked;
 	}
 
-	const int TempleAltarReachX = 300;
-	const int TempleAltarReachY = 200;
+	const int TempleAltarReachX = 400;
+	const int TempleAltarReachY = 400;
+	const uint AltarRescanTicks = 1800;
+	static readonly Dictionary<int, uint> altarScannedAt = new();
 
 	static bool LearnAltarOfOpenTemple(Bot bot)
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || Bots.Tasks.ScoutTask.LockedTempleDoor(temple) != null)
+		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || TempleLocked(temple))
 			return false;
+		if (Main.GameUpdateCount - altarScannedAt.GetValueOrDefault(bot.FactionId) < AltarRescanTicks)
+			return false;
+		altarScannedAt[bot.FactionId] = Main.GameUpdateCount;
 		for (int x = temple.X - TempleAltarReachX; x <= temple.X + TempleAltarReachX; x++)
 		{
 			for (int y = temple.Y - TempleAltarReachY; y <= temple.Y + TempleAltarReachY; y++)
@@ -391,6 +396,8 @@ public static class BossRituals
 	{
 		if (KnownShrine(bot, Landmark.Jungle) is Point larva)
 			return new SummonBossStep(challenge, trigger, larva.ToWorldCoordinates(), larva);
+		if (!World.TilePresence.AnyExists(LarvaTiles))
+			return PlanStep.Blocked;
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
 		if (knowledge.ShrineSearchExhausted(Landmark.Jungle, ShrineSearchesBeforeGivingUp, ShrineRetryTicks))
 			return PlanStep.Blocked;
