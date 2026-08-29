@@ -249,8 +249,8 @@ public sealed class SummonTask : BotTask
 			int low = System.Math.Min(faction.BaseTile.X, goal.X), high = System.Math.Max(faction.BaseTile.X, goal.X);
 			route.AddRange(Highway.All.Where(highway => !highway.IsComplete && highway.Y < Main.worldSurface + UndergroundRallyDepth
 				&& System.Math.Min(highway.StartX, highway.EndX) < high && System.Math.Max(highway.StartX, highway.EndX) > low));
-			if (underground)
-				shaft = new Hellevator(goal.X - 1, TileQuery.SurfaceY(goal.X) - 1) { StopRow = goal.Y + 1 };
+			if (underground && DiggableColumn(faction, goal) is int shaftX)
+				shaft = new Hellevator(shaftX, TileQuery.SurfaceY(shaftX + 1) - 1) { StopRow = goal.Y + 1 };
 			strategy = $"building {route.Count} highways{(shaft != null ? " and a shaft down" : "")} on the way";
 		}
 		else if (choice == 2 && faction.Hellevator is { } hellevator)
@@ -271,9 +271,41 @@ public sealed class SummonTask : BotTask
 		faction.RallyRouteUntil = Main.GameUpdateCount + (uint)(RallyRouteTicks * Planning.ProgressionPlanner.WorldScale);
 	}
 
+	const int ShaftShiftTiles = 24;
+
+	static int? DiggableColumn(Factions.Faction faction, Point goal)
+	{
+		int bestPick = BestPick(faction);
+		for (int shift = 0; shift <= ShaftShiftTiles; shift++)
+		{
+			foreach (int x in new[] { goal.X - 1 + shift, goal.X - 1 - shift })
+			{
+				if (ColumnDiggable(x, TileQuery.SurfaceY(x + 1) - 1, goal.Y + 1, bestPick))
+					return x;
+			}
+		}
+		return null;
+	}
+
+	static bool ColumnDiggable(int x, int top, int bottom, int bestPick)
+	{
+		for (int y = top; y <= bottom; y++)
+		{
+			for (int column = x; column <= x + Hellevator.Width - 1; column++)
+			{
+				if (TileQuery.IsSolid(column, y) && Navigation.PickRequirement.MinimumPick(Main.tile[column, y].TileType, column, y) > bestPick)
+					return false;
+			}
+		}
+		return true;
+	}
+
+	static int BestPick(Factions.Faction faction) =>
+		BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).Select(member => member.Hands.BestPickaxe?.pick ?? 0).DefaultIfEmpty(0).Max();
+
 	static bool TunnelDiggable(Factions.Faction faction, int fromX, Point goal)
 	{
-		int bestPick = BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).Select(member => member.Hands.BestPickaxe?.pick ?? 0).DefaultIfEmpty(0).Max();
+		int bestPick = BestPick(faction);
 		int low = Math.Min(fromX, goal.X), high = Math.Max(fromX, goal.X);
 		for (int x = low; x <= high; x++)
 		{
