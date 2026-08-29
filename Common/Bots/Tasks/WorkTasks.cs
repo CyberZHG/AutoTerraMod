@@ -83,6 +83,11 @@ public sealed class CraftTask : BotTask
 			WalkToWater();
 			return;
 		}
+		if (ProgressionPlanner.NeedsHoney(recipe) && !WaterFinder.IsNearHoney(Bot.CenterTile))
+		{
+			WalkToHoney();
+			return;
+		}
 		Bot.Motor.Stop();
 		Equipment.UnequipIngredients(Avatar, recipe);
 		if (!Crafting.HasIngredients(Avatar, recipe))
@@ -236,6 +241,21 @@ public sealed class CraftTask : BotTask
 	{
 		PackUpPortableStations();
 		base.Stop();
+	}
+
+	void WalkToHoney()
+	{
+		if (WaterFinder.NearestHoney(Bot.CenterTile) is not Point pool)
+		{
+			BotDiagnostics.Log(Bot, "no honey found");
+			IsFinished = true;
+			return;
+		}
+		if (!TravelOrTunnel(pool.ToWorldCoordinates(), StationArrivalRadius))
+		{
+			BotDiagnostics.Log(Bot, $"stuck walking to honey at {pool}");
+			IsFinished = true;
+		}
 	}
 
 	void WalkToWater()

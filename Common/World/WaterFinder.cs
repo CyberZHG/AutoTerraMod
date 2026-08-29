@@ -17,7 +17,11 @@ public static class WaterFinder
 
 	static readonly Dictionary<Point, (uint tick, Point? shore)> cache = new();
 
-	public static void Reset() => cache.Clear();
+	public static void Reset()
+	{
+		cache.Clear();
+		honey = null;
+	}
 
 	public static bool IsNearWater(Point center)
 	{
@@ -155,6 +159,65 @@ public static class WaterFinder
 	}
 
 	static bool IsWater(int x, int y) => IsLiquid(x, y, LiquidID.Water);
+
+	static bool IsHoney(int x, int y) => IsLiquid(x, y, LiquidID.Honey);
+
+	public static bool IsNearHoney(Point center)
+	{
+		for (int x = center.X - AdjacentRange; x <= center.X + AdjacentRange; x++)
+		{
+			for (int y = center.Y - AdjacentRange; y <= center.Y + AdjacentRange; y++)
+			{
+				if (IsHoney(x, y))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	const uint HoneyCacheTicks = 3600 * 10;
+	const int HoneySpanMargin = 60;
+	static (uint tick, List<Point> surfaces)? honey;
+
+	public static Point? NearestHoney(Point from)
+	{
+		if (honey is not { } cached || Main.GameUpdateCount - cached.tick > HoneyCacheTicks)
+			honey = cached = (Main.GameUpdateCount, ScanHoney());
+		Point? best = null;
+		long bestDistance = long.MaxValue;
+		foreach (var spot in cached.surfaces)
+		{
+			long distance = DistanceSq(from, spot);
+			if (distance < bestDistance)
+			{
+				bestDistance = distance;
+				best = spot;
+			}
+		}
+		return best;
+	}
+
+	static long DistanceSq(Point a, Point b) => (long)(a.X - b.X) * (a.X - b.X) + (long)(a.Y - b.Y) * (a.Y - b.Y);
+
+	static List<Point> ScanHoney()
+	{
+		var found = new List<Point>();
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (Systems.BotWorldSystem.KnowledgeOf(faction).SpanOf(Landmark.Jungle) is not var (minX, maxX))
+				continue;
+			for (int x = System.Math.Max(minX - HoneySpanMargin, 10); x <= System.Math.Min(maxX + HoneySpanMargin, Main.maxTilesX - 10); x++)
+			{
+				for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
+				{
+					if (IsHoney(x, y) && !IsHoney(x, y - 1) && !TileQuery.IsSolid(x, y - 1))
+						found.Add(new Point(x, y - 1));
+				}
+			}
+			break;
+		}
+		return found;
+	}
 
 	static bool IsLiquid(int x, int y, int liquidType)
 	{

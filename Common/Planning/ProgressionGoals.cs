@@ -1506,7 +1506,9 @@ public sealed class RallyRouteGoal : ProgressionGoal
 			if (open.Count > 0 || faction.RallyShaft is { IsFinished: false })
 				return PlanStep.Idle;
 		}
-		BotDiagnostics.Log(bot, blocked ? "rally route is blocked by tiles nobody can dig, heading straight there" : "rally route is built, setting out");
+		string where = string.Join(", ", open.Where(highway => highway.BlockedAt(highway.WorkFrontier(), bestPick)).Select(highway => $"highway y={highway.Y} at x={highway.WorkFrontier()}"))
+			+ (faction.RallyShaft is { IsFinished: false } stuck && !Bosses.BossRituals.CanDigRowWith(bestPick, stuck, stuck.WorkRow()) ? $" shaft x={stuck.X} row {stuck.WorkRow()}" : "");
+		BotDiagnostics.Log(bot, blocked ? $"rally route is blocked by tiles nobody can dig ({where}, best pick {bestPick}), heading straight there" : "rally route is built, setting out");
 		faction.RallyRoute = null;
 		faction.RallyShaft = null;
 		return PlanStep.Idle;

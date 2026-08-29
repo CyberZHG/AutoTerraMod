@@ -781,6 +781,12 @@ public static class ProgressionPlanner
 					return false;
 				continue;
 			}
+			if (condition == Condition.NearHoney)
+			{
+				if (World.WaterFinder.NearestHoney(bot.Faction.BaseTile) == null)
+					return false;
+				continue;
+			}
 			if (condition != Condition.NearWater || World.WaterFinder.NearestShore(bot.Faction.BaseTile) == null)
 				return false;
 		}
@@ -788,6 +794,8 @@ public static class ProgressionPlanner
 	}
 
 	public static bool NeedsWater(Recipe recipe) => recipe.Conditions.Contains(Condition.NearWater);
+
+	public static bool NeedsHoney(Recipe recipe) => recipe.Conditions.Contains(Condition.NearHoney);
 
 	static int Readiness(Context context, int itemType)
 	{

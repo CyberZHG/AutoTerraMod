@@ -12,7 +12,12 @@ public static class WaterBottler
 	public static void FillWhileAtWater(Bot bot)
 	{
 		var avatar = bot.Avatar;
-		if (Inventory.Count(avatar, ItemID.Bottle) == 0 || !World.WaterFinder.IsNearWater(bot.CenterTile))
+		if (Inventory.Count(avatar, ItemID.Bottle) == 0)
+			return;
+		if (bot.Brain.PlannedItemTypes.Contains(ItemID.BottledHoney) && World.WaterFinder.IsNearHoney(bot.CenterTile)
+			&& RecipeIndex.For(ItemID.BottledHoney).FirstOrDefault(ProgressionPlanner.NeedsHoney) is { } honey && Crafting.TryCraft(avatar, honey))
+			BotDiagnostics.Log(bot, $"filled Bottled Honey at {bot.CenterTile}");
+		if (!World.WaterFinder.IsNearWater(bot.CenterTile))
 			return;
 		var recipe = RecipeIndex.For(ItemID.BottledWater).FirstOrDefault(ProgressionPlanner.NeedsWater);
 		if (recipe == null)
