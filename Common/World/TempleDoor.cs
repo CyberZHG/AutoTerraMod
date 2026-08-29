@@ -166,9 +166,9 @@ public static class TempleDoor
 
 	public static Point? HuntSpot(Point temple, Point? altar)
 	{
-		if (Near(altar ?? temple) is not Point door || Mouth(door) is not Point mouth)
+		if ((Near(temple) ?? (altar is Point deep ? Near(deep) : null)) is not Point door || OutsideSide(door) is not int side)
 			return null;
-		var origin = altar ?? new Point(door.X - Math.Sign(mouth.X - door.X) * 2, mouth.Y);
+		var origin = altar ?? InsideStep(door, side, 2);
 		int fewest = altar == null ? ShallowSteps : NearAltarSteps;
 		int most = altar == null ? DeepSteps : AltarRouteSteps;
 		if (!guides.TryGetValue(origin, out var field) || Main.GameUpdateCount - field.At > GuideTicks)

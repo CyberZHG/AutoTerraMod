@@ -122,30 +122,39 @@ public static class BossRituals
 		return templeLock.locked;
 	}
 
-	const int TempleAltarReachX = 400;
-	const int TempleAltarReachY = 400;
-	const uint AltarRescanTicks = 1800;
-	static readonly Dictionary<int, uint> altarScannedAt = new();
 
 	static bool LearnAltarOfOpenTemple(Bot bot)
 	{
 		var knowledge = BotWorldSystem.KnowledgeOf(bot.Faction);
-		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || TempleLocked(temple))
+		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || TempleLocked(temple) || FindAltar(knowledge) is not Point altar)
 			return false;
-		if (Main.GameUpdateCount - altarScannedAt.GetValueOrDefault(bot.FactionId) < AltarRescanTicks)
-			return false;
-		altarScannedAt[bot.FactionId] = Main.GameUpdateCount;
-		for (int x = temple.X - TempleAltarReachX; x <= temple.X + TempleAltarReachX; x++)
+		knowledge.Remember(altar, TileID.LihzahrdAltar);
+		return true;
+	}
+
+	static Point? templeAltar;
+	static uint altarScannedAt;
+	const uint AltarRescanTicks = 1800;
+	const int AltarSpanMargin = 200;
+
+	static Point? FindAltar(Factions.FactionKnowledge knowledge)
+	{
+		if (templeAltar is Point known && Main.tile[known.X, known.Y].HasTile && Main.tile[known.X, known.Y].TileType == TileID.LihzahrdAltar)
+			return known;
+		templeAltar = null;
+		if (altarScannedAt != 0 && Main.GameUpdateCount - altarScannedAt < AltarRescanTicks)
+			return null;
+		altarScannedAt = Main.GameUpdateCount | 1;
+		var (minX, maxX) = knowledge.SpanOf(Landmark.Jungle) is var (left, right) ? (left - AltarSpanMargin, right + AltarSpanMargin) : (0, Main.maxTilesX);
+		for (int x = System.Math.Max(minX, 10); x <= System.Math.Min(maxX, Main.maxTilesX - 10); x++)
 		{
-			for (int y = temple.Y - TempleAltarReachY; y <= temple.Y + TempleAltarReachY; y++)
+			for (int y = (int)Main.worldSurface; y < Main.UnderworldLayer; y++)
 			{
-				if (!WorldGen.InWorld(x, y, 10) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.LihzahrdAltar)
-					continue;
-				knowledge.Remember(new Point(x, y), TileID.LihzahrdAltar);
-				return true;
+				if (Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.LihzahrdAltar)
+					return templeAltar = new Point(x, y);
 			}
 		}
-		return false;
+		return null;
 	}
 
 	static PlanStep PlanBulb(Bot bot, BossChallenge challenge, BulbTrigger trigger)
