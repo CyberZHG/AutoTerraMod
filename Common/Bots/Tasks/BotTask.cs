@@ -459,9 +459,14 @@ public abstract class BotTask
 		var here = Bot.CenterTile;
 		if (!Navigation.PathFinder.InsideMaze(goal))
 			return null;
-		if (World.TempleDoor.Near(goal) is Point tunnelDoor && World.TempleDoor.InTunnel(tunnelDoor, here) && World.TempleDoor.OutsideSide(tunnelDoor) is int tunnelSide
-			&& Main.tile[tunnelDoor.X, tunnelDoor.Y].TileType == TileID.ClosedDoor)
-			return World.TempleDoor.InsideStep(tunnelDoor, tunnelSide, DoorStepInside).ToWorldCoordinates(8f, 0f);
+		if (World.TempleDoor.Near(goal) is Point tunnelDoor && World.TempleDoor.OutsideSide(tunnelDoor) is int tunnelSide && World.TempleDoor.Mouth(tunnelDoor) is Point tunnelMouth
+			&& (World.TempleDoor.InTunnel(tunnelDoor, here) || System.Math.Abs(here.X - tunnelMouth.X) + System.Math.Abs(here.Y - tunnelMouth.Y) <= TempleArrival))
+		{
+			var doorstep = World.TempleDoor.InsideStep(tunnelDoor, -tunnelSide, DoorStepInside);
+			if (System.Math.Abs(here.X - doorstep.X) + System.Math.Abs(here.Y - doorstep.Y) <= TempleArrival)
+				return World.TempleDoor.InsideStep(tunnelDoor, tunnelSide, DoorStepInside).ToWorldCoordinates(8f, 0f);
+			return World.TempleDoor.GuideStep(doorstep, here, GuideHop) is Point hop && hop != here ? hop.ToWorldCoordinates(8f, 0f) : doorstep.ToWorldCoordinates(8f, 0f);
+		}
 		if (Navigation.PathFinder.InsideMaze(here))
 		{
 			if (System.Math.Abs(goal.X - here.X) + System.Math.Abs(goal.Y - here.Y) <= GuideHop)

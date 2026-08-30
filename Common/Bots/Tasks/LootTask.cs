@@ -87,6 +87,16 @@ public sealed class LootTask : BotTask
 			return;
 		if (!emptied)
 		{
+			if (Chest.IsLocked(chest.x, chest.y))
+			{
+				if (!Chest.Unlock(chest.x, chest.y))
+				{
+					Abandon("cannot unlock the chest");
+					return;
+				}
+				Net.TileSync.Mark(chest.x, chest.y, 5);
+				BotDiagnostics.Log(Bot, $"unlocked the lihzahrd chest at {chestTile}");
+			}
 			TakeEverything(chest);
 			Bot.Watchdog.RecordProgress();
 			SoundEngine.PlaySound(SoundID.MenuClose, chestTile.ToWorldCoordinates());
@@ -205,9 +215,14 @@ public sealed class LootTask : BotTask
 
 	bool IsLootable(Chest chest) =>
 		Main.tile[chest.x, chest.y].HasTile && TileID.Sets.BasicChest[Main.tile[chest.x, chest.y].TileType]
-		&& !Chest.IsLocked(chest.x, chest.y)
+		&& (!Chest.IsLocked(chest.x, chest.y) || UnlockableLihzahrd(chest))
 		&& !IsAtAnyBase(chest)
 		&& Main.LocalPlayer.chest != System.Array.IndexOf(Main.chest, chest);
+
+	const int LihzahrdChestStyle = 16;
+
+	static bool UnlockableLihzahrd(Chest chest) =>
+		NPC.downedPlantBoss && Main.tile[chest.x, chest.y].TileType == TileID.Containers && Main.tile[chest.x, chest.y].TileFrameX / 36 == LihzahrdChestStyle;
 
 	static bool IsAtAnyBase(Chest chest) =>
 		BotWorldSystem.Factions.Any(faction => faction.Settlement?.Contains(chest.x, chest.y) == true);

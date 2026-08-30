@@ -157,8 +157,11 @@ public sealed class BotBrain
 			using (Probes.Measure("Reflex"))
 				Engagement.Reflex(bot, far.target, far.weapon);
 		long motorBegan = System.Diagnostics.Stopwatch.GetTimestamp();
-		using (Probes.Measure("Motor"))
-			bot.Motor.Tick(body);
+		if (bot.Hands.ClearTrapAhead())
+			body.velocity.X = 0f;
+		else
+			using (Probes.Measure("Motor"))
+				bot.Motor.Tick(body);
 		double motorMilliseconds = (System.Diagnostics.Stopwatch.GetTimestamp() - motorBegan) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 		if (motorMilliseconds > SlowMotorMilliseconds)
 			BotDiagnostics.Log(bot, $"slow motor tick {motorMilliseconds:0.0}ms: {bot.Motor.Describe()}");

@@ -129,6 +129,35 @@ public sealed class BotHands
 		return ToolResult.Working;
 	}
 
+	const int TrapReachAhead = 5;
+	static readonly System.Collections.Generic.HashSet<Point> unbreakableTraps = new();
+
+	public bool ClearTrapAhead()
+	{
+		if (!NPC.downedPlantBoss || bot.Npc is not NPC body || BestPickaxe == null)
+			return false;
+		var feet = Navigation.PathFinder.FeetOf(body);
+		if (!Navigation.PathFinder.InsideMaze(feet) && !Navigation.PathFinder.InsideMaze(bot.CenterTile))
+			return false;
+		int direction = body.velocity.X > 0.1f ? 1 : body.velocity.X < -0.1f ? -1 : body.direction;
+		for (int step = -1; step <= TrapReachAhead; step++)
+		{
+			int x = feet.X + direction * step;
+			for (int y = feet.Y - 3; y <= feet.Y + 1; y++)
+			{
+				var tile = new Point(x, y);
+				if (!WorldGen.InWorld(x, y, 5) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType is not (TileID.WoodenSpikes or TileID.PressurePlates) || unbreakableTraps.Contains(tile))
+					continue;
+				var result = Dig(tile);
+				if (result == ToolResult.Working)
+					return true;
+				if (result == ToolResult.Unbreakable)
+					unbreakableTraps.Add(tile);
+			}
+		}
+		return false;
+	}
+
 	static bool InAnyStructure(Point tile) => Systems.BotWorldSystem.Factions.Any(faction => faction.Settlement?.Structures.Any(structure =>
 		tile.X >= structure.Left && tile.X <= structure.Right && tile.Y >= structure.Top && tile.Y <= structure.Floor) == true);
 
