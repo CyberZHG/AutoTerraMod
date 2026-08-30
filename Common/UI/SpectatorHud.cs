@@ -23,6 +23,15 @@ public sealed class SpectatorHud : ModSystem
 
 	public override void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
 	{
+		if (Main.netMode == Terraria.ID.NetmodeID.MultiplayerClient)
+		{
+			int at = layers.FindIndex(IsMouseText);
+			if (at < 0)
+				at = layers.Count;
+			layers.Insert(at, clientLabelLayer);
+			layers.Insert(at, clientHookLayer);
+			return;
+		}
 		if (!BotWorldSystem.IsRunning)
 			return;
 		int index = layers.FindIndex(IsMouseText);
@@ -45,26 +54,54 @@ public sealed class SpectatorHud : ModSystem
 		{
 			if (bot.Npc is not NPC body || bot.Grapple.Anchor is not Vector2 anchor)
 				continue;
-			int type = bot.Grapple.HookProjectile;
-			if (type <= 0)
-				continue;
-			Main.instance.LoadProjectile(type);
-			var delta = anchor - body.Center;
-			float length = delta.Length();
-			if (length < 1f)
-				continue;
-			var direction = delta / length;
-			float rotation = delta.ToRotation() + MathHelper.PiOver2;
-			var chain = Terraria.GameContent.TextureAssets.Chain.Value;
-			for (float distance = 0f; distance < length; distance += chain.Height)
-			{
-				var link = body.Center + direction * distance;
-				Main.spriteBatch.Draw(chain, link - Main.screenPosition, null, Lighting.GetColor(link.ToTileCoordinates()), rotation, new Vector2(chain.Width / 2f, chain.Height / 2f), 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
-			}
-			var head = Terraria.GameContent.TextureAssets.Projectile[type].Value;
-			Main.spriteBatch.Draw(head, anchor - Main.screenPosition, null, Lighting.GetColor(anchor.ToTileCoordinates()), rotation, head.Size() / 2f, 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+			DrawHook(bot.Grapple.HookProjectile, body.Center, anchor);
 		}
 		return true;
+	}
+
+	static readonly GameInterfaceLayer clientHookLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Synced Bot Hooks", DrawClientHooks, InterfaceScaleType.Game);
+	static readonly GameInterfaceLayer clientLabelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Synced Bot Labels", DrawClientLabels, InterfaceScaleType.Game);
+
+	static bool DrawClientHooks()
+	{
+		foreach (var hook in Net.BotNet.ClientHooks())
+			DrawHook(hook.Type, hook.From, hook.Anchor);
+		return true;
+	}
+
+	static bool DrawClientLabels()
+	{
+		foreach (var label in Net.BotNet.ClientLabels())
+			DrawLabel(label.Name, Main.teamColor[label.Team], label.TaskKey, label.Top);
+		return true;
+	}
+
+	static void DrawHook(int type, Vector2 from, Vector2 anchor)
+	{
+		if (type <= 0)
+			return;
+		Main.instance.LoadProjectile(type);
+		var delta = anchor - from;
+		float length = delta.Length();
+		if (length < 1f)
+			return;
+		var direction = delta / length;
+		float rotation = delta.ToRotation() + MathHelper.PiOver2;
+		var chain = Terraria.GameContent.TextureAssets.Chain.Value;
+		for (float distance = 0f; distance < length; distance += chain.Height)
+		{
+			var link = from + direction * distance;
+			Main.spriteBatch.Draw(chain, link - Main.screenPosition, null, Lighting.GetColor(link.ToTileCoordinates()), rotation, new Vector2(chain.Width / 2f, chain.Height / 2f), 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+		}
+		var head = Terraria.GameContent.TextureAssets.Projectile[type].Value;
+		Main.spriteBatch.Draw(head, anchor - Main.screenPosition, null, Lighting.GetColor(anchor.ToTileCoordinates()), rotation, head.Size() / 2f, 1f, Microsoft.Xna.Framework.Graphics.SpriteEffects.None, 0f);
+	}
+
+	static void DrawLabel(string name, Color color, string taskKey, Vector2 top)
+	{
+		var anchor = top - Main.screenPosition + new Vector2(0f, -30f);
+		Utils.DrawBorderString(Main.spriteBatch, name, anchor, color, 0.8f, 0.5f, 1f);
+		Utils.DrawBorderString(Main.spriteBatch, string.IsNullOrEmpty(taskKey) ? "" : TaskName(taskKey), anchor + new Vector2(0f, 14f), Color.LightGray, 0.6f, 0.5f, 1f);
 	}
 
 	static readonly GameInterfaceLayer labelLayer = new LegacyGameInterfaceLayer("AutoTerraMod: Bot Labels", DrawLabels, InterfaceScaleType.Game);
@@ -78,10 +115,7 @@ public sealed class SpectatorHud : ModSystem
 			var body = bot.Npc;
 			if (body == null)
 				continue;
-			var anchor = body.Top - Main.screenPosition + new Vector2(0f, -30f);
-			Utils.DrawBorderString(Main.spriteBatch, bot.Name, anchor, bot.Faction.Color, 0.8f, 0.5f, 1f);
-			string task = bot.Brain.Current == null ? "" : TaskName(bot.Brain.Current.NameKey);
-			Utils.DrawBorderString(Main.spriteBatch, task, anchor + new Vector2(0f, 14f), Color.LightGray, 0.6f, 0.5f, 1f);
+			DrawLabel(bot.Name, bot.Faction.Color, bot.Brain.Current?.NameKey, body.Top);
 		}
 		return true;
 	}

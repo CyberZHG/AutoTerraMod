@@ -34,6 +34,22 @@ public sealed class VanillaHooks : ModSystem
 
 	static void UpdateAvatarProjectiles(On_Projectile.orig_Update orig, Projectile self, int i)
 	{
+		if (Net.BotNet.IsClientAvatar(self.owner))
+		{
+			var owner = Main.player[self.owner];
+			owner.active = true;
+			try
+			{
+				orig(self, i);
+				if (self.active && (self.minion || Main.projPet[self.type]))
+					self.timeLeft = MinionKeepAliveTicks;
+			}
+			finally
+			{
+				owner.active = false;
+			}
+			return;
+		}
 		if (!BotWorldSystem.IsRunning || self.owner < FirstAvatarSlot || self.owner >= Main.maxPlayers)
 		{
 			orig(self, i);
@@ -106,6 +122,11 @@ public sealed class VanillaHooks : ModSystem
 	static void DrawBotAvatars(On_Main.orig_DrawPlayers_AfterProjectiles orig, Main self)
 	{
 		orig(self);
+		if (Main.netMode == Terraria.ID.NetmodeID.MultiplayerClient)
+		{
+			Net.BotNet.DrawClientAvatars();
+			return;
+		}
 		if (!BotWorldSystem.IsRunning)
 			return;
 		using var _ = Perf.Measure(PerfSection.Drawing);

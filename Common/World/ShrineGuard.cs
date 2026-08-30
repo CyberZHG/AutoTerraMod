@@ -12,6 +12,8 @@ public sealed class ShrineGuard : GlobalTile
 	static int botActing;
 	static int bulbAllowed;
 
+	public static bool IsBotActing => botActing > 0;
+
 	public static IDisposable BotActing() => new Scope(() => botActing++, () => botActing--);
 
 	public static IDisposable AllowBulb() => new Scope(() => bulbAllowed++, () => bulbAllowed--);

@@ -40,6 +40,8 @@ public sealed class BotNPC : ModNPC
 
 	public override void AI()
 	{
+		if (Main.netMode == NetmodeID.MultiplayerClient)
+			return;
 		var bot = Bot;
 		if (bot == null)
 		{
