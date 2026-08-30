@@ -276,7 +276,7 @@ public static class TempleDoor
 			return false;
 		for (int row = y - 2; row <= y; row++)
 		{
-			if (TileQuery.IsSolid(x, row) && !IsLihzahrdDoor(x, row))
+			if (TileQuery.IsSolid(x, row) && !IsLihzahrdDoor(x, row) && !(NPC.downedPlantBoss && Main.tile[x, row].TileType == TileID.WoodenSpikes))
 				return false;
 		}
 		return true;

@@ -131,8 +131,13 @@ public static class Grounds
 				}
 			}
 		}
-		return best is Point feet ? new Vector2(feet.X * 16f + 8f, feet.Y * 16f - 5f) : faction.BaseCenter;
+		if (best is Point feet)
+			return new Vector2(feet.X * 16f + 8f, feet.Y * 16f - 5f);
+		var beside = new Point(camp.Hall.Left + HallSideOffset, camp.Hall.Floor - 1);
+		return StandingSpotNear(beside) is Point floor ? floor.ToWorldCoordinates(8f, 0f) : faction.BaseCenter;
 	}
+
+	const int HallSideOffset = 3;
 
 	const int UnderfootHalfWidth = 3;
 	const int UnderfootDepth = 4;
