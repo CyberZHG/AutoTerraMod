@@ -23,6 +23,7 @@ public static class TempleDoor
 		cache.Clear();
 		guides.Clear();
 		entrances.Clear();
+		knownDoor = null;
 	}
 
 	public static Point? Near(Point tile)
@@ -30,16 +31,25 @@ public static class TempleDoor
 		var key = new Point(tile.X / CacheCell, tile.Y / CacheCell);
 		if (cache.TryGetValue(key, out var cached) && Main.GameUpdateCount - cached.at < CacheTicks)
 			return cached.door;
+		if (knownDoor is Point remembered && IsLihzahrdDoor(remembered.X, remembered.Y) && !IsLihzahrdDoor(remembered.X, remembered.Y - 1))
+			return Math.Abs(remembered.X - tile.X) <= KnownDoorReach && Math.Abs(remembered.Y - tile.Y) <= KnownDoorReach ? remembered : null;
 		var door = Scan(tile);
+		if (door is Point found)
+			knownDoor = found;
 		cache[key] = (Main.GameUpdateCount, door);
 		return door;
 	}
 
+	static Point? knownDoor;
+	const int KnownDoorReach = 1000;
+
 	static Point? Scan(Point tile)
 	{
-		for (int x = tile.X - SearchWidth; x <= tile.X + SearchWidth; x++)
+		float scale = Planning.ProgressionPlanner.WorldScale;
+		int width = (int)(SearchWidth * scale), height = (int)(SearchHeight * scale);
+		for (int x = tile.X - width; x <= tile.X + width; x++)
 		{
-			for (int y = tile.Y - SearchHeight; y <= tile.Y + SearchHeight; y++)
+			for (int y = tile.Y - height; y <= tile.Y + height; y++)
 			{
 				if (IsLihzahrdDoor(x, y) && !IsLihzahrdDoor(x, y - 1))
 					return new Point(x, y);
