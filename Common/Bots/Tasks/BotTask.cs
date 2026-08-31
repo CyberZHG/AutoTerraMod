@@ -432,6 +432,8 @@ public abstract class BotTask
 			Bot.Motor.TunnelTo(exit, 32f);
 			return true;
 		}
+		if (Navigation.PathFinder.InsideMaze(target.ToTileCoordinates()))
+			return false;
 		BotDiagnostics.Log(Bot, $"no walkable route to {target.ToTileCoordinates()}, tunneling");
 		tunnelingSince = Main.GameUpdateCount;
 		Bot.Motor.TunnelTo(target, radius);

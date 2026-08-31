@@ -229,7 +229,8 @@ public static class BossRituals
 			return new ScoutStep(Landmark.Dungeon, false);
 		if (RitualFloorGap() is Point gap)
 			return Inventory.Items(bot.Avatar).Any(Bots.Tasks.FillTileTask.IsFiller) ? new FillTileStep(gap) : ProgressionPlanner.Obtain(bot, ItemID.StoneBlock, RitualFillerBlocks);
-		return new SummonBossStep(challenge, trigger, dungeon.ToWorldCoordinates(), null);
+		var ritual = Main.dungeonX > 0 ? (Grounds.StandingSpotNear(new Point(Main.dungeonX, Main.dungeonY - 1)) ?? new Point(Main.dungeonX, Main.dungeonY - 1)) : dungeon;
+		return new SummonBossStep(challenge, trigger, ritual.ToWorldCoordinates(), null);
 	}
 
 	const int RitualFillerBlocks = 10;

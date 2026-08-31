@@ -33,7 +33,7 @@ public static class TempleDoor
 			return cached.door;
 		if (knownDoor is Point remembered && IsLihzahrdDoor(remembered.X, remembered.Y) && !IsLihzahrdDoor(remembered.X, remembered.Y - 1))
 			return Math.Abs(remembered.X - tile.X) <= KnownDoorReach && Math.Abs(remembered.Y - tile.Y) <= KnownDoorReach ? remembered : null;
-		var door = Scan(tile);
+		var door = Scan(tile) ?? (Navigation.PathFinder.InsideMaze(tile) ? DeepScan(tile) : null);
 		if (door is Point found)
 			knownDoor = found;
 		cache[key] = (Main.GameUpdateCount, door);
@@ -42,6 +42,22 @@ public static class TempleDoor
 
 	static Point? knownDoor;
 	const int KnownDoorReach = 1000;
+
+	const int DeepScanRise = 600;
+
+	static Point? DeepScan(Point tile)
+	{
+		int width = (int)(SearchWidth * 2 * Planning.ProgressionPlanner.WorldScale);
+		for (int y = Math.Max(10, tile.Y - DeepScanRise); y <= tile.Y; y++)
+		{
+			for (int x = tile.X - width; x <= tile.X + width; x++)
+			{
+				if (IsLihzahrdDoor(x, y) && !IsLihzahrdDoor(x, y - 1))
+					return new Point(x, y);
+			}
+		}
+		return null;
+	}
 
 	static Point? Scan(Point tile)
 	{
