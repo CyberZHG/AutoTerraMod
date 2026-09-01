@@ -254,6 +254,7 @@ public sealed class CraftTask : BotTask
 		if (!TravelOrTunnel(pool.ToWorldCoordinates(), StationArrivalRadius))
 		{
 			BotDiagnostics.Log(Bot, $"stuck walking to honey at {pool}");
+			WaterFinder.MarkHoneyUnreachable(pool);
 			IsFinished = true;
 		}
 	}

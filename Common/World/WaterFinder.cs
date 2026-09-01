@@ -21,6 +21,7 @@ public static class WaterFinder
 	{
 		cache.Clear();
 		honey = null;
+		unreachableHoney.Clear();
 	}
 
 	public static bool IsNearWater(Point center)
@@ -179,14 +180,24 @@ public static class WaterFinder
 	const int HoneySpanMargin = 60;
 	static (uint tick, List<Point> surfaces)? honey;
 
+	static readonly HashSet<Point> unreachableHoney = new();
+	const int UnreachableHoneyRadius = 12;
+
+	public static void MarkHoneyUnreachable(Point spot) => unreachableHoney.Add(spot);
+
 	public static Point? NearestHoney(Point from)
 	{
 		if (honey is not { } cached || Main.GameUpdateCount - cached.tick > HoneyCacheTicks)
+		{
 			honey = cached = (Main.GameUpdateCount, ScanHoney());
+			unreachableHoney.Clear();
+		}
 		Point? best = null;
 		long bestDistance = long.MaxValue;
 		foreach (var spot in cached.surfaces)
 		{
+			if (unreachableHoney.Any(bad => System.Math.Abs(bad.X - spot.X) <= UnreachableHoneyRadius && System.Math.Abs(bad.Y - spot.Y) <= UnreachableHoneyRadius))
+				continue;
 			long distance = DistanceSq(from, spot);
 			if (distance < bestDistance)
 			{
