@@ -340,6 +340,8 @@ public static class BossRituals
 	const float PillarZone = 4000f;
 	const float PillarZoneSlack = 16f * 25f;
 
+	public static bool PillarsStanding() => Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type));
+
 	public static bool InPillarZone(Vector2 at) =>
 		Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type) && Vector2.Distance(npc.Center, at) < PillarZone + PillarZoneSlack);
 
