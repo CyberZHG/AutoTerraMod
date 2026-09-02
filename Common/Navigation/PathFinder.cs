@@ -49,7 +49,7 @@ public static class PathFinder
 	public const int BaseJumpRise = 5;
 	public const int BaseLeapReach = 6;
 	const int SwimmableLiquid = 64;
-	const double TickBudgetMilliseconds = 2.0;
+	const double TickBudgetMilliseconds = 1.25;
 	const double SliceMilliseconds = 1.0;
 	const uint ForgetWaitingTicks = 60;
 

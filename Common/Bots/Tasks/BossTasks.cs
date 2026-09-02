@@ -195,7 +195,13 @@ public sealed class SummonTask : BotTask
 		if (faction.RallyAssembled)
 			return true;
 		Bot.Watchdog.RecordProgress();
-		if (Vector2.Distance(step.Place, faction.BaseCenter) > DistantArenaReach && step.Trigger is not PillarsTrigger)
+		if (step.Trigger is PillarsTrigger)
+		{
+			faction.RallyAssembled = true;
+			faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyTicks);
+			return true;
+		}
+		if (Vector2.Distance(step.Place, faction.BaseCenter) > DistantArenaReach)
 		{
 			faction.RallyAssembled = true;
 			faction.Rally = (GatherPoint, Main.GameUpdateCount + DistantRallyTicks);

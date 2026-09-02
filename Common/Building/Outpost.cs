@@ -345,6 +345,8 @@ public static class Outpost
 
 	public static bool ExpectsDistantArena(Bot bot)
 	{
+		if (bot.Faction.Rally == null && Bosses.BossCredit.NextChallengeFor(bot.Faction)?.BossType == NPCID.MoonLordCore && Bosses.BossRituals.NearestPillar(bot.Faction.BaseCenter) is NPC pillar)
+			return Vector2.Distance(pillar.Center, bot.Faction.BaseCenter) > ArenaOutpostDistance;
 		if (bot.Faction.Rally != null || Bosses.BossCredit.NextChallengeFor(bot.Faction) is not { DistantArena: { } arena } challenge)
 			return false;
 		return BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(arena) is Point site

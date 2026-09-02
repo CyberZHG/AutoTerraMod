@@ -34,6 +34,7 @@ public sealed class PathFollower
 	const int ExtendedSearchMultiplier = 3;
 	const int OffPathTolerance = 4;
 	const int GoalShiftTolerance = 4;
+	const int FarGoalShiftDivisor = 8;
 	const int MinimumReplanGapTicks = 20;
 	const int NoRouteBackoffTicks = 120;
 	const int SkipAheadWindow = 4;
@@ -126,7 +127,8 @@ public sealed class PathFollower
 	{
 		if (path.Nodes.Count == 0 || index >= path.Nodes.Count)
 			return true;
-		if (Math.Abs(goal.X - plannedGoal.X) > GoalShiftTolerance || Math.Abs(goal.Y - plannedGoal.Y) > GoalShiftTolerance)
+		int shiftTolerance = Math.Max(GoalShiftTolerance, (Math.Abs(plannedGoal.X - feet.X) + Math.Abs(plannedGoal.Y - feet.Y)) / FarGoalShiftDivisor);
+		if (Math.Abs(goal.X - plannedGoal.X) > shiftTolerance || Math.Abs(goal.Y - plannedGoal.Y) > shiftTolerance)
 			return true;
 		if (!grounded && stepTicks < MaxLeapTicks && (path.Nodes[index].Arrival is MoveKind.Leap or MoveKind.HookHang || index > 0 && path.Nodes[index - 1].Arrival == MoveKind.HookHang))
 			return false;

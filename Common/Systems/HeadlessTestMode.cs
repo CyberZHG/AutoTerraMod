@@ -691,6 +691,23 @@ public sealed class HeadlessTestMode : ModSystem
 
 	static readonly string traceBot = Environment.GetEnvironmentVariable("AUTOTERRA_TRACE_BOT");
 
+	static readonly bool probeSwings = Environment.GetEnvironmentVariable("AUTOTERRA_PROBE_SWINGS") == "1";
+
+	static void ProbeIdleSwingsWhenAsked()
+	{
+		if (!probeSwings || Main.GameUpdateCount % 60 != 0)
+			return;
+		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.IsAlive && bot.Avatar.itemAnimation > 0))
+		{
+			var item = bot.Avatar.lastVisualizedSelectedItem;
+			if (item == null || item.IsAir || item.damage <= 0 || item.pick > 0 || item.axe > 0 || item.hammer > 0)
+				continue;
+			if (Bots.Tasks.Engagement.NearestHostile(bot, 16f * 30f, false) != null)
+				continue;
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"idle swing {bot.Name}: {item.Name} task={bot.Brain.Current?.NameKey} plan={bot.Brain.Plan?.GetType().Name} anim={bot.Avatar.itemAnimation}/{bot.Avatar.itemAnimationMax}");
+		}
+	}
+
 	static int probeObtainTicks;
 
 	static void ProbeObtainWhenAsked()
@@ -732,6 +749,7 @@ public sealed class HeadlessTestMode : ModSystem
 			CountTilesWhenAsked();
 			ImportWhenAsked();
 			ProbeObtainWhenAsked();
+			ProbeIdleSwingsWhenAsked();
 		}
 		if (Enabled && Main.netMode == NetmodeID.Server && Main.GameUpdateCount % 3600 == 0)
 		{

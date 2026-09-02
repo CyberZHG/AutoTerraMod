@@ -13,6 +13,7 @@ public static class Engagement
 {
 	const float RangedStandoff = 16f * 14f;
 	const float MaxFireRange = 16f * 60f;
+	const float MonsterFireRange = 16f * 32f;
 	const float MinionThreat = 16f * 10f;
 
 	const float TooCloseForRanged = 16f * 3f;
@@ -241,7 +242,7 @@ public static class Engagement
 			bool kiting = Bosses.BossCatalog.IsBossPart(target) && bot.Avatar.statLife < bot.Avatar.statLifeMax2 / 2;
 			float gap = distance - Math.Max(target.width, target.height) / 2f;
 			float tooClose = Bosses.BossCatalog.IsBossPart(target) ? BossRangedGap : TooCloseForRanged;
-			if (clearShot && distance < MaxFireRange)
+			if (clearShot && distance < (Bosses.BossCatalog.IsBossPart(target) ? MaxFireRange : MonsterFireRange))
 			{
 				bot.Motor.Face(target.Center);
 				bot.Hands.Fire(target, weapon);

@@ -291,10 +291,12 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || !BossCredit.HasDefeated(bot.Faction, moonLord) || bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType
-			|| Main.npc.Any(npc => npc.active && npc.boss))
+		if (moonLord == null || bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType || Main.npc.Any(npc => npc.active && npc.boss))
 			return null;
-		return NearestPillar(bot.Center) is NPC pillar && !SiegeStalled(bot, pillar) ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
+		if (NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
+			return null;
+		bool encountered = Vector2.Distance(bot.Center, pillar.Center) < PillarZone && bot.Faction.Rally == null;
+		return BossCredit.HasDefeated(bot.Faction, moonLord) || encountered ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
 	}
 
 	const uint SiegePatienceTicks = 5 * 3600;
@@ -339,8 +341,6 @@ public static class BossRituals
 
 	const float PillarZone = 4000f;
 	const float PillarZoneSlack = 16f * 25f;
-
-	public static bool PillarsStanding() => Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type));
 
 	public static bool InPillarZone(Vector2 at) =>
 		Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type) && Vector2.Distance(npc.Center, at) < PillarZone + PillarZoneSlack);
