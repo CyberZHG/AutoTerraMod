@@ -129,25 +129,38 @@ public sealed class BotHands
 		return ToolResult.Working;
 	}
 
-	const int TrapReachAhead = 5;
+	const int TrapReachAhead = 3;
+	const uint TrapPatienceTicks = 180;
 	static readonly System.Collections.Generic.HashSet<Point> unbreakableTraps = new();
+	Point? clearingTrap;
+	uint clearingSince;
 
 	public bool ClearTrapAhead()
 	{
-		if (!NPC.downedPlantBoss || bot.Npc is not NPC body || BestPickaxe == null)
+		if (!NPC.downedPlantBoss || bot.Npc is not NPC body || BestPickaxe == null || Math.Abs(body.velocity.X) < 0.1f && body.velocity.Y == 0f)
 			return false;
 		var feet = Navigation.PathFinder.FeetOf(body);
 		if (!Navigation.PathFinder.InsideMaze(feet) && !Navigation.PathFinder.InsideMaze(bot.CenterTile))
 			return false;
 		int direction = body.velocity.X > 0.1f ? 1 : body.velocity.X < -0.1f ? -1 : body.direction;
-		for (int step = -1; step <= TrapReachAhead; step++)
+		for (int step = 1; step <= TrapReachAhead; step++)
 		{
-			int x = feet.X + direction * step;
-			for (int y = feet.Y - 3; y <= feet.Y + 1; y++)
+			int x = direction > 0 ? feet.X + 1 + step : feet.X - step;
+			for (int y = feet.Y - 2; y <= feet.Y + 1; y++)
 			{
 				var tile = new Point(x, y);
 				if (!WorldGen.InWorld(x, y, 5) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType is not (TileID.WoodenSpikes or TileID.PressurePlates) || unbreakableTraps.Contains(tile))
 					continue;
+				if (clearingTrap != tile)
+				{
+					clearingTrap = tile;
+					clearingSince = Main.GameUpdateCount;
+				}
+				else if (Main.GameUpdateCount - clearingSince > TrapPatienceTicks)
+				{
+					unbreakableTraps.Add(tile);
+					continue;
+				}
 				var result = Dig(tile);
 				if (result == ToolResult.Working)
 					return true;
@@ -805,7 +818,8 @@ public sealed class BotHands
 
 	public bool Strike(NPC target, Item weapon)
 	{
-		if (!Ready || !InMeleeReach(target, weapon))
+		if (!Ready || !InMeleeReach(target, weapon) || bot.Npc is not NPC body
+			|| !Bosses.BossCatalog.IsBossPart(target) && !Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height))
 			return false;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
 		YoyoTarget = target.Center;

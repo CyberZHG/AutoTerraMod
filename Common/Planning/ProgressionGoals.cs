@@ -533,7 +533,9 @@ public sealed class BossGoal : ProgressionGoal
 
 	const int ReadinessLogIntervalTicks = 1800;
 
-	public override bool AppliesTo(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) != null && IsSummoner(bot);
+	public override bool AppliesTo(Bot bot) => (Bosses.BossCredit.NextChallengeFor(bot.Faction) != null || Bosses.BossRituals.PillarsStanding()) && IsSummoner(bot);
+
+	public override bool IsUrgent(Bot bot) => Bosses.BossRituals.PillarsStanding() && IsSummoner(bot);
 
 	public override bool IsMet(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) == null;
 

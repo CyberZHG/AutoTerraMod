@@ -733,7 +733,7 @@ public sealed class HeadlessTestMode : ModSystem
 		if (string.IsNullOrEmpty(traceBot) || Main.GameUpdateCount % 20 != 0)
 			return;
 		foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == traceBot && bot.IsAlive))
-			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"trace {bot.Name}: task={bot.Brain.Current?.NameKey} plan={(bot.Brain.Plan is Planning.BuildBridgeStep b && b.Bridge is World.Highway h ? $"highway {h.StartX}->{h.EndX} y={h.Y} dir={h.Direction} frontier={h.Frontier(h.Direction)} work={h.WorkFrontier()}" : bot.Brain.Plan?.ToString())} {bot.Motor.Describe()}");
+			ModContent.GetInstance<AutoTerraMod>().Logger.Info($"trace {bot.Name}: task={bot.Brain.Current?.NameKey} plan={(bot.Brain.Plan is Planning.BuildBridgeStep b && b.Bridge is World.Highway h ? $"highway {h.StartX}->{h.EndX} y={h.Y} dir={h.Direction} frontier={h.Frontier(h.Direction)} work={h.WorkFrontier()}" : bot.Brain.Plan?.ToString())} {bot.Motor.Describe()}{(Main.GameUpdateCount % 600 == 0 ? $" abilities={bot.Motor.Abilities()}" : "")}");
 	}
 
 	public override void PostUpdateWorld()

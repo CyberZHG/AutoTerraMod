@@ -104,7 +104,7 @@ public static class Engagement
 		bool ranged = BotHands.IsProjectileWeapon(weapon);
 		bool bossNear = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossTruceRange) != null;
 		float reach = ranged ? ReflexFireRange : BotHands.MeleeReach(weapon) + ReflexMeleeSlack;
-		var target = NearestHostile(bot, reach, ranged, bossNear);
+		var target = NearestHostile(bot, reach, true, bossNear);
 		if (target == null)
 			return null;
 		bool close = !ranged || Vector2.Distance(bot.Center, target.Center) < CloseReflexRange;

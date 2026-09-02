@@ -278,7 +278,9 @@ public static class BossRituals
 	public static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
 
 	public static NPC NearestPillar(Vector2 from) =>
-		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => Vector2.Distance(npc.Center, from)).FirstOrDefault();
+		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault();
+
+	public static bool PillarsStanding() => Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type));
 
 	static int ShieldLeft(NPC pillar) => pillar.type switch
 	{
@@ -291,12 +293,14 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType || Main.npc.Any(npc => npc.active && npc.boss))
+		if (moonLord == null || Main.npc.Any(npc => npc.active && npc.boss) || NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
 			return null;
-		if (NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
-			return null;
-		bool encountered = Vector2.Distance(bot.Center, pillar.Center) < PillarZone && bot.Faction.Rally == null;
-		return BossCredit.HasDefeated(bot.Faction, moonLord) || encountered ? new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null) : null;
+		if (bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType)
+		{
+			BotDiagnostics.Log(bot, $"calling off the {Lang.GetNPCNameValue(bot.Faction.RallyBossType)} rally while the celestial pillars stand");
+			bot.Faction.Rally = null;
+		}
+		return new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null);
 	}
 
 	const uint SiegePatienceTicks = 5 * 3600;

@@ -733,6 +733,8 @@ public sealed class PickupTask : BotTask
 	}
 
 	const float FreshDropRadius = 16f * 8f;
+	const float LootTripRadius = 16f * 250f;
+	const float FarPickupPixels = 16f * 30f;
 	const float FallenStarPriority = 84f;
 	const float BossLootRadius = 16f * 50f;
 	const float BossLootPriority = 90f;
@@ -751,13 +753,16 @@ public sealed class PickupTask : BotTask
 			return fallenStar;
 		int nearest = -1;
 		var loot = Bosses.BossCredit.RecentLootPoint;
-		float nearestDistance = loot is Vector2 spot && Vector2.Distance(spot, Bot.Center) < BossLootRadius ? BossLootRadius * 2f : SearchRadius;
+		bool lootTrip = loot is Vector2 trip && Vector2.Distance(trip, Bot.Center) < LootTripRadius;
+		float nearestDistance = lootTrip ? float.MaxValue : SearchRadius;
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
 			if (!item.active)
 				continue;
 			float distance = Vector2.Distance(item.Center, Bot.Center);
+			if (lootTrip && distance >= SearchRadius && Vector2.Distance(item.Center, loot.Value) >= BossLootRadius)
+				continue;
 			if (distance >= nearestDistance || unreachable.Contains(i) || ItemReservations.IsReservedForOther(i, Bot) || Junk.IsAbandoned(i) || InLava(item) || Junk.IsUnwanted(Bot, item))
 				continue;
 			if (!Inventory.HasRoomFor(Avatar, item) && !Bot.Brain.PlannedItemTypes.Contains(item.type))
@@ -806,7 +811,17 @@ public sealed class PickupTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		Bot.Motor.MoveTo(Main.item[itemIndex].Center, 8f);
+		var spot = Main.item[itemIndex].Center;
+		if (Vector2.Distance(spot, Bot.Center) > FarPickupPixels)
+		{
+			if (!TravelOrTunnel(spot, 8f))
+			{
+				unreachable.Add(itemIndex);
+				IsFinished = true;
+			}
+			return;
+		}
+		Bot.Motor.MoveTo(spot, 8f);
 		if (Bot.Motor.HasArrived)
 			arrivedTicks++;
 		else
