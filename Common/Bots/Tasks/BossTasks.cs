@@ -475,21 +475,9 @@ public sealed class SummonTask : BotTask
 
 	bool BesiegePillar()
 	{
-		var pillar = BossRituals.NearestPillar(step.Place);
-		if (pillar == null || Vector2.Distance(pillar.Center, step.Place) > PillarReach)
+		if (PillarSiege.SiegedPillar(step.Place) is not NPC pillar)
 			return true;
-		Bot.Watchdog.RecordProgress();
-		if (!pillar.dontTakeDamage)
-		{
-			Engagement.Fight(Bot, pillar);
-			return false;
-		}
-		var guard = Main.npc.Where(npc => Engagement.IsHostileTarget(npc) && !Bot.IsIgnoring(npc) && Vector2.Distance(npc.Center, Bot.Center) < PillarGuardReach)
-			.OrderBy(npc => Vector2.DistanceSquared(npc.Center, Bot.Center)).FirstOrDefault();
-		if (guard != null)
-			Engagement.Fight(Bot, guard);
-		else
-			TravelOrTunnel(pillar.Bottom, PillarGuardReach * 0.25f);
+		PillarSiege.Tick(Bot, pillar, TravelOrTunnel);
 		return false;
 	}
 
@@ -764,6 +752,7 @@ public sealed class RallyTask : BotTask
 
 	Vector2? goal;
 	public const float SelfDefenseRadius = 16f * 10f;
+	const float SiegeJoinPixels = 16f * 70f;
 	const float RallyPriority = 93f;
 
 	public RallyTask(Bot bot) : base(bot) { }
@@ -852,6 +841,12 @@ public sealed class RallyTask : BotTask
 		LeaveOutpostIfBedside();
 		if (!AtArenaBed())
 			return;
+		if (Bot.Faction.RallyAssembled && Bot.Faction.RallyBossType == Terraria.ID.NPCID.MoonLordCore && PillarSiege.SiegedPillar(rally.point) is NPC sieged
+			&& Vector2.Distance(Bot.Center, rally.point) < SiegeJoinPixels)
+		{
+			PillarSiege.Tick(Bot, sieged, TravelOrTunnel);
+			return;
+		}
 		bool sees = Bot.Npc is NPC body && Collision.CanHitLine(body.position, body.width, body.height, target - new Vector2(8f), 16, 16);
 		bool close = sees && Vector2.Distance(Bot.Center, target) < CloseEnough;
 		if (close && (Bot.Motor.IsStalled || Bot.Motor.IsStuck))

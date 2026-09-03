@@ -318,7 +318,7 @@ public static class BossRituals
 			BotDiagnostics.Log(bot, $"calling off the {Lang.GetNPCNameValue(bot.Faction.RallyBossType)} rally while the celestial pillars stand");
 			bot.Faction.Rally = null;
 		}
-		return new SummonBossStep(moonLord, new PillarsTrigger(), pillar.Bottom, null);
+		return new SummonBossStep(moonLord, new PillarsTrigger(), Bots.Tasks.PillarSiege.StagingFor(pillar), null);
 	}
 
 	const uint SiegePatienceTicks = 5 * 3600;
@@ -380,7 +380,7 @@ public static class BossRituals
 	}
 
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
-		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, pillar.Bottom, null) : PlanStep.Blocked;
+		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, Bots.Tasks.PillarSiege.StagingFor(pillar), null) : PlanStep.Blocked;
 
 	static Point? KnownLandmark(Bot bot, Landmark landmark) => BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(landmark);
 
