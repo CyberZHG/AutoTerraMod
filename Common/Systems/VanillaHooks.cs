@@ -104,7 +104,7 @@ public sealed class VanillaHooks : ModSystem
 			return;
 		}
 		using (Perf.Measure(PerfSection.VanillaHooks))
-		using (AvatarPresence.Enter(hideSpectator: true))
+		using (AvatarPresence.Enter(hideSpectator: true, spawning: true))
 			orig();
 	}
 

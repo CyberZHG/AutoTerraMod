@@ -535,7 +535,7 @@ public sealed class BossGoal : ProgressionGoal
 
 	public override bool AppliesTo(Bot bot) => (Bosses.BossCredit.NextChallengeFor(bot.Faction) != null || Bosses.BossRituals.PillarsStanding()) && IsSummoner(bot);
 
-	public override bool IsUrgent(Bot bot) => Bosses.BossRituals.PillarsStanding() && IsSummoner(bot);
+	public override bool IsUrgent(Bot bot) => IsSummoner(bot) && Bosses.BossRituals.FightsPillars(bot);
 
 	public override bool IsMet(Bot bot) => Bosses.BossCredit.NextChallengeFor(bot.Faction) == null;
 

@@ -719,6 +719,11 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
 			{
+				if (parts[1] == "gear")
+				{
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe gear {bot.Name}: def={bot.Avatar.statDefense} life={bot.Avatar.statLifeMax2} armor=[{string.Join(", ", bot.Avatar.armor.Take(10).Where(item => !item.IsAir).Select(item => item.Name))}] weapon={bot.Hands.BestWeapon()?.Name} pick={bot.Hands.BestPickaxe?.pick}");
+					continue;
+				}
 				foreach (string name in parts[1].Split(','))
 				{
 					int item = ItemID.Search.GetId(name);

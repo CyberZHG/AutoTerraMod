@@ -38,13 +38,23 @@ public static class BossReadiness
 		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * mode.EnemyMaxLifeMultiplier;
 		if (Main.expertMode)
 			bossLife *= 1f + ExpertScalingPerExtraPlayer * Math.Max(0, fighters.Count - 1);
-		float bossDamage = sample.damage * mode.EnemyDamageMultiplier * challenge.ThreatMultiplier;
+		float bossDamage = Math.Max(sample.damage, BaseThreatDamage(challenge.BossType)) * mode.EnemyDamageMultiplier * challenge.ThreatMultiplier;
 		float requiredRatio = MathHelper.Lerp(CautiousRatio, BraveRatio, summoner.Personality.Courage);
 		float burstDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense)) * challenge.Exposure;
 		float expectedSeconds = burstDps > 0 ? Math.Min(bossLife / burstDps, MaxConsideredFightSeconds) : MaxConsideredFightSeconds;
 		float rawDps = fighters.Sum(bot => SustainedDamagePerSecond(bot, sample.defense, expectedSeconds)) * challenge.Exposure;
 		return new Setup(fighters, rawDps, bossLife, bossDamage, requiredRatio);
 	}
+
+	const int MoonLordThreatDamage = 120;
+	const int CultistThreatDamage = 100;
+
+	static int BaseThreatDamage(int bossType) => bossType switch
+	{
+		Terraria.ID.NPCID.MoonLordCore => MoonLordThreatDamage,
+		Terraria.ID.NPCID.CultistBoss => CultistThreatDamage,
+		_ => 0
+	};
 
 	public static ReadinessReport Evaluate(Faction faction, BossChallenge challenge, Bot summoner, IEnumerable<Bot> present = null)
 	{

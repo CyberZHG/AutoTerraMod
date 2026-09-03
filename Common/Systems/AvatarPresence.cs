@@ -12,15 +12,18 @@ public readonly struct AvatarPresence : IDisposable
 
 	AvatarPresence(bool entered) => this.entered = entered;
 
-	public static AvatarPresence Enter(bool hideSpectator = false)
+	public static AvatarPresence Enter(bool hideSpectator = false, bool spawning = false)
 	{
 		if (!BotWorldSystem.IsRunning)
 			return default;
 		if (depth++ == 0)
 		{
+			bool pillarsUp = spawning && Bosses.BossRituals.PillarsStanding();
 			foreach (var bot in BotWorldSystem.Bots)
 			{
 				bool alive = bot.IsAlive;
+				if (pillarsUp && alive && !Bosses.BossRituals.FightsPillars(bot) && Bosses.BossRituals.InPillarZone(bot.Center))
+					alive = false;
 				bot.Avatar.active = alive;
 				bot.Avatar.dead = !alive;
 			}

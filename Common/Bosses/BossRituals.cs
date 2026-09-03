@@ -280,6 +280,22 @@ public static class BossRituals
 	public static NPC NearestPillar(Vector2 from) =>
 		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault();
 
+	static readonly Dictionary<int, (uint at, bool ready)> pillarReadiness = new();
+	const uint PillarReadinessTicks = 600;
+
+	public static bool FightsPillars(Bot bot)
+	{
+		if (!PillarsStanding() || BossCatalog.ChallengeOf(NPCID.MoonLordCore) is not { } moonLord)
+			return false;
+		if (BossCredit.HasDefeated(bot.Faction, moonLord))
+			return true;
+		if (pillarReadiness.TryGetValue(bot.FactionId, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
+			return cached.ready;
+		bool ready = BossReadiness.Evaluate(bot.Faction, moonLord, bot).IsReady;
+		pillarReadiness[bot.FactionId] = (Main.GameUpdateCount, ready);
+		return ready;
+	}
+
 	public static bool PillarsStanding() => Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type));
 
 	static int ShieldLeft(NPC pillar) => pillar.type switch
@@ -293,7 +309,7 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || Main.npc.Any(npc => npc.active && npc.boss) || NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
+		if (moonLord == null || !FightsPillars(bot) || Main.npc.Any(npc => npc.active && npc.boss) || NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
 			return null;
 		if (bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType)
 		{
