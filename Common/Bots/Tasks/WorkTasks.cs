@@ -812,6 +812,8 @@ public sealed class PickupTask : BotTask
 			return;
 		}
 		var spot = Main.item[itemIndex].Center;
+		if (ItemID.Sets.ItemNoGravity[Main.item[itemIndex].type] && GroundBelow(spot) is Vector2 ground)
+			spot = ground;
 		if (Vector2.Distance(spot, Bot.Center) > FarPickupPixels)
 		{
 			if (!TravelOrTunnel(spot, 8f))
@@ -833,6 +835,18 @@ public sealed class PickupTask : BotTask
 	}
 
 	const int ArrivedGraceTicks = 60;
+	const int FloatGroundSearch = 18;
+
+	static Vector2? GroundBelow(Vector2 spot)
+	{
+		var tile = spot.ToTileCoordinates();
+		for (int y = tile.Y; y <= tile.Y + FloatGroundSearch; y++)
+		{
+			if (TileQuery.CanStandOn(tile.X, y + 1) && !TileQuery.IsSolid(tile.X, y))
+				return new Vector2(tile.X * 16f + 8f, y * 16f);
+		}
+		return null;
+	}
 	int arrivedTicks;
 
 	public override void Start()

@@ -289,10 +289,12 @@ public static class BossRituals
 			return false;
 		if (BossCredit.HasDefeated(bot.Faction, moonLord))
 			return true;
-		if (pillarReadiness.TryGetValue(bot.FactionId, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
+		if (pillarReadiness.TryGetValue(0, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
 			return cached.ready;
-		bool ready = BossReadiness.Evaluate(bot.Faction, moonLord, bot).IsReady;
-		pillarReadiness[bot.FactionId] = (Main.GameUpdateCount, ready);
+		var everyone = BotWorldSystem.Bots.Where(member => member.IsAlive).ToList();
+		bool ready = BossReadiness.Evaluate(bot.Faction, moonLord, bot, everyone).IsReady;
+		pillarReadiness[0] = (Main.GameUpdateCount, ready);
+		BotDiagnostics.Log(bot, $"pillar readiness of all {everyone.Count} bots together: {(ready ? "ready" : "not ready")}");
 		return ready;
 	}
 

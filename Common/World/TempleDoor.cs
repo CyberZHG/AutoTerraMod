@@ -161,8 +161,10 @@ public static class TempleDoor
 		if (Nearest(guide, here) is not Point start)
 			return null;
 		var at = start;
-		for (int step = 0; step < hop; step++)
+		for (int step = 0; step < hop * 2; step++)
 		{
+			if (step >= hop && TileQuery.CanStandOn(at.X, at.Y + 1))
+				return at;
 			int current = StepsAt(guide, at.X, at.Y);
 			if (current <= 0)
 				break;

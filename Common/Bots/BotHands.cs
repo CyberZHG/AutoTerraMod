@@ -1007,15 +1007,19 @@ public sealed class BotHands
 		return false;
 	}
 
+	const int FloatGrabSide = 16 * 2;
+	const int FloatGrabRise = 16 * 20;
+
 	public void CollectNearbyItems()
 	{
 		var npc = bot.Npc;
 		var grabArea = npc.Hitbox;
 		grabArea.Inflate(Player.defaultItemGrabRange, Player.defaultItemGrabRange);
+		var floatArea = new Rectangle(npc.Hitbox.X - FloatGrabSide, npc.Hitbox.Y - FloatGrabRise, npc.Hitbox.Width + FloatGrabSide * 2, npc.Hitbox.Height + FloatGrabRise);
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) || ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) || Junk.IsAbandoned(i))
+			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) && !(ItemID.Sets.ItemNoGravity[item.type] && floatArea.Intersects(item.Hitbox)) || ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) || Junk.IsAbandoned(i))
 				continue;
 			if (ItemID.Sets.IsAPickup[item.type])
 			{
