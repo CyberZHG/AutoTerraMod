@@ -724,6 +724,8 @@ public sealed class PickupTask : BotTask
 		Detail = item.Name;
 		if (item.type == ItemID.FallenStar)
 			return FallenStarPriority;
+		if (ItemID.Sets.IsAPickup[item.type])
+			return RestorePickupPriority;
 		if (Bosses.BossCredit.RecentLootPoint is Vector2 loot && Vector2.Distance(item.Center, loot) < BossLootRadius)
 			return BossLootPriority;
 		if ((item.timeSinceItemSpawned < FreshDropTicks || IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
@@ -733,6 +735,7 @@ public sealed class PickupTask : BotTask
 	}
 
 	const float FreshDropRadius = 16f * 8f;
+	const float RestorePickupPriority = 97f;
 	const float LootTripRadius = 16f * 250f;
 	const float FarPickupPixels = 16f * 30f;
 	const float FallenStarPriority = 84f;
@@ -751,6 +754,9 @@ public sealed class PickupTask : BotTask
 		int fallenStar = NearestVisibleFallenStar();
 		if (fallenStar >= 0)
 			return fallenStar;
+		int restore = NearestNeededPickup();
+		if (restore >= 0)
+			return restore;
 		int nearest = -1;
 		var loot = Bosses.BossCredit.RecentLootPoint;
 		bool lootTrip = loot is Vector2 trip && Vector2.Distance(trip, Bot.Center) < LootTripRadius;
@@ -772,6 +778,37 @@ public sealed class PickupTask : BotTask
 		}
 		if (nearest >= 0 && !Inventory.HasRoomFor(Avatar, Main.item[nearest]) && !Junk.MakeRoomFor(Bot, Main.item[nearest]))
 			return -1;
+		return nearest;
+	}
+
+	const float PickupHealthFraction = 0.7f;
+	const float PickupManaFraction = 0.5f;
+	const float RestoreRadius = 16f * 15f;
+
+	int NearestNeededPickup()
+	{
+		bool hurt = Avatar.statLife < Avatar.statLifeMax2 * PickupHealthFraction;
+		bool drained = Avatar.statMana < Avatar.statManaMax2 * PickupManaFraction;
+		if (!hurt && !drained)
+			return -1;
+		int nearest = -1;
+		float nearestDistance = RestoreRadius;
+		for (int i = 0; i < Main.maxItems; i++)
+		{
+			var item = Main.item[i];
+			if (!item.active || !ItemID.Sets.IsAPickup[item.type] || unreachable.Contains(i) || InLava(item))
+				continue;
+			bool heals = item.type is ItemID.Heart or ItemID.CandyApple or ItemID.CandyCane;
+			bool restoresMana = item.type is ItemID.Star or ItemID.SoulCake or ItemID.SugarPlum;
+			if (!(heals && hurt || restoresMana && drained))
+				continue;
+			float distance = Vector2.Distance(item.Center, Bot.Center);
+			if (distance < nearestDistance)
+			{
+				nearest = i;
+				nearestDistance = distance;
+			}
+		}
 		return nearest;
 	}
 
