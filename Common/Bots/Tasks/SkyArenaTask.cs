@@ -16,7 +16,7 @@ public sealed class SkyArenaTask : BotTask
 
 	public override void Tick()
 	{
-		if (SkyArena.For(Bot.Faction) is not { } arena || arena.NextGap() is not Microsoft.Xna.Framework.Point gap || !Bot.Hands.HasPlatform)
+		if (SkyArena.For(Bot.Faction) is not { } arena || !arena.RopeReady || arena.NextGap() is not Microsoft.Xna.Framework.Point gap || !Bot.Hands.HasPlatform)
 		{
 			IsFinished = true;
 			return;

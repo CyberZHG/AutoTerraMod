@@ -20,19 +20,18 @@ public static class PillarSiege
 	const float RetreatHealth = 0.45f;
 	const float ResumeHealth = 0.75f;
 
-	static readonly Dictionary<int, (Vector2 spot, uint at)> staging = new();
+	static readonly Dictionary<(int pillar, int side), (Vector2 spot, uint at)> staging = new();
 	static readonly HashSet<int> retreating = new();
 
-	public static Vector2 StagingFor(NPC pillar)
+	public static Vector2 StagingFor(NPC pillar, Factions.Faction faction)
 	{
-		if (staging.TryGetValue(pillar.whoAmI, out var known) && Main.GameUpdateCount - known.at < StagingTicks)
+		int side = faction.BaseCenter.X >= pillar.Center.X ? 1 : -1;
+		if (staging.TryGetValue((pillar.whoAmI, side), out var known) && Main.GameUpdateCount - known.at < StagingTicks)
 			return known.spot;
-		float basesX = BotWorldSystem.Factions.Select(faction => faction.BaseCenter.X).DefaultIfEmpty(pillar.Center.X).Average();
-		int side = basesX >= pillar.Center.X ? 1 : -1;
 		int x = Utils.Clamp((int)(pillar.Center.X / 16f) + side * StagingTiles, 50, Main.maxTilesX - 50);
 		var ground = new Point(x, Math.Max((int)(pillar.Bottom.Y / 16f) - 1, TileQuery.SurfaceY(x) - 1));
 		var spot = (Grounds.StandingSpotNear(ground) ?? ground).ToWorldCoordinates(8f, 0f);
-		staging[pillar.whoAmI] = (spot, Main.GameUpdateCount);
+		staging[(pillar.whoAmI, side)] = (spot, Main.GameUpdateCount);
 		return spot;
 	}
 
@@ -41,7 +40,7 @@ public static class PillarSiege
 
 	public static void Tick(Bot bot, NPC pillar, Func<Vector2, float, bool> travel)
 	{
-		var camp = StagingFor(pillar);
+		var camp = StagingFor(pillar, bot.Faction);
 		var avatar = bot.Avatar;
 		float health = avatar.statLife / (float)Math.Max(1, avatar.statLifeMax2);
 		if (health < RetreatHealth)

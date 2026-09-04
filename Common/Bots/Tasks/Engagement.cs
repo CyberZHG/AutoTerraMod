@@ -19,6 +19,19 @@ public static class Engagement
 	const float TooCloseForRanged = 16f * 3f;
 	const float BossStandoff = 12f;
 	const float JumpStrikeHeight = 16f * 6f;
+	const float AirStrikeRange = 16f * 30f;
+	const int AirborneClearance = 3;
+
+	static bool Airborne(NPC target)
+	{
+		var feet = target.Bottom.ToTileCoordinates();
+		for (int y = feet.Y; y <= feet.Y + AirborneClearance; y++)
+		{
+			if (World.TileQuery.CanStandOn(feet.X, y))
+				return false;
+		}
+		return true;
+	}
 	const float StandingTolerance = 8f;
 
 	public static bool IsHostileTarget(NPC npc) =>
@@ -220,6 +233,14 @@ public static class Engagement
 			int away = bot.Center.X >= target.Center.X ? 1 : -1;
 			bot.Motor.MoveTo(new Vector2(target.Center.X + away * BreatherDistance, bot.Center.Y), 16f * 3f);
 			DodgeCharge(bot, target);
+			return;
+		}
+		if (weapon != null && !BotHands.IsProjectileWeapon(weapon) && bot.Motor.CanFly && Airborne(target)
+			&& Vector2.Distance(bot.Center, target.Center) < AirStrikeRange && !Bosses.BossCatalog.IsBossPart(target))
+		{
+			bot.Motor.AirStrike(target.Center);
+			if (bot.Hands.InMeleeReach(target, weapon))
+				bot.Hands.Strike(target, weapon);
 			return;
 		}
 		if (!Bosses.BossCatalog.IsBossPart(target) && ChaseIsFutile(bot, target, weapon))

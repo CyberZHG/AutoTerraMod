@@ -278,7 +278,28 @@ public static class BossRituals
 	public static readonly int[] Pillars = { NPCID.LunarTowerSolar, NPCID.LunarTowerVortex, NPCID.LunarTowerNebula, NPCID.LunarTowerStardust };
 
 	public static NPC NearestPillar(Vector2 from) =>
-		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault();
+		Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(npc => Vector2.DistanceSquared(npc.Center, from)).FirstOrDefault();
+
+	const float HomePillarRange = 16f * 250f;
+	static int sharedFocus = -1;
+	static readonly Dictionary<int, int> homeFocus = new();
+
+	static bool StandingPillar(int index) => index >= 0 && index < Main.maxNPCs && Main.npc[index] is { active: true } npc && Pillars.Contains(npc.type);
+
+	public static NPC FocusPillar(Factions.Faction faction)
+	{
+		if (homeFocus.TryGetValue(faction.Id, out int home) && StandingPillar(home) && Vector2.Distance(Main.npc[home].Center, faction.BaseCenter) < HomePillarRange)
+			return Main.npc[home];
+		if (NearestPillar(faction.BaseCenter) is NPC near && Vector2.Distance(near.Center, faction.BaseCenter) < HomePillarRange)
+		{
+			homeFocus[faction.Id] = near.whoAmI;
+			return near;
+		}
+		homeFocus.Remove(faction.Id);
+		if (!StandingPillar(sharedFocus))
+			sharedFocus = Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault()?.whoAmI ?? -1;
+		return StandingPillar(sharedFocus) ? Main.npc[sharedFocus] : null;
+	}
 
 	static readonly Dictionary<int, (uint at, bool ready)> pillarReadiness = new();
 	const uint PillarReadinessTicks = 600;
@@ -311,14 +332,14 @@ public static class BossRituals
 	public static PlanStep LeftoverPillars(Bot bot)
 	{
 		var moonLord = BossCatalog.ChallengeOf(NPCID.MoonLordCore);
-		if (moonLord == null || !FightsPillars(bot) || Main.npc.Any(npc => npc.active && npc.boss) || NearestPillar(bot.Center) is not NPC pillar || SiegeStalled(bot, pillar))
+		if (moonLord == null || !FightsPillars(bot) || Main.npc.Any(npc => npc.active && npc.boss) || FocusPillar(bot.Faction) is not NPC pillar || SiegeStalled(bot, pillar))
 			return null;
 		if (bot.Faction.Rally != null && bot.Faction.RallyBossType != moonLord.BossType)
 		{
 			BotDiagnostics.Log(bot, $"calling off the {Lang.GetNPCNameValue(bot.Faction.RallyBossType)} rally while the celestial pillars stand");
 			bot.Faction.Rally = null;
 		}
-		return new SummonBossStep(moonLord, new PillarsTrigger(), Bots.Tasks.PillarSiege.StagingFor(pillar), null);
+		return new SummonBossStep(moonLord, new PillarsTrigger(), Bots.Tasks.PillarSiege.StagingFor(pillar, bot.Faction), null);
 	}
 
 	const uint SiegePatienceTicks = 5 * 3600;
@@ -380,7 +401,7 @@ public static class BossRituals
 	}
 
 	static PlanStep PlanPillars(Bot bot, BossChallenge challenge, PillarsTrigger trigger) =>
-		NearestPillar(bot.Center) is NPC pillar ? new SummonBossStep(challenge, trigger, Bots.Tasks.PillarSiege.StagingFor(pillar), null) : PlanStep.Blocked;
+		FocusPillar(bot.Faction) is NPC pillar ? new SummonBossStep(challenge, trigger, Bots.Tasks.PillarSiege.StagingFor(pillar, bot.Faction), null) : PlanStep.Blocked;
 
 	static Point? KnownLandmark(Bot bot, Landmark landmark) => BotWorldSystem.KnowledgeOf(bot.Faction).LandmarkOf(landmark);
 

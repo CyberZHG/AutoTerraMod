@@ -84,7 +84,7 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 		return true;
 	}
 
-	public bool DeckBuilt(int x) => x == CenterX || TileQuery.IsPlatform(x, DeckRow);
+	public bool DeckBuilt(int x) => x == CenterX ? TileQuery.HasTile(new Point(x, DeckRow)) : TileQuery.IsPlatform(x, DeckRow);
 
 	public Point? NextGap()
 	{

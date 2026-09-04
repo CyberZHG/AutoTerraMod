@@ -559,6 +559,7 @@ public abstract class BotTask
 	}
 
 	const int HighwayTripTiles = 200;
+	const int FarHighwayTripTiles = 300;
 	const int HighwayWorthTiles = 100;
 	const int HighwayEntryReach = 100;
 	const int HighwaySurfaceDepth = 60;
@@ -577,7 +578,7 @@ public abstract class BotTask
 		if (goal.Y >= Main.UnderworldLayer && here.Y < Main.UnderworldLayer && TravelShaft is { IsComplete: true })
 			return null;
 		int baseX = Bot.Faction.BaseTile.X;
-		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0;
+		bool bossSide = (here.X - baseX) * System.Math.Sign(goal.X - baseX) >= 0 || System.Math.Abs(goal.X - here.X) > FarHighwayTripTiles;
 		int tripLow = System.Math.Min(here.X, goal.X), tripHigh = System.Math.Max(here.X, goal.X);
 		NoteLeftRoad(here);
 		Highway best = null;

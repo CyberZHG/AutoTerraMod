@@ -290,7 +290,19 @@ public sealed class BotMotor
 		int moveDirection = 0;
 		bool wantsJump = false;
 		int jumpHoldTicks = JumpHoldTicks;
-		if (ClimbingStraightUp)
+		if (airTarget is Vector2 aim && CanFly)
+		{
+			var gap = aim - npc.Center;
+			moveDirection = Math.Abs(gap.X) > AirStrikeSlack ? Math.Sign(gap.X) : 0;
+			if (gap.Y < -AirStrikeSlack)
+			{
+				RequestFlight(AirStrikeLiftTicks);
+				wantsJump = true;
+			}
+			HasArrived = gap.Length() < AirStrikeSlack * 2f;
+			TrackProgress(npc);
+		}
+		else if (ClimbingStraightUp)
 			ClimbUpStep(npc, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else if (destination is Vector2 tunnelGoal && Tunneling)
 			TunnelStep(npc, tunnelGoal, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
@@ -321,6 +333,7 @@ public sealed class BotMotor
 				TileToDig = ceiling;
 		}
 
+		airTarget = null;
 		Run(npc, moveDirection);
 		Jump(npc, wantsJump, jumpHoldTicks);
 		if (flightTicks > 0)
@@ -1374,6 +1387,12 @@ public sealed class BotMotor
 	public bool CanFly => FlightTicks > 0;
 
 	public void RequestFlight(int ticks) => flightTicks = Math.Max(flightTicks, ticks);
+
+	Vector2? airTarget;
+	const float AirStrikeSlack = 12f;
+	const int AirStrikeLiftTicks = 4;
+
+	public void AirStrike(Vector2 point) => airTarget = point;
 
 	bool extraJumpReady;
 	bool sprinting;

@@ -719,6 +719,13 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
 			{
+				if (parts[1] == "banners")
+				{
+					var banners = Building.BaseStorage.Chests(bot.Faction).SelectMany(chest => chest.item).Concat(bot.Avatar.inventory).Where(item => item != null && !item.IsAir && item.createTile == TileID.Banners)
+						.GroupBy(item => item.Name).Select(group => $"{group.Key}x{group.Sum(item => item.stack)}");
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe banners {bot.Faction.Name}: {string.Join(", ", banners)}");
+					continue;
+				}
 				if (parts[1] == "gear")
 				{
 					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe gear {bot.Name}: def={bot.Avatar.statDefense} life={bot.Avatar.statLifeMax2} armor=[{string.Join(", ", bot.Avatar.armor.Take(10).Where(item => !item.IsAir).Select(item => item.Name))}] weapon={bot.Hands.BestWeapon()?.Name} pick={bot.Hands.BestPickaxe?.pick}");
