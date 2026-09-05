@@ -284,13 +284,28 @@ public static class BossRituals
 	static int sharedFocus = -1;
 	static readonly Dictionary<int, int> homeFocus = new();
 
+	static readonly Dictionary<int, (uint at, bool ready)> homeReadiness = new();
+
+	static bool HomeGroupReady(NPC pillar)
+	{
+		if (homeReadiness.TryGetValue(pillar.whoAmI, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
+			return cached.ready;
+		var group = BotWorldSystem.Bots.Where(bot => bot.IsAlive && Vector2.Distance(bot.Faction.BaseCenter, pillar.Center) < HomePillarRange).ToList();
+		bool ready = group.Count > 0 && BossCatalog.ChallengeOf(NPCID.MoonLordCore) is { } moonLord && BossReadiness.Evaluate(group[0].Faction, moonLord, group[0], group).IsReady;
+		homeReadiness[pillar.whoAmI] = (Main.GameUpdateCount, ready);
+		return ready;
+	}
+
+	public static bool Targets(Bot bot, Vector2 at) =>
+		FightsPillars(bot) && FocusPillar(bot.Faction) is NPC focus && Vector2.Distance(focus.Center, at) < PillarZone + PillarZoneSlack;
+
 	static bool StandingPillar(int index) => index >= 0 && index < Main.maxNPCs && Main.npc[index] is { active: true } npc && Pillars.Contains(npc.type);
 
 	public static NPC FocusPillar(Factions.Faction faction)
 	{
-		if (homeFocus.TryGetValue(faction.Id, out int home) && StandingPillar(home) && Vector2.Distance(Main.npc[home].Center, faction.BaseCenter) < HomePillarRange)
+		if (homeFocus.TryGetValue(faction.Id, out int home) && StandingPillar(home) && Vector2.Distance(Main.npc[home].Center, faction.BaseCenter) < HomePillarRange && HomeGroupReady(Main.npc[home]))
 			return Main.npc[home];
-		if (NearestPillar(faction.BaseCenter) is NPC near && Vector2.Distance(near.Center, faction.BaseCenter) < HomePillarRange)
+		if (NearestPillar(faction.BaseCenter) is NPC near && Vector2.Distance(near.Center, faction.BaseCenter) < HomePillarRange && HomeGroupReady(near))
 		{
 			homeFocus[faction.Id] = near.whoAmI;
 			return near;

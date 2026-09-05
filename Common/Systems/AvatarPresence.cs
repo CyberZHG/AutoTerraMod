@@ -22,7 +22,7 @@ public readonly struct AvatarPresence : IDisposable
 			foreach (var bot in BotWorldSystem.Bots)
 			{
 				bool alive = bot.IsAlive;
-				if (pillarsUp && alive && !Bosses.BossRituals.FightsPillars(bot) && Bosses.BossRituals.InPillarZone(bot.Center))
+				if (pillarsUp && alive && Bosses.BossRituals.InPillarZone(bot.Center) && !Bosses.BossRituals.Targets(bot, bot.Center))
 					alive = false;
 				bot.Avatar.active = alive;
 				bot.Avatar.dead = !alive;
