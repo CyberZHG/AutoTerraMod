@@ -314,6 +314,8 @@ public abstract class BotTask
 
 	bool ShaftShortcut(Vector2 target)
 	{
+		if (Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()))
+			return false;
 		if (TravelShaft is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish || shaft.FirstImpassableRow() - shaft.TopY < ShaftUsefulDepth)
 			return false;
 		float centerX = (shaft.X + 1) * 16f;
@@ -682,7 +684,7 @@ public abstract class BotTask
 
 	bool DeepDetour(Vector2 target, float radius)
 	{
-		if (TravelShaft is not { } shaft)
+		if (TravelShaft is not { } shaft || Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()))
 			return false;
 		var goal = target.ToTileCoordinates();
 		if (goal.Y < shaft.TopY + DeepDetourRows)

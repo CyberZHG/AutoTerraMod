@@ -312,7 +312,11 @@ public static class BossRituals
 		}
 		homeFocus.Remove(faction.Id);
 		if (!StandingPillar(sharedFocus))
-			sharedFocus = Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault()?.whoAmI ?? -1;
+		{
+			var besieged = homeFocus.Values.Where(StandingPillar).GroupBy(index => index).OrderByDescending(group => group.Count()).Select(group => group.Key).FirstOrDefault(-1);
+			sharedFocus = besieged >= 0 ? besieged
+				: Main.npc.Where(npc => npc.active && Pillars.Contains(npc.type)).OrderBy(ShieldLeft).ThenBy(npc => npc.life).ThenBy(npc => npc.whoAmI).FirstOrDefault()?.whoAmI ?? -1;
+		}
 		return StandingPillar(sharedFocus) ? Main.npc[sharedFocus] : null;
 	}
 
