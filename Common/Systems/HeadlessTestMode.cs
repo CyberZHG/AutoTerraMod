@@ -719,6 +719,17 @@ public sealed class HeadlessTestMode : ModSystem
 		{
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
 			{
+				if (parts[1].StartsWith("path"))
+				{
+					var nums = parts[1].Substring(4).Split('/').Select(int.Parse).ToArray();
+					var abilities = bot.Motor.Abilities();
+					var result = Navigation.PathFinder.Find(new Microsoft.Xna.Framework.Point(nums[0], nums[1]), new Microsoft.Xna.Framework.Point(nums[2], nums[3]), 1, abilities);
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe path {bot.Name}: reaches={result.ReachesGoal} nodes={result.Nodes.Count} {string.Join(" ", result.Nodes.Take(30).Select(node => $"{node.Feet.X},{node.Feet.Y}:{node.Arrival}"))} abilities={abilities}");
+					var bare = abilities with { FlyRise = 0, HookReach = 0, LeapReach = 6, MaxFall = 42 };
+					var plain = Navigation.PathFinder.Find(new Microsoft.Xna.Framework.Point(nums[0], nums[1]), new Microsoft.Xna.Framework.Point(nums[2], nums[3]), 1, bare);
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe path {bot.Name} bare: reaches={plain.ReachesGoal} nodes={plain.Nodes.Count}");
+					continue;
+				}
 				if (parts[1] == "banners")
 				{
 					var banners = Building.BaseStorage.Chests(bot.Faction).SelectMany(chest => chest.item).Concat(bot.Avatar.inventory).Where(item => item != null && !item.IsAir && item.createTile == TileID.Banners)

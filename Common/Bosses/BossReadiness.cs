@@ -46,7 +46,7 @@ public static class BossReadiness
 		return new Setup(fighters, rawDps, bossLife, bossDamage, requiredRatio);
 	}
 
-	const int MoonLordThreatDamage = 120;
+	const int MoonLordThreatDamage = 160;
 	const int CultistThreatDamage = 100;
 
 	static int BaseThreatDamage(int bossType) => bossType switch
