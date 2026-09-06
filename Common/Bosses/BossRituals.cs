@@ -331,7 +331,7 @@ public static class BossRituals
 			return true;
 		if (pillarReadiness.TryGetValue(0, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
 			return cached.ready;
-		var everyone = BotWorldSystem.Bots.Where(member => member.IsAlive).ToList();
+		var everyone = BotWorldSystem.Bots.ToList();
 		bool ready = BossReadiness.Evaluate(bot.Faction, moonLord, bot, everyone).IsReady;
 		pillarReadiness[0] = (Main.GameUpdateCount, ready);
 		BotDiagnostics.Log(bot, $"pillar readiness of all {everyone.Count} bots together: {(ready ? "ready" : "not ready")}");
