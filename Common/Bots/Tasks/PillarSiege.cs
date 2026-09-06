@@ -11,14 +11,19 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public static class PillarSiege
 {
 	const int StagingTiles = 35;
+	const int StagingNearest = 20;
+	const int StagingFarthest = 60;
+	const int StagingRise = 25;
 	const uint StagingTicks = 1800;
 	const float LeashRadius = 16f * 30f;
 	const float ChaseRadius = 16f * 40f;
 	const float CloseThreatRadius = 16f * 6f;
 	const float HoldRadius = 16f * 4f;
-	const float SiegeReach = 16f * 90f;
-	const float RetreatHealth = 0.45f;
-	const float ResumeHealth = 0.75f;
+	const float SiegeReach = 16f * 120f;
+	const float RetreatHealth = 0.35f;
+	const float ResumeHealth = 0.6f;
+	const float RetreatReach = 16f * 60f;
+	const uint SiegeLogTicks = 600;
 
 	static readonly Dictionary<(int pillar, int side), (Vector2 spot, uint at)> staging = new();
 	static readonly HashSet<int> retreating = new();
@@ -28,26 +33,41 @@ public static class PillarSiege
 		int side = faction.BaseCenter.X >= pillar.Center.X ? 1 : -1;
 		if (staging.TryGetValue((pillar.whoAmI, side), out var known) && Main.GameUpdateCount - known.at < StagingTicks)
 			return known.spot;
-		int x = Utils.Clamp((int)(pillar.Center.X / 16f) + side * StagingTiles, 50, Main.maxTilesX - 50);
-		var ground = new Point(x, Math.Max((int)(pillar.Bottom.Y / 16f) - 1, TileQuery.SurfaceY(x) - 1));
-		var spot = (Grounds.StandingSpotNear(ground) ?? ground).ToWorldCoordinates(8f, 0f);
+		int pillarX = (int)(pillar.Center.X / 16f), pillarFloor = (int)(pillar.Bottom.Y / 16f);
+		Point? ground = null;
+		foreach (int sign in new[] { side, -side })
+		{
+			for (int offset = StagingNearest; offset <= StagingFarthest && ground == null; offset++)
+			{
+				int x = Utils.Clamp(pillarX + sign * offset, 50, Main.maxTilesX - 50);
+				int y = TileQuery.SurfaceY(x) - 1;
+				if (Math.Abs(y - pillarFloor) <= StagingRise)
+					ground = new Point(x, y);
+			}
+			if (ground != null)
+				break;
+		}
+		var fallback = new Point(Utils.Clamp(pillarX + side * StagingTiles, 50, Main.maxTilesX - 50), pillarFloor - 1);
+		var spot = (Grounds.StandingSpotNear(ground ?? fallback) ?? ground ?? fallback).ToWorldCoordinates(8f, 0f);
 		staging[(pillar.whoAmI, side)] = (spot, Main.GameUpdateCount);
 		return spot;
 	}
 
 	public static NPC SiegedPillar(Vector2 near) =>
-		Bosses.BossRituals.NearestPillar(near) is NPC pillar && Vector2.Distance(pillar.Center, near) < SiegeReach ? pillar : null;
+		Bosses.BossRituals.NearestPillar(near) is NPC pillar && Math.Abs(pillar.Center.X - near.X) < SiegeReach ? pillar : null;
 
 	public static void Tick(Bot bot, NPC pillar, Func<Vector2, float, bool> travel)
 	{
 		var camp = StagingFor(pillar, bot.Faction);
 		var avatar = bot.Avatar;
 		float health = avatar.statLife / (float)Math.Max(1, avatar.statLifeMax2);
-		if (health < RetreatHealth)
-			retreating.Add(bot.Id);
-		else if (health >= ResumeHealth)
+		if (Vector2.Distance(bot.Center, camp) > RetreatReach || health >= ResumeHealth)
 			retreating.Remove(bot.Id);
+		else if (health < RetreatHealth)
+			retreating.Add(bot.Id);
 		bot.Watchdog.RecordProgress();
+		if ((Main.GameUpdateCount + (uint)bot.Id * 37) % SiegeLogTicks == 0)
+			BotDiagnostics.Log(bot, $"siege {pillar.TypeName}: shield={(pillar.dontTakeDamage ? "up" : "down")} life={pillar.life} distance={Vector2.Distance(bot.Center, pillar.Center) / 16f:0} retreating={retreating.Contains(bot.Id)} health={health:0.00} weapon={bot.Hands.BestWeapon()?.Name}");
 		if (retreating.Contains(bot.Id))
 		{
 			if (Engagement.NearestHostile(bot, CloseThreatRadius, true) is NPC close)

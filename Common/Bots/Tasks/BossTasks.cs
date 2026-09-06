@@ -96,6 +96,12 @@ public sealed class SummonTask : BotTask
 		if (!Assembled())
 			return;
 		InviteGuests();
+		if (step.Trigger is PillarsTrigger)
+		{
+			if (BesiegePillar())
+				IsFinished = true;
+			return;
+		}
 		if (!AtArenaBed())
 			return;
 		if (!ReachedPlace())
@@ -838,15 +844,15 @@ public sealed class RallyTask : BotTask
 		if (goal is Vector2 kept && Vector2.Distance(kept, target) < LeaderDriftPixels)
 			target = kept;
 		goal = target;
-		LeaveOutpostIfBedside();
-		if (!AtArenaBed())
-			return;
 		if (Bot.Faction.RallyAssembled && Bot.Faction.RallyBossType == Terraria.ID.NPCID.MoonLordCore && PillarSiege.SiegedPillar(rally.point) is NPC sieged
 			&& Vector2.Distance(Bot.Center, rally.point) < SiegeJoinPixels)
 		{
 			PillarSiege.Tick(Bot, sieged, TravelOrTunnel);
 			return;
 		}
+		LeaveOutpostIfBedside();
+		if (!AtArenaBed())
+			return;
 		bool sees = Bot.Npc is NPC body && Collision.CanHitLine(body.position, body.width, body.height, target - new Vector2(8f), 16, 16);
 		bool close = sees && Vector2.Distance(Bot.Center, target) < CloseEnough;
 		if (close && (Bot.Motor.IsStalled || Bot.Motor.IsStuck))
