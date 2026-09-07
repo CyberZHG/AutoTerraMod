@@ -24,6 +24,7 @@ public static class PillarSiege
 	const float ResumeHealth = 0.6f;
 	const float RetreatReach = 16f * 60f;
 	const uint SiegeLogTicks = 600;
+	const float ApproachFirstPixels = 16f * 50f;
 
 	static readonly Dictionary<(int pillar, int side), (Vector2 spot, uint at)> staging = new();
 	static readonly HashSet<int> retreating = new();
@@ -72,6 +73,14 @@ public static class PillarSiege
 		{
 			if (Engagement.NearestHostile(bot, CloseThreatRadius, true) is NPC close)
 				Engagement.Fight(bot, close);
+			else
+				travel(camp, HoldRadius);
+			return;
+		}
+		if (Vector2.Distance(bot.Center, camp) > ApproachFirstPixels && Vector2.Distance(bot.Center, pillar.Center) > ApproachFirstPixels)
+		{
+			if (Engagement.NearestHostile(bot, CloseThreatRadius, true) is NPC blocker)
+				Engagement.Fight(bot, blocker);
 			else
 				travel(camp, HoldRadius);
 			return;
