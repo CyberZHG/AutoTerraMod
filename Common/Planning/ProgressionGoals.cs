@@ -669,6 +669,62 @@ public sealed class BossSupportGoal : ProgressionGoal
 	}
 }
 
+public sealed class FragmentGiftGoal : ProgressionGoal
+{
+	const int SigilShare = 20;
+	const int KeepForSelf = 20;
+
+	static readonly int[] Fragments = { ItemID.FragmentSolar, ItemID.FragmentVortex, ItemID.FragmentNebula, ItemID.FragmentStardust };
+
+	public override string Describe() => "FragmentGift";
+
+	public override bool AppliesTo(Bot bot) => Gift(bot) != null;
+
+	public override bool IsMet(Bot bot) => Gift(bot) == null;
+
+	static (Bot summoner, int fragment)? Gift(Bot bot)
+	{
+		if (BotWorldSystem.Relation == Config.FactionRelation.War || !Terraria.NPC.downedAncientCultist || BossGoal.IsSummoner(bot)
+			|| BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive && !BossGoal.IsSummoner(member)).MinBy(member => member.Id) != bot)
+			return null;
+		foreach (var faction in BotWorldSystem.Factions)
+		{
+			if (faction == bot.Faction || !WantsMoonLord(faction)
+				|| BotWorldSystem.Bots.FirstOrDefault(member => member.FactionId == faction.Id && member.IsAlive && BossGoal.IsSummoner(member)) is not { } summoner
+				|| !HasManipulator(faction, summoner))
+				continue;
+			foreach (int fragment in Fragments)
+			{
+				if (Held(faction, summoner, fragment) >= SigilShare)
+					continue;
+				int ours = BaseStorage.Count(bot.Faction, fragment) + Inventory.Count(bot.Avatar, fragment);
+				if (ours >= SigilShare + KeepForSelf)
+					return (summoner, fragment);
+			}
+		}
+		return null;
+	}
+
+	static bool WantsMoonLord(Factions.Faction faction) =>
+		Bosses.BossCredit.NextChallengeFor(faction)?.BossType == NPCID.MoonLordCore || faction.WantsRefight(NPCID.MoonLordCore);
+
+	static bool HasManipulator(Factions.Faction faction, Bot summoner) =>
+		BaseStorage.Count(faction, ItemID.LunarCraftingStation) > 0 || Inventory.Count(summoner.Avatar, ItemID.LunarCraftingStation) > 0 || Stations.BaseHas(faction, TileID.LunarCraftingStation);
+
+	static int Held(Factions.Faction faction, Bot summoner, int fragment) =>
+		BaseStorage.Count(faction, fragment) + Inventory.Count(summoner.Avatar, fragment);
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Gift(bot) is not var (summoner, fragment))
+			return PlanStep.Idle;
+		int held = Inventory.Count(bot.Avatar, fragment);
+		if (held < SigilShare)
+			return new WithdrawStep(fragment, SigilShare - held);
+		return new DeliverStep(fragment, summoner.Id, 0, HandOver: true);
+	}
+}
+
 public sealed class RefightGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -1802,6 +1858,7 @@ public static class ProgressionGoals
 			new RallyRouteGoal(),
 			new BossGoal(),
 			new BossSupportGoal(),
+			new FragmentGiftGoal(),
 			new ArenaOutpostGoal(),
 			new RefightGoal(gearOnly: true),
 			new HellevatorGoal(),
