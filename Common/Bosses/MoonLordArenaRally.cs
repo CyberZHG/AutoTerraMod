@@ -17,7 +17,7 @@ public sealed class MoonLordArenaRally : ModSystem
 			return;
 		foreach (var faction in BotWorldSystem.Factions)
 		{
-			if (SkyArena.For(faction) is not { IsComplete: true } arena)
+			if (SkyArena.For(faction) is not { Usable: true } arena)
 				continue;
 			var leader = BotWorldSystem.Bots.FirstOrDefault(bot => bot.FactionId == faction.Id && bot.IsAlive);
 			if (leader == null)

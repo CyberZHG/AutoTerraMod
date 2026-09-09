@@ -65,6 +65,7 @@ public sealed class Bot
 	public int RespawnTicks { get; set; }
 	public Vector2? SavedFeetPosition { get; set; }
 	public Point? OutpostBed { get; set; }
+	public Vector2? DeathPosition { get; set; }
 
 	public uint LastRecallAt { get; set; }
 	public uint BiomeHuntAt { get; set; }
@@ -146,6 +147,7 @@ public sealed class Bot
 		DropHalfCoins(npc.Center);
 		Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.BotDied", Name, Faction.Name), Faction.Color);
 		RespawnTicks = BotVitals.RespawnDelay(npc.Center);
+		DeathPosition = npc.Center;
 		Vitals.OnDeath();
 		npc.active = false;
 		NpcIndex = -1;

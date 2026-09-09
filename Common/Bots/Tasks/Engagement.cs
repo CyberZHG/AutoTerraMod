@@ -209,7 +209,7 @@ public static class Engagement
 		if (Bosses.BossCatalog.IsBossPart(target) && !CatchesBreath(bot) && bot.Hands.BestWeapon() is Item held
 			&& NearestMinion(bot, BotHands.IsProjectileWeapon(held) ? MinionThreat : MeleeMinionThreat) is NPC minion)
 			target = minion;
-		var approach = Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
+		var approach = Bosses.MoonLordFoothold.IsPart(target) ? Bosses.MoonLordFoothold.For(bot, target) : Bosses.BossCatalog.IsBossPart(target) ? target.Bottom : target.Center;
 		var weapon = bot.Hands.BestWeapon(target);
 		if (Bosses.BossCatalog.IsBossPart(target) && Bosses.BossCatalog.ChallengeOf(target.type) is { Arena: World.Landmark arena }
 			&& !Bosses.BossChallenge.InArena(bot.Avatar, arena) && bot.Faction.ArenaPoint is Vector2 arenaPoint
@@ -286,7 +286,7 @@ public static class Engagement
 		}
 		if (Bosses.BossCatalog.IsBossPart(target))
 		{
-			bot.Motor.MoveTo(BossStandingSpot(body, target, weapon), StandingTolerance);
+			bot.Motor.MoveTo(Bosses.MoonLordFoothold.IsPart(target) ? approach : BossStandingSpot(body, target, weapon), StandingTolerance);
 			bool overhead = target.Bottom.Y < body.Top.Y && target.Bottom.Y > body.Top.Y - JumpStrikeHeight
 				&& Math.Abs(target.Center.X - body.Center.X) < target.width / 2f + BotHands.MeleeReach(weapon);
 			if (overhead)
@@ -299,17 +299,23 @@ public static class Engagement
 
 	const float MinMeleeGap = 6f;
 	const float ArenaSettledFactor = 1.5f;
-	const float RangedThreatDistance = 16f * 10f;
 
 	static Item PreferredAgainst(Bot bot, NPC target, Item weapon)
 	{
 		if (BotHands.IsProjectileWeapon(weapon) || bot.Personality.Style is not (CombatStyle.Melee or CombatStyle.Summon))
 			return weapon;
-		bool rangedThreat = target.noGravity || Vector2.Distance(bot.Center, target.Center) > RangedThreatDistance;
-		if (!rangedThreat)
+		var ranged = bot.Hands.BestRangedOption(bot.Hands.BestMagicWeapon());
+		if (ranged == null || bot.Hands.RawDps(ranged) < bot.Hands.RawDps(weapon) * MinRangedShare)
 			return weapon;
-		return bot.Hands.BestMagicWeapon() ?? bot.Hands.BestProjectileWeapon() ?? weapon;
+		float reach = BotHands.MeleeReach(weapon) + Math.Max(target.width, target.height) / 2f + RangedSwitchSlack;
+		bool hurt = bot.Avatar.statLife < bot.Avatar.statLifeMax2 * RangedSwitchHealth;
+		return target.noGravity || hurt || Vector2.Distance(bot.Center, target.Center) > reach ? ranged : weapon;
 	}
+
+	const float MinRangedShare = 0.35f;
+	const float RangedSwitchSlack = 16f * 3f;
+	const float RangedSwitchHealth = 0.5f;
+
 	const float MeleeStandoff = 0.6f;
 	const float BackOffStep = 48f;
 
@@ -466,6 +472,14 @@ public static class Engagement
 		else if (health >= RejoinHealthFraction)
 			catchingBreath.Remove(bot.Id);
 		return catchingBreath.Contains(bot.Id);
+	}
+
+	public static void ShootIfClear(Bot bot, NPC target)
+	{
+		if (!CanShootFromHere(bot, target))
+			return;
+		bot.Motor.Face(target.Center);
+		bot.Hands.Fire(target, bot.Hands.BestWeapon(target));
 	}
 
 	static bool CanShootFromHere(Bot bot, NPC target)

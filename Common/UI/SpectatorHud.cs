@@ -233,7 +233,7 @@ public sealed class SpectatorHud : ModSystem
 			int bestPick = members.Select(bot => Equipment.BestPower(bot.Avatar, GearKind.Pickaxe)).DefaultIfEmpty(0).Max();
 			int built = faction.Settlement?.Structures.Count(structure => Building.HouseInspector.IsComplete(faction, structure)) ?? 0;
 			int planned = faction.Settlement?.Structures.Count ?? 0;
-			string house = faction.Settlement == null || built >= planned ? "" : Text("UI.SettlementProgress", built, planned, Text($"Roofs.{faction.HouseDesign.Roof}"));
+			string house = faction.Settlement == null || built >= planned ? "" : Text("UI.SettlementProgress", built, planned);
 			string bosses = Text("UI.FactionBosses", Bosses.BossCredit.DefeatedCount(faction), bossTotal);
 			lines.Add((Text("UI.FactionLine", faction.Name, bestPick, house, bosses), faction.Color));
 			var challenge = Bosses.BossCredit.NextChallengeFor(faction);

@@ -104,6 +104,19 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 
 	public bool IsComplete => RopeReady && NextGap() == null;
 
+	public bool Usable => RopeReady && BuiltColumns() >= HalfLength;
+
+	int BuiltColumns()
+	{
+		int built = 0;
+		for (int x = Left; x <= Right; x++)
+		{
+			if (DeckBuilt(x))
+				built++;
+		}
+		return built;
+	}
+
 	public bool Contains(Point tile) =>
 		tile.X >= Left - FightSideSlack && tile.X <= Right + FightSideSlack && tile.Y >= DeckRow - FightAbove && tile.Y <= DeckRow + FightBelow;
 

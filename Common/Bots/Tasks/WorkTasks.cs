@@ -848,11 +848,12 @@ public sealed class PickupTask : BotTask
 			IsFinished = true;
 			return;
 		}
-		var spot = Main.item[itemIndex].Center;
-		if (ItemID.Sets.ItemNoGravity[Main.item[itemIndex].type] && GroundBelow(spot) is Vector2 ground)
-			spot = ground;
+		var item = Main.item[itemIndex];
+		Vector2? ground = ItemID.Sets.ItemNoGravity[item.type] ? GroundBelow(item.Center) : null;
+		var spot = ground ?? item.Center;
 		if (Vector2.Distance(spot, Bot.Center) > FarPickupPixels)
 		{
+			Bot.Motor.ClimbingStraightUp = false;
 			if (!TravelOrTunnel(spot, 8f))
 			{
 				unreachable.Add(itemIndex);
@@ -860,6 +861,9 @@ public sealed class PickupTask : BotTask
 			}
 			return;
 		}
+		if (ground != null && Math.Abs(spot.X - Bot.Center.X) < RiseAlignPixels && item.Center.Y < Bot.Center.Y - RiseMinPixels && RiseUp(item))
+			return;
+		Bot.Motor.ClimbingStraightUp = false;
 		Bot.Motor.MoveTo(spot, 8f);
 		if (Bot.Motor.HasArrived)
 			arrivedTicks++;
@@ -871,8 +875,37 @@ public sealed class PickupTask : BotTask
 		IsFinished = true;
 	}
 
+	const float RiseAlignPixels = 16f * 3f;
+	const float RiseMinPixels = 16f * 2f;
+	const int RiseGiveUpTicks = 600;
+	int risingTicks;
+
+	bool RiseUp(Item item)
+	{
+		if (++risingTicks > RiseGiveUpTicks)
+			return false;
+		Bot.Watchdog.RecordProgress();
+		if (Bot.Motor.CanFly)
+		{
+			Bot.Motor.ClimbingStraightUp = false;
+			Bot.Motor.MoveTo(item.Center, 8f);
+			Bot.Motor.AirStrike(item.Center);
+			return true;
+		}
+		if (!Bot.Hands.HasBridgeMaterial)
+			return false;
+		Bot.Motor.ClimbingStraightUp = true;
+		return true;
+	}
+
+	public override void Stop()
+	{
+		Bot.Motor.ClimbingStraightUp = false;
+		base.Stop();
+	}
+
 	const int ArrivedGraceTicks = 60;
-	const int FloatGroundSearch = 18;
+	const int FloatGroundSearch = 40;
 
 	static Vector2? GroundBelow(Vector2 spot)
 	{
@@ -890,5 +923,6 @@ public sealed class PickupTask : BotTask
 	{
 		base.Start();
 		arrivedTicks = 0;
+		risingTicks = 0;
 	}
 }

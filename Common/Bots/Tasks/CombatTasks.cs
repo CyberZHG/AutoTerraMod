@@ -208,6 +208,13 @@ public sealed class FightTask : BotTask
 			TravelOrTunnel(calm, 16f * 2f);
 			return;
 		}
+		if (Bosses.MoonLordFoothold.IsPart(target) && Vector2.Distance(Bot.Center, Bosses.MoonLordFoothold.For(Bot, target)) > MoonLordFootholdSlack)
+		{
+			Bot.Watchdog.RecordProgress();
+			TravelOrTunnel(Bosses.MoonLordFoothold.For(Bot, target), MoonLordFootholdSlack * 0.5f);
+			Engagement.ShootIfClear(Bot, target);
+			return;
+		}
 		if (Bosses.BossCatalog.IsBossPart(target) && Vector2.Distance(Bot.Center, target.Center) > BossApproachDistance)
 		{
 			TravelOrTunnel(target.Bottom, BossApproachDistance * 0.5f);
@@ -215,6 +222,8 @@ public sealed class FightTask : BotTask
 		}
 		Engagement.Fight(Bot, target);
 	}
+
+	const float MoonLordFootholdSlack = 16f * 12f;
 
 	const float ShoreSlack = 16f * 2f;
 

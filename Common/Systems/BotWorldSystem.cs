@@ -303,7 +303,7 @@ public sealed class BotWorldSystem : ModSystem
 			{
 				if (bot.OutpostBed is Point outpost)
 					bot.Faction.TouchOutpost(outpost);
-				Spawn(bot, RespawnFeet(bot));
+				Spawn(bot, RespawnFeetNear(bot, bot.DeathPosition));
 			}
 		}
 		Navigation.DangerSpots.Prune();
@@ -487,6 +487,37 @@ public sealed class BotWorldSystem : ModSystem
 			if (slot >= FirstAvatarSlot && slot < Main.maxPlayers && Main.player[slot] == bot.Avatar)
 				Main.player[slot] = new Player();
 		}
+	}
+
+	const float AllyBedAdvantage = 16f * 100f;
+
+	static Vector2 RespawnFeetNear(Bot bot, Vector2? death)
+	{
+		var own = RespawnFeet(bot);
+		if (death is not Vector2 at || Relation == Config.FactionRelation.War)
+			return own;
+		var best = own;
+		float bestDistance = Vector2.Distance(own, at) - AllyBedAdvantage;
+		foreach (var faction in Factions)
+		{
+			if (faction.Id == bot.FactionId || faction.Settlement is not { } settlement)
+				continue;
+			foreach (var bedroom in settlement.Bedrooms)
+			{
+				if (bedroom.FindTileInside(TileID.Beds) is not Point bed)
+					continue;
+				var feet = new Vector2(bed.X * 16f + 8f, bedroom.Floor * 16f);
+				float distance = Vector2.Distance(feet, at);
+				if (distance < bestDistance && !Bosses.BossRituals.InPillarZone(feet))
+				{
+					best = feet;
+					bestDistance = distance;
+				}
+			}
+		}
+		if (best != own)
+			BotDiagnostics.Log(bot, $"respawning at an allied bed {best.ToTileCoordinates()}");
+		return best;
 	}
 
 	public static Vector2 RespawnFeet(Bot bot)

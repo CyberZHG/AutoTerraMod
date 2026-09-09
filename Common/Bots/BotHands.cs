@@ -745,6 +745,18 @@ public sealed class BotHands
 
 	public Item BestProjectileWeapon() => Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsProjectileWeapon(item)).MaxBy(item => item.damage);
 
+	public Item BestRangedOption(Item magic)
+	{
+		var best = Inventory.Items(Avatar).Where(item => IsUsableWeapon(item) && IsRangedWeapon(item)).MaxBy(RawDps);
+		return magic == null || best != null && RawDps(best) >= RawDps(magic) ? best : magic;
+	}
+
+	public float RawDps(Item weapon)
+	{
+		int cadence = IsProjectileWeapon(weapon) ? CombinedHooks.TotalUseTime(weapon.useTime, Avatar, weapon) : CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon);
+		return Avatar.GetWeaponDamage(weapon) * 60f / Math.Max(1, cadence);
+	}
+
 	bool IsUsableWeapon(Item item)
 	{
 		if (item.damage <= 0 || IsSummonWeapon(item))
@@ -773,8 +785,7 @@ public sealed class BotHands
 
 	float PreferenceScore(Item weapon)
 	{
-		int cadence = IsProjectileWeapon(weapon) ? CombinedHooks.TotalUseTime(weapon.useTime, Avatar, weapon) : CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon);
-		float score = Avatar.GetWeaponDamage(weapon) * 60f / Math.Max(1, cadence);
+		float score = RawDps(weapon);
 		if (weapon.pick > 0 || weapon.axe > 0 || weapon.hammer > 0)
 			score *= 0.7f;
 		if (IsProjectileWeapon(weapon))
@@ -1009,42 +1020,83 @@ public sealed class BotHands
 		return false;
 	}
 
-	const int FloatGrabSide = 16 * 2;
-	const int FloatGrabRise = 16 * 20;
+	const float PullSpeed = 8f;
+	const float PullSmoothing = 5f;
+	const float PullPrefilter = 16f * 30f;
 
 	public void CollectNearbyItems()
 	{
 		var npc = bot.Npc;
-		var grabArea = npc.Hitbox;
-		grabArea.Inflate(Player.defaultItemGrabRange, Player.defaultItemGrabRange);
-		var floatArea = new Rectangle(npc.Hitbox.X - FloatGrabSide, npc.Hitbox.Y - FloatGrabRise, npc.Hitbox.Width + FloatGrabSide * 2, npc.Hitbox.Height + FloatGrabRise);
 		for (int i = 0; i < Main.maxItems; i++)
 		{
 			var item = Main.item[i];
-			if (!item.active || item.noGrabDelay > 0 || !grabArea.Intersects(item.Hitbox) && !(ItemID.Sets.ItemNoGravity[item.type] && floatArea.Intersects(item.Hitbox)) || ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) || Junk.IsAbandoned(i))
+			if (!item.active || item.noGrabDelay > 0 || Math.Abs(item.Center.X - npc.Center.X) > PullPrefilter || Math.Abs(item.Center.Y - npc.Center.Y) > PullPrefilter
+				|| ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) || Junk.IsAbandoned(i))
 				continue;
-			if (ItemID.Sets.IsAPickup[item.type])
-			{
-				ConsumePickup(item);
-				Main.item[i] = new Item();
+			var pullArea = npc.Hitbox;
+			int range = SafeGrabRange(item);
+			pullArea.Inflate(range, range);
+			if (!pullArea.Intersects(item.Hitbox))
 				continue;
-			}
-			if (!ItemLoader.CanPickup(item, Avatar) || Junk.IsUnwanted(bot, item))
+			bool pickup = ItemID.Sets.IsAPickup[item.type];
+			if (!pickup && (!ItemLoader.CanPickup(item, Avatar) || Junk.IsUnwanted(bot, item)))
 				continue;
-			if (!Inventory.HasRoomFor(Avatar, item))
+			if (!pickup && !Inventory.HasRoomFor(Avatar, item))
 			{
 				Junk.TrashExcess(bot);
 				if (!Inventory.HasRoomFor(Avatar, item))
 					continue;
+			}
+			if (!npc.Hitbox.Intersects(item.Hitbox))
+			{
+				Pull(item, i, npc.Center);
+				continue;
+			}
+			if (pickup)
+			{
+				ConsumePickup(item);
+				Main.item[i] = new Item();
+				SyncItem(i);
+				continue;
 			}
 			var leftover = Inventory.Add(Avatar, item.Clone());
 			if (leftover.IsAir)
 				Main.item[i] = new Item();
 			else
 				item.stack = leftover.stack;
+			SyncItem(i);
 			bot.Watchdog.RecordProgress();
 			SoundEngine.PlaySound(SoundID.Grab, npc.Center);
 		}
+	}
+
+	int SafeGrabRange(Item item)
+	{
+		try
+		{
+			return Avatar.GetItemGrabRange(item);
+		}
+		catch
+		{
+			return Player.defaultItemGrabRange;
+		}
+	}
+
+	static void Pull(Item item, int index, Vector2 toward)
+	{
+		var gap = toward - item.Center;
+		if (gap == Vector2.Zero)
+			return;
+		var desired = Vector2.Normalize(gap) * Math.Min(PullSpeed, gap.Length());
+		item.velocity = (item.velocity * (PullSmoothing - 1f) + desired) / PullSmoothing;
+		if (Main.GameUpdateCount % 4 == 0)
+			SyncItem(index);
+	}
+
+	static void SyncItem(int index)
+	{
+		if (Main.netMode == NetmodeID.Server)
+			NetMessage.SendData(MessageID.SyncItem, -1, -1, null, index);
 	}
 
 	void ConsumePickup(Item pickup)

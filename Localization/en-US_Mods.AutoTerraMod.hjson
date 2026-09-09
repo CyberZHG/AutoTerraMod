@@ -217,7 +217,7 @@ UI: {
 	BossProgress: Bosses defeated {0}/{1} - next: {2}
 	AllBossesDefeated: all defeated
 	Stalled: No progress for {0}s
-	SettlementProgress: ", {0}/{1} buildings ({2})"
+	SettlementProgress: ", {0}/{1} buildings"
 	InventoryOf: "{0}'s inventory (read-only)"
 	SharingBoosters: bringing boosters home
 	Respawning: Dead, respawning in {0}s

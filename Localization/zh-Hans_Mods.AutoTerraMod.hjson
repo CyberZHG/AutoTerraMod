@@ -217,7 +217,7 @@ UI: {
 	BossProgress: 世界 Boss {0}/{1}，下一个：{2}
 	AllBossesDefeated: 全部击败
 	Stalled: 已 {0} 秒无进展
-	SettlementProgress: ，已建成 {0}/{1} 栋（{2}）
+	SettlementProgress: ，已建成 {0}/{1} 栋
 	InventoryOf: "{0} 的背包（只读）"
 	SharingBoosters: 带回营地给队友
 	Respawning: 已阵亡，{0} 秒后复活

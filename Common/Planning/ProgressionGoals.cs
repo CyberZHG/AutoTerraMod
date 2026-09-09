@@ -725,6 +725,68 @@ public sealed class FragmentGiftGoal : ProgressionGoal
 	}
 }
 
+public sealed class SurplusGiftGoal : ProgressionGoal
+{
+	const int Reserve = 20;
+	const int MinGift = 5;
+	const int MaxGift = 60;
+	const int Plenty = 120;
+
+	static readonly int[] Materials =
+	{
+		ItemID.SoulofLight, ItemID.SoulofNight, ItemID.SoulofFlight, ItemID.SoulofMight, ItemID.SoulofSight, ItemID.SoulofFright,
+		ItemID.HallowedBar, ItemID.ChlorophyteBar, ItemID.ChlorophyteOre, ItemID.ShroomiteBar, ItemID.SpectreBar, ItemID.Ectoplasm,
+		ItemID.BeetleHusk, ItemID.TurtleShell, ItemID.LihzahrdPowerCell, ItemID.FragmentSolar, ItemID.FragmentVortex, ItemID.FragmentNebula,
+		ItemID.FragmentStardust, ItemID.LunarBar, ItemID.LunarOre, ItemID.HellstoneBar, ItemID.AdamantiteBar, ItemID.TitaniumBar,
+		ItemID.MythrilBar, ItemID.OrichalcumBar, ItemID.CobaltBar, ItemID.PalladiumBar, ItemID.LifeCrystal, ItemID.LifeFruit
+	};
+
+	public override string Describe() => "SurplusGift";
+
+	public override bool AppliesTo(Bot bot) => Gift(bot) != null;
+
+	public override bool IsMet(Bot bot) => Gift(bot) == null;
+
+	static (Bot recipient, int item, int amount)? Gift(Bot bot)
+	{
+		if (BotWorldSystem.Relation == Config.FactionRelation.War || !Bosses.BossCredit.AllBossesDone(bot.Faction)
+			|| BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MinBy(member => member.Id) != bot)
+			return null;
+		var needy = BotWorldSystem.Factions
+			.Where(faction => faction != bot.Faction && !Bosses.BossCredit.AllBossesDone(faction))
+			.Select(faction => (faction, member: BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).OrderByDescending(BossGoal.IsSummoner).ThenBy(member => member.Id).FirstOrDefault()))
+			.Where(pair => pair.member != null)
+			.ToList();
+		if (needy.Count == 0)
+			return null;
+		foreach (int material in Materials)
+		{
+			int surplus = BaseStorage.Count(bot.Faction, material) + Inventory.Count(bot.Avatar, material) - Reserve;
+			var wanting = needy.Where(pair => Held(pair.faction, pair.member, material) < Plenty).ToList();
+			if (wanting.Count == 0 || surplus < MinGift)
+				continue;
+			int share = System.Math.Min(MaxGift, surplus / wanting.Count);
+			if (share < MinGift)
+				share = System.Math.Min(surplus, MinGift);
+			var poorest = wanting.MinBy(pair => Held(pair.faction, pair.member, material));
+			return (poorest.member, material, share);
+		}
+		return null;
+	}
+
+	static int Held(Factions.Faction faction, Bot member, int item) => BaseStorage.Count(faction, item) + Inventory.Count(member.Avatar, item);
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Gift(bot) is not var (recipient, item, amount))
+			return PlanStep.Idle;
+		int held = Inventory.Count(bot.Avatar, item);
+		if (held < amount && BaseStorage.Count(bot.Faction, item) > 0)
+			return new WithdrawStep(item, amount - held);
+		return new DeliverStep(item, recipient.Id, System.Math.Max(0, held - amount), HandOver: true);
+	}
+}
+
 public sealed class RefightGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -821,6 +883,36 @@ public sealed class TempleDoorGoal : ProgressionGoal
 	public override bool IsMet(Bot bot) => Temple is not { } temple || !Bosses.BossRituals.TempleLocked(temple);
 
 	public override PlanStep Plan(Bot bot) => new ScoutStep(World.Landmark.Temple, true);
+}
+
+public sealed class TempleShaftGoal : ProgressionGoal
+{
+	public const int LihzahrdPick = 210;
+
+	public override string Describe() => "TempleShaft";
+
+	public static int DiggerId { get; set; } = -1;
+
+	public override bool AppliesTo(Bot bot)
+	{
+		if (!Terraria.NPC.downedGolemBoss || (bot.Hands.BestPickaxe?.pick ?? 0) < LihzahrdPick || World.TempleShaft.Usable)
+			return false;
+		if (DiggerId >= 0 && DiggerId != bot.Id && BotWorldSystem.FindBot(DiggerId) is { } digger && (digger.Hands.BestPickaxe?.pick ?? 0) >= LihzahrdPick)
+			return false;
+		return Bosses.BossRituals.TempleAltar(bot.Faction) != null;
+	}
+
+	public override bool IsMet(Bot bot) => World.TempleShaft.Usable;
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Bosses.BossRituals.TempleAltar(bot.Faction) is not { } altar || World.TempleShaft.PlanFrom(altar) is not { } shaft)
+			return PlanStep.Blocked;
+		if (DiggerId != bot.Id)
+			BotDiagnostics.Log(bot, $"digging the temple shaft at {shaft.X},{shaft.TopY}..{shaft.BottomY}");
+		DiggerId = bot.Id;
+		return !shaft.Dug || bot.Hands.HasPlatform ? new DigTempleShaftStep() : ProgressionPlanner.ObtainPlatforms(bot, 10);
+	}
 }
 
 public sealed class ShaftRopeGoal : ProgressionGoal
@@ -1844,6 +1936,7 @@ public static class ProgressionGoals
 			new ReserveGoal(ItemID.Torch, 3, 10),
 			new HealingPotionGoal(),
 			new TempleDoorGoal(),
+			new TempleShaftGoal(),
 			new GatedGoal(new ReserveGoal(ItemID.IronskinPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.RegenerationPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.InfernoPotion, 2, 5), () => Terraria.NPC.downedGolemBoss),
@@ -1859,6 +1952,7 @@ public static class ProgressionGoals
 			new BossGoal(),
 			new BossSupportGoal(),
 			new FragmentGiftGoal(),
+			new SurplusGiftGoal(),
 			new ArenaOutpostGoal(),
 			new RefightGoal(gearOnly: true),
 			new HellevatorGoal(),

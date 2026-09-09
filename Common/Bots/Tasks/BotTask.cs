@@ -463,6 +463,8 @@ public abstract class BotTask
 		var here = Bot.CenterTile;
 		if (!Navigation.PathFinder.InsideMaze(goal))
 			return null;
+		if (ViaTempleShaft(goal, here) is Vector2 shaftLeg)
+			return shaftLeg;
 		if (World.TempleDoor.Near(goal) is Point tunnelDoor && World.TempleDoor.OutsideSide(tunnelDoor) is int tunnelSide && World.TempleDoor.Mouth(tunnelDoor) is Point tunnelMouth
 			&& (World.TempleDoor.InTunnel(tunnelDoor, here) || System.Math.Abs(here.X - tunnelMouth.X) + System.Math.Abs(here.Y - tunnelMouth.Y) <= TempleArrival))
 		{
@@ -487,6 +489,21 @@ public abstract class BotTask
 		if (door is not Point doorTile || mouth is not Point mouthTile)
 			return null;
 		return TempleLeg(here, doorTile, mouthTile, World.TempleDoor.OutsideSide(doorTile) ?? System.Math.Sign(mouthTile.X - doorTile.X));
+	}
+
+	const int ShaftServesTiles = 120;
+	const int ShaftBottomArrival = 4;
+
+	static Vector2? ViaTempleShaft(Point goal, Point here)
+	{
+		if (World.TempleShaft.Current is not { IsComplete: true } shaft || System.Math.Abs(goal.X - shaft.RopeX) + System.Math.Abs(goal.Y - shaft.TopY) > ShaftServesTiles)
+			return null;
+		if (shaft.Contains(here))
+			return here.Y >= shaft.TopY ? shaft.Top : null;
+		if (Navigation.PathFinder.InsideMaze(here))
+			return null;
+		bool atBottom = System.Math.Abs(here.X - shaft.RopeX) <= ShaftBottomArrival && System.Math.Abs(here.Y - shaft.BottomY) <= ShaftBottomArrival;
+		return atBottom ? shaft.Top : shaft.Bottom;
 	}
 
 	uint templeLoggedAt;

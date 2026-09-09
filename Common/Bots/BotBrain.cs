@@ -53,6 +53,7 @@ public sealed class BotBrain
 			new TravelTask(bot),
 			new BuildBridgeTask(bot),
 			new DigShaftTask(bot),
+			new TempleShaftTask(bot),
 			new RopeColumnTask(bot),
 			new OutpostTask(bot),
 			new ClaimOutpostTask(bot),
