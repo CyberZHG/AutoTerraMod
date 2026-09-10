@@ -168,9 +168,13 @@ public sealed class BotBrain
 			BotDiagnostics.Log(bot, $"slow motor tick {motorMilliseconds:0.0}ms: {bot.Motor.Describe()}");
 		using (Probes.Measure("Collect"))
 			bot.Hands.CollectNearbyItems();
+		if ((Main.GameUpdateCount + (uint)bot.Id) % GraveCheckTicks == 0 && current is not Tasks.FightTask)
+			bot.Hands.BreakGraveInReach();
 		using (Probes.Measure("Animate"))
 			AnimateAvatar(body);
 	}
+
+	const uint GraveCheckTicks = 10;
 
 	public void SuppressCurrentGoal()
 	{

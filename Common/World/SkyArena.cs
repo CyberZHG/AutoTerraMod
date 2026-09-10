@@ -63,7 +63,11 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 		return For(faction);
 	}
 
-	static bool Ours(int x, int y) => TileQuery.IsPlatform(x, y) || Main.tile[x, y].HasTile && Main.tileRope[Main.tile[x, y].TileType];
+	static bool Ours(int x, int y) => TileQuery.IsPlatform(x, y) || Main.tile[x, y].HasTile && (Main.tileRope[Main.tile[x, y].TileType] || Main.tile[x, y].TileType == Terraria.ID.TileID.Tombstones);
+
+	public static IEnumerable<(int faction, SkyArena arena)> Planned => planned.Where(pair => pair.Value != null).Select(pair => (pair.Key, pair.Value));
+
+	public static void Restore(int faction, SkyArena arena) => planned[faction] = arena;
 
 	static bool Clear(int center, int deck)
 	{
@@ -124,4 +128,28 @@ public sealed record SkyArena(int CenterX, int DeckRow)
 		For(bot.Faction) is { } arena && arena.Contains(bot.CenterTile) && arena.DeckBuilt(arena.Left) && Main.npc.Any(npc => npc.active && npc.boss);
 
 	public static bool Wanted => Main.hardMode && (NPC.downedPlantBoss || NPC.downedMechBossAny);
+}
+
+public sealed class SkyArenaStore : Terraria.ModLoader.ModSystem
+{
+	public override void SaveWorldData(Terraria.ModLoader.IO.TagCompound tag)
+	{
+		var arenas = SkyArena.Planned.ToList();
+		if (arenas.Count == 0)
+			return;
+		tag["skyArenaFactions"] = arenas.Select(pair => pair.faction).ToList();
+		tag["skyArenaX"] = arenas.Select(pair => pair.arena.CenterX).ToList();
+		tag["skyArenaDeck"] = arenas.Select(pair => pair.arena.DeckRow).ToList();
+	}
+
+	public override void LoadWorldData(Terraria.ModLoader.IO.TagCompound tag)
+	{
+		if (!tag.ContainsKey("skyArenaFactions"))
+			return;
+		var factions = tag.GetList<int>("skyArenaFactions");
+		var xs = tag.GetList<int>("skyArenaX");
+		var decks = tag.GetList<int>("skyArenaDeck");
+		for (int i = 0; i < factions.Count && i < xs.Count && i < decks.Count; i++)
+			SkyArena.Restore(factions[i], new SkyArena(xs[i], decks[i]));
+	}
 }

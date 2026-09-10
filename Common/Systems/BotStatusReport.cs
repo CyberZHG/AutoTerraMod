@@ -42,6 +42,8 @@ public sealed class BotStatusReport : ModSystem
 		string shaftText = shaft == null ? "" : $"\n    hellevator x={shaft.X}: dug to {shaft.FirstImpassableRow()} (tidy to {shaft.FirstUnfinishedRow()}) of {Main.UnderworldLayer}, rope missing at {Bots.Tasks.RopeColumnTask.MissingRow(shaft.RopeX, shaft.RopeTop, shaft.RopeBottom())?.ToString() ?? "none"}";
 		foreach (var highway in World.Highway.For(faction))
 			shaftText += $"\n    highway {(highway.Direction > 0 ? "east" : "west")} y={highway.Y} {highway.StartX}->{highway.EndX}: frontier {highway.Frontier(highway.Direction)}{(highway.BlockReason is string reason ? " blocked by " + reason : "")}, link row missing {highway.MissingLinkRow()?.ToString() ?? "none"}";
+		if (World.SkyArena.Wanted && World.SkyArena.For(faction) is { } arena)
+			shaftText += $"\n    sky arena x={arena.CenterX} deck={arena.DeckRow}: rope missing at {Bots.Tasks.RopeColumnTask.MissingRow(arena.CenterX, arena.DeckRow, arena.Surface - 1)?.ToString() ?? "none"}, next gap {arena.NextGap()?.ToString() ?? "none"}, usable={arena.Usable}";
 		var bridge = faction.Hellbridge;
 		return shaftText + (bridge == null ? "" : $"\n    hellbridge y={bridge.Y}: built {bridge.Frontier(-1)}..{bridge.Frontier(1)} of {bridge.LeftEnd}..{bridge.RightEnd} ends [{Column(bridge, bridge.Frontier(-1))}] [{Column(bridge, bridge.Frontier(1))}]");
 	}
@@ -55,7 +57,10 @@ public sealed class BotStatusReport : ModSystem
 		var report = Bosses.BossReadiness.Evaluate(faction, challenge, summoner);
 		var site = challenge.Arena ?? challenge.DistantArena;
 		string siteText = site is World.Landmark landmark ? $" site={landmark}:{(BotWorldSystem.KnowledgeOf(faction).LandmarkOf(landmark) != null ? "found" : "unknown")}" : " site=camp";
-		return $"\n    next boss {challenge.Name}: kill~{report.KillSeconds:0}s survive~{report.SurviveSeconds:0}s need x{report.RequiredRatio:0.0} ready={report.IsReady}{siteText}";
+		string rallyText = faction.Rally is { } rally && Main.GameUpdateCount < rally.until
+			? $" rally={Lang.GetNPCNameValue(faction.RallyBossType)}@{rally.point.ToTileCoordinates()} assembled={faction.RallyAssembled} leader={BotWorldSystem.FindBot(faction.RallyLeaderId)?.Name} building={faction.RallyBuilding}"
+			: "";
+		return $"\n    next boss {challenge.Name}: kill~{report.KillSeconds:0}s survive~{report.SurviveSeconds:0}s need x{report.RequiredRatio:0.0} ready={report.IsReady}{siteText}{rallyText}";
 	}
 
 	static string DescribeConstruction(Factions.Faction faction)

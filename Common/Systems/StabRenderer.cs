@@ -93,10 +93,30 @@ public static class StabRenderer
 		var position = Vector2.Lerp(hand, end, (float)Math.Sin(progress * MathHelper.Pi));
 		var line = position - hand;
 		var light = Lighting.GetColor(position.ToTileCoordinates());
+		if (ItemID.Sets.Spears[item.type])
+		{
+			var tip = hand + target.Aim * (SpearRest + (float)Math.Sin(progress * MathHelper.Pi) * SpearThrust);
+			spriteBatch.Draw(texture, tip - Main.screenPosition, null, Lighting.GetColor(tip.ToTileCoordinates()), target.Aim.ToRotation() + MathHelper.PiOver4, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
+			return;
+		}
+		if (IsJavelin(item))
+		{
+			if (progress > JavelinVisible)
+				return;
+			var flight = Vector2.Lerp(hand, end, progress / JavelinVisible);
+			spriteBatch.Draw(texture, flight - Main.screenPosition, null, Lighting.GetColor(flight.ToTileCoordinates()), (end - hand).ToRotation() + MathHelper.PiOver2, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
+			return;
+		}
 		if (BotHands.IsYoyo(item) || BotHands.IsWhip(item))
 			spriteBatch.Draw(TextureAssets.MagicPixel.Value, hand - Main.screenPosition, new Rectangle(0, 0, 1, 1), YoyoString.MultiplyRGB(light), line.ToRotation(), Vector2.Zero, new Vector2(line.Length(), 1f), SpriteEffects.None, 0f);
 		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, progress * MathHelper.TwoPi * YoyoSpinTurns, texture.Size() / 2f, 1f, SpriteEffects.None, 0f);
 	}
+
+	const float SpearRest = 8f;
+	const float SpearThrust = 40f;
+	const float JavelinVisible = 0.6f;
+
+	static bool IsJavelin(Item item) => item.type is ItemID.DayBreak or ItemID.Javelin or ItemID.BoneJavelin;
 
 	static void DrawStab(SpriteBatch spriteBatch, Target target)
 	{

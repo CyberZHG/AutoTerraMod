@@ -305,7 +305,7 @@ public sealed class SummonTask : BotTask
 		{
 			for (int column = x; column <= x + Hellevator.Width - 1; column++)
 			{
-				if (TileQuery.IsSolid(column, y) && Navigation.PickRequirement.MinimumPick(Main.tile[column, y].TileType, column, y) > bestPick)
+				if (TileQuery.IsSolid(column, y) && (Navigation.PickRequirement.MinimumPick(Main.tile[column, y].TileType, column, y) > bestPick || Building.HouseInspector.IsProtected(column, y)))
 					return false;
 			}
 		}

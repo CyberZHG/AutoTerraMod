@@ -1020,6 +1020,30 @@ public sealed class BotHands
 		return false;
 	}
 
+	const int GraveSideTiles = 5;
+	const int GraveRowsTiles = 4;
+
+	public void BreakGraveInReach()
+	{
+		var pickaxe = BestPickaxe;
+		if (pickaxe == null || !Ready)
+			return;
+		var here = bot.CenterTile;
+		for (int x = here.X - GraveSideTiles; x <= here.X + GraveSideTiles; x++)
+		{
+			for (int y = here.Y - GraveRowsTiles; y <= here.Y + GraveRowsTiles; y++)
+			{
+				if (!WorldGen.InWorld(x, y, 5) || !Main.tile[x, y].HasTile || Main.tile[x, y].TileType != TileID.Tombstones)
+					continue;
+				var grave = new Point(x, y);
+				if (!CanReach(pickaxe, grave) || Building.HouseInspector.IsProtected(x, y) || InOtherBase(grave) || !WorldGen.CanKillTile(x, y))
+					continue;
+				Dig(grave);
+				return;
+			}
+		}
+	}
+
 	const float PullSpeed = 8f;
 	const float PullSmoothing = 5f;
 	const float PullPrefilter = 16f * 30f;
