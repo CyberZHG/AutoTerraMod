@@ -129,6 +129,8 @@ public sealed class DeliverTask : BotTask
 			Take(item, portion.stack);
 		}
 		Bot.Watchdog.RecordProgress();
+		if (delivered > 0)
+			Planning.SurplusGiftGoal.Delivered(Bot, step.ItemType, builder);
 		BotDiagnostics.Log(Bot, $"handed {Lang.GetItemNameValue(step.ItemType)} x{delivered} to {builder.Name}");
 	}
 }

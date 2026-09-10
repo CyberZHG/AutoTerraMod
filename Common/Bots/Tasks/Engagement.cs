@@ -308,13 +308,11 @@ public static class Engagement
 		if (ranged == null || bot.Hands.RawDps(ranged) < bot.Hands.RawDps(weapon) * MinRangedShare)
 			return weapon;
 		float reach = BotHands.MeleeReach(weapon) + Math.Max(target.width, target.height) / 2f + RangedSwitchSlack;
-		bool hurt = bot.Avatar.statLife < bot.Avatar.statLifeMax2 * RangedSwitchHealth;
-		return target.noGravity || hurt || Vector2.Distance(bot.Center, target.Center) > reach ? ranged : weapon;
+		return Vector2.Distance(bot.Center, target.Center) > reach ? ranged : weapon;
 	}
 
 	const float MinRangedShare = 0.35f;
 	const float RangedSwitchSlack = 16f * 3f;
-	const float RangedSwitchHealth = 0.5f;
 
 	const float MeleeStandoff = 0.6f;
 	const float BackOffStep = 48f;

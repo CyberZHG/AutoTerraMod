@@ -17,12 +17,12 @@ public sealed record TempleShaftPlan(int X, int TopY, int BottomY)
 
 	public Point? NextSolid()
 	{
-		for (int y = TopY; y <= BottomY; y++)
+		for (int y = TopY + 1; y <= BottomY; y++)
 		{
 			for (int x = X; x <= Right; x++)
 			{
 				var tile = Main.tile[x, y];
-				if (!tile.HasTile || Main.tileRope[tile.TileType] || y == TopY && TileQuery.IsPlatform(x, y))
+				if (!tile.HasTile || Main.tileRope[tile.TileType])
 					continue;
 				return new Point(x, y);
 			}
@@ -43,6 +43,8 @@ public sealed record TempleShaftPlan(int X, int TopY, int BottomY)
 	public bool Dug => NextSolid() == null;
 	public bool Capped => NextCap() == null;
 	public bool IsComplete => Dug && Capped;
+
+	public Point SideStand => !TileQuery.IsSolid(X - 2, TopY - 1) && TileQuery.IsSolid(X - 2, TopY) ? new Point(X - 2, TopY - 1) : new Point(Right + 2, TopY - 1);
 
 	public Vector2 Bottom => new Point(RopeX, BottomY).ToWorldCoordinates(8f, 0f);
 	public Vector2 Top => new Point(RopeX, TopY - 1).ToWorldCoordinates(8f, 0f);
@@ -83,17 +85,27 @@ public sealed class TempleShaft : ModSystem
 
 	public static TempleShaftPlan PlanFrom(Point altar)
 	{
-		if (Current != null)
+		if (Current != null && !Untouched(Current))
 			return Current;
 		int floor = altar.Y + 2;
 		foreach (int x in new[] { altar.X - SideGap - TempleShaftPlan.Width, altar.X + 3 + SideGap })
 		{
 			if (!FloorUnder(x, floor) || ExitRow(x, floor) is not int exit)
 				continue;
-			Current = new TempleShaftPlan(x, floor, exit + ExitRows);
+			Current = new TempleShaftPlan(x, floor, OpenBelow(x, exit) ?? exit + ExitRows);
 			return Current;
 		}
 		return null;
+	}
+
+	static bool Untouched(TempleShaftPlan shaft)
+	{
+		for (int x = shaft.X; x <= shaft.Right; x++)
+		{
+			if (!TileQuery.IsSolid(x, shaft.TopY) || TileQuery.IsPlatform(x, shaft.TopY))
+				return false;
+		}
+		return true;
 	}
 
 	static bool FloorUnder(int x, int floor)
@@ -115,6 +127,24 @@ public sealed class TempleShaft : ModSystem
 				outside = !InTemple(column, y);
 			if (outside)
 				return y;
+		}
+		return null;
+	}
+
+	const int CaveSearch = 80;
+	const int CaveRows = 3;
+
+	static int? OpenBelow(int x, int exit)
+	{
+		int open = 0;
+		for (int y = exit; y < exit + CaveSearch && y < Main.UnderworldLayer; y++)
+		{
+			bool clear = true;
+			for (int column = x; column < x + TempleShaftPlan.Width && clear; column++)
+				clear = !TileQuery.IsSolid(column, y) && Main.tile[column, y].LiquidAmount == 0;
+			open = clear ? open + 1 : 0;
+			if (open >= CaveRows)
+				return y - CaveRows + 1;
 		}
 		return null;
 	}

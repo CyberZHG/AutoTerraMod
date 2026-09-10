@@ -8,7 +8,8 @@ namespace AutoTerraMod.Common.Bots.Tasks;
 public sealed class TempleShaftTask : BotTask
 {
 	const float DigPriority = 72f;
-	const int StuckTicks = 600;
+	const int StuckTicks = 1200;
+	const int TravelFailurePenalty = 30;
 
 	int idleTicks;
 	Point lastCell;
@@ -27,18 +28,21 @@ public sealed class TempleShaftTask : BotTask
 
 	public override void Tick()
 	{
-		if (TempleShaft.Current is not { } shaft || shaft.IsComplete)
+		var shaft = TempleShaft.Current;
+		if (shaft == null || shaft.IsComplete)
 		{
+			if (shaft != null)
+				BotDiagnostics.Log(Bot, $"finished the temple shaft at {shaft.X},{shaft.TopY}..{shaft.BottomY}");
 			IsFinished = true;
 			return;
 		}
-		if (shaft.NextSolid() is Point cell)
+		if (shaft.NextCap() is Point cap)
 		{
-			Dig(shaft, cell);
+			Cap(shaft, cap);
 			return;
 		}
-		if (shaft.NextCap() is Point cap)
-			Cap(shaft, cap);
+		if (shaft.NextSolid() is Point cell)
+			Dig(shaft, cell);
 	}
 
 	void Dig(TempleShaftPlan shaft, Point cell)
@@ -64,26 +68,39 @@ public sealed class TempleShaftTask : BotTask
 		if (shaft.Contains(here) && here.Y < cell.Y)
 			Bot.Motor.MoveTo(stand.ToWorldCoordinates(8f, 0f), 8f);
 		else if (!TravelOrTunnel(shaft.Top, 16f))
-			GiveUp("cannot reach the shaft top");
+			idleTicks += TravelFailurePenalty;
 		if (++idleTicks > StuckTicks)
 			GiveUp($"stuck digging toward {cell}, at {here}");
 	}
 
 	void Cap(TempleShaftPlan shaft, Point cap)
 	{
-		if (Bot.Hands.CanReachPlatform(cap))
+		var pickaxe = Bot.Hands.BestPickaxe;
+		bool solid = TileQuery.HasTile(cap);
+		bool inReach = solid ? pickaxe != null && Bot.Hands.CanReach(pickaxe, cap) : Bot.Hands.CanReachPlatform(cap);
+		if (!solid && !Bot.Hands.HasPlatform)
 		{
-			Bot.Motor.Stop();
-			if (Bot.Hands.PlacePlatform(cap))
-			{
-				Bot.Watchdog.RecordProgress();
-				if (shaft.Capped)
-					BotDiagnostics.Log(Bot, $"finished the temple shaft at {shaft.X},{shaft.TopY}..{shaft.BottomY}");
-			}
+			GiveUp("no platforms to cap the shaft");
 			return;
 		}
-		if (!Bot.Hands.HasPlatform || !TravelOrTunnel(shaft.Top, 16f) || ++idleTicks > StuckTicks)
-			GiveUp("cannot cap the shaft");
+		if (!inReach)
+		{
+			if (!TravelOrTunnel(shaft.SideStand.ToWorldCoordinates(8f, 0f), 16f))
+				idleTicks += TravelFailurePenalty;
+			if (++idleTicks > StuckTicks)
+				GiveUp($"cannot reach the shaft top from {Bot.CenterTile}");
+			return;
+		}
+		Bot.Motor.Stop();
+		Bot.Watchdog.RecordProgress();
+		if (solid)
+		{
+			if (Bot.Hands.Dig(cap) is ToolResult.Unbreakable or ToolResult.NoTool)
+				GiveUp($"cannot break {TileQuery.TypeAt(cap)} at {cap}");
+			return;
+		}
+		if (Bot.Hands.PlacePlatform(cap) && shaft.Capped)
+			BotDiagnostics.Log(Bot, $"capped the temple shaft at {shaft.X},{shaft.TopY}, digging down to {shaft.BottomY}");
 	}
 
 	void GiveUp(string why)

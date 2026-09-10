@@ -82,11 +82,12 @@ public sealed class RopeColumnTask : BotTask
 
 	public override void Tick()
 	{
-		if (MissingRow(step.X, step.Top, step.Bottom) is not int row || !Bot.Hands.HasRope)
+		if (MissingRow(step.X, step.Top, step.Bottom) is not int first || !Bot.Hands.HasRope)
 		{
 			IsFinished = true;
 			return;
 		}
+		int row = AnchoredRow(step.X, first, step.Bottom);
 		var cell = new Point(step.X, row);
 		bool rightWall = TileQuery.IsSolid(step.X + 1, row) || TileQuery.IsSolid(step.X + 1, row - 1) || TileQuery.IsSolid(step.X + 1, row - 2);
 		var spot = new Vector2(PathFinder.CenterXOf(rightWall ? step.X - 1 : step.X), row * 16f + 8f);
@@ -115,5 +116,19 @@ public sealed class RopeColumnTask : BotTask
 		}
 		if (Bot.Hands.PlaceRope(cell))
 			Bot.Watchdog.RecordProgress();
+		else if (Main.GameUpdateCount % 600 == 0)
+			BotDiagnostics.Log(Bot, $"cannot hang rope at {cell}: {Bot.Hands.PlaceFailure(Inventory.Items(Avatar).FirstOrDefault(item => item.createTile >= 0 && Main.tileRope[item.createTile]), cell)}{TerrainDump.Around(cell, 4, 6)}");
+	}
+
+	static bool Holds(int x, int y) => TileQuery.IsSolid(x, y) || Main.tile[x, y].HasTile && (Main.tileRope[Main.tile[x, y].TileType] || TileQuery.IsPlatform(x, y));
+
+	static int AnchoredRow(int x, int first, int bottom)
+	{
+		if (Holds(x, first - 1))
+			return first;
+		int y = first;
+		while (y < bottom && !Holds(x, y + 1))
+			y++;
+		return y;
 	}
 }

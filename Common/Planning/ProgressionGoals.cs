@@ -730,7 +730,6 @@ public sealed class SurplusGiftGoal : ProgressionGoal
 	const int Reserve = 20;
 	const int MinGift = 5;
 	const int MaxGift = 60;
-	const int Plenty = 120;
 
 	static readonly int[] Materials =
 	{
@@ -747,6 +746,8 @@ public sealed class SurplusGiftGoal : ProgressionGoal
 
 	public override bool IsMet(Bot bot) => Gift(bot) == null;
 
+	static readonly Dictionary<(int donor, int item), (int share, HashSet<int> given)> rounds = new();
+
 	static (Bot recipient, int item, int amount)? Gift(Bot bot)
 	{
 		if (BotWorldSystem.Relation == Config.FactionRelation.War || !Bosses.BossCredit.AllBossesDone(bot.Faction)
@@ -755,26 +756,36 @@ public sealed class SurplusGiftGoal : ProgressionGoal
 		var needy = BotWorldSystem.Factions
 			.Where(faction => faction != bot.Faction && !Bosses.BossCredit.AllBossesDone(faction))
 			.Select(faction => (faction, member: BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id && member.IsAlive).OrderByDescending(BossGoal.IsSummoner).ThenBy(member => member.Id).FirstOrDefault()))
-			.Where(pair => pair.member != null)
 			.ToList();
 		if (needy.Count == 0)
 			return null;
 		foreach (int material in Materials)
 		{
-			int surplus = BaseStorage.Count(bot.Faction, material) + Inventory.Count(bot.Avatar, material) - Reserve;
-			var wanting = needy.Where(pair => Held(pair.faction, pair.member, material) < Plenty).ToList();
-			if (wanting.Count == 0 || surplus < MinGift)
+			var key = (bot.FactionId, material);
+			if (!rounds.TryGetValue(key, out var round) || needy.All(pair => round.given.Contains(pair.faction.Id)))
+			{
+				int surplus = BaseStorage.Count(bot.Faction, material) + Inventory.Count(bot.Avatar, material) - Reserve;
+				int share = System.Math.Min(MaxGift, surplus / needy.Count);
+				if (share < MinGift)
+				{
+					rounds.Remove(key);
+					continue;
+				}
+				rounds[key] = round = (share, new HashSet<int>());
+			}
+			var next = needy.FirstOrDefault(pair => !round.given.Contains(pair.faction.Id) && pair.member != null);
+			if (next.member == null)
 				continue;
-			int share = System.Math.Min(MaxGift, surplus / wanting.Count);
-			if (share < MinGift)
-				share = System.Math.Min(surplus, MinGift);
-			var poorest = wanting.MinBy(pair => Held(pair.faction, pair.member, material));
-			return (poorest.member, material, share);
+			return (next.member, material, round.share);
 		}
 		return null;
 	}
 
-	static int Held(Factions.Faction faction, Bot member, int item) => BaseStorage.Count(faction, item) + Inventory.Count(member.Avatar, item);
+	public static void Delivered(Bot donor, int item, Bot recipient)
+	{
+		if (rounds.TryGetValue((donor.FactionId, item), out var round))
+			round.given.Add(recipient.FactionId);
+	}
 
 	public override PlanStep Plan(Bot bot)
 	{
@@ -888,6 +899,7 @@ public sealed class TempleDoorGoal : ProgressionGoal
 public sealed class TempleShaftGoal : ProgressionGoal
 {
 	public const int LihzahrdPick = 210;
+	const float FarFromShaft = 16f * 150f;
 
 	public override string Describe() => "TempleShaft";
 
@@ -911,7 +923,9 @@ public sealed class TempleShaftGoal : ProgressionGoal
 		if (DiggerId != bot.Id)
 			BotDiagnostics.Log(bot, $"digging the temple shaft at {shaft.X},{shaft.TopY}..{shaft.BottomY}");
 		DiggerId = bot.Id;
-		return !shaft.Dug || bot.Hands.HasPlatform ? new DigTempleShaftStep() : ProgressionPlanner.ObtainPlatforms(bot, 10);
+		if (Microsoft.Xna.Framework.Vector2.Distance(bot.Center, shaft.Top) > FarFromShaft)
+			return new TravelStep(shaft.Top);
+		return shaft.Capped || bot.Hands.HasPlatform ? new DigTempleShaftStep() : ProgressionPlanner.ObtainPlatforms(bot, 10);
 	}
 }
 
