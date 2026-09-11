@@ -1319,8 +1319,11 @@ public sealed class BuildBridgeTask : BotTask
 		}
 	}
 
+	static readonly System.Collections.Generic.Dictionary<Point, int> clutterSweeps = new();
+	const int MaxClutterSweeps = 3;
+
 	static bool Blocks(World.ICorridor bridge, int x, int y) =>
-		TileQuery.IsSolid(x, y) && !bridge.IsTolerated(x, y) || bridge is World.Highway && World.Highway.IsClutter(x, y);
+		(TileQuery.IsSolid(x, y) || bridge is World.Highway && World.Highway.IsClutter(x, y)) && !bridge.IsTolerated(x, y);
 	int stuckFrontier = int.MinValue;
 	uint stuckSince;
 
@@ -1416,7 +1419,15 @@ public sealed class BuildBridgeTask : BotTask
 				{
 					if (bridge is World.Highway highway && World.Highway.IsClutter(column, y))
 					{
-						Bot.Hands.Dig(new Point(column, y), clearSaplings: true);
+						var cell = new Point(column, y);
+						clutterSweeps[cell] = (clutterSweeps.TryGetValue(cell, out int swept) ? swept : 0) + 1;
+						if (clutterSweeps[cell] > MaxClutterSweeps)
+						{
+							BotDiagnostics.Log(Bot, $"{TileQuery.TypeAt(cell)} at {cell} keeps coming back on the highway, leaving it");
+							bridge.Tolerate(column, y);
+							return;
+						}
+						Bot.Hands.Dig(cell, clearSaplings: true);
 						SweepClutter(highway, column);
 						Bot.Watchdog.RecordProgress();
 						return;

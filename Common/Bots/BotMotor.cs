@@ -276,7 +276,8 @@ public sealed class BotMotor
 		BridgeTile = null;
 		WantsToDropThroughPlatforms = false;
 
-		bot.Grapple.Tick(npc, destination);
+		using (Systems.Probes.Measure("m:Grapple"))
+			bot.Grapple.Tick(npc, destination);
 		if (bot.Grapple.ConsumeClimbRelease())
 			jumpHold = bot.Vitals.JumpHeight;
 		if (bot.Grapple.IsAttached && !bot.Grapple.HangingInPlace)
@@ -307,7 +308,8 @@ public sealed class BotMotor
 		else if (destination is Vector2 tunnelGoal && Tunneling)
 			TunnelStep(npc, tunnelGoal, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else if (destination is Vector2 target)
-			Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
+			using (Systems.Probes.Measure("m:Steer"))
+				Steer(npc, target, ref moveDirection, ref wantsJump, ref jumpHoldTicks);
 		else
 			moveDirection = EscapeHazard(npc);
 		if (StandingInHazard() && EscapeHazard(npc) is int away && away != 0)
@@ -321,8 +323,11 @@ public sealed class BotMotor
 			jumpHoldTicks = JumpHoldTicks;
 			jumpRequested = false;
 		}
-		RefuelWings(npc);
-		ArrestFall(npc, ref wantsJump);
+		using (Systems.Probes.Measure("m:Arrest"))
+		{
+			RefuelWings(npc);
+			ArrestFall(npc, ref wantsJump);
+		}
 		if (flightTicks > 0)
 			wantsJump = true;
 		if (npc.wet && bot.Vitals.BreathFraction < SurfaceForAirBelow)
@@ -334,8 +339,11 @@ public sealed class BotMotor
 		}
 
 		airTarget = null;
-		Run(npc, moveDirection);
-		Jump(npc, wantsJump, jumpHoldTicks);
+		using (Systems.Probes.Measure("m:RunJump"))
+		{
+			Run(npc, moveDirection);
+			Jump(npc, wantsJump, jumpHoldTicks);
+		}
 		if (flightTicks > 0)
 			flightTicks--;
 		HoldRopeOverDrop(npc, wantsJump);
@@ -347,12 +355,16 @@ public sealed class BotMotor
 		if (!WantsToDropThroughPlatforms)
 			Collision.StepUp(ref npc.position, ref npc.velocity, npc.width, npc.height, ref npc.stepSpeed, ref npc.gfxOffY);
 		npc.spriteDirection = npc.direction;
-		TrackProgress(npc);
+		using (Systems.Probes.Measure("m:Track"))
+			TrackProgress(npc);
 
-		if (TileToDig is Point dig)
-			PassThrough(dig, npc.direction);
-		else if (!PlacementForbidden)
-			PlacePlannedSupport();
+		using (Systems.Probes.Measure("m:Place"))
+		{
+			if (TileToDig is Point dig)
+				PassThrough(dig, npc.direction);
+			else if (!PlacementForbidden)
+				PlacePlannedSupport();
+		}
 		ScaffoldingAllowed = false;
 		PlacementForbidden = false;
 	}
@@ -699,13 +711,17 @@ public sealed class BotMotor
 
 		var abilities = Abilities();
 		var goalTile = new Point((int)(target.X / 16f), (int)((target.Y + 21f) / 16f));
-		var leg = longRoute.LegToward(PathFinder.FeetOf(npc), goalTile, Math.Max(1, (int)(arriveRadius / 16f)), abilities, needsWholeRoute);
+		Vector2? leg;
+		using (Systems.Probes.Measure("m:Leg"))
+			leg = longRoute.LegToward(PathFinder.FeetOf(npc), goalTile, Math.Max(1, (int)(arriveRadius / 16f)), abilities, needsWholeRoute);
 		if (longRoute.Planned != null)
 		{
 			BotDiagnostics.Log(bot, longRoute.Planned);
 			longRoute.ClearPlanned();
 		}
-		var intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
+		MotorIntent intent;
+		using (Systems.Probes.Measure("m:Follow"))
+			intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
 		if (leg == null && follower.HasNoRoute)
 			needsWholeRoute = true;
 		AimProgressAt(leg ?? target);

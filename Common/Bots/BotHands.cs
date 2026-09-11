@@ -1055,7 +1055,7 @@ public sealed class BotHands
 		{
 			var item = Main.item[i];
 			if (!item.active || item.noGrabDelay > 0 || Math.Abs(item.Center.X - npc.Center.X) > PullPrefilter || Math.Abs(item.Center.Y - npc.Center.Y) > PullPrefilter
-				|| ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) || Junk.IsAbandoned(i))
+				|| ItemReservations.IsReservedForOther(i, bot) || InOtherBase(item.Center) && !FreeToTake(item) || Junk.IsAbandoned(i))
 				continue;
 			var pullArea = npc.Hitbox;
 			int range = SafeGrabRange(item);
@@ -1068,7 +1068,7 @@ public sealed class BotHands
 			if (!pickup && !Inventory.HasRoomFor(Avatar, item))
 			{
 				Junk.TrashExcess(bot);
-				if (!Inventory.HasRoomFor(Avatar, item))
+				if (!Inventory.HasRoomFor(Avatar, item) && !(npc.Hitbox.Intersects(item.Hitbox) && Main.GameUpdateCount - roomMadeAt >= RoomCheckTicks && MakeRoom(item)))
 					continue;
 			}
 			if (!npc.Hitbox.Intersects(item.Hitbox))
@@ -1092,6 +1092,21 @@ public sealed class BotHands
 			bot.Watchdog.RecordProgress();
 			SoundEngine.PlaySound(SoundID.Grab, npc.Center);
 		}
+	}
+
+	const int FreshLootTicks = 3600;
+
+	static bool FreeToTake(Item item) =>
+		ItemID.Sets.IsAPickup[item.type]
+		|| Systems.BotWorldSystem.Relation != Config.FactionRelation.War && ItemID.Sets.ItemNoGravity[item.type] && item.timeSinceItemSpawned < FreshLootTicks;
+
+	const uint RoomCheckTicks = 60;
+	uint roomMadeAt;
+
+	bool MakeRoom(Item item)
+	{
+		roomMadeAt = Main.GameUpdateCount;
+		return Junk.MakeRoomForBetter(bot, item);
 	}
 
 	int SafeGrabRange(Item item)

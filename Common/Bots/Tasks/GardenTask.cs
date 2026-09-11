@@ -65,7 +65,7 @@ public sealed class GardenTask : BotTask
 	bool ClearPlatform(Point tile)
 	{
 		var current = Main.tile[tile.X, tile.Y];
-		if (current.HasTile && (job == Job.PlaceBox ? current.TileType == TileID.Platforms : HerbGarden.IsWeed(current.TileType)))
+		if (current.HasTile && (job == Job.PlaceBox ? current.TileType == TileID.Platforms || HerbGarden.OwnHighwayDeck(tile) : HerbGarden.IsWeed(current.TileType)))
 			WorldGen.KillTile(tile.X, tile.Y);
 		return true;
 	}

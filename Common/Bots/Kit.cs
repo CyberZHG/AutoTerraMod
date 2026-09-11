@@ -13,6 +13,49 @@ public static class Kit
 	const int RopeReserve = 60;
 	const int PlatformReserve = 20;
 
+	const int FurnitureCap = 5;
+	const int PotionCap = 100;
+	const int BuildingCap = 999;
+	const int ExplosiveCap = 300;
+	const int MiscCap = 200;
+
+	static int CapOf(Item item)
+	{
+		if (item.IsACoin || item.maxStack <= 1)
+			return int.MaxValue;
+		if (item.potion && item.healLife > 0 || item.healMana > 0)
+			return PotionCap;
+		if (item.ammo > 0 || item.createWall > 0)
+			return BuildingCap;
+		if (item.createTile >= 0)
+			return TileID.Sets.Torch[item.createTile] || Main.tileRope[item.createTile] || !Main.tileFrameImportant[item.createTile] ? BuildingCap : FurnitureCap;
+		if (Explosives.IsExplosive(item))
+			return ExplosiveCap;
+		return item.consumable || item.material ? MiscCap : FurnitureCap;
+	}
+
+	public static IEnumerable<(Item item, int surplus)> Surplus(Bot bot)
+	{
+		var planned = bot.Brain.PlannedItemTypes;
+		var toStore = ItemsToStore(bot).ToHashSet();
+		foreach (var group in Inventory.Items(bot.Avatar).Where(item => !toStore.Contains(item) && !planned.Contains(item.type)).GroupBy(item => item.type))
+		{
+			int cap = CapOf(group.First());
+			int total = group.Sum(item => item.stack);
+			if (total <= cap)
+				continue;
+			int excess = total - cap;
+			foreach (var item in group.OrderBy(item => item.stack))
+			{
+				if (excess <= 0)
+					break;
+				int take = System.Math.Min(excess, item.stack);
+				excess -= take;
+				yield return (item, take);
+			}
+		}
+	}
+
 	public static List<Item> ItemsToStore(Bot bot)
 	{
 		var avatar = bot.Avatar;

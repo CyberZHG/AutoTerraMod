@@ -41,8 +41,7 @@ public static class PillarSiege
 			for (int offset = StagingNearest; offset <= StagingFarthest && ground == null; offset++)
 			{
 				int x = Utils.Clamp(pillarX + sign * offset, 50, Main.maxTilesX - 50);
-				int y = TileQuery.SurfaceY(x) - 1;
-				if (Math.Abs(y - pillarFloor) <= StagingRise)
+				if (FootingNear(x, pillarFloor) is int y)
 					ground = new Point(x, y);
 			}
 			if (ground != null)
@@ -52,6 +51,16 @@ public static class PillarSiege
 		var spot = (Grounds.StandingSpotNear(ground ?? fallback) ?? ground ?? fallback).ToWorldCoordinates(8f, 0f);
 		staging[(pillar.whoAmI, side)] = (spot, Main.GameUpdateCount);
 		return spot;
+	}
+
+	static int? FootingNear(int x, int floor)
+	{
+		for (int y = Math.Max(10, floor - StagingRise); y <= Math.Min(Main.maxTilesY - 10, floor + StagingRise); y++)
+		{
+			if (TileQuery.CanStandOn(x, y + 1) && !TileQuery.IsSolid(x, y) && !TileQuery.IsSolid(x, y - 1) && !TileQuery.IsSolid(x, y - 2) && Main.tile[x, y].LiquidAmount == 0)
+				return y;
+		}
+		return null;
 	}
 
 	public static NPC SiegedPillar(Vector2 near) =>

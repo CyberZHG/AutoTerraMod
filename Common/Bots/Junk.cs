@@ -151,6 +151,18 @@ public static class Junk
 		return Inventory.HasRoomFor(bot.Avatar, incoming);
 	}
 
+	public static bool MakeRoomForBetter(Bot bot, Item incoming)
+	{
+		var planned = bot.Brain.PlannedItemTypes;
+		var cheapest = Kit.ItemsToStore(bot)
+			.Where(item => item.type != incoming.type && !planned.Contains(item.type) && !IsBossSummon(item))
+			.MinBy(item => (long)item.value * item.stack);
+		if (cheapest == null || (long)cheapest.value * cheapest.stack >= (long)incoming.value * incoming.stack)
+			return false;
+		Discard(bot, cheapest, cheapest.stack, $"making room for {incoming.Name}");
+		return Inventory.HasRoomFor(bot.Avatar, incoming);
+	}
+
 	public static void SellOutgrownLoot(Bot bot)
 	{
 		var shopkeeper = Planning.Shops.NearbyShopkeeper(bot.Center);

@@ -9,7 +9,8 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class HerbGarden
 {
-	public const int Size = 6;
+	public const int Size = 30;
+	const int HighwayReach = 28;
 	public const int Seed = ItemID.DaybloomSeeds;
 	public const int Box = ItemID.DayBloomPlanterBox;
 	public const int HerbStyle = 0;
@@ -37,9 +38,9 @@ public static class HerbGarden
 
 	static IEnumerable<int> Columns(Building.Settlement settlement)
 	{
-		for (int x = settlement.Left - Building.Settlement.ApronWidth; x <= settlement.Left - DoorClearance; x++)
+		for (int x = settlement.Left - DoorClearance; x >= settlement.Left - Building.Settlement.ApronWidth - HighwayReach; x--)
 			yield return x;
-		for (int x = settlement.Right + DoorClearance; x <= settlement.Right + Building.Settlement.ApronWidth; x++)
+		for (int x = settlement.Right + DoorClearance; x <= settlement.Right + Building.Settlement.ApronWidth + HighwayReach; x++)
 			yield return x;
 	}
 
@@ -81,12 +82,16 @@ public static class HerbGarden
 			.MinBy(spot => WorldScan.DistanceSq(bot.CenterTile, spot.Value));
 	}
 
+	public static bool OwnHighwayDeck(Point spot) =>
+		Systems.BotWorldSystem.Factions.Any(faction => World.Highway.For(faction).Any(highway => highway.Y + 1 == spot.Y && highway.Spans(spot.X)))
+		&& TileQuery.IsSolid(spot.X, spot.Y) && Main.tile[spot.X, spot.Y].TileType is TileID.Stone or TileID.GrayBrick or TileID.WoodBlock or TileID.Dirt;
+
 	public static bool IsFreeSpot(Point spot)
 	{
 		if (!WorldGen.InWorld(spot.X, spot.Y, 10))
 			return false;
 		var ground = Main.tile[spot.X, spot.Y];
-		if (ground.HasTile && ground.TileType != TileID.Platforms)
+		if (ground.HasTile && ground.TileType != TileID.Platforms && !OwnHighwayDeck(spot))
 			return false;
 		for (int y = spot.Y - 2; y < spot.Y; y++)
 		{

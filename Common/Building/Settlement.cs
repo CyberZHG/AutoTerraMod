@@ -15,6 +15,7 @@ public sealed class Settlement
 	const int RoomWidth = 10;
 	public const int ApronWidth = 5;
 	const int RoomInteriorHeight = 5;
+	const int AtelierInteriorHeight = 6;
 	const int MinimumStorageInteriorHeight = 4;
 	public const int GuestRoomCount = 3;
 	public const int GuestStories = 3;
@@ -30,7 +31,7 @@ public sealed class Settlement
 		int nextRight = Hall.Left;
 		for (int i = 0; i < bedroomCount; i++)
 		{
-			var bedroom = Add(StructurePurpose.Bedroom, nextRight - RoomWidth + 1, RoomWidth, floor, RoomInteriorHeight, design.Roof);
+			var bedroom = Add(StructurePurpose.Bedroom, nextRight - RoomWidth + 1, RoomWidth, floor, RoomInteriorHeight, RoofStyle.Flat);
 			Bedrooms.Add(bedroom);
 			nextRight = bedroom.Left;
 		}
@@ -69,6 +70,15 @@ public sealed class Settlement
 		stack = Workshop;
 		for (int story = 0; story < WorkshopStorageStories; story++)
 			stack = StackStorage(stack, WorkshopWidth, workshopHatch);
+		if (Bedrooms.Count > 0)
+		{
+			var nearHall = Bedrooms[0];
+			int hatch = (nearHall.Left + nearHall.Right) / 2;
+			nearHall.AddHatchAbove(hatch);
+			int atelierLeft = Bedrooms[^1].Left;
+			Atelier = Add(StructurePurpose.Workshop, atelierLeft, nearHall.Right - atelierLeft + 1, nearHall.Ceiling, AtelierInteriorHeight, design.Roof);
+			Atelier.AddHatchBelow(hatch);
+		}
 		CloseMisalignedDoors();
 		AddBalconies(floor);
 		Left = structures.Min(structure => structure.Left);
@@ -87,6 +97,7 @@ public sealed class Settlement
 	public HouseBlueprint Storage { get; }
 	public HouseBlueprint Workshop { get; }
 	public HouseBlueprint Gallery { get; }
+	public HouseBlueprint Atelier { get; }
 	public List<HouseBlueprint> StorageAnnexes { get; } = new();
 	public IEnumerable<HouseBlueprint> StorageRooms => structures.Where(structure => structure.Purpose == StructurePurpose.Storage);
 	public List<HouseBlueprint> Bedrooms { get; } = new();

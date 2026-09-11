@@ -96,7 +96,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	{
 		for (int y = Y - Headroom + 1; y <= Y; y++)
 		{
-			if (TileQuery.IsSolid(x, y) && !tolerated.Contains((x, y)) || IsClutter(x, y))
+			if ((TileQuery.IsSolid(x, y) || IsClutter(x, y)) && !tolerated.Contains((x, y)))
 				return false;
 		}
 		return true;

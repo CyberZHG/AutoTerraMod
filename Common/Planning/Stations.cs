@@ -180,6 +180,9 @@ public static class Stations
 		if (hobby)
 			foreach (var spot in HighwaySpots(faction))
 				yield return spot;
+		if (settlement.Atelier is { } atelier && Building.HouseInspector.IsComplete(faction, atelier))
+			foreach (var spot in atelier.FloorSpotsNearCenter())
+				yield return spot;
 		foreach (var spot in settlement.Workshop.FloorSpotsNearCenter())
 			yield return spot;
 		foreach (var spot in settlement.Hall.FloorSpotsNearCenter())

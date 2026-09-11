@@ -737,6 +737,12 @@ public sealed class HeadlessTestMode : ModSystem
 					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe banners {bot.Faction.Name}: {string.Join(", ", banners)}");
 					continue;
 				}
+				if (parts[1] == "inv")
+				{
+					var store = Bots.Kit.ItemsToStore(bot).ToHashSet();
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe inv {bot.Name}: used={Bots.Inventory.UsedSlots(bot.Avatar)} storageFree={Building.BaseStorage.FreeSlots(bot.Faction)} [{string.Join(", ", Bots.Inventory.Items(bot.Avatar).Select(item => $"{item.Name}x{item.stack}{(store.Contains(item) ? "*" : "")}"))}]");
+					continue;
+				}
 				if (parts[1] == "gear")
 				{
 					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe gear {bot.Name}: def={bot.Avatar.statDefense} life={bot.Avatar.statLifeMax2} armor=[{string.Join(", ", bot.Avatar.armor.Take(10).Where(item => !item.IsAir).Select(item => item.Name))}] weapon={bot.Hands.BestWeapon()?.Name} pick={bot.Hands.BestPickaxe?.pick}");

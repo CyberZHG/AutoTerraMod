@@ -107,7 +107,7 @@ public sealed class BotBrain
 		var avatar = bot.Avatar;
 		if (avatar.statLife >= avatar.statLifeMax2 * BossQuickHealFraction)
 			return;
-		float threshold = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossNearbyRadius) != null ? BossQuickHealFraction : QuickHealFraction;
+		float threshold = Bosses.BossCatalog.NearestActiveBoss(bot.Center, BossNearbyRadius) != null || Bosses.BossRituals.InPillarZone(bot.Center) ? BossQuickHealFraction : QuickHealFraction;
 		if (avatar.statLife < avatar.statLifeMax2 * threshold)
 			bot.Hands.DrinkHealingPotion();
 	}

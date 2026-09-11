@@ -69,7 +69,7 @@ public sealed class BotVitals
 	{
 		SyncAvatar(npc, Avatar);
 		FeelWallHorror();
-		RefreshVanillaStats();
+		RefreshVanillaStats(force: false);
 		BurnInfernoRing();
 		if (PotionSicknessTicks > 0)
 			PotionSicknessTicks--;
@@ -228,10 +228,22 @@ public sealed class BotVitals
 		}
 	}
 
-	public void RefreshVanillaStats()
+	const uint StatRefreshTicks = 2;
+	bool statsRefreshed;
+
+	public void RefreshVanillaStats(bool force = true)
 	{
 		try
 		{
+			if (!force && statsRefreshed && (Main.GameUpdateCount + (uint)bot.Id) % StatRefreshTicks != 0)
+			{
+				if (Avatar.whoAmI != Main.myPlayer)
+					TickBuffTimers();
+				Avatar.UpdateLifeRegen();
+				Avatar.UpdateManaRegen();
+				return;
+			}
+			statsRefreshed = true;
 			Avatar.maxRunSpeed = BaseRunSpeed;
 			Avatar.accRunSpeed = BaseRunSpeed;
 			Avatar.runAcceleration = BaseRunAcceleration;

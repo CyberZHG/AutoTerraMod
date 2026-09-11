@@ -88,7 +88,7 @@ public sealed class StoreTask : ChestVisitTask
 		Detail = "";
 		bool atBase = Vector2.Distance(Bot.Center, Bot.Faction.BaseCenter) < NearBase;
 		float score = atBase && Kit.CarriesSurplusTreasure(Bot) ? SurplusTreasurePriority : 0f;
-		bool hasItemsToStore = Kit.ItemsToStore(Bot).Any();
+		bool hasItemsToStore = Kit.ItemsToStore(Bot).Any() || used >= FullishSlots && Kit.Surplus(Bot).Any();
 		if (atBase && Bot.StoreAfterDeath && !Bot.UpgradeAfterDeath && hasItemsToStore)
 			return StoreAfterDeathPriority;
 		if (used < OpportunisticSlots || !hasItemsToStore || Bot.CommittedToMining && used < Inventory.MainSlotCount - 1)
@@ -142,6 +142,24 @@ public sealed class StoreTask : ChestVisitTask
 					break;
 				}
 			}
+		}
+		foreach (var (item, surplus) in Kit.Surplus(Bot).ToList())
+		{
+			int left = surplus;
+			foreach (var target in reachable)
+			{
+				if (left <= 0)
+					break;
+				var portion = item.Clone();
+				portion.stack = left;
+				var leftover = BaseStorage.Deposit(target, portion);
+				int moved = left - (leftover.IsAir ? 0 : leftover.stack);
+				left -= moved;
+				item.stack -= moved;
+				stored += moved;
+			}
+			if (item.stack <= 0)
+				item.TurnToAir();
 		}
 		BotDiagnostics.Log(Bot, $"stored {stored} items by category");
 		Bot.FinishChoresAfterDeath();

@@ -101,6 +101,13 @@ public sealed class FightTask : BotTask
 			Detail = boss.GivenOrTypeName;
 			return BossPriority;
 		}
+		if (Bosses.BossRituals.PillarsStanding() && ZoneThreat() is NPC zoneThreat)
+		{
+			target = zoneThreat;
+			closeThreat = true;
+			Detail = zoneThreat.GivenOrTypeName;
+			return PillarZonePriority;
+		}
 		var interferer = Interferer();
 		if (interferer != null)
 		{
@@ -131,6 +138,15 @@ public sealed class FightTask : BotTask
 			score = System.Math.Max(score, RallyGuardPriority);
 		Detail = target.GivenOrTypeName;
 		return HealthFraction < Traits.FleeHealthFraction ? score * 0.3f : score;
+	}
+
+	const float PillarZonePriority = 110f;
+	const float PillarThreatRadius = 16f * 30f;
+
+	NPC ZoneThreat()
+	{
+		var threat = Engagement.NearestHostile(Bot, PillarThreatRadius, true, ignoreBots: true);
+		return threat != null && !Bosses.BossRituals.Pillars.Contains(threat.type) && !Bot.IsIgnoring(threat) ? threat : null;
 	}
 
 	const float RallyGuardPriority = 94f;
