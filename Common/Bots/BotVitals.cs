@@ -237,6 +237,7 @@ public sealed class BotVitals
 		{
 			if (!force && statsRefreshed && (Main.GameUpdateCount + (uint)bot.Id) % StatRefreshTicks != 0)
 			{
+				RecountOwnedProjectiles();
 				if (Avatar.whoAmI != Main.myPlayer)
 					TickBuffTimers();
 				Avatar.UpdateLifeRegen();
