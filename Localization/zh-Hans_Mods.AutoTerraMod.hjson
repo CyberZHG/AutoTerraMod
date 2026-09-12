@@ -208,6 +208,8 @@ Import: {
 UI: {
 	BossSiteFound: （已找到{0}）
 	BossSiteUnknown: （尚未找到{0}）
+	BossFighting: "  正在挑战 {0}"
+	BossLife: ：剩余生命 {0}%
 	BossReadiness: "  下一个 Boss {0}：准备度 {1}%"
 	FactionBosses: Boss {0}/{1}
 	BossCredited: "{0}击败了{1}！伤害占比：{2}"

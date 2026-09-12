@@ -208,6 +208,8 @@ Import: {
 UI: {
 	BossSiteFound: " ({0} found)"
 	BossSiteUnknown: " ({0} not found yet)"
+	BossFighting: "  Fighting {0}"
+	BossLife: ": {0}% life left"
 	BossReadiness: "  Next boss {0}: readiness {1}%"
 	FactionBosses: bosses {0}/{1}
 	BossCredited: "{0} defeated {1}! Damage: {2}"

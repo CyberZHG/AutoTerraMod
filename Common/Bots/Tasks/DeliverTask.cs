@@ -36,6 +36,15 @@ public sealed class DeliverTask : BotTask
 			IsFinished = true;
 			return;
 		}
+		if (step.ToFaction >= 0)
+		{
+			var target = BotWorldSystem.Factions.FirstOrDefault(faction => faction.Id == step.ToFaction);
+			if (target != null && BaseStorage.ChestWithRoom(target, Bot.Center) is { } theirs)
+				DeliverToChest(theirs);
+			else
+				IsFinished = true;
+			return;
+		}
 		var chest = step.HandOver ? null : BaseStorage.ChestWithRoom(Bot.Faction, Bot.Center);
 		if (chest != null)
 		{

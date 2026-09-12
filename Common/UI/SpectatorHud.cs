@@ -236,6 +236,12 @@ public sealed class SpectatorHud : ModSystem
 			string house = faction.Settlement == null || built >= planned ? "" : Text("UI.SettlementProgress", built, planned);
 			string bosses = Text("UI.FactionBosses", Bosses.BossCredit.DefeatedCount(faction), bossTotal);
 			lines.Add((Text("UI.FactionLine", faction.Name, bestPick, house, bosses), faction.Color));
+			if (Bosses.BossCredit.CurrentFight(faction) is { } fight)
+			{
+				string life = Bosses.BossCredit.LifePercent(fight) is int percent ? Text("UI.BossLife", percent) : "";
+				lines.Add((Text("UI.BossFighting", fight.Name) + life, Color.Orange));
+				continue;
+			}
 			var challenge = Bosses.BossCredit.NextChallengeFor(faction);
 			var summoner = members.Where(bot => bot.IsAlive).MaxBy(bot => bot.Personality.Combat);
 			if (challenge != null && summoner != null)

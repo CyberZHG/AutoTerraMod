@@ -798,6 +798,63 @@ public sealed class SurplusGiftGoal : ProgressionGoal
 	}
 }
 
+public sealed class SpareStationGiftGoal : ProgressionGoal
+{
+	const uint ClaimTicks = 3 * 3600;
+
+	static readonly (int item, int tile)[] Stations = { (ItemID.LunarCraftingStation, TileID.LunarCraftingStation) };
+	static readonly (int item, int keep, int lacking, int gift)[] BossOnly = { (ItemID.LunarOre, 600, 45, 45) };
+	static readonly Dictionary<(int faction, int item), (int donor, uint tick)> claims = new();
+
+	public override string Describe() => "SpareStationGift";
+
+	public override bool AppliesTo(Bot bot) => Gift(bot) != null;
+
+	public override bool IsMet(Bot bot) => Gift(bot) == null;
+
+	static int Owned(Factions.Faction faction, int item) =>
+		BaseStorage.Count(faction, item) + BotWorldSystem.Bots.Where(member => member.FactionId == faction.Id).Sum(member => Inventory.Count(member.Avatar, item));
+
+	static bool ClaimedByOther(Factions.Faction recipient, int item, Bot donor) =>
+		claims.TryGetValue((recipient.Id, item), out var claim) && claim.donor != donor.FactionId && Main.GameUpdateCount - claim.tick < ClaimTicks;
+
+	static (Factions.Faction recipient, int item, int amount)? Gift(Bot bot)
+	{
+		if (BotWorldSystem.Relation == Config.FactionRelation.War
+			|| BotWorldSystem.Bots.Where(member => member.FactionId == bot.FactionId && member.IsAlive).MinBy(member => member.Id) != bot)
+			return null;
+		foreach (var (item, keep, lackingBelow, gift) in BossOnly)
+		{
+			if (Owned(bot.Faction, item) < keep + gift)
+				continue;
+			var lacking = BotWorldSystem.Factions.FirstOrDefault(faction => faction != bot.Faction && Owned(faction, item) < lackingBelow && !ClaimedByOther(faction, item, bot));
+			if (lacking != null)
+				return (lacking, item, gift);
+		}
+		foreach (var (item, tile) in Stations)
+		{
+			int spare = Owned(bot.Faction, item) - (Planning.Stations.BaseHas(bot.Faction, tile) ? 0 : 1);
+			if (spare <= 0)
+				continue;
+			var lacking = BotWorldSystem.Factions.FirstOrDefault(faction => faction != bot.Faction && !Planning.Stations.BaseHas(faction, tile) && Owned(faction, item) == 0 && !ClaimedByOther(faction, item, bot));
+			if (lacking != null)
+				return (lacking, item, 1);
+		}
+		return null;
+	}
+
+	public override PlanStep Plan(Bot bot)
+	{
+		if (Gift(bot) is not var (recipient, item, amount))
+			return PlanStep.Idle;
+		claims[(recipient.Id, item)] = (bot.FactionId, Main.GameUpdateCount);
+		int held = Inventory.Count(bot.Avatar, item);
+		if (held < amount)
+			return new WithdrawStep(item, amount - held);
+		return new DeliverStep(item, -1, held - amount, ToFaction: recipient.Id);
+	}
+}
+
 public sealed class RefightGoal : ProgressionGoal
 {
 	public override bool MayUseWood => true;
@@ -997,6 +1054,32 @@ public sealed class StyleGoal : ProgressionGoal
 	public HashSet<CombatStyle> Styles => styles;
 
 	public static CombatStyle EffectiveStyle(CombatStyle style) => style == CombatStyle.Summon ? CombatStyle.Melee : style;
+}
+
+public sealed class OptionalGoal : ProgressionGoal
+{
+	const int CacheTicks = 600;
+
+	readonly ProgressionGoal inner;
+	readonly Dictionary<int, (uint at, bool ready)> cache = new();
+
+	public OptionalGoal(ProgressionGoal inner) => this.inner = inner;
+
+	public ProgressionGoal Inner => inner;
+	public override GearTrack Track => inner.Track;
+	public override string Describe() => inner.Describe();
+	public override bool AppliesTo(Bot bot) => inner.AppliesTo(bot) && Ready(bot);
+	public override bool IsMet(Bot bot) => inner.IsMet(bot) || !Ready(bot);
+	public override PlanStep Plan(Bot bot) => inner.Plan(bot);
+
+	bool Ready(Bot bot)
+	{
+		if (cache.TryGetValue(bot.Id, out var cached) && Terraria.Main.GameUpdateCount - cached.at < CacheTicks + bot.Id * 7)
+			return cached.ready;
+		bool ready = !inner.IsMet(bot) && inner.Plan(bot) is CraftStep or WithdrawStep or PlaceStationStep;
+		cache[bot.Id] = (Terraria.Main.GameUpdateCount, ready);
+		return ready;
+	}
 }
 
 public sealed class OwnGoal : ProgressionGoal
@@ -1954,6 +2037,7 @@ public static class ProgressionGoals
 			new GatedGoal(new ReserveGoal(ItemID.IronskinPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.RegenerationPotion, 2, 5), () => Terraria.Main.hardMode),
 			new GatedGoal(new ReserveGoal(ItemID.InfernoPotion, 2, 5), () => Terraria.NPC.downedGolemBoss),
+			new SpareStationGiftGoal(),
 			new StructureGoal(settlement => new[] { settlement.Hall }),
 			new ReserveGoal(ItemID.Torch, 5, 15, onlyWhenHolding: ItemID.Gel),
 			new SupportConstructionGoal(),
@@ -2108,9 +2192,18 @@ public static class ProgressionGoals
 			staffs: new int[] { ItemID.CursedFlames, ItemID.GoldenShower },
 			armor: new (int, int, int)[] { (ItemID.ChlorophyteMask, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHelmet, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves), (ItemID.ChlorophyteHeadgear, ItemID.ChlorophytePlateMail, ItemID.ChlorophyteGreaves) });
 		goals.Add(new OwnGoal(ItemID.AngelWings, ItemID.DemonWings));
+		AddOptionalSet(goals, new[] { CombatStyle.Melee, CombatStyle.Summon },
+			new int[] { ItemID.TurtleHelmet, ItemID.BeetleHelmet }, new int[] { ItemID.TurtleScaleMail, ItemID.BeetleScaleMail, ItemID.BeetleShell }, new int[] { ItemID.TurtleLeggings, ItemID.BeetleLeggings });
+		AddOptionalSet(goals, new[] { CombatStyle.Ranged },
+			new int[] { ItemID.ShroomiteHeadgear, ItemID.ShroomiteMask, ItemID.ShroomiteHelmet }, new int[] { ItemID.ShroomiteBreastplate }, new int[] { ItemID.ShroomiteLeggings });
+		AddOptionalSet(goals, new[] { CombatStyle.Magic },
+			new int[] { ItemID.SpectreHood, ItemID.SpectreMask }, new int[] { ItemID.SpectreRobe }, new int[] { ItemID.SpectrePants });
 		goals.Add(new GearGoal(GearKind.Body, ItemID.SolarFlareBreastplate));
 		goals.Add(new GearGoal(GearKind.Head, ItemID.SolarFlareHelmet));
 		goals.Add(new GearGoal(GearKind.Legs, ItemID.SolarFlareLeggings));
+		goals.Add(new GearGoal(GearKind.Pickaxe, ItemID.SolarFlarePickaxe, ItemID.VortexPickaxe, ItemID.NebulaPickaxe, ItemID.StardustPickaxe,
+			ItemID.SolarFlareDrill, ItemID.VortexDrill, ItemID.NebulaDrill, ItemID.StardustDrill));
+		goals.Add(new OwnGoal(ItemID.WingsSolar, ItemID.WingsVortex, ItemID.WingsNebula, ItemID.WingsStardust));
 		goals.Add(new OwnGoal(ItemID.TerrasparkBoots));
 		goals.Add(new OwnGoal(ItemID.AnkhShield));
 		goals.Add(new OwnGoal(ItemID.CellPhone));
@@ -2159,12 +2252,14 @@ public static class ProgressionGoals
 		GatedGoal gated => Unwrap(gated.Inner),
 		AspirationGoal aspiration => Unwrap(aspiration.Inner),
 		StyleGoal style => Unwrap(style.Inner),
+		OptionalGoal optional => Unwrap(optional.Inner),
 		_ => goal
 	};
 
 	static HashSet<CombatStyle> StylesOf(ProgressionGoal goal) => goal switch
 	{
 		GatedGoal gated => StylesOf(gated.Inner),
+		OptionalGoal optional => StylesOf(optional.Inner),
 		StyleGoal style => style.Styles,
 		_ => null
 	};
@@ -2198,6 +2293,13 @@ public static class ProgressionGoals
 
 	static bool BeatenMechBoss(Factions.Faction faction) =>
 		Beaten(faction, NPCID.TheDestroyer) || Beaten(faction, NPCID.Retinazer) || Beaten(faction, NPCID.SkeletronPrime);
+
+	static void AddOptionalSet(List<ProgressionGoal> goals, CombatStyle[] styles, int[] heads, int[] bodies, int[] legs)
+	{
+		goals.Add(new StyleGoal(new OptionalGoal(new GearGoal(GearKind.Body, bodies)), styles));
+		goals.Add(new StyleGoal(new OptionalGoal(new GearGoal(GearKind.Head, heads)), styles));
+		goals.Add(new StyleGoal(new OptionalGoal(new GearGoal(GearKind.Legs, legs)), styles));
+	}
 
 	static void AddOreTier(List<ProgressionGoal> goals, int[] pickaxes, int[] swords, int[] bows, int[] staffs, (int head, int body, int legs)[] armor,
 		System.Func<Factions.Faction, bool> leapWhen = null)

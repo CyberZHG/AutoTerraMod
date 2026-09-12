@@ -50,6 +50,8 @@ public sealed class BotStatusReport : ModSystem
 
 	static string DescribeBossReadiness(Factions.Faction faction)
 	{
+		if (Bosses.BossCredit.CurrentFight(faction) is { } fight)
+			return $"\n    fighting {fight.Name}: life={Bosses.BossCredit.LifePercent(fight)?.ToString() ?? "?"}% damage=[{Bosses.BossCredit.DescribeFight(fight)}]";
 		var challenge = Bosses.BossCredit.NextChallengeFor(faction);
 		var summoner = BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id && bot.IsAlive).MaxBy(bot => bot.Personality.Combat);
 		if (challenge == null || summoner == null)

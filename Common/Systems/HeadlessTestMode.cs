@@ -717,7 +717,13 @@ public sealed class HeadlessTestMode : ModSystem
 			return;
 		foreach (var parts in spec.Split(';').Select(entry => entry.Split(':')))
 		{
-			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.Name == parts[0] && bot.IsAlive))
+			if (parts[0] == "world")
+			{
+				foreach (string name in parts[1].Split(','))
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe world {name}: {WorldCount(ItemID.Search.GetId(name))}");
+				continue;
+			}
+			foreach (var bot in BotWorldSystem.Bots.Where(bot => (parts[0] == "*" || bot.Name == parts[0]) && bot.IsAlive))
 			{
 				if (parts[1].StartsWith("path"))
 				{
@@ -745,7 +751,7 @@ public sealed class HeadlessTestMode : ModSystem
 				}
 				if (parts[1] == "gear")
 				{
-					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe gear {bot.Name}: def={bot.Avatar.statDefense} life={bot.Avatar.statLifeMax2} armor=[{string.Join(", ", bot.Avatar.armor.Take(10).Where(item => !item.IsAir).Select(item => item.Name))}] weapon={bot.Hands.BestWeapon()?.Name} pick={bot.Hands.BestPickaxe?.pick}");
+					ModContent.GetInstance<AutoTerraMod>().Logger.Info($"probe gear {bot.Name}: def={bot.Avatar.statDefense} life={bot.Avatar.statLifeMax2} {bot.Faction.Name} armor=[{string.Join(", ", bot.Avatar.armor.Take(10).Where(item => !item.IsAir).Select(item => item.Name))}] weapon={bot.Hands.BestWeapon()?.Name} pick={bot.Hands.BestPickaxe?.pick} weapons=[{string.Join(", ", Bots.Inventory.Items(bot.Avatar).Where(item => item.damage > 0 && item.pick == 0 && item.axe == 0 && item.hammer == 0 && item.ammo == 0 && !item.consumable).Select(item => $"{item.Name}:{item.damage}"))}]");
 					continue;
 				}
 				foreach (string name in parts[1].Split(','))
@@ -755,6 +761,16 @@ public sealed class HeadlessTestMode : ModSystem
 				}
 			}
 		}
+	}
+
+	static string WorldCount(int type)
+	{
+		int Sum(IEnumerable<Item> items) => items.Where(item => item != null && item.type == type).Sum(item => item.stack);
+		var parts = BotWorldSystem.Bots.Select(bot => $"{bot.Name}={Sum(bot.Avatar.inventory) + Sum(bot.Avatar.bank.item)}").Where(entry => !entry.EndsWith("=0"));
+		var factions = BotWorldSystem.Factions.Select(faction => $"{faction.Name}Chests={Building.BaseStorage.Count(faction, type)}");
+		int allChests = Main.chest.Where(chest => chest != null).Sum(chest => Sum(chest.item));
+		int ground = Sum(Main.item.Where(item => item.active));
+		return $"chests={allChests} ground={ground} {string.Join(" ", factions)} {string.Join(" ", parts)}";
 	}
 
 	static void TraceWhenAsked()

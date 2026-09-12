@@ -113,6 +113,13 @@ public sealed class BossCredit : GlobalNPC
 	public static bool IsEngaged(int factionId, BossChallenge challenge) =>
 		damageByFight.TryGetValue(challenge.BossType, out var byFaction) && byFaction.ContainsKey(factionId);
 
+	public static BossChallenge CurrentFight(Faction faction) =>
+		BossCatalog.Challenges.FirstOrDefault(challenge => (IsEngaged(faction.Id, challenge) || summoners.TryGetValue(challenge.BossType, out int owner) && owner == faction.Id
+			|| faction.Rally != null && faction.RallyBossType == challenge.BossType) && BossCatalog.IsBossAlive(challenge));
+
+	public static int? LifePercent(BossChallenge challenge) =>
+		Main.npc.FirstOrDefault(npc => npc.active && npc.type == challenge.BossType && npc.lifeMax > 0) is { } boss ? boss.life * 100 / boss.lifeMax : null;
+
 	public static NPC EngagedBoss(Bot bot) =>
 		Main.npc.Where(npc => npc.active && !npc.dontTakeDamage && !npc.immortal && BossCatalog.ChallengeOf(npc.type) is BossChallenge challenge && IsEngaged(bot.FactionId, challenge))
 			.OrderBy(npc => Microsoft.Xna.Framework.Vector2.Distance(npc.Center, bot.Center))

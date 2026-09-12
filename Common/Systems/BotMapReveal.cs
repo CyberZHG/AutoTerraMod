@@ -13,7 +13,8 @@ public sealed class BotMapReveal : ModSystem
 	const int Radius = 14;
 	const int FullLightRadius = 8;
 	const int EdgeLight = 110;
-	const int RevealStep = 6;
+	const int RevealStep = 12;
+	const uint Interval = 15;
 
 	readonly Dictionary<int, Point> lastRevealed = new();
 	int cursor;
@@ -24,19 +25,26 @@ public sealed class BotMapReveal : ModSystem
 	{
 		if (Main.dedServ || !Main.mapEnabled || Main.Map == null || !Spectating.SpectatorSystem.IsSpectating)
 			return;
+		if (Main.GameUpdateCount % Interval != 0)
+			return;
+		var followed = Spectating.SpectatorSystem.Followed?.Npc;
 		for (int step = 0; step < Main.maxNPCs; step++)
 		{
 			cursor = (cursor + 1) % Main.maxNPCs;
 			var npc = Main.npc[cursor];
-			if (!npc.active || npc.ModNPC is not BotNPC)
-				continue;
-			var center = npc.Center.ToTileCoordinates();
-			if (lastRevealed.TryGetValue(npc.whoAmI, out var previous) && Math.Abs(previous.X - center.X) < RevealStep && Math.Abs(previous.Y - center.Y) < RevealStep)
-				continue;
-			if (Reveal(center))
-				lastRevealed[npc.whoAmI] = center;
-			return;
+			if (npc.active && npc.ModNPC is BotNPC && npc != followed && TryReveal(npc))
+				return;
 		}
+	}
+
+	bool TryReveal(NPC npc)
+	{
+		var center = npc.Center.ToTileCoordinates();
+		if (lastRevealed.TryGetValue(npc.whoAmI, out var previous) && Math.Abs(previous.X - center.X) < RevealStep && Math.Abs(previous.Y - center.Y) < RevealStep)
+			return false;
+		if (Reveal(center))
+			lastRevealed[npc.whoAmI] = center;
+		return true;
 	}
 
 	static bool Reveal(Point center)
