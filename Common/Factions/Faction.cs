@@ -14,7 +14,7 @@ public sealed class Faction
 	Settlement settlement;
 
 	public int Id { get; init; }
-	public Point BaseTile { get; init; }
+	public Point BaseTile { get; set; }
 	public HouseDesign HouseDesign { get; set; }
 	public FactionKnowledge Knowledge { get; } = new();
 	public HashSet<Point> Scaffolding { get; } = new();

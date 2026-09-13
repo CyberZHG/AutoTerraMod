@@ -227,6 +227,7 @@ public sealed class BotWorldSystem : ModSystem
 		ReleaseAvatarSlots();
 		GrowToConfig();
 		DesignMissingHouses();
+		SeparateCrowdedBases();
 		foreach (var bot in dormantBots.Where(wasActive.Contains))
 			Hide(bot);
 		AssignAvatarSlots();
@@ -313,6 +314,7 @@ public sealed class BotWorldSystem : ModSystem
 	{
 		GrowToConfig();
 		DesignMissingHouses();
+		SeparateCrowdedBases();
 		HeadlessTestMode.PrepareScenario();
 		foreach (var faction in Factions)
 			BotDiagnostics.LogWorld($"[{faction.Name}] base site {faction.BaseTile}:{TerrainDump.Around(faction.BaseTile, 45, 25)}");
@@ -352,7 +354,32 @@ public sealed class BotWorldSystem : ModSystem
 		Building.BaseStorage.Reset();
 	}
 
-	static Point FindBaseTileAwayFromOthers()
+	static void SeparateCrowdedBases()
+	{
+		for (int index = 1; index < Factions.Count; index++)
+		{
+			var faction = Factions[index];
+			if (Factions.Take(index).All(other => System.Math.Abs(other.BaseTile.X - faction.BaseTile.X) >= MinimumBaseSeparation))
+				continue;
+			if (faction.Settlement is { } camp && camp.Structures.Any(structure => Building.HouseInspector.IsComplete(faction, structure)))
+				continue;
+			var site = FindBaseTileAwayFromOthers(faction);
+			if (Factions.Any(other => other != faction && System.Math.Abs(other.BaseTile.X - site.X) < MinimumBaseSeparation))
+			{
+				BotDiagnostics.LogWorld($"[{faction.Name}] base {faction.BaseTile} is too close to another faction but no free site was found (best {site}, spawn {Main.spawnTileX}, separation {MinimumBaseSeparation})");
+				continue;
+			}
+			BotDiagnostics.LogWorld($"[{faction.Name}] base {faction.BaseTile} is too close to another faction; moving to {site}");
+			faction.BaseTile = site;
+			faction.Hellevator = null;
+			faction.Hellbridge = null;
+			faction.ForgetSettlement();
+			World.Highway.Forget();
+			World.SkyArena.Forget();
+		}
+	}
+
+	static Point FindBaseTileAwayFromOthers(Faction self = null)
 	{
 		for (int step = 1; step < Main.maxTilesX / BaseSpacingTiles; step++)
 		{
@@ -361,7 +388,8 @@ public sealed class BotWorldSystem : ModSystem
 				int x = Main.spawnTileX + direction * step * BaseSpacingTiles;
 				if (x < WorldEdgeMargin || x > Main.maxTilesX - WorldEdgeMargin)
 					continue;
-				if (Factions.All(faction => System.Math.Abs(faction.BaseTile.X - x) >= MinimumBaseSeparation) && FindBaseTileNear(x) is Point site)
+				if (Factions.All(faction => faction == self || System.Math.Abs(faction.BaseTile.X - x) >= MinimumBaseSeparation) && FindBaseTileNear(x) is Point site
+					&& Factions.All(faction => faction == self || System.Math.Abs(faction.BaseTile.X - site.X) >= MinimumBaseSeparation))
 					return site;
 			}
 		}
@@ -388,7 +416,7 @@ public sealed class BotWorldSystem : ModSystem
 		int awayFromSpawn = targetX >= Main.spawnTileX ? 1 : -1;
 		for (int shift = 0; shift <= MaxEvilDetour; shift += BaseSearchRadius)
 		{
-			if (FindBaseTileNear(targetX + awayFromSpawn * shift) is Point site)
+			if (FindBaseTileNear(targetX + awayFromSpawn * shift) is Point site && Factions.All(other => System.Math.Abs(other.BaseTile.X - site.X) >= MinimumBaseSeparation))
 				return site;
 		}
 		return SurfaceSite(targetX);

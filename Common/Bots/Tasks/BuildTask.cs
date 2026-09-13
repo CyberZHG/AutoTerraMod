@@ -251,7 +251,7 @@ public sealed class BuildTask : BotTask
 			case BuildAction.PlaceBed:
 				for (int x = structure.Left; x <= structure.Right; x++)
 					Flatten(x, structure.Floor);
-				foreach (var spot in structure.FurnitureSpots(tile))
+				foreach (var spot in structure.FurnitureSpots(tile, operation.Action == BuildAction.PlaceChair ? 0 : 2))
 				{
 					if (Bot.Hands.CanReach(tool, spot) && Bot.Hands.Place(tool, spot))
 						return true;

@@ -275,20 +275,20 @@ public sealed class HouseBlueprint
 
 	public int PendingCount(BuildAction action, HouseDesign materials) => PendingOperations(materials).Count(operation => operation.Action == action);
 
-	public IEnumerable<Point> FurnitureSpots(Point preferred)
+	public IEnumerable<Point> FurnitureSpots(Point preferred, int shaftMargin = 2)
 	{
-		if (!OverShaft(preferred.X))
+		if (!OverShaft(preferred.X, shaftMargin))
 			yield return preferred;
 		for (int x = Left + 3; x <= Right - 2; x++)
 		{
-			if (x != preferred.X && !OverShaft(x))
+			if (x != preferred.X && !OverShaft(x, shaftMargin))
 				yield return new Point(x, Floor - 1);
 		}
 	}
 
-	bool OverShaft(int x)
+	bool OverShaft(int x, int margin = 2)
 	{
-		for (int dx = -2; dx <= 2; dx++)
+		for (int dx = -margin; dx <= margin; dx++)
 			if (Hellevator.InAnyShaft(x + dx, Floor + 1))
 				return true;
 		return false;
