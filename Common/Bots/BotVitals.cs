@@ -181,19 +181,24 @@ public sealed class BotVitals
 	const int PetBuffTicks = 18000;
 	const int PetCheckTicks = 60;
 
+	bool hasMinions;
+
 	void KeepPets()
 	{
 		for (int slot = 0; slot < Avatar.buffType.Length; slot++)
 		{
 			int buff = Avatar.buffType[slot];
-			if (buff > 0 && (Main.vanityPet[buff] || Main.lightPet[buff]) && !WearsPetFor(buff))
+			if (buff > 0 && (Main.vanityPet[buff] && hasMinions || (Main.vanityPet[buff] || Main.lightPet[buff]) && !WearsPetFor(buff)))
 				Avatar.DelBuff(slot--);
 		}
 		if ((Main.GameUpdateCount + bot.Id) % PetCheckTicks != 0)
 			return;
+		hasMinions = Main.projectile.Any(projectile => projectile.active && projectile.owner == Avatar.whoAmI && projectile.minion);
 		for (int slot = 0; slot < PetSlotCount; slot++)
 		{
 			var pet = Avatar.miscEquips[slot];
+			if (slot == 0 && hasMinions)
+				continue;
 			if (pet.IsAir || pet.buffType <= 0 || pet.shoot <= ProjectileID.None)
 				continue;
 			if (!Avatar.HasBuff(pet.buffType))

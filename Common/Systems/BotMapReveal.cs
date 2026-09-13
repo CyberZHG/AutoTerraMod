@@ -15,6 +15,7 @@ public sealed class BotMapReveal : ModSystem
 	const int EdgeLight = 110;
 	const int RevealStep = 24;
 	const uint Interval = 60;
+	const bool Enabled = false;
 
 	readonly Dictionary<int, Point> lastRevealed = new();
 	int cursor;
@@ -23,7 +24,7 @@ public sealed class BotMapReveal : ModSystem
 
 	public override void PostUpdateEverything()
 	{
-		if (Main.dedServ || !Main.mapEnabled || Main.Map == null || !Spectating.SpectatorSystem.IsSpectating)
+		if (!Enabled || Main.dedServ || !Main.mapEnabled || Main.Map == null || !Spectating.SpectatorSystem.IsSpectating)
 			return;
 		if (Main.GameUpdateCount % Interval != 0)
 			return;

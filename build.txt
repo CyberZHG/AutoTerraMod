@@ -1,4 +1,4 @@
 displayName = Auto Terra Factions
 author = cyberzhg
-version = 0.148.0
+version = 0.149.0
 buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*, tools\*, *.md, .gitignore, .git\*, .idea\*

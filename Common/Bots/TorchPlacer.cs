@@ -18,6 +18,8 @@ public static class TorchPlacer
 
 	public static void LightUpIfDark(Bot bot)
 	{
+		if (HasLightPet(bot))
+			return;
 		var center = bot.CenterTile;
 		int keep = TorchesToKeep(bot, center);
 		if (keep < 0 || HasLightNearby(center))
@@ -47,6 +49,8 @@ public static class TorchPlacer
 	const int BaseLightMargin = 40;
 	const int CaveTorchesKept = 0;
 	const int AmbientTorchesKept = 10;
+
+	static bool HasLightPet(Bot bot) => bot.Avatar.miscEquips[1] is { IsAir: false, buffType: > 0 } pet && Main.lightPet[pet.buffType];
 
 	static int TorchesToKeep(Bot bot, Point center)
 	{
