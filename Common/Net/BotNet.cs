@@ -32,7 +32,7 @@ public sealed class BotNet : ModSystem
 	sealed class ClientBot
 	{
 		public Player Avatar;
-		public Vector2 AuthPosition, AuthVelocity, Drawn, Aim = Vector2.UnitX, YoyoTarget;
+		public Vector2 AuthPosition, AuthVelocity, Drawn, Aim = Vector2.UnitX, AimPoint;
 		public uint AuthAt, SeenAt;
 		public bool HasState, Flying, Dead;
 		public string Name = "", TaskKey = "";
@@ -173,7 +173,7 @@ public sealed class BotNet : ModSystem
 			packet.Write((short)avatar.itemAnimationMax);
 			packet.Write(avatar.itemRotation);
 			packet.Write(bot.Hands.AimDirection.ToRotation());
-			packet.WriteVector2(bot.Hands.YoyoTarget);
+			packet.WriteVector2(bot.Hands.AimPoint);
 			bool hooked = bot.Grapple.Anchor != null && bot.Grapple.HookProjectile > 0;
 			packet.Write((short)(hooked ? bot.Grapple.HookProjectile : 0));
 			if (hooked)
@@ -307,7 +307,7 @@ public sealed class BotNet : ModSystem
 			avatar.itemTime = animation;
 			avatar.itemRotation = rotation;
 			entry.Aim = aim.ToRotationVector2();
-			entry.YoyoTarget = yoyoTarget;
+			entry.AimPoint = yoyoTarget;
 			entry.HookType = hookType;
 			entry.HookAnchor = hookAnchor;
 		}
@@ -366,7 +366,7 @@ public sealed class BotNet : ModSystem
 			if (!entry.HasState || entry.Dead || now - entry.SeenAt > StaleTicks || !view.Intersects(entry.Avatar.Hitbox))
 				continue;
 			visible.Add(entry.Avatar);
-			targets.Add(new Systems.StabRenderer.Target(entry.Avatar, entry.Avatar.Center, entry.Aim, entry.YoyoTarget));
+			targets.Add(new Systems.StabRenderer.Target(entry.Avatar, entry.Avatar.Center, entry.Aim, entry.AimPoint));
 		}
 		if (visible.Count == 0)
 			return;

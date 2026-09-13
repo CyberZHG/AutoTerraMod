@@ -43,7 +43,7 @@ public sealed class BotHands
 	public uint TicksSinceWork => Main.GameUpdateCount - lastWorkTick;
 	public Vector2 AimDirection { get; private set; } = Vector2.UnitX;
 
-	public Vector2 YoyoTarget { get; private set; }
+	public Vector2 AimPoint { get; private set; }
 	public bool Ready => cooldown <= 0;
 	public Item BestPickaxe => Avatar.GetBestPickaxe();
 	public Item BestAxe => BestTool(Avatar, AxePower);
@@ -379,7 +379,7 @@ public sealed class BotHands
 
 	public bool Place(Item item, Point tile, bool intoShaft = false)
 	{
-		if (item == null || item.IsAir || item.createTile < 0 || item.createTile == TileID.HellstoneBrick || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
+		if (item == null || item.IsAir || item.createTile < 0 || item.createTile is TileID.HellstoneBrick or TileID.LunarOre || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
 			return false;
 		if (TileID.Sets.Platforms[item.createTile] && !Anchored(tile))
 			return false;
@@ -409,7 +409,7 @@ public sealed class BotHands
 			return ToolResult.OutOfReach;
 		if (!Ready)
 			return ToolResult.Working;
-		if (!Avatar.HasEnoughPickPowerToHurtTile(tile.X, tile.Y) || !WorldGen.ReplaceTile(tile.X, tile.Y, (ushort)block.createTile, block.placeStyle))
+		if (block.createTile == TileID.LunarOre || !Avatar.HasEnoughPickPowerToHurtTile(tile.X, tile.Y) || !WorldGen.ReplaceTile(tile.X, tile.Y, (ushort)block.createTile, block.placeStyle))
 			return ToolResult.Unbreakable;
 		if (Main.netMode == NetmodeID.Server)
 			NetMessage.SendTileSquare(-1, tile.X, tile.Y);
@@ -835,7 +835,6 @@ public sealed class BotHands
 			|| !Bosses.BossCatalog.IsBossPart(target) && !Collision.CanHitLine(body.position, body.width, body.height, target.position, target.width, target.height))
 			return false;
 		Swing(weapon, CombinedHooks.TotalAnimationTime(weapon.useAnimation, Avatar, weapon), target.Center);
-		YoyoTarget = target.Center;
 		var area = SwingArea(target, weapon);
 		CutTilesIn(area);
 		HitWithSwing(target, weapon);
@@ -1178,6 +1177,7 @@ public sealed class BotHands
 		npc.direction = toward.X >= npc.Center.X ? 1 : -1;
 		Avatar.direction = npc.direction;
 		AimDirection = toward == npc.Center ? new Vector2(npc.direction, 0f) : Vector2.Normalize(toward - npc.Center);
+		AimPoint = toward;
 		Avatar.itemAnimation = Avatar.itemAnimationMax = Math.Max(useTime, CombinedHooks.TotalAnimationTime(item.useAnimation, Avatar, item));
 		Avatar.itemTime = Avatar.itemTimeMax = useTime;
 		cooldown = Math.Max(1, useTime);

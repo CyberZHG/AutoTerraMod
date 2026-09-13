@@ -321,8 +321,7 @@ public sealed class HouseBlueprint
 		int type = Main.tile[tile.X, tile.Y].TileType;
 		if (!TileQuery.IsSolid(tile) || materials.AcceptsBlockTile(type) && !PlacementRules.IsEvil(type))
 			return false;
-		var above = Main.tile[tile.X, tile.Y - 1];
-		return !(above.HasTile && Main.tileFrameImportant[above.TileType]);
+		return WorldGen.IsTileReplacable(tile.X, tile.Y);
 	}
 
 	static bool NeedsNewWall(Point tile, HouseDesign materials)

@@ -16,9 +16,9 @@ public static class StabRenderer
 	const float ThrustReach = 18f;
 	const float SpriteDiagonalOffset = MathHelper.PiOver4;
 
-	public readonly record struct Target(Player Avatar, Vector2 Center, Vector2 Aim, Vector2 YoyoTarget);
+	public readonly record struct Target(Player Avatar, Vector2 Center, Vector2 Aim, Vector2 AimPoint);
 
-	public static void Draw(IEnumerable<Bot> bots) => DrawTargets(bots.Select(bot => new Target(bot.Avatar, bot.Center, bot.Hands.AimDirection, bot.Hands.YoyoTarget)));
+	public static void Draw(IEnumerable<Bot> bots) => DrawTargets(bots.Select(bot => new Target(bot.Avatar, bot.Center, bot.Hands.AimDirection, bot.Hands.AimPoint)));
 
 	public static void DrawTargets(IEnumerable<Target> targets)
 	{
@@ -67,6 +67,11 @@ public static class StabRenderer
 	static void DrawHeldTool(SpriteBatch spriteBatch, Target target)
 	{
 		var item = target.Avatar.lastVisualizedSelectedItem;
+		if (item.type == ItemID.LaserDrill)
+		{
+			DrawLaserDrill(spriteBatch, target, item);
+			return;
+		}
 		Main.instance.LoadProjectile(item.shoot);
 		var texture = TextureAssets.Projectile[item.shoot].Value;
 		var aim = target.Aim;
@@ -75,6 +80,33 @@ public static class StabRenderer
 		var light = Lighting.GetColor((hand + aim * texture.Width / 2f).ToTileCoordinates());
 		var effects = aim.X < 0f ? SpriteEffects.FlipVertically : SpriteEffects.None;
 		spriteBatch.Draw(texture, hand - Main.screenPosition, null, light, aim.ToRotation(), new Vector2(ToolGrip, texture.Height / 2f), 1f, effects, 0f);
+	}
+
+	const float LaserMuzzle = 22f;
+	const int LaserDrillGlow = 39;
+	static readonly Color[] LaserColors = { new Color(50, 205, 50, 128) * 0.5f, new Color(100, 149, 237, 128) * 0.5f };
+
+	static void DrawLaserDrill(SpriteBatch spriteBatch, Target target, Item item)
+	{
+		Main.instance.LoadItem(item.type);
+		var texture = TextureAssets.Item[item.type].Value;
+		var aim = target.Aim;
+		var hand = target.Center + new Vector2(0f, 2f) + aim * 4f;
+		var effects = aim.X < 0f ? SpriteEffects.FlipVertically : SpriteEffects.None;
+		var origin = new Vector2(0f, texture.Height / 2f);
+		spriteBatch.Draw(texture, hand - Main.screenPosition, null, Lighting.GetColor(hand.ToTileCoordinates()), aim.ToRotation(), origin, item.scale, effects, 0f);
+		spriteBatch.Draw(TextureAssets.GlowMask[LaserDrillGlow].Value, hand - Main.screenPosition, null, new Color(255, 255, 255, 0), aim.ToRotation(), origin, item.scale, effects, 0f);
+		var muzzle = hand + aim * LaserMuzzle;
+		var beam = target.AimPoint - muzzle;
+		if (Vector2.Dot(beam, aim) <= 0f)
+			return;
+		float spin = Main.GlobalTimeWrappedHourly * MathHelper.TwoPi;
+		var normal = new Vector2(-beam.Y, beam.X) / beam.Length();
+		for (int strand = 0; strand < LaserColors.Length; strand++)
+		{
+			var offset = normal * (float)Math.Sin(spin + strand * MathHelper.Pi) * 2f;
+			spriteBatch.Draw(TextureAssets.MagicPixel.Value, muzzle + offset - Main.screenPosition, new Rectangle(0, 0, 1, 1), LaserColors[strand], beam.ToRotation(), new Vector2(0f, 0.5f), new Vector2(beam.Length(), 2f), SpriteEffects.None, 0f);
+		}
 	}
 
 	const float YoyoSpinTurns = 6f;
@@ -90,7 +122,7 @@ public static class StabRenderer
 		var texture = TextureAssets.Projectile[item.shoot].Value;
 		float progress = 1f - avatar.itemAnimation / (float)Math.Max(1, avatar.itemAnimationMax);
 		var hand = target.Center + new Vector2(avatar.direction * 6f, -2f);
-		var end = Vector2.Distance(hand, target.YoyoTarget) <= YoyoMaxThrow ? target.YoyoTarget : hand + target.Aim * YoyoFallbackThrow;
+		var end = Vector2.Distance(hand, target.AimPoint) <= YoyoMaxThrow ? target.AimPoint : hand + target.Aim * YoyoFallbackThrow;
 		var position = Vector2.Lerp(hand, end, (float)Math.Sin(progress * MathHelper.Pi));
 		var line = position - hand;
 		var light = Lighting.GetColor(position.ToTileCoordinates());

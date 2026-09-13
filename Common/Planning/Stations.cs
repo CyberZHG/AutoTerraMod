@@ -88,7 +88,7 @@ public static class Stations
 		var columns = settlement != null
 			? Enumerable.Range(settlement.Left, settlement.Right - settlement.Left + 1).Select(x => (x, top: settlement.Top, bottom: settlement.Floor))
 			: Enumerable.Range(origin.X - BaseHalfWidth, BaseHalfWidth * 2 + 1).Select(x => (x, top: origin.Y - BaseRowsAbove, bottom: origin.Y + BaseRowsBelow));
-		columns = columns.Concat(OutdoorColumns(faction).Select(x => (x, top: World.TileQuery.SurfaceY(x) - BaseRowsAbove, bottom: World.TileQuery.SurfaceY(x) + BaseRowsBelow)));
+		columns = columns.Concat(OutdoorColumns(faction, OutdoorScanRange).Select(x => (x, top: World.TileQuery.SurfaceY(x) - BaseRowsAbove, bottom: World.TileQuery.SurfaceY(x) + BaseRowsBelow)));
 		foreach (var (x, top, bottom) in columns)
 		{
 			for (int y = top; y <= bottom; y++)
@@ -233,17 +233,31 @@ public static class Stations
 		}
 	}
 
-		const int OutdoorPlacementRange = 30;
+	const int OutdoorPlacementRange = 8;
+	const int OutdoorScanRange = 30;
 	const int OutdoorClearance = 2;
 
 	const int OutdoorDrop = 20;
 
-	static IEnumerable<int> OutdoorColumns(Faction faction)
+	public static bool IsMisplaced(Faction faction, int x, int y)
+	{
+		if (faction.Settlement is not { } settlement || !Main.tile[x, y].HasTile)
+			return false;
+		int type = Main.tile[x, y].TileType;
+		if (!IsCraftingStation(type) || IsWorldOnly(type) || Main.tileContainer[type])
+			return false;
+		if (settlement.StorageRooms.Any(room => x > room.Left && x < room.Right && y >= room.Top && y < room.Floor))
+			return true;
+		int gap = x < settlement.Left ? settlement.Left - x : x - settlement.Right;
+		return gap > OutdoorPlacementRange + OutdoorClearance && gap <= OutdoorScanRange + OutdoorClearance && y <= World.TileQuery.SurfaceY(x) && y < settlement.Floor + OutdoorDrop;
+	}
+
+	static IEnumerable<int> OutdoorColumns(Faction faction, int range = OutdoorPlacementRange)
 	{
 		var settlement = faction.Settlement;
 		int left = (settlement?.Left ?? faction.BaseTile.X - BaseHalfWidth) - OutdoorClearance;
 		int right = (settlement?.Right ?? faction.BaseTile.X + BaseHalfWidth) + OutdoorClearance;
-		for (int offset = 0; offset <= OutdoorPlacementRange; offset++)
+		for (int offset = 0; offset <= range; offset++)
 		{
 			yield return right + offset;
 			yield return left - offset;

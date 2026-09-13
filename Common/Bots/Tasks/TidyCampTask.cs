@@ -125,7 +125,7 @@ public sealed class TidyCampTask : BotTask
 			{
 				if (!WorldGen.InWorld(x, y, 5) || RecentlyFailed(new Point(x, y)))
 					continue;
-				if (!IsClutter(x, y) && !IsCampObstacle(settlement, x, y))
+				if (!IsClutter(x, y) && !IsCampObstacle(settlement, x, y) && !Planning.Stations.IsMisplaced(Bot.Faction, x, y))
 					continue;
 				if (Main.tileRope[Main.tile[x, y].TileType] && (!ropes || BotNear(new Point(x, y))))
 					continue;
@@ -235,7 +235,7 @@ public sealed class TidyCampTask : BotTask
 		if (IsClutter(tile.X, tile.Y))
 			return true;
 		var settlement = Bot.Faction.Settlement;
-		return settlement != null && (IsCampObstacle(settlement, tile.X, tile.Y) || IsEntranceWork(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
+		return settlement != null && (IsCampObstacle(settlement, tile.X, tile.Y) || Planning.Stations.IsMisplaced(Bot.Faction, tile.X, tile.Y) || IsEntranceWork(settlement, tile.X, tile.Y) || IsRoadGap(settlement, tile.X, tile.Y) && PavingBlock() != null);
 	}
 
 	const float RopeInUseDistance = 16f * 4f;
