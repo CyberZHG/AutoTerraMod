@@ -86,7 +86,7 @@ public sealed class SpectatorSystem : ModSystem
 
 	public static void Cycle(int step)
 	{
-		var bots = BotWorldSystem.Bots;
+		var bots = BotWorldSystem.Bots.OrderBy(bot => bot.FactionId).ThenBy(bot => bot.Id).ToList();
 		if (bots.Count == 0)
 			return;
 		int current = bots.FindIndex(bot => bot.Id == followedBotId);
