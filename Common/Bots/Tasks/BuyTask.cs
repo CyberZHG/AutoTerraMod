@@ -47,6 +47,8 @@ public sealed class BuyTask : BotTask
 			bought++;
 		}
 		if (bought > 0)
+			Systems.BotEmotes.Casual(Bot, Terraria.GameContent.UI.EmoteID.ItemGoldpile);
+		if (bought > 0)
 			BotDiagnostics.Log(Bot, $"bought {Lang.GetItemNameValue(step.ItemType)} x{bought} from {seller.GivenOrTypeName} for {price * bought} copper");
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;

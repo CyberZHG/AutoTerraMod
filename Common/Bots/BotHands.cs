@@ -993,6 +993,7 @@ public sealed class BotHands
 		CombatText.NewText(bot.Npc.Hitbox, CombatText.HealLife, healed);
 		if (potion.UseSound.HasValue)
 			SoundEngine.PlaySound(potion.UseSound.Value, bot.Center);
+		Systems.BotEmotes.Casual(bot, Terraria.GameContent.UI.EmoteID.ItemLifePotion);
 		BotDiagnostics.Log(bot, $"drank {potion.Name}: life {Avatar.statLife - healed} -> {Avatar.statLife}/{Avatar.statLifeMax2}");
 		Inventory.ConsumeOne(Avatar, potion);
 		return true;
@@ -1159,6 +1160,8 @@ public sealed class BotHands
 		critter.active = false;
 		Inventory.Add(Avatar, caught);
 		BotDiagnostics.Log(bot, $"caught a {caught.Name} with the bug net");
+		if (caught.type is ItemID.TruffleWorm or ItemID.EmpressButterfly)
+			Systems.BotEmotes.Show(bot, caught.type == ItemID.TruffleWorm ? Terraria.GameContent.UI.EmoteID.TownTruffle : Terraria.GameContent.UI.EmoteID.CritterButterfly);
 		return caught;
 	}
 

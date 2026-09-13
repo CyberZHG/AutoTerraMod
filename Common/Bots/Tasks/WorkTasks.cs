@@ -578,7 +578,7 @@ public sealed class GatherTask : BotTask
 	{
 		var origin = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
-		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsWoodSource : (x, y) => !HouseInspector.IsProtected(x, y) && !TileQuery.InOcean(x, y) && Tiles.Accepts(x, y) && !Bot.Hands.IsReclaimable(new Point(x, y));
+		Func<int, int, bool> accept = Tiles.IsTree ? TileQuery.IsWoodSource : (x, y) => !HouseInspector.IsProtected(x, y) && !TileQuery.InOcean(x, y) && Tiles.Accepts(x, y) && !Bot.Hands.IsReclaimable(new Point(x, y)) && (Tiles.OnSurface || !BiomeKeeper.Protects(x, y));
 		var visible = WorldScan.NearestVisibleTile(origin, Tiles.TileTypes, accept, unreachable, knowledge);
 		if (visible != null)
 			return visible;

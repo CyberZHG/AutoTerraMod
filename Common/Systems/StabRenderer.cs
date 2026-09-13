@@ -60,8 +60,9 @@ public static class StabRenderer
 			&& (BotHands.IsYoyo(item) || BotHands.IsWhip(item) || item.noUseGraphic && item.DamageType.CountsAsClass(Terraria.ModLoader.DamageClass.Melee));
 	}
 
-	const float ToolHold = 14f;
-	const float ToolJitter = 1.5f;
+	const float ToolHand = 6f;
+	const float ToolGrip = 10f;
+	const float ToolJitter = 1f;
 
 	static void DrawHeldTool(SpriteBatch spriteBatch, Target target)
 	{
@@ -70,10 +71,10 @@ public static class StabRenderer
 		var texture = TextureAssets.Projectile[item.shoot].Value;
 		var aim = target.Aim;
 		var jitter = new Vector2(Main.rand.NextFloat(-ToolJitter, ToolJitter), Main.rand.NextFloat(-ToolJitter, ToolJitter));
-		var position = target.Center + aim * ToolHold + jitter;
-		var light = Lighting.GetColor(position.ToTileCoordinates());
+		var hand = target.Center + new Vector2(0f, 2f) + aim * ToolHand + jitter;
+		var light = Lighting.GetColor((hand + aim * texture.Width / 2f).ToTileCoordinates());
 		var effects = aim.X < 0f ? SpriteEffects.FlipVertically : SpriteEffects.None;
-		spriteBatch.Draw(texture, position - Main.screenPosition, null, light, aim.ToRotation(), texture.Size() / 2f, 1f, effects, 0f);
+		spriteBatch.Draw(texture, hand - Main.screenPosition, null, light, aim.ToRotation(), new Vector2(ToolGrip, texture.Height / 2f), 1f, effects, 0f);
 	}
 
 	const float YoyoSpinTurns = 6f;

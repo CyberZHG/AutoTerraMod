@@ -552,6 +552,8 @@ public sealed class BossGoal : ProgressionGoal
 			return PlanStep.Idle;
 		if (Bosses.BossRituals.LeftoverPillars(bot) is { } pillars)
 			return pillars;
+		if (bot.Faction.Rally != null && bot.Faction.RallyBossType == NPCID.MoonLordCore && Bosses.BossRituals.HasEarlierBoss(bot.Faction) && !NPC.AnyNPCs(NPCID.MoonLordCore))
+			bot.Faction.Rally = null;
 		PlanStep preparation = null;
 		bool waiting = false;
 		foreach (var challenge in Bosses.BossCredit.OpenChallengesFor(bot.Faction))

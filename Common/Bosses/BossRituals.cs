@@ -329,6 +329,8 @@ public static class BossRituals
 	{
 		if (!PillarsStanding() || BossCatalog.ChallengeOf(NPCID.MoonLordCore) is not { } moonLord)
 			return false;
+		if (HasEarlierBoss(bot.Faction))
+			return false;
 		if (BossCredit.HasDefeated(bot.Faction, moonLord))
 			return true;
 		if (pillarReadiness.TryGetValue(0, out var cached) && Main.GameUpdateCount - cached.at < PillarReadinessTicks)
@@ -339,6 +341,9 @@ public static class BossRituals
 		BotDiagnostics.Log(bot, $"pillar readiness of all {everyone.Count} bots together: {(ready ? "ready" : "not ready")}");
 		return ready;
 	}
+
+	public static bool HasEarlierBoss(Factions.Faction faction) =>
+		BossCredit.NextChallengeFor(faction) is { } next && next.BossType is not (NPCID.MoonLordCore or NPCID.CultistBoss) && !BossCredit.Deferred(faction, next);
 
 	public static bool PillarsStanding() => Main.npc.Any(npc => npc.active && Pillars.Contains(npc.type));
 

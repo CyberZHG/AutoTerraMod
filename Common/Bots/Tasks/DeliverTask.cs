@@ -40,7 +40,11 @@ public sealed class DeliverTask : BotTask
 		{
 			var target = BotWorldSystem.Factions.FirstOrDefault(faction => faction.Id == step.ToFaction);
 			if (target != null && BaseStorage.ChestWithRoom(target, Bot.Center) is { } theirs)
+			{
 				DeliverToChest(theirs);
+				if (IsFinished)
+					Systems.BotEmotes.Gift(Bot, target);
+			}
 			else
 				IsFinished = true;
 			return;
@@ -67,7 +71,11 @@ public sealed class DeliverTask : BotTask
 		Bot.Motor.Stop();
 		var sample = Inventory.Items(Avatar).First(item => item.type == step.ItemType);
 		if (Inventory.HasRoomFor(builder.Avatar, sample))
+		{
 			DropFor(builder, recipient.Center);
+			if (builder.FactionId != Bot.FactionId)
+				Systems.BotEmotes.Gift(Bot, builder.Faction);
+		}
 		else
 			BotDiagnostics.Log(Bot, $"{builder.Name} has no room for {sample.Name}, keeping it");
 		IsFinished = true;

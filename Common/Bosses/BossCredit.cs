@@ -91,7 +91,8 @@ public sealed class BossCredit : GlobalNPC
 
 	public static bool ForeignFight(NPC boss, int factionId) =>
 		BossCatalog.ChallengeOf(boss.type) is { } challenge && summoners.TryGetValue(challenge.BossType, out int owner) && owner != factionId
-		&& (BotWorldSystem.Relation == FactionRelation.War || FactionById(factionId) is not { } faction || HasDefeated(faction, challenge));
+		&& (BotWorldSystem.Relation == FactionRelation.War || FactionById(factionId) is not { } faction || HasDefeated(faction, challenge)
+			|| (challenge.BossType == NPCID.MoonLordCore || IsOptional(challenge)) && BossRituals.HasEarlierBoss(faction));
 
 	public static bool ForgetIfOver(BossChallenge challenge)
 	{
@@ -211,7 +212,7 @@ public sealed class BossCredit : GlobalNPC
 
 	public static bool Deferred(Faction faction, BossChallenge challenge) => IsOptional(challenge) ||
 		challenge.BossType == NPCID.SkeletronHead && !NPC.AnyNPCs(NPCID.OldMan)
-		&& !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0);
+		&& (!NPC.AnyNPCs(NPCID.Clothier) || !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0));
 
 	public static BossChallenge NextChallengeFor(Faction faction) => OpenChallengesFor(faction).FirstOrDefault();
 
@@ -329,7 +330,8 @@ public sealed class BossCredit : GlobalNPC
 			return;
 		CheckCalibration(challenge, over: true, won: true);
 		damageByFight.Remove(challenge.BossType, out var byFaction);
-		if (fightersByFight.Remove(challenge.BossType, out var fighters))
+		fightersByFight.Remove(challenge.BossType, out var fighters);
+		if (fighters != null)
 			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
 		long best = byFaction.Values.Max();
@@ -349,6 +351,7 @@ public sealed class BossCredit : GlobalNPC
 		BotDiagnostics.LogWorld($"boss {challenge.Name} defeated; damage shares: {shares}; credited: {string.Join(", ", credited.Select(faction => faction.Name))}");
 		foreach (var faction in credited)
 			Main.NewText(Language.GetTextValue("Mods.AutoTerraMod.UI.BossCredited", faction.Name, challenge.Name, shares), faction.Color);
+		BotEmotes.BossOver(challenge.BossType, fighters ?? new HashSet<int>(), credited);
 	}
 
 	static void HandOutBags(BossChallenge challenge, HashSet<int> fighters)

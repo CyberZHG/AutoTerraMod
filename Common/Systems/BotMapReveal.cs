@@ -13,8 +13,8 @@ public sealed class BotMapReveal : ModSystem
 	const int Radius = 14;
 	const int FullLightRadius = 8;
 	const int EdgeLight = 110;
-	const int RevealStep = 12;
-	const uint Interval = 15;
+	const int RevealStep = 24;
+	const uint Interval = 60;
 
 	readonly Dictionary<int, Point> lastRevealed = new();
 	int cursor;

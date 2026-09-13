@@ -136,7 +136,7 @@ public sealed class SummonTask : BotTask
 	void InviteGuests()
 	{
 		var host = Bot.Faction;
-		if (step.Trigger is PillarsTrigger || BotWorldSystem.Relation == Config.FactionRelation.War || host.Rally is not { } rally || ConfidentAlone(host))
+		if (step.Trigger is PillarsTrigger || BotWorldSystem.Relation == Config.FactionRelation.War || host.Rally is not { } rally || !BossCredit.HasDefeated(host, step.Challenge) && ConfidentAlone(host))
 			return;
 		foreach (var guest in BotWorldSystem.Factions)
 		{

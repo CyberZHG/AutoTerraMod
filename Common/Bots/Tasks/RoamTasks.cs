@@ -4,6 +4,7 @@ using AutoTerraMod.Common.Systems;
 using AutoTerraMod.Common.World;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ID;
 
 namespace AutoTerraMod.Common.Bots.Tasks;
 
@@ -175,10 +176,15 @@ public sealed class HuntTask : BotTask
 	{
 		if (prey == null || !prey.active || prey.catchItem <= 0)
 		{
-			Bot.Motor.Stop();
-			Bot.Watchdog.RecordProgress();
 			if (Bot.Brain.Plan is not GatherStep { Source: NpcSource source } || !InCritterGround(source))
+			{
+				Bot.Motor.Stop();
 				IsFinished = true;
+				return;
+			}
+			if (!RepairBiome(source.Ground == Landmark.Hallow))
+				Bot.Motor.Stop();
+			Bot.Watchdog.RecordProgress();
 			return;
 		}
 		if (Vector2.Distance(Bot.Center, prey.Center) > NetReach)
@@ -191,6 +197,23 @@ public sealed class HuntTask : BotTask
 		Bot.Hands.NetCritter(prey);
 		Bot.Watchdog.RecordProgress();
 		IsFinished = true;
+	}
+
+	bool RepairBiome(bool hallow)
+	{
+		var block = hallow ? Inventory.Items(Avatar).Where(FillTileTask.IsFiller).OrderByDescending(item => item.type is ItemID.StoneBlock or ItemID.DirtBlock).FirstOrDefault()
+			: Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.MudBlock);
+		if (block == null || World.BiomeKeeper.HoleNear(Bot.CenterTile, hallow) is not Point hole)
+			return false;
+		if (!Bot.Hands.CanReach(block, hole))
+		{
+			Bot.Motor.MoveTo(hole.ToWorldCoordinates(), 32f);
+			return !Bot.Motor.IsStalled;
+		}
+		Bot.Motor.Stop();
+		if (Bot.Hands.Place(block, hole))
+			BotDiagnostics.Log(Bot, $"patched the {(hallow ? "Hallow" : "mushroom biome")} at {hole} with {block.Name}");
+		return true;
 	}
 
 	Vector2? CritterGround(Factions.FactionKnowledge knowledge, NpcSource source) => source.Ground is Landmark ground
