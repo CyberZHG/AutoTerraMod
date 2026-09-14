@@ -439,6 +439,14 @@ public sealed class StructureGoal : ProgressionGoal
 			operation = next;
 			break;
 		}
+		if (structure == null && NextUnfinished(bot) is HouseBlueprint blocked)
+		{
+			structure = bot.Faction.Settlement.Structures
+				.Where(candidate => candidate != blocked && !HouseInspector.IsFinished(bot.Faction, candidate) && HouseInspector.NextOperation(bot.Faction, candidate) != null)
+				.MinBy(candidate => Math.Abs(candidate.Left + candidate.Right - blocked.Left - blocked.Right) + Math.Abs(candidate.Floor - blocked.Floor) * 2);
+			if (structure != null)
+				operation = HouseInspector.NextOperation(bot.Faction, structure).Value;
+		}
 		if (structure == null)
 		{
 			if (NextUnfinished(bot) is HouseBlueprint stalled && HouseInspector.IsComplete(bot.Faction, stalled) == false && HouseInspector.NextOperation(bot.Faction, stalled) == null)
@@ -2094,6 +2102,7 @@ public static class ProgressionGoals
 		goals.Add(new StructureGoal(settlement => settlement.GuestRooms));
 		goals.Add(new FurnishBedroomsGoal());
 		goals.Add(new StructureGoal(settlement => settlement.StorageAnnexes.Append(settlement.Gallery)));
+		goals.Add(new StructureGoal(settlement => settlement.Atelier is { } atelier ? new[] { atelier } : System.Array.Empty<HouseBlueprint>()));
 		goals.Add(new CraftableUpgradeGoal());
 		goals.Add(new StyleGoal(new GearGoal(GearKind.MeleeWeapon, ItemID.WoodenSword, ItemID.CactusSword, ItemID.CopperShortsword, ItemID.TinShortsword, ItemID.CopperBroadsword, ItemID.TinBroadsword), CombatStyle.Ranged, CombatStyle.Magic));
 		goals.Add(new StyleGoal(new GearGoal(GearKind.RangedWeapon, ItemID.WoodenBow), CombatStyle.Melee, CombatStyle.Magic));

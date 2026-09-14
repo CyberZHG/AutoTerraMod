@@ -90,6 +90,9 @@ public sealed class Settlement
 		Hall.AddFloorPlatforms(Hall.Left + 1, Hall.Right - 1);
 		foreach (var structure in structures)
 			structure.AddRoofHatch();
+		if (Atelier != null)
+			foreach (var below in structures.Where(structure => structure != Atelier && structure.Ceiling == Atelier.Floor))
+				Atelier.KeepHatchesOf(below);
 		yardKeeper.Yard = YardTiles;
 	}
 

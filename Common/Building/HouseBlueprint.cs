@@ -152,6 +152,15 @@ public sealed class HouseBlueprint
 		}
 	}
 
+	public void KeepHatchesOf(HouseBlueprint below)
+	{
+		foreach (var spot in below.platforms.Where(spot => spot.Y == Floor && spot.X > Left && spot.X < Right).ToList())
+		{
+			hatchColumns.Add(spot.X);
+			platforms.Add(spot);
+		}
+	}
+
 	public void AddShelf()
 	{
 		if (Floor - 1 - Ceiling < ShelfMinimumHeight)
@@ -172,12 +181,12 @@ public sealed class HouseBlueprint
 			platforms.Add(new Point(x, Floor));
 	}
 
-	static bool IsFurniture(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] && !Main.tileRope[Main.tile[tile.X, tile.Y].TileType];
+	static bool IsFurniture(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] && !Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && !TileQuery.IsChoppableTree(Main.tile[tile.X, tile.Y].TileType);
 
 	static bool HoldsFurniture(Point tile)
 	{
 		var above = Main.tile[tile.X, tile.Y - 1];
-		return above.HasTile && Main.tileFrameImportant[above.TileType];
+		return above.HasTile && Main.tileFrameImportant[above.TileType] && !TileQuery.IsChoppableTree(above.TileType);
 	}
 
 	public System.Func<IEnumerable<Point>> Yard { get; set; }
@@ -374,7 +383,7 @@ public sealed class HouseBlueprint
 	{
 		for (int x = Left; x <= Right; x++)
 		{
-			for (int y = Top; y < Floor; y++)
+			for (int y = Top; y <= Floor; y++)
 			{
 				var tile = Main.tile[x, y];
 				if (!tile.HasTile)
@@ -384,6 +393,8 @@ public sealed class HouseBlueprint
 					yield return TreeBaseBelow(x, y);
 					continue;
 				}
+				if (y == Floor)
+					continue;
 				if (IsPlatformSpot(new Point(x, y)) || Main.tileRope[tile.TileType] && (Bots.Tasks.TidyCampTask.IsLifelineColumn(x) || Bots.Tasks.TidyCampTask.BotNear(new Point(x, y))))
 					continue;
 				if (IsShell(x, y) && !TileQuery.IsSolid(x, y))

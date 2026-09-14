@@ -118,7 +118,7 @@ public static class TileQuery
 	}
 
 	public static bool IsChoppableTree(int tileType) =>
-		Main.tileAxe[tileType] && (TileID.Sets.IsATreeTrunk[tileType] || tileType == TileID.TreeAsh);
+		Main.tileAxe[tileType] && (TileID.Sets.IsATreeTrunk[tileType] || tileType is TileID.TreeAsh or TileID.PalmTree);
 
 	public static bool IsExposedLivingWood(int x, int y) =>
 		Main.tile[x, y].HasTile && Main.tile[x, y].TileType == TileID.LivingWood && IsExposed(x, y) && !Building.HouseInspector.IsProtected(x, y);
