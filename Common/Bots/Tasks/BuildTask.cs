@@ -251,7 +251,9 @@ public sealed class BuildTask : BotTask
 			case BuildAction.PlaceBed:
 				for (int x = structure.Left; x <= structure.Right; x++)
 					Flatten(x, structure.Floor);
-				foreach (var spot in structure.FurnitureSpots(tile, operation.Action == BuildAction.PlaceChair ? 0 : 2))
+				var footprint = tool == null ? null : Terraria.ObjectData.TileObjectData.GetTileData(tool.createTile, tool.placeStyle);
+				int reachLeft = footprint?.Origin.X ?? 0, reachRight = (footprint?.Width ?? 1) - 1 - reachLeft;
+				foreach (var spot in structure.FurnitureSpots(tile, reachLeft, reachRight))
 				{
 					if (Bot.Hands.CanReach(tool, spot) && Bot.Hands.Place(tool, spot))
 						return true;

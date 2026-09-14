@@ -150,11 +150,17 @@ public static class HouseInspector
 
 	static BuildOperation? ComputeNextOperation(Faction faction, HouseBlueprint structure)
 	{
+		faction.Scaffolding.RemoveWhere(tile => !Main.tile[tile.X, tile.Y].HasTile);
 		var excluded = Skipped(faction);
 		bool bedReady = HasSpareBed(faction);
 		var pending = structure.PendingOperations(MaterialsFor(faction))
 			.Where(operation => !faction.Scaffolding.Contains(operation.Tile) && (operation.Action != BuildAction.PlaceBed || bedReady))
 			.ToList();
+		foreach (var operation in pending)
+		{
+			if (!excluded.Contains(operation.Tile) && (operation.Action switch { BuildAction.PlaceBlock or BuildAction.PlacePlatform => Bots.BotHands.Anchored(operation.Tile), BuildAction.PlaceWall => Bots.BotHands.WallAnchored(operation.Tile), _ => true }))
+				return operation;
+		}
 		foreach (var operation in pending)
 		{
 			if (!excluded.Contains(operation.Tile))

@@ -389,7 +389,7 @@ public sealed class BotHands
 		if (!CanPlaceAt(item, tile) && CanPlaceClearingRopes(item, tile))
 			foreach (var rope in RopesUnder(item, tile))
 				WorldGen.KillTile(rope.X, rope.Y);
-		if (!TryPlaceTile(item, tile))
+		if (!PlaceNatively(item, tile))
 			return false;
 		Swing(item, CombinedHooks.TotalUseTime(item.useTime, Avatar, item), tile.ToWorldCoordinates());
 		Inventory.ConsumeOne(Avatar, item);
@@ -443,8 +443,7 @@ public sealed class BotHands
 	{
 		if (item == null || item.IsAir || item.createWall <= WallID.None || !Ready || !CanReach(item, tile))
 			return false;
-		WorldGen.PlaceWall(tile.X, tile.Y, item.createWall);
-		if (Main.tile[tile.X, tile.Y].WallType != item.createWall)
+		if (!PlaceNatively(item, tile))
 			return false;
 		Swing(item, CombinedHooks.TotalUseTime(item.useTime, Avatar, item), tile.ToWorldCoordinates());
 		Inventory.ConsumeOne(Avatar, item);
@@ -504,6 +503,49 @@ public sealed class BotHands
 		var existing = Main.tile[tile.X, tile.Y];
 		if (existing.HasTile && !IsGrowingSapling(tile) && (Main.tileCut[existing.TileType] || TileID.Sets.BreakableWhenPlacing[existing.TileType]))
 			WorldGen.KillTile(tile.X, tile.Y);
+	}
+
+	bool PlaceNatively(Item item, Point tile)
+	{
+		int slot = Inventory.FindSlot(Avatar, item);
+		if (slot < 0 || bot.Npc is not NPC body)
+			return false;
+		BotVitals.SyncAvatar(body, Avatar);
+		int selected = Avatar.selectedItem, animation = Avatar.itemAnimation, time = Avatar.itemTime, targetX = Player.tileTargetX, targetY = Player.tileTargetY;
+		bool use = Avatar.controlUseItem;
+		Avatar.selectedItem = slot;
+		Player.tileTargetX = tile.X;
+		Player.tileTargetY = tile.Y;
+		Avatar.controlUseItem = true;
+		Avatar.itemAnimation = System.Math.Max(1, animation);
+		Avatar.itemTime = 0;
+		Avatar.direction = tile.X * 16 + 8 >= Avatar.Center.X ? 1 : -1;
+		try
+		{
+			var context = new Player.ItemCheckContext();
+			Avatar.PlaceThing(ref context);
+		}
+		finally
+		{
+			Avatar.selectedItem = selected;
+			Avatar.itemAnimation = animation;
+			Avatar.itemTime = time;
+			Avatar.controlUseItem = use;
+			Player.tileTargetX = targetX;
+			Player.tileTargetY = targetY;
+		}
+		var placed = Main.tile[tile.X, tile.Y];
+		return item.createWall > WallID.None ? placed.WallType == item.createWall : placed.HasTile && (placed.TileType == item.createTile || item.createTile == TileID.Torches && TileID.Sets.Torch[placed.TileType]);
+	}
+
+	public static bool WallAnchored(Point tile)
+	{
+		if (!WorldGen.InWorld(tile.X, tile.Y, 2))
+			return false;
+		foreach (var side in new[] { new Point(tile.X - 1, tile.Y), new Point(tile.X + 1, tile.Y), new Point(tile.X, tile.Y - 1), new Point(tile.X, tile.Y + 1) })
+			if (Main.tile[side.X, side.Y].HasTile || Main.tile[side.X, side.Y].WallType > WallID.None)
+				return true;
+		return false;
 	}
 
 	public static bool Anchored(Point tile) =>

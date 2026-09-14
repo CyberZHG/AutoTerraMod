@@ -220,12 +220,14 @@ public sealed class HouseBlueprint
 			var action = TileQuery.IsChoppableTree(TileQuery.TypeAt(tile)) ? BuildAction.ChopTree : BuildAction.ClearTile;
 			yield return Operation(action, tile);
 		}
-		foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None))
+		var frame = shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X))).ToList();
+		foreach (var tile in frame.Where(tile => tile.Y == Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
+			yield return Operation(BuildAction.PlaceBlock, tile);
+		foreach (var tile in InteriorTiles().Concat(shellInBuildOrder.Where(tile => tile.Y < Floor && !Hellevator.InAnyShaft(tile.X, tile.Y))).Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None).OrderByDescending(tile => tile.Y))
 			yield return Operation(BuildAction.PlaceWall, tile);
 		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
-		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X)))
-			.OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
+		foreach (var tile in frame.Where(tile => tile.Y != Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
 			yield return Operation(BuildAction.PlaceBlock, tile);
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
@@ -284,13 +286,14 @@ public sealed class HouseBlueprint
 
 	public int PendingCount(BuildAction action, HouseDesign materials) => PendingOperations(materials).Count(operation => operation.Action == action);
 
-	public IEnumerable<Point> FurnitureSpots(Point preferred, int shaftMargin = 2)
+	public IEnumerable<Point> FurnitureSpots(Point preferred, int reachLeft = 1, int reachRight = 1)
 	{
-		if (!OverShaft(preferred.X, shaftMargin))
+		bool Fits(int x) => x - reachLeft >= Left + 2 && x + reachRight <= Right - 2 && !Enumerable.Range(x - reachLeft, reachLeft + reachRight + 1).Any(column => OverShaft(column, 0));
+		if (Fits(preferred.X))
 			yield return preferred;
-		for (int x = Left + 3; x <= Right - 2; x++)
+		for (int x = Left + 2; x <= Right - 2; x++)
 		{
-			if (x != preferred.X && !OverShaft(x, shaftMargin))
+			if (x != preferred.X && Fits(x))
 				yield return new Point(x, Floor - 1);
 		}
 	}
