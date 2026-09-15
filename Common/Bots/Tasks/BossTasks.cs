@@ -1246,7 +1246,7 @@ public sealed class BuildBridgeTask : BotTask
 			{
 				if (!WorldGen.InWorld(x, y, 2) || !Main.tile[x, y].HasTile || !TileID.Sets.BasicChest[Main.tile[x, y].TileType])
 					continue;
-				if (Chest.IsLocked(x, y))
+				if (Chest.IsLocked(x, y) && !UnlockChest(x, y))
 					return false;
 				int index = Chest.FindChestByGuessing(x, y);
 				if (index >= 0)
@@ -1268,6 +1268,26 @@ public sealed class BuildBridgeTask : BotTask
 			}
 		}
 		return false;
+	}
+
+	bool UnlockChest(int x, int y)
+	{
+		var tile = Main.tile[x, y];
+		int left = x - tile.TileFrameX % 36 / 18, top = y - tile.TileFrameY % 36 / 18;
+		int frame = Main.tile[left, top].TileFrameX;
+		int key = Main.tile[left, top].TileType != TileID.Containers ? ItemID.GoldenKey
+			: frame >= 144 && frame <= 178 ? ItemID.ShadowKey
+			: frame >= 828 && frame <= 1006 ? ItemID.JungleKey + frame / 36 - 23
+			: ItemID.GoldenKey;
+		var held = Inventory.Items(Avatar).FirstOrDefault(item => item.type == key);
+		if (held == null || !Chest.Unlock(left, top))
+			return false;
+		if (key != ItemID.ShadowKey)
+			Inventory.ConsumeOne(Avatar, held);
+		if (Main.netMode == NetmodeID.Server)
+			NetMessage.SendTileSquare(-1, left, top, 2, 2);
+		BotDiagnostics.Log(Bot, $"unlocked the chest at {left},{top} with {Lang.GetItemNameValue(key)}");
+		return true;
 	}
 
 	bool NeedsBlast(Point tile)

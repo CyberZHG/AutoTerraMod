@@ -11,6 +11,7 @@ namespace AutoTerraMod.Common.Systems;
 public sealed class SummonGift : ModSystem
 {
 	const int Amount = 100;
+	const int SingleAmount = 3;
 	static readonly int[] Gifts = { ItemID.TruffleWorm, ItemID.EmpressButterfly, ItemID.ClothierVoodooDoll };
 
 	readonly HashSet<int> granted = new();
@@ -44,7 +45,7 @@ public sealed class SummonGift : ModSystem
 	static void Give(Factions.Faction faction, int type)
 	{
 		var near = faction.BaseTile.ToWorldCoordinates();
-		for (int left = Amount; left > 0;)
+		for (int left = ContentSamples.ItemsByType[type].maxStack == 1 ? SingleAmount : Amount; left > 0;)
 		{
 			var item = new Item(type);
 			item.stack = System.Math.Min(left, item.maxStack);

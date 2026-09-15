@@ -19,6 +19,8 @@ public static class Junk
 	{
 		if (Inventory.Count(bot.Avatar, item.type) >= Plenty)
 			return true;
+		if (IsSpareSummon(item, Inventory.Count(bot.Avatar, item.type)))
+			return true;
 		if (bot.Brain.PlannedItemTypes.Contains(item.type) || IsBossSummon(item) || IsPlatform(item) || FitsExistingStack(bot.Avatar, item) || DyeTaste.IsFavorite(bot.Faction, item))
 			return false;
 		int reserve = IsOverflowing(bot) ? OverflowReserveFor(item) : ReserveFor(item);
@@ -252,6 +254,8 @@ public static class Junk
 			return false;
 		if (item.maxStack > 1 && amountBefore >= Plenty)
 			return true;
+		if (IsSpareSummon(item, amountBefore))
+			return true;
 		if (IsBossSummon(item) || bot.Brain.PlannedItemTypes.Contains(item.type))
 			return false;
 		if (item.maxStack > 1)
@@ -385,8 +389,14 @@ public static class Junk
 
 	static readonly HashSet<int> CraftingBlocks = new() { ItemID.Obsidian, ItemID.LunarOre, ItemID.LunarBar, ItemID.FragmentSolar, ItemID.FragmentVortex, ItemID.FragmentNebula, ItemID.FragmentStardust };
 
+	const int KeptSingleSummons = 3;
+
+	static bool IsSpareSummon(Item item, int held) => item.maxStack == 1 && IsBossSummon(item) && !item.questItem && held >= KeptSingleSummons;
+
 	static int ReserveFor(Item item)
 	{
+		if (item.maxStack == 1 && IsBossSummon(item) && !item.questItem)
+			return KeptSingleSummons;
 		if (IsBossSummon(item) || IsPlatform(item) || CraftingBlocks.Contains(item.type))
 			return int.MaxValue;
 		if (item.createTile == TileID.Tombstones)
