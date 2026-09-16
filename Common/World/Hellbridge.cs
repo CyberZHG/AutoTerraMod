@@ -77,7 +77,7 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 	readonly System.Collections.Generic.Dictionary<int, uint> skipped = new();
 	const uint SkipRetryTicks = 10 * 3600;
 
-	bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
+	public bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
 
 	public void Skip(int x)
 	{

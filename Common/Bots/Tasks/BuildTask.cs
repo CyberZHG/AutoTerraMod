@@ -129,8 +129,9 @@ public sealed class BuildTask : BotTask
 		if (failures < FailuresBeforeClearingRoom || Bot.Hands.BestPickaxe is not Item pickaxe)
 			return false;
 		for (int x = structure.Left + 1; x < structure.Right; x++)
+		for (int y = structure.Floor - 1; y >= structure.Floor - 2; y--)
 		{
-			var spot = new Point(x, structure.Floor - 1);
+			var spot = new Point(x, y);
 			int type = TileQuery.TypeAt(spot);
 			if (type < 0 || !TileID.Sets.RoomNeeds.CountsAsTable.Contains(type) && !TileID.Sets.RoomNeeds.CountsAsChair.Contains(type)
 				&& !TileQuery.IsPlatform(spot.X, spot.Y) && !Main.tileRope[type])

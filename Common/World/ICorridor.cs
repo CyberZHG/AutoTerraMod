@@ -20,6 +20,8 @@ public interface ICorridor
 
 	void Skip(int x);
 
+	bool Skipped(int x);
+
 	int FeetRow(int x) => Y;
 
 	void Dip(int x, int rows) { }

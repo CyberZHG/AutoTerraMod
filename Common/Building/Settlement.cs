@@ -154,6 +154,9 @@ public sealed class Settlement
 					room.CloseSide(x, (cx, cy) => structures.Any(keeper => keeper != room && keeper.IsDoorway(cx, cy)));
 			}
 		}
+		foreach (var room in structures)
+			foreach (var other in structures.Where(other => other != room))
+				room.GiveWayToDoorsOf(other);
 		shell.Clear();
 		foreach (var tile in structures.SelectMany(structure => structure.ShellTiles))
 			shell.Add(tile);

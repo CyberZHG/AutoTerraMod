@@ -156,7 +156,7 @@ public static class ResourceSources
 	};
 
 	static bool IsCraftedFromMaterials(int itemType) =>
-		RecipeIndex.AnyFor(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));
+		RecipeIndex.For(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));
 
 	static Dictionary<int, NpcSource> BuildNpcSources()
 	{

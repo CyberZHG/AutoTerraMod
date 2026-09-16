@@ -1430,6 +1430,8 @@ public sealed class BuildBridgeTask : BotTask
 		Bot.Motor.Face(new Vector2(frontier * 16f, bridge.Y * 16f));
 		foreach (int column in new[] { frontier, frontier + direction })
 		{
+			if (column != frontier && bridge.Skipped(column))
+				continue;
 			int feet = bridge.FeetRow(column);
 			if (HoldUpSand(bridge, column, feet))
 				return;

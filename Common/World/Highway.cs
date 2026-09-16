@@ -137,7 +137,7 @@ public sealed record Highway(int FactionId, int Direction, int StartX, int EndX,
 	readonly System.Collections.Generic.Dictionary<int, uint> skipped = new();
 	const uint SkipRetryTicks = 10 * 3600;
 
-	bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
+	public bool Skipped(int x) => skipped.TryGetValue(x, out uint at) && Terraria.Main.GameUpdateCount - at < SkipRetryTicks;
 	readonly HashSet<(int, int)> tolerated = new();
 
 	public bool IsTolerated(int x, int y) => tolerated.Contains((x, y));
