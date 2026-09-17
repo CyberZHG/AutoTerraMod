@@ -37,7 +37,7 @@ public static class TorchPlacer
 		foreach (var offset in CandidateOffsets)
 		{
 			var spot = new Point(center.X + offset.X, center.Y + offset.Y);
-			if (!Main.tile[spot.X, spot.Y].HasTile && bot.Hands.Place(torch, spot))
+			if (!Main.tile[spot.X, spot.Y].HasTile && bot.Faction.Settlement?.IsShell(spot.X, spot.Y) != true && bot.Hands.Place(torch, spot))
 			{
 				BotDiagnostics.Log(bot, $"placed torch at {spot}");
 				return;

@@ -194,7 +194,7 @@ public sealed class HouseBlueprint
 			platforms.Add(new Point(x, Floor));
 	}
 
-	static bool IsFurniture(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] && !Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && !TileQuery.IsChoppableTree(Main.tile[tile.X, tile.Y].TileType);
+	static bool IsFurniture(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tileFrameImportant[Main.tile[tile.X, tile.Y].TileType] && !Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && !TileQuery.IsChoppableTree(Main.tile[tile.X, tile.Y].TileType) && !TileID.Sets.Torch[Main.tile[tile.X, tile.Y].TileType];
 
 	static bool HoldsFurniture(Point tile)
 	{
@@ -251,6 +251,9 @@ public sealed class HouseBlueprint
 			yield return Operation(FrameAction(tile), tile);
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
+		if (frame.Count == 0)
+			foreach (var tile in InteriorTiles().Where(tile => TileQuery.IsPlatform(tile.X, tile.Y) && !IsPlatformSpot(tile) && !HoldsFurniture(tile)))
+				yield return Operation(BuildAction.ClearTile, tile);
 		for (int y = Floor; y <= Floor + FoundationDepth; y++)
 			for (int x = Left; x <= Right; x++)
 				if (TileQuery.IsSolid(x, y) && TileID.Sets.Falling[Main.tile[x, y].TileType] && !Hellevator.InAnyShaft(x, y))

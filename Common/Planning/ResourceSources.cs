@@ -144,6 +144,7 @@ public static class ResourceSources
 		foreach (var (item, tile) in GemTiles)
 			Add(item, tile);
 		Add(ItemID.Cobweb, TileID.Cobweb);
+		Add(ItemID.Hive, TileID.Hive);
 		Add(ItemID.DirtBlock, TileID.Grass);
 		Add(ItemID.MudBlock, TileID.JungleGrass);
 		return tilesByItem.ToDictionary(entry => entry.Key, entry => new TileSource(entry.Value, false, Ground: TileGrounds.TryGetValue(entry.Key, out var ground) ? ground : null));
