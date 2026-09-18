@@ -252,7 +252,7 @@ public sealed class HouseBlueprint
 		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		if (frame.Count == 0)
-			foreach (var tile in InteriorTiles().Where(tile => TileQuery.IsPlatform(tile.X, tile.Y) && !IsPlatformSpot(tile) && !HoldsFurniture(tile)))
+			foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].HasTile && TileID.Sets.Platforms[Main.tile[tile.X, tile.Y].TileType] && !IsPlatformSpot(tile) && !HoldsFurniture(tile)))
 				yield return Operation(BuildAction.ClearTile, tile);
 		for (int y = Floor; y <= Floor + FoundationDepth; y++)
 			for (int x = Left; x <= Right; x++)
