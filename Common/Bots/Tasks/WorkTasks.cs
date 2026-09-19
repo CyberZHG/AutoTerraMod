@@ -609,7 +609,9 @@ public sealed class GatherTask : BotTask
 			prospectTarget = destination;
 			Bot.Motor.Stop();
 		}
-		bool farGround = Tiles.Ground is Landmark && (!Grounds.IsInside(BotWorldSystem.KnowledgeOf(Bot.Faction), Tiles.Ground.Value, Bot.CenterTile) || Vector2.Distance(Bot.Center, destination) > FarProspectPixels);
+		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		bool inside = Tiles.Cavern ? InsideCavern(knowledge, Bot.CenterTile) : Tiles.Ground is Landmark home && Grounds.IsInside(knowledge, home, Bot.CenterTile);
+		bool farGround = Tiles.Ground is Landmark && (!inside || Vector2.Distance(Bot.Center, destination) > FarProspectPixels);
 		bool moving = DeepOre() || Tiles.Ground == Landmark.Underworld || farGround ? TravelOrTunnel(destination, 32f) : MoveToward(destination);
 		if (moving)
 			return;
@@ -626,6 +628,16 @@ public sealed class GatherTask : BotTask
 
 	const int DeepOreMarginTiles = 20;
 
+	bool InsideCavern(Factions.FactionKnowledge knowledge, Point tile) =>
+		Tiles.Ground is Landmark ground && knowledge.SpanOf(ground) is var (minX, maxX) && tile.X >= minX && tile.X <= maxX && tile.Y > Main.rockLayer;
+
+	static Vector2? CavernSpot(Factions.FactionKnowledge knowledge, Landmark ground, Point from)
+	{
+		if (ground == Landmark.Jungle && knowledge.SpanOf(ground) is var (minX, maxX) && ScoutTask.CavernJungleSpot(knowledge, from, minX, maxX) is Point cavern)
+			return cavern.ToWorldCoordinates(8f, 0f);
+		return Grounds.PickUndergroundSpot(knowledge, ground);
+	}
+
 	static readonly HashSet<int> DeepOres = new()
 	{
 		TileID.Cobalt, TileID.Palladium, TileID.Mythril, TileID.Orichalcum, TileID.Adamantite, TileID.Titanium
@@ -637,7 +649,9 @@ public sealed class GatherTask : BotTask
 	{
 		var here = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
-		if (Tiles.Ground is Landmark ground && !Grounds.IsInside(knowledge, ground, here) && Grounds.PickSpot(knowledge, ground, here) is Vector2 spot)
+		if (Tiles.Cavern && Tiles.Ground is Landmark cavernGround && !InsideCavern(knowledge, here) && CavernSpot(knowledge, cavernGround, here) is Vector2 deep)
+			return deep;
+		if (!Tiles.Cavern && Tiles.Ground is Landmark ground && !Grounds.IsInside(knowledge, ground, here) && Grounds.PickSpot(knowledge, ground, here) is Vector2 spot)
 			return spot;
 		if (Tiles.Ground == Landmark.Underworld)
 		{

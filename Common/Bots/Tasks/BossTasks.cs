@@ -1033,7 +1033,7 @@ public sealed class ScoutTask : BotTask
 	const int JungleProbe = 4;
 	const int BulbFloorMargin = 4;
 
-	static Point? CavernJungleSpot(Factions.FactionKnowledge knowledge, Point from, int minX, int maxX)
+	public static Point? CavernJungleSpot(Factions.FactionKnowledge knowledge, Point from, int minX, int maxX)
 	{
 		Point? fallback = null;
 		Point? nearest = null;
