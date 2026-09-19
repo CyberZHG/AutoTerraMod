@@ -147,14 +147,18 @@ public static class ResourceSources
 		Add(ItemID.Hive, TileID.Hive);
 		Add(ItemID.DirtBlock, TileID.Grass);
 		Add(ItemID.MudBlock, TileID.JungleGrass);
-		return tilesByItem.ToDictionary(entry => entry.Key, entry => new TileSource(entry.Value, false, Ground: TileGrounds.TryGetValue(entry.Key, out var ground) ? ground : null));
+		return tilesByItem.ToDictionary(entry => entry.Key, entry => new TileSource(entry.Value, false, Ground: TileGrounds.TryGetValue(entry.Key, out var ground) ? ground : null) { Cavern = HiveItems.Contains(entry.Key) });
 	}
 
 	static readonly Dictionary<int, Landmark> TileGrounds = new()
 	{
 		[ItemID.Hellstone] = Landmark.Underworld,
-		[ItemID.AshBlock] = Landmark.Underworld
+		[ItemID.AshBlock] = Landmark.Underworld,
+		[ItemID.Hive] = Landmark.Jungle,
+		[ItemID.HoneyBlock] = Landmark.Jungle
 	};
+
+	static readonly HashSet<int> HiveItems = new() { ItemID.Hive, ItemID.HoneyBlock };
 
 	static bool IsCraftedFromMaterials(int itemType) =>
 		RecipeIndex.For(itemType).Any(recipe => recipe.requiredItem.Any(ingredient => ingredient.createWall <= WallID.None));
