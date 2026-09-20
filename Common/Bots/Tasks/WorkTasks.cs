@@ -627,6 +627,7 @@ public sealed class GatherTask : BotTask
 	}
 
 	const int DeepOreMarginTiles = 20;
+	const int KnownCavernReach = 5000;
 
 	bool InsideCavern(Factions.FactionKnowledge knowledge, Point tile) =>
 		Tiles.Ground is Landmark ground && knowledge.SpanOf(ground) is var (minX, maxX) && tile.X >= minX && tile.X <= maxX && tile.Y > Main.rockLayer;
@@ -649,6 +650,8 @@ public sealed class GatherTask : BotTask
 	{
 		var here = Bot.CenterTile;
 		var knowledge = BotWorldSystem.KnowledgeOf(Bot.Faction);
+		if (Tiles.Cavern && knowledge.NearestKnown(here, Tiles.TileTypes, unreachable, KnownCavernReach) is Point remembered && !InsideCavern(knowledge, here))
+			return remembered.ToWorldCoordinates();
 		if (Tiles.Cavern && Tiles.Ground is Landmark cavernGround && !InsideCavern(knowledge, here) && CavernSpot(knowledge, cavernGround, here) is Vector2 deep)
 			return deep;
 		if (!Tiles.Cavern && Tiles.Ground is Landmark ground && !Grounds.IsInside(knowledge, ground, here) && Grounds.PickSpot(knowledge, ground, here) is Vector2 spot)

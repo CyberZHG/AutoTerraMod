@@ -11,6 +11,7 @@ public static class WorldScan
 {
 	public const int ViewHalfWidth = 50;
 	public const int ViewHalfHeight = 30;
+	const int HiveSampleStep = 4;
 
 	public static Point? NearestVisibleTile(Point origin, ISet<int> tileTypes, Func<int, int, bool> accept, ISet<Point> excluded, FactionKnowledge knowledge)
 	{
@@ -67,7 +68,7 @@ public static class WorldScan
 		{
 			if (TileID.Sets.Ore[tileType] || IsTreasure(tileType) || TileQuery.IsTreeBase(x, y) || IsBossShrine(tileType) || IsForage(x, y, tileType) || LootableFurniture.Contains(tileType) || tileType == TileID.Crystals && IsGelatinCrystal(x, y))
 				knowledge.Remember(new Point(x, y), tileType);
-			if (tileType == TileID.Tombstones)
+			if (tileType == TileID.Tombstones || tileType == TileID.Hive && x % HiveSampleStep == 0 && y % HiveSampleStep == 0)
 				knowledge.Remember(new Point(x, y), tileType);
 			if (tileType == TileID.DemonAltar)
 				SharedAltar.Claim(x, y);
