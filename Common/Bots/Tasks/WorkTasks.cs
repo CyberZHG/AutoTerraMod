@@ -591,11 +591,17 @@ public sealed class GatherTask : BotTask
 				return tile;
 			rejected.Add(tile);
 		}
-		return SensesBuriedOre ? WorldScan.NearestBuriedTile(origin, BuriedSenseRadius, Tiles.TileTypes, accept, unreachable) : null;
+		if (!SensesBuriedOre)
+			return null;
+		return Tiles.TileTypes.Contains(TileID.Hive)
+			? WorldScan.NearestBuriedTile(origin, HiveSenseRadius, Tiles.TileTypes, accept, unreachable, HiveSenseStride)
+			: WorldScan.NearestBuriedTile(origin, BuriedSenseRadius, Tiles.TileTypes, accept, unreachable);
 	}
 
 	const int BuriedSenseAfterTicks = 2 * 60 * 60;
 	const int BuriedSenseRadius = 50;
+	const int HiveSenseRadius = 200;
+	const int HiveSenseStride = 4;
 
 	readonly Dictionary<int, uint> prospectingSince = new();
 

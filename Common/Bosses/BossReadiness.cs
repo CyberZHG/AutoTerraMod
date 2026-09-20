@@ -6,6 +6,7 @@ using AutoTerraMod.Common.Factions;
 using AutoTerraMod.Common.Systems;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
 
@@ -24,7 +25,6 @@ public static class BossReadiness
 	const float BossHitsPerSecond = 0.5f;
 	const float CautiousRatio = 2f;
 	const float BraveRatio = 1f;
-	const float ExpertScalingPerExtraPlayer = 0.35f;
 	const float DefenseHalving = 0.5f;
 	const float MaxConsideredFightSeconds = 600f;
 
@@ -35,15 +35,30 @@ public static class BossReadiness
 		var fighters = (present ?? BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id)).ToList();
 		var sample = ContentSamples.NpcsByNetId[challenge.BossType];
 		var mode = Main.GameModeInfo;
-		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * mode.EnemyMaxLifeMultiplier;
-		if (Main.expertMode)
-			bossLife *= 1f + ExpertScalingPerExtraPlayer * Math.Max(0, fighters.Count - 1);
+		int playerCount = Main.netMode == NetmodeID.SinglePlayer ? 1 : BossPlayerScaling.FactionPlayerCount(faction.Id);
+		float bossLife = (challenge.TotalLife > 0 ? challenge.TotalLife : sample.lifeMax) * LifeScale(challenge.BossType, playerCount);
 		float bossDamage = Math.Max(sample.damage, BaseThreatDamage(challenge.BossType)) * mode.EnemyDamageMultiplier * challenge.ThreatMultiplier;
 		float requiredRatio = MathHelper.Lerp(CautiousRatio, BraveRatio, summoner.Personality.Courage);
 		float burstDps = fighters.Sum(bot => DamagePerSecond(bot, sample.defense)) * challenge.Exposure;
 		float expectedSeconds = burstDps > 0 ? Math.Min(bossLife / burstDps, MaxConsideredFightSeconds) : MaxConsideredFightSeconds;
 		float rawDps = fighters.Sum(bot => SustainedDamagePerSecond(bot, sample.defense, expectedSeconds)) * challenge.Exposure;
 		return new Setup(fighters, rawDps, bossLife, bossDamage, requiredRatio);
+	}
+
+	static readonly Dictionary<(int type, int players, float mode), float> lifeScales = new();
+
+	static float LifeScale(int bossType, int playerCount)
+	{
+		var key = (bossType, playerCount, Main.GameModeInfo.EnemyMaxLifeMultiplier);
+		if (lifeScales.TryGetValue(key, out float scale))
+			return scale;
+		var normal = new NPC();
+		normal.SetDefaults(bossType, new NPCSpawnParams { playerCountForMultiplayerDifficultyOverride = 1, gameModeData = GameModeData.NormalMode });
+		var scaled = new NPC();
+		scaled.SetDefaults(bossType, new NPCSpawnParams { playerCountForMultiplayerDifficultyOverride = playerCount, gameModeData = Main.GameModeInfo });
+		scale = normal.lifeMax > 0 ? (float)scaled.lifeMax / normal.lifeMax : Main.GameModeInfo.EnemyMaxLifeMultiplier;
+		lifeScales[key] = scale;
+		return scale;
 	}
 
 	const int MoonLordThreatDamage = 160;
