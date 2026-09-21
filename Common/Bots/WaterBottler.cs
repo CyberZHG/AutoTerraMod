@@ -14,9 +14,12 @@ public static class WaterBottler
 		var avatar = bot.Avatar;
 		if (Inventory.Count(avatar, ItemID.Bottle) == 0)
 			return;
-		if (bot.Brain.PlannedItemTypes.Contains(ItemID.BottledHoney) && World.WaterFinder.IsNearHoney(bot.CenterTile)
-			&& RecipeIndex.For(ItemID.BottledHoney).FirstOrDefault(ProgressionPlanner.NeedsHoney) is { } honey && Crafting.TryCraft(avatar, honey))
-			BotDiagnostics.Log(bot, $"filled Bottled Honey at {bot.CenterTile}");
+		if (bot.Brain.PlannedItemTypes.Contains(ItemID.BottledHoney))
+		{
+			if (World.WaterFinder.IsNearHoney(bot.CenterTile) && RecipeIndex.For(ItemID.BottledHoney).FirstOrDefault(ProgressionPlanner.NeedsHoney) is { } honey && Crafting.TryCraft(avatar, honey))
+				BotDiagnostics.Log(bot, $"filled Bottled Honey at {bot.CenterTile}");
+			return;
+		}
 		if (!World.WaterFinder.IsNearWater(bot.CenterTile))
 			return;
 		var recipe = RecipeIndex.For(ItemID.BottledWater).FirstOrDefault(ProgressionPlanner.NeedsWater);

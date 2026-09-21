@@ -141,6 +141,8 @@ public sealed class FactionKnowledge
 
 	public bool Knows(Point tile, int tileType) => resourceTiles.TryGetValue(tile, out int known) && known == tileType;
 
+	public IEnumerable<Point> KnownTilesOf(int tileType) => resourceTiles.Where(entry => entry.Value == tileType).Select(entry => entry.Key);
+
 	public int KnownCount(ISet<int> tileTypes) => tileTypes.Sum(type => knownCountByType.GetValueOrDefault(type));
 
 	public bool KnowsAny(ISet<int> tileTypes)

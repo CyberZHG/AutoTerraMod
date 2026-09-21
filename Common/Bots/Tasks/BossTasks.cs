@@ -951,6 +951,8 @@ public sealed class ScoutTask : BotTask
 		bool jungleCaverns = step.SeekTile == TileID.PlanteraBulb || step.Landmark == Landmark.Temple;
 		if (jungleCaverns && knowledge.SpanOf(Landmark.Jungle) is var (jungleMinX, jungleMaxX) && CavernJungleSpot(knowledge, here, jungleMinX, jungleMaxX) is Point cavern)
 			return new Vector2(cavern.X * 16f + 8f, cavern.Y * 16f);
+		if (step.Underground && step.Landmark == Landmark.Jungle && step.SeekTile < 0 && UnvisitedHive(knowledge, here) is Point hiveTile)
+			return OpenTileNear(hiveTile).ToWorldCoordinates(8f, 0f);
 		if (step.Underground && knowledge.SpanOf(step.Landmark) is var (minX, maxX))
 		{
 			int column = Main.rand.Next(minX - SpanMargin, maxX + SpanMargin + 1);
@@ -975,6 +977,13 @@ public sealed class ScoutTask : BotTask
 		knowledge.ScoutDirection = direction;
 		x = Utils.Clamp(x, WorldGen.beachDistance, Main.maxTilesX - WorldGen.beachDistance);
 		return new Vector2(x * 16f, (TileQuery.SurfaceY(x) - 2) * 16f);
+	}
+
+	static Point? UnvisitedHive(Factions.FactionKnowledge knowledge, Point here)
+	{
+		int cell = Factions.FactionKnowledge.ExploreCell;
+		return knowledge.KnownTilesOf(TileID.Hive).Where(tile => !knowledge.IsExplored(tile.X / cell, tile.Y / cell))
+			.Select(tile => (Point?)tile).MinBy(tile => Vector2.DistanceSquared(tile.Value.ToVector2(), here.ToVector2()));
 	}
 
 	public static int Heading(Factions.FactionKnowledge knowledge, Landmark landmark, int campX, int fromX)
