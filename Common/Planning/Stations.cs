@@ -244,6 +244,8 @@ public static class Stations
 		if (faction.Settlement is not { } settlement || !Main.tile[x, y].HasTile)
 			return false;
 		int type = Main.tile[x, y].TileType;
+		if (type == TileID.TeleportationPylon)
+			return Bots.PylonTravel.IsStranded(x, y);
 		if (!IsCraftingStation(type) || IsWorldOnly(type) || Main.tileContainer[type])
 			return false;
 		if (settlement.StorageRooms.Any(room => x > room.Left && x < room.Right && y >= room.Top && y < room.Floor))

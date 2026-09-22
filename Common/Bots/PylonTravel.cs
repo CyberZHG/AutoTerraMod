@@ -1,9 +1,11 @@
 using System.Linq;
+using System.Reflection;
 using AutoTerraMod.Common.Systems;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.GameContent;
+using Terraria.ID;
 
 namespace AutoTerraMod.Common.Bots;
 
@@ -24,7 +26,7 @@ public static class PylonTravel
 
 	public static PylonHop? Plan(Vector2 from, Vector2 to)
 	{
-		var pylons = Main.PylonSystem.Pylons.Where(pylon => HasEnoughNpcs(pylon) && !RecentlyRefused(pylon)).ToList();
+		var pylons = Main.PylonSystem.Pylons.Where(pylon => HasEnoughNpcs(pylon) && !RecentlyRefused(pylon) && MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)).ToList();
 		if (pylons.Count < 2)
 			return null;
 		var near = pylons.MinBy(pylon => Vector2.Distance(Center(pylon), from));
@@ -58,6 +60,41 @@ public static class PylonTravel
 
 	static bool HasEnoughNpcs(TeleportPylonInfo pylon) =>
 		pylon.TypeOfPylon == TeleportPylonType.Victory || TeleportPylonsSystem.DoesPositionHaveEnoughNPCs(TownNpcsNeeded, pylon.PositionInTiles);
+
+	static readonly FieldInfo SceneMetricsField = typeof(TeleportPylonsSystem).GetField("_sceneMetrics", BindingFlags.NonPublic | BindingFlags.Instance);
+	static readonly MethodInfo AcceptsTeleportation = typeof(TeleportPylonsSystem).GetMethod("DoesPylonAcceptTeleportation", BindingFlags.NonPublic | BindingFlags.Instance);
+	const uint BiomeCacheTicks = 10 * 3600;
+	static readonly System.Collections.Generic.Dictionary<(Point16, TeleportPylonType), (uint at, bool meets)> biomeCache = new();
+
+	public static bool MeetsBiome(TeleportPylonType type, Point16 position)
+	{
+		if (biomeCache.TryGetValue((position, type), out var cached) && Main.GameUpdateCount - cached.at < BiomeCacheTicks)
+			return cached.meets;
+		bool meets = true;
+		if (SceneMetricsField?.GetValue(Main.PylonSystem) is SceneMetrics metrics && AcceptsTeleportation != null)
+		{
+			metrics.ScanAndExportToMain(new SceneMetricsScanSettings { VisualScanArea = null, BiomeScanCenterPositionInWorld = position.ToWorldCoordinates(), ScanOreFinderData = false });
+			var info = new TeleportPylonInfo { PositionInTiles = position, TypeOfPylon = type };
+			meets = (bool)AcceptsTeleportation.Invoke(Main.PylonSystem, new object[] { info, Main.player[Main.myPlayer] });
+		}
+		biomeCache[(position, type)] = (Main.GameUpdateCount, meets);
+		return meets;
+	}
+
+	public static TeleportPylonType TypeOfItem(int itemType) => (TeleportPylonType)ContentSamples.ItemsByType[itemType].placeStyle;
+
+	public static bool IsStranded(int x, int y)
+	{
+		if (Main.tile[x, y].TileType != TileID.TeleportationPylon)
+			return false;
+		foreach (var pylon in Main.PylonSystem.Pylons)
+		{
+			var origin = pylon.PositionInTiles;
+			if (x >= origin.X && x < origin.X + 3 && y >= origin.Y && y < origin.Y + 4)
+				return !MeetsBiome(pylon.TypeOfPylon, origin);
+		}
+		return false;
+	}
 
 	public static bool InRange(Bot bot, PylonHop hop)
 	{

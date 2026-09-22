@@ -47,11 +47,12 @@ public sealed class StationGoal : ProgressionGoal
 		this.stationItems = stationItems;
 	}
 
-	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType) || Placeable().Length == 0 || Stations.TeammateFetching(bot, stationItems);
-	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanStation(bot, Placeable());
+	public override bool IsMet(Bot bot) => Stations.BaseHas(bot.Faction, tileType) || Placeable(bot).Length == 0 || Stations.TeammateFetching(bot, stationItems);
+	public override PlanStep Plan(Bot bot) => ProgressionPlanner.PlanStation(bot, Placeable(bot));
 
-	int[] Placeable() => tileType == TileID.TeleportationPylon
-		? stationItems.Where(item => !Terraria.Main.PylonSystem.Pylons.Any(pylon => (int)pylon.TypeOfPylon == Terraria.ID.ContentSamples.ItemsByType[item].placeStyle)).ToArray()
+	int[] Placeable(Bot bot) => tileType == TileID.TeleportationPylon
+		? stationItems.Where(item => !Terraria.Main.PylonSystem.Pylons.Any(pylon => pylon.TypeOfPylon == PylonTravel.TypeOfItem(item))
+			&& PylonTravel.MeetsBiome(PylonTravel.TypeOfItem(item), new Terraria.DataStructures.Point16(bot.Faction.BaseTile.X, bot.Faction.BaseTile.Y))).ToArray()
 		: stationItems;
 }
 
