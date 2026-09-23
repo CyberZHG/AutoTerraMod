@@ -51,6 +51,8 @@ public static class PylonTravel
 	{
 		if (!TeleportPylonsSystem.IsPlayerNearAPylon(bot.Avatar))
 			return "not near a pylon";
+		if (!MeetsBiome(hop.From.TypeOfPylon, hop.From.PositionInTiles))
+			return $"source {hop.From.TypeOfPylon} biome requirement";
 		if (!HasEnoughNpcs(hop.To))
 			return "not enough NPCs";
 		if (NPC.AnyDanger(quickBossNPCCheck: false, ignorePillarsAndMoonlordCountdown: true))
@@ -58,7 +60,7 @@ public static class PylonTravel
 		return $"{hop.To.TypeOfPylon} biome requirement";
 	}
 
-	static bool HasEnoughNpcs(TeleportPylonInfo pylon) =>
+	public static bool HasEnoughNpcs(TeleportPylonInfo pylon) =>
 		pylon.TypeOfPylon == TeleportPylonType.Victory || TeleportPylonsSystem.DoesPositionHaveEnoughNPCs(TownNpcsNeeded, pylon.PositionInTiles);
 
 	static readonly FieldInfo SceneMetricsField = typeof(TeleportPylonsSystem).GetField("_sceneMetrics", BindingFlags.NonPublic | BindingFlags.Instance);

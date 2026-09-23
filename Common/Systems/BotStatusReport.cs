@@ -30,6 +30,9 @@ public sealed class BotStatusReport : ModSystem
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}
+		report.Append("\n  pylons:");
+		foreach (var pylon in Main.PylonSystem.Pylons)
+			report.Append($" {pylon.TypeOfPylon}@{pylon.PositionInTiles} biome={Bots.PylonTravel.MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)} npcs={Bots.PylonTravel.HasEnoughNpcs(pylon)};");
 		Mod.Logger.Info(report.ToString());
 	}
 
