@@ -32,8 +32,18 @@ public sealed class BotStatusReport : ModSystem
 		}
 		report.Append("\n  pylons:");
 		foreach (var pylon in Main.PylonSystem.Pylons)
-			report.Append($" {pylon.TypeOfPylon}@{pylon.PositionInTiles} biome={Bots.PylonTravel.MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)} npcs={Bots.PylonTravel.HasEnoughNpcs(pylon)};");
+			report.Append($" {pylon.TypeOfPylon}@{pylon.PositionInTiles} biome={Bots.PylonTravel.MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)} npcs={Bots.PylonTravel.HasEnoughNpcs(pylon)} tidy={DescribePylonTidy(pylon)};");
 		Mod.Logger.Info(report.ToString());
+	}
+
+	static string DescribePylonTidy(Terraria.GameContent.TeleportPylonInfo pylon)
+	{
+		var owner = BotWorldSystem.Factions.Where(faction => faction.Settlement != null).MinBy(faction => System.Math.Abs(faction.BaseTile.X - pylon.PositionInTiles.X));
+		if (owner == null)
+			return "none";
+		var settlement = owner.Settlement;
+		int x = pylon.PositionInTiles.X, y = pylon.PositionInTiles.Y;
+		return $"{owner.Name} misplaced={Planning.Stations.IsMisplaced(owner, x, y)} protected={Building.HouseInspector.IsProtected(x, y)} camp={settlement.Left}..{settlement.Right}/{settlement.Top}..{settlement.Floor}";
 	}
 
 	static string Column(World.Hellbridge bridge, int x) =>
