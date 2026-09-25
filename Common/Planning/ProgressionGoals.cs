@@ -975,7 +975,7 @@ public sealed class TempleShaftGoal : ProgressionGoal
 
 	public override bool AppliesTo(Bot bot)
 	{
-		if (!Terraria.NPC.downedGolemBoss || (bot.Hands.BestPickaxe?.pick ?? 0) < LihzahrdPick || World.TempleShaft.Usable)
+		if (!Terraria.NPC.downedPlantBoss || (bot.Hands.BestPickaxe?.pick ?? 0) < LihzahrdPick || World.TempleShaft.Usable)
 			return false;
 		if (DiggerId >= 0 && DiggerId != bot.Id && BotWorldSystem.FindBot(DiggerId) is { } digger && (digger.Hands.BestPickaxe?.pick ?? 0) >= LihzahrdPick)
 			return false;

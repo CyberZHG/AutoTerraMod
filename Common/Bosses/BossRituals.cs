@@ -98,7 +98,7 @@ public static class BossRituals
 	{
 		if (trigger.Place == Landmark.Temple && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0 && Building.BaseStorage.Count(bot.Faction, ItemID.TempleKey) > 0)
 			return new WithdrawStep(ItemID.TempleKey, 1);
-		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null && !LearnAltarOfOpenTemple(bot))
+		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null && !LearnAltarOfOpenTemple(bot) && !LearnAltarBelowShaft(bot))
 		{
 			bool locked = KnownLandmark(bot, Landmark.Temple) is Point temple && TempleLocked(temple);
 			if (locked && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0)
@@ -129,6 +129,14 @@ public static class BossRituals
 		if (knowledge.LandmarkOf(Landmark.Temple) is not Point temple || TempleLocked(temple) || FindAltar(knowledge) is not Point altar)
 			return false;
 		knowledge.Remember(altar, TileID.LihzahrdAltar);
+		return true;
+	}
+
+	static bool LearnAltarBelowShaft(Bot bot)
+	{
+		if (!World.TempleShaft.Usable || TempleAltar(bot.Faction) is not Point altar || !World.TempleShaft.Current.Contains(new Point(World.TempleShaft.Current.X, altar.Y + 2)))
+			return false;
+		BotWorldSystem.KnowledgeOf(bot.Faction).Remember(altar, TileID.LihzahrdAltar);
 		return true;
 	}
 

@@ -40,8 +40,8 @@ public sealed class TidyCampTask : BotTask
 			return 0f;
 		if (!Building.HouseInspector.IsDesignatedBuilder(Bot))
 		{
-			if (tombstone is not Point grave || !IsGrave(grave) || RecentlyFailed(grave))
-				tombstone = NearestGrave();
+			if (tombstone is not Point grave || !IsGrave(grave) && !Planning.Stations.IsMisplaced(Bot.Faction, grave.X, grave.Y) || RecentlyFailed(grave))
+				tombstone = NearestGrave() ?? StrandedPylon(settlement);
 			Detail = "";
 			return tombstone != null && Bot.Hands.BestPickaxe != null ? GraveDiggerPriority : 0f;
 		}
@@ -88,6 +88,12 @@ public sealed class TidyCampTask : BotTask
 		campScans[Bot.FactionId] = (Main.GameUpdateCount, nearest != null);
 		return nearest;
 	}
+
+	Point? StrandedPylon(Building.Settlement settlement) =>
+		Main.PylonSystem.Pylons.Select(pylon => new Point(pylon.PositionInTiles.X, pylon.PositionInTiles.Y))
+			.Where(tile => InCamp(settlement, tile.X) && tile.Y >= settlement.Top - CampRowsAbove && tile.Y <= settlement.Floor + CampRowsBelow
+				&& !RecentlyFailed(tile) && Planning.Stations.IsMisplaced(Bot.Faction, tile.X, tile.Y))
+			.Cast<Point?>().FirstOrDefault();
 
 	static bool IsGrave(Point tile) => Main.tile[tile.X, tile.Y].HasTile && Main.tile[tile.X, tile.Y].TileType == TileID.Tombstones;
 
