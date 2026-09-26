@@ -362,7 +362,7 @@ public static class Junk
 
 	static readonly HashSet<int> RitualItems = new()
 	{
-		ItemID.EmpressButterfly, ItemID.TruffleWorm, ItemID.LihzahrdPowerCell, ItemID.TempleKey, ItemID.GuideVoodooDoll, ItemID.ClothierVoodooDoll, ItemID.BugNet, ItemID.GoldenBugNet, ItemID.FireproofBugNet
+		ItemID.EmpressButterfly, ItemID.TruffleWorm, ItemID.LihzahrdPowerCell, ItemID.LihzahrdAltar, ItemID.TempleKey, ItemID.GuideVoodooDoll, ItemID.ClothierVoodooDoll, ItemID.BugNet, ItemID.GoldenBugNet, ItemID.FireproofBugNet
 	};
 
 	public static bool IsBossSummon(Item item) => ItemID.Sets.SortingPriorityBossSpawns[item.type] >= 0 || RitualItems.Contains(item.type) || item.questItem;

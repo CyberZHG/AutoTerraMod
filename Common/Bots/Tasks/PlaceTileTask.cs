@@ -1,5 +1,6 @@
 using System.Linq;
 using AutoTerraMod.Common.Planning;
+using Microsoft.Xna.Framework;
 using Terraria;
 
 namespace AutoTerraMod.Common.Bots.Tasks;
@@ -38,7 +39,14 @@ public sealed class PlaceTileTask : BotTask
 		}
 		if (!Bot.Hands.CanReach(item, plan.Tile))
 		{
-			if (!TravelOrTunnel(plan.Tile.ToWorldCoordinates(), 32f))
+			var target = plan.Tile.ToWorldCoordinates();
+			if (Navigation.PathFinder.InsideMaze(plan.Tile) && NPC.downedPlantBoss && (Bot.Hands.BestPickaxe?.pick ?? 0) >= TempleShaftGoal.LihzahrdPick)
+			{
+				if (!Bot.Motor.Tunneling || Bot.Motor.Destination is not Vector2 dest || Vector2.DistanceSquared(dest, target) > 32f * 32f || Bot.Motor.IsStuck)
+					Bot.Motor.TunnelTo(target, 32f);
+				return;
+			}
+			if (!TravelOrTunnel(target, 32f))
 				IsFinished = true;
 			return;
 		}
