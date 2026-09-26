@@ -50,6 +50,8 @@ public sealed record TravelStep(Microsoft.Xna.Framework.Vector2 Place) : PlanSte
 
 public sealed record FillTileStep(Microsoft.Xna.Framework.Point Tile) : PlanStep;
 
+public sealed record PlaceTileStep(int ItemType, Microsoft.Xna.Framework.Point Tile) : PlanStep;
+
 public sealed record BuildSkyArenaStep : PlanStep;
 
 public sealed record DigTempleShaftStep : PlanStep;

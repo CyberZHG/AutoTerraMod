@@ -109,7 +109,7 @@ public sealed class BotHands
 		}
 		if (World.Highway.ProtectsOthersDeck(bot.FactionId, tile.X, tile.Y) || World.Hellevator.InOthersShaft(bot.FactionId, tile.X, tile.Y))
 			return ToolResult.Unbreakable;
-		if (InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
+		if (Main.tile[tile.X, tile.Y].TileType == TileID.LihzahrdAltar || InOtherBase(tile) || World.ShimmerZone.Contains(tile.X, tile.Y) || !clearSaplings && IsGrowingSapling(tile) || TileQuery.InOcean(tile.X, tile.Y) || !Avatar.lavaImmune && TileQuery.IsSolid(tile) && TileQuery.TouchesLava(tile.X, tile.Y) || HoldsSandOverhead(tile) || TileQuery.SupportsBoulder(tile.X, tile.Y))
 			return ToolResult.Unbreakable;
 		if (Main.tileAxe[Main.tile[tile.X, tile.Y].TileType])
 			return Chop(tile);

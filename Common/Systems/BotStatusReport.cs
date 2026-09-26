@@ -4,6 +4,7 @@ using AutoTerraMod.Common.Bots;
 using AutoTerraMod.Common.Config;
 using AutoTerraMod.Common.Planning;
 using Terraria;
+using Terraria.ID;
 using Terraria.ModLoader;
 
 namespace AutoTerraMod.Common.Systems;
@@ -30,6 +31,7 @@ public sealed class BotStatusReport : ModSystem
 			foreach (var bot in BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id))
 				report.Append($"\n    {Describe(bot)}");
 		}
+		report.Append($"\n  temple: altar={Bosses.BossRituals.TempleAltar(BotWorldSystem.Factions.First())?.ToString() ?? "none"} shaft={World.TempleShaft.Current?.ToString() ?? "none"} usable={World.TempleShaft.Usable} altarItems=[{string.Join(", ", BotWorldSystem.Factions.Select(faction => $"{faction.Name} {Building.BaseStorage.Count(faction, ItemID.LihzahrdAltar) + BotWorldSystem.Bots.Where(bot => bot.FactionId == faction.Id).Sum(bot => Bots.Inventory.Count(bot.Avatar, ItemID.LihzahrdAltar))}"))}]");
 		report.Append("\n  pylons:");
 		foreach (var pylon in Main.PylonSystem.Pylons)
 			report.Append($" {pylon.TypeOfPylon}@{pylon.PositionInTiles} biome={Bots.PylonTravel.MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)} npcs={Bots.PylonTravel.HasEnoughNpcs(pylon)} tidy={DescribePylonTidy(pylon)};");

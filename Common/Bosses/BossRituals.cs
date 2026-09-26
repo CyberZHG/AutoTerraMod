@@ -96,6 +96,8 @@ public static class BossRituals
 
 	static PlanStep PlanAltar(Bot bot, BossChallenge challenge, AltarTrigger trigger)
 	{
+		if (trigger.Place == Landmark.Temple && NPC.downedPlantBoss && TempleAltar(bot.Faction) == null && !World.TilePresence.AnyExists(AltarTiles))
+			return PlanRestoreAltar(bot);
 		if (trigger.Place == Landmark.Temple && Inventory.Count(bot.Avatar, ItemID.TempleKey) == 0 && Building.BaseStorage.Count(bot.Faction, ItemID.TempleKey) > 0)
 			return new WithdrawStep(ItemID.TempleKey, 1);
 		if (trigger.Place == Landmark.Temple && KnownTile(bot, AltarTiles) == null && !LearnAltarOfOpenTemple(bot) && !LearnAltarBelowShaft(bot))
@@ -110,6 +112,44 @@ public static class BossRituals
 		if (KnownTile(bot, AltarTiles) is not Point altar)
 			return new ScoutStep(trigger.Place, true);
 		return new SummonBossStep(challenge, trigger, altar.ToWorldCoordinates(), altar);
+	}
+
+	static PlanStep PlanRestoreAltar(Bot bot)
+	{
+		if (Inventory.Count(bot.Avatar, ItemID.LihzahrdAltar) == 0)
+			return Building.BaseStorage.Count(bot.Faction, ItemID.LihzahrdAltar) > 0 ? new WithdrawStep(ItemID.LihzahrdAltar, 1) : PlanStep.Blocked;
+		if (KnownLandmark(bot, Landmark.Temple) is not Point temple)
+			return new ScoutStep(Landmark.Temple, true);
+		return AltarSpot(temple) is Point spot ? new PlaceTileStep(ItemID.LihzahrdAltar, spot) : PlanStep.Blocked;
+	}
+
+	const int AltarSpotSpanX = 200;
+	const int AltarSpotAbove = 50;
+	const int AltarSpotBelow = 250;
+	const uint AltarSpotCacheTicks = 600;
+	static (uint at, Point temple, Point? spot) altarSpot;
+
+	static Point? AltarSpot(Point temple)
+	{
+		if (altarSpot.at != 0 && altarSpot.temple == temple && Main.GameUpdateCount - altarSpot.at < AltarSpotCacheTicks)
+			return altarSpot.spot;
+		Point? best = null;
+		long bestDistance = long.MaxValue;
+		for (int x = System.Math.Max(temple.X - AltarSpotSpanX, 20); x <= System.Math.Min(temple.X + AltarSpotSpanX, Main.maxTilesX - 20); x++)
+		{
+			for (int y = System.Math.Max(temple.Y - AltarSpotAbove, 20); y <= System.Math.Min(temple.Y + AltarSpotBelow, Main.maxTilesY - 20); y++)
+			{
+				if (Main.tile[x, y].HasTile || Main.tile[x, y].WallType != WallID.LihzahrdBrickUnsafe || !World.TileQuery.IsSolid(x, y + 1))
+					continue;
+				long distance = (long)(x - temple.X) * (x - temple.X) + (long)(y - temple.Y) * (y - temple.Y);
+				if (distance >= bestDistance || !TileObject.CanPlace(x, y, TileID.LihzahrdAltar, 0, 1, out _, onlyCheck: true))
+					continue;
+				best = new Point(x, y);
+				bestDistance = distance;
+			}
+		}
+		altarSpot = (Main.GameUpdateCount | 1, temple, best);
+		return best;
 	}
 
 	static (uint at, bool locked) templeLock;
