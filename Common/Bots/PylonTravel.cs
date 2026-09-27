@@ -66,20 +66,30 @@ public static class PylonTravel
 	static readonly FieldInfo SceneMetricsField = typeof(TeleportPylonsSystem).GetField("_sceneMetrics", BindingFlags.NonPublic | BindingFlags.Instance);
 	static readonly MethodInfo AcceptsTeleportation = typeof(TeleportPylonsSystem).GetMethod("DoesPylonAcceptTeleportation", BindingFlags.NonPublic | BindingFlags.Instance);
 	const uint BiomeCacheTicks = 10 * 3600;
-	static readonly System.Collections.Generic.Dictionary<(Point16, TeleportPylonType), (uint at, bool meets)> biomeCache = new();
+	static readonly System.Collections.Generic.Dictionary<Point16, (uint at, bool[] meets)> biomeCache = new();
+	static readonly TeleportPylonType[] PylonTypes = System.Enum.GetValues<TeleportPylonType>().Where(type => type < TeleportPylonType.Count).ToArray();
 
 	public static bool MeetsBiome(TeleportPylonType type, Point16 position)
 	{
-		if (biomeCache.TryGetValue((position, type), out var cached) && Main.GameUpdateCount - cached.at < BiomeCacheTicks)
-			return cached.meets;
-		bool meets = true;
-		if (SceneMetricsField?.GetValue(Main.PylonSystem) is SceneMetrics metrics && AcceptsTeleportation != null)
+		if (type < 0 || type >= TeleportPylonType.Count)
+			return true;
+		if (!biomeCache.TryGetValue(position, out var cached) || Main.GameUpdateCount - cached.at >= BiomeCacheTicks)
 		{
-			metrics.ScanAndExportToMain(new SceneMetricsScanSettings { VisualScanArea = null, BiomeScanCenterPositionInWorld = position.ToWorldCoordinates(), ScanOreFinderData = false });
-			var info = new TeleportPylonInfo { PositionInTiles = position, TypeOfPylon = type };
-			meets = (bool)AcceptsTeleportation.Invoke(Main.PylonSystem, new object[] { info, Main.player[Main.myPlayer] });
+			cached = (Main.GameUpdateCount, ScanBiomes(position));
+			biomeCache[position] = cached;
 		}
-		biomeCache[(position, type)] = (Main.GameUpdateCount, meets);
+		return cached.meets[(int)type];
+	}
+
+	static bool[] ScanBiomes(Point16 position)
+	{
+		var meets = new bool[(int)TeleportPylonType.Count];
+		System.Array.Fill(meets, true);
+		if (SceneMetricsField?.GetValue(Main.PylonSystem) is not SceneMetrics metrics || AcceptsTeleportation == null)
+			return meets;
+		metrics.ScanAndExportToMain(new SceneMetricsScanSettings { VisualScanArea = null, BiomeScanCenterPositionInWorld = position.ToWorldCoordinates(), ScanOreFinderData = false });
+		foreach (var type in PylonTypes)
+			meets[(int)type] = (bool)AcceptsTeleportation.Invoke(Main.PylonSystem, new object[] { new TeleportPylonInfo { PositionInTiles = position, TypeOfPylon = type }, Main.player[Main.myPlayer] });
 		return meets;
 	}
 

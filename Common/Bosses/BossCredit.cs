@@ -114,9 +114,23 @@ public sealed class BossCredit : GlobalNPC
 	public static bool IsEngaged(int factionId, BossChallenge challenge) =>
 		damageByFight.TryGetValue(challenge.BossType, out var byFaction) && byFaction.ContainsKey(factionId);
 
-	public static BossChallenge CurrentFight(Faction faction) =>
-		BossCatalog.Challenges.FirstOrDefault(challenge => (IsEngaged(faction.Id, challenge) || summoners.TryGetValue(challenge.BossType, out int owner) && owner == faction.Id
-			|| faction.Rally != null && faction.RallyBossType == challenge.BossType) && BossCatalog.IsBossAlive(challenge));
+	const float HelperShare = 0.1f;
+
+	public static BossChallenge CurrentFight(Faction faction)
+	{
+		var alive = BossCatalog.Challenges.Where(BossCatalog.IsBossAlive).ToList();
+		return alive.FirstOrDefault(challenge => summoners.TryGetValue(challenge.BossType, out int owner) && owner == faction.Id)
+			?? alive.FirstOrDefault(challenge => faction.Rally != null && faction.RallyBossType == challenge.BossType)
+			?? alive.Where(challenge => DamageShare(faction.Id, challenge) >= HelperShare).MaxBy(challenge => DamageShare(faction.Id, challenge));
+	}
+
+	static float DamageShare(int factionId, BossChallenge challenge)
+	{
+		if (!damageByFight.TryGetValue(challenge.BossType, out var byFaction))
+			return 0f;
+		long total = byFaction.Values.Sum();
+		return total > 0 ? (float)byFaction.GetValueOrDefault(factionId) / total : 0f;
+	}
 
 	public static int? LifePercent(BossChallenge challenge) =>
 		Main.npc.FirstOrDefault(npc => npc.active && npc.type == challenge.BossType && npc.lifeMax > 0) is { } boss ? boss.life * 100 / boss.lifeMax : null;
