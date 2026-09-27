@@ -78,8 +78,12 @@ public static class BossReadiness
 		var calibrated = Report(setup, Calibration(faction, challenge.BossType));
 		if (present == null)
 			NotePlateau(faction, challenge.BossType, raw.KillSeconds <= 0 ? 0f : raw.SurviveSeconds / (raw.KillSeconds * raw.RequiredRatio));
-		if (present == null && !calibrated.IsReady && raw.IsReady && GearPlateaued(faction, challenge.BossType))
-			return raw;
+		if (present == null && GearPlateaued(faction, challenge.BossType))
+		{
+			if (!calibrated.IsReady && raw.IsReady)
+				return raw;
+			return Report(setup with { RequiredRatio = setup.RequiredRatio * PlateauPatience(faction, challenge.BossType) }, Calibration(faction, challenge.BossType));
+		}
 		return calibrated;
 	}
 
@@ -94,7 +98,7 @@ public static class BossReadiness
 	public static void RestartPlateau(Faction faction, int bossType)
 	{
 		faction.GearPlateauBosses.Remove(bossType);
-		plateaus.Remove((faction.Id, bossType));
+		faction.PlateauProgress.Remove(bossType);
 	}
 
 	const int ThresholdSteps = 12;
@@ -143,20 +147,28 @@ public static class BossReadiness
 
 	const uint PlateauTicks = 20 * 3600;
 	const float PlateauGain = 0.02f;
-	static readonly Dictionary<(int faction, int boss), (float best, uint improvedAt)> plateaus = new();
 
 	static void NotePlateau(Faction faction, int bossType, float confidence)
 	{
-		var key = (faction.Id, bossType);
-		if (!plateaus.TryGetValue(key, out var entry) || confidence > entry.best * (1f + PlateauGain))
-			plateaus[key] = (Math.Max(confidence, entry.best), Main.GameUpdateCount);
+		if (!faction.PlateauProgress.TryGetValue(bossType, out var entry) || confidence > entry.best * (1f + PlateauGain))
+			faction.PlateauProgress[bossType] = (Math.Max(confidence, entry.best), Main.GameUpdateCount);
+	}
+
+	const uint PatienceHalvingTicks = 10 * 3600;
+
+	static float PlateauPatience(Faction faction, int bossType)
+	{
+		if (!faction.PlateauProgress.TryGetValue(bossType, out var entry))
+			return 1f;
+		float waited = (float)(Main.GameUpdateCount - entry.improvedAt) - PlateauTicks;
+		return waited <= 0f ? 1f : (float)Math.Pow(0.5, waited / PatienceHalvingTicks);
 	}
 
 	static bool GearPlateaued(Faction faction, int bossType)
 	{
 		if (faction.GearPlateauBosses.Contains(bossType))
 			return true;
-		if (!plateaus.TryGetValue((faction.Id, bossType), out var entry) || Main.GameUpdateCount - entry.improvedAt <= PlateauTicks)
+		if (!faction.PlateauProgress.TryGetValue(bossType, out var entry) || Main.GameUpdateCount - entry.improvedAt <= PlateauTicks)
 			return false;
 		faction.GearPlateauBosses.Add(bossType);
 		return true;

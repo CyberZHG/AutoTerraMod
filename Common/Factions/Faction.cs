@@ -21,6 +21,7 @@ public sealed class Faction
 	public HashSet<int> DefeatedBosses { get; } = new();
 	public Dictionary<int, float> BossDpsCalibration { get; } = new();
 	public HashSet<int> GearPlateauBosses { get; } = new();
+	public Dictionary<int, (float best, uint improvedAt)> PlateauProgress { get; } = new();
 	public (Vector2 point, uint until)? Rally { get; set; }
 	public uint RallyCooldownUntil { get; set; }
 	public int RallyLeaderId { get; set; } = -1;
@@ -103,6 +104,21 @@ public sealed class Faction
 		tag["bosses"] = DefeatedBosses.ToList();
 		tag["calibration"] = BossDpsCalibration.SelectMany(entry => new[] { (float)entry.Key, entry.Value }).ToList();
 		tag["plateaus"] = GearPlateauBosses.ToList();
+		uint now = Terraria.Main.GameUpdateCount;
+		tag["plateauBosses"] = PlateauProgress.Keys.ToList();
+		tag["plateauBest"] = PlateauProgress.Values.Select(entry => entry.best).ToList();
+		tag["plateauWaited"] = PlateauProgress.Values.Select(entry => (int)System.Math.Min(now - entry.improvedAt, int.MaxValue)).ToList();
+		if (Rally is { } rally && rally.until > now)
+		{
+			tag["rallyPoint"] = rally.point;
+			tag["rallyLeft"] = (int)(rally.until - now);
+			tag["rallyLeader"] = RallyLeaderId;
+			tag["rallyAssembled"] = RallyAssembled;
+			tag["rallyBoss"] = RallyBossType;
+			tag["rallyCheckedIn"] = RallyCheckedIn.ToList();
+		}
+		if (RallyCooldownUntil > now)
+			tag["rallyCooldownLeft"] = (int)(RallyCooldownUntil - now);
 		tag["knowledge"] = Knowledge.Save();
 		if (Hellevator != null)
 		{
@@ -144,6 +160,24 @@ public sealed class Faction
 			faction.BossDpsCalibration[(int)calibration[i]] = calibration[i + 1];
 		foreach (int boss in tag.GetList<int>("plateaus"))
 			faction.GearPlateauBosses.Add(boss);
+		uint now = Terraria.Main.GameUpdateCount;
+		var plateauBosses = tag.GetList<int>("plateauBosses");
+		var plateauBest = tag.GetList<float>("plateauBest");
+		var plateauWaited = tag.GetList<int>("plateauWaited");
+		for (int i = 0; i < plateauBosses.Count && i < plateauBest.Count && i < plateauWaited.Count; i++)
+			faction.PlateauProgress[plateauBosses[i]] = (plateauBest[i], unchecked(now - (uint)plateauWaited[i]));
+		if (tag.ContainsKey("rallyPoint"))
+		{
+			faction.Rally = (tag.Get<Vector2>("rallyPoint"), now + (uint)tag.GetInt("rallyLeft"));
+			faction.RallyLeaderId = tag.GetInt("rallyLeader");
+			faction.RallyAssembled = tag.GetBool("rallyAssembled");
+			faction.RallyBossType = tag.GetInt("rallyBoss");
+			faction.RallyLeaderSeenAt = now;
+			foreach (int bot in tag.GetList<int>("rallyCheckedIn"))
+				faction.RallyCheckedIn.Add(bot);
+		}
+		if (tag.ContainsKey("rallyCooldownLeft"))
+			faction.RallyCooldownUntil = now + (uint)tag.GetInt("rallyCooldownLeft");
 		if (tag.ContainsKey("knowledge"))
 			faction.Knowledge.Load(tag.GetCompound("knowledge"));
 		if (tag.ContainsKey("shaftX"))
