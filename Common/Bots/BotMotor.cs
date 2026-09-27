@@ -344,6 +344,7 @@ public sealed class BotMotor
 			Run(npc, moveDirection);
 			Jump(npc, wantsJump, jumpHoldTicks);
 		}
+		NoteCeilingFlight(npc);
 		if (flightTicks > 0)
 			flightTicks--;
 		HoldRopeOverDrop(npc, wantsJump);
@@ -1473,6 +1474,22 @@ public sealed class BotMotor
 		needsWholeRoute |= stalledChecks >= StalledChecksBeforeWholeRoute;
 		if (stalledChecks == StalledChecksBeforeHook && target.Y < npc.Center.Y - HookWorthyRise && !bot.Grapple.IsAttached && !OnRope(npc) && bot.Grapple.TryLatch(npc, target))
 			BotDiagnostics.Log(bot, $"stuck below {target.ToTileCoordinates()}, hooking up");
+	}
+
+	int ceilingFlightTicks;
+	const int CeilingFlightReportTicks = 30;
+
+	void NoteCeilingFlight(NPC npc)
+	{
+		var body = BodyTiles.Of(npc);
+		bool pressed = flightTicks > 0 && npc.velocity.Y > -1f && (TileQuery.IsSolid(body.Left, body.Top - 1) || TileQuery.IsSolid(body.Right, body.Top - 1));
+		if (!pressed)
+		{
+			ceilingFlightTicks = 0;
+			return;
+		}
+		if (++ceilingFlightTicks == CeilingFlightReportTicks)
+			BotDiagnostics.Log(bot, $"flying into a ceiling at {PathFinder.FeetOf(npc)}: {Describe()}");
 	}
 
 	const int StalledChecksBeforeHook = 2;

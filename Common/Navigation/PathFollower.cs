@@ -130,6 +130,11 @@ public sealed class PathFollower
 		int shiftTolerance = Math.Max(GoalShiftTolerance, (Math.Abs(plannedGoal.X - feet.X) + Math.Abs(plannedGoal.Y - feet.Y)) / FarGoalShiftDivisor);
 		if (Math.Abs(goal.X - plannedGoal.X) > shiftTolerance || Math.Abs(goal.Y - plannedGoal.Y) > shiftTolerance)
 			return true;
+		if (!grounded && path.Nodes[index].Arrival == MoveKind.Leap && feet.Y > path.Nodes[index].Feet.Y + OffPathTolerance)
+		{
+			failedSteps.Add((index > 0 ? path.Nodes[index - 1].Feet : stepOrigin, path.Nodes[index].Feet));
+			return true;
+		}
 		if (!grounded && stepTicks < MaxLeapTicks && (path.Nodes[index].Arrival is MoveKind.Leap or MoveKind.HookHang || index > 0 && path.Nodes[index - 1].Arrival == MoveKind.HookHang))
 			return false;
 		if (Main.GameUpdateCount - plannedAt > ReplanIntervalTicks || stepTicks > StepTimeoutTicks)
@@ -264,8 +269,10 @@ public sealed class PathFollower
 		intent.MoveDirection = AirSteer(body, toLanding);
 		intent.Jump = farFromLanding || feet.Y > node.Feet.Y;
 		intent.JumpHoldTicks = HoldTicksForRise(abilities.SingleJumpRise);
-		intent.Fly = intent.Jump && body.velocity.Y > 0f && abilities.FlyRise > 0;
+		intent.Fly = intent.Jump && body.velocity.Y > 0f && abilities.FlyRise > 0 && feet.Y >= node.Feet.Y - LeapHoverRows;
 	}
+
+	const int LeapHoverRows = 1;
 
 	const int HookJumpHoldTicks = 15;
 	const int RopeLeapCommitTicks = 40;
@@ -380,8 +387,10 @@ public sealed class PathFollower
 					intent.MoveDirection = 0;
 				break;
 			case MoveKind.Fly:
-				intent.Fly = true;
-				intent.Jump = true;
+				bool inFlightColumn = Math.Abs(feet.X - node.Feet.X) <= 1;
+				bool belowFlightTop = feet.Y > node.Feet.Y;
+				intent.Fly = belowFlightTop && (inFlightColumn || body.velocity.Y > 0f);
+				intent.Jump = intent.Fly || grounded && belowFlightTop && inFlightColumn;
 				break;
 			case MoveKind.Leap:
 				Leap(body, feet, grounded, node, abilities, ref intent);
