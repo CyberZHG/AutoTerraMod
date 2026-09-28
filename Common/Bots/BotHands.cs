@@ -1042,8 +1042,15 @@ public sealed class BotHands
 
 	bool InOtherBase(Vector2 position) => InOtherBase(position.ToTileCoordinates());
 
-	public bool InOtherBase(Point tile) =>
-		Systems.BotWorldSystem.Factions.Any(faction => faction.Id != bot.FactionId && faction.Settlement?.Contains(tile.X, tile.Y) == true);
+	public bool InOtherBase(Point tile)
+	{
+		foreach (var faction in Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Id != bot.FactionId && faction.Settlement?.Contains(tile.X, tile.Y) == true)
+				return true;
+		}
+		return false;
+	}
 
 	const float DropPickupRange = 16f * 4f;
 
@@ -1090,8 +1097,12 @@ public sealed class BotHands
 	const float PullSmoothing = 5f;
 	const float PullPrefilter = 16f * 30f;
 
+	const uint CollectEveryTicks = 2;
+
 	public void CollectNearbyItems()
 	{
+		if ((Main.GameUpdateCount + (uint)bot.Id) % CollectEveryTicks != 0)
+			return;
 		var npc = bot.Npc;
 		for (int i = 0; i < Main.maxItems; i++)
 		{
@@ -1170,7 +1181,7 @@ public sealed class BotHands
 			return;
 		var desired = Vector2.Normalize(gap) * Math.Min(PullSpeed, gap.Length());
 		item.velocity = (item.velocity * (PullSmoothing - 1f) + desired) / PullSmoothing;
-		if (Main.GameUpdateCount % 4 == 0)
+		if (Main.GameUpdateCount / CollectEveryTicks % 2 == 0)
 			SyncItem(index);
 	}
 

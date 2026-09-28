@@ -57,6 +57,8 @@ public sealed class PathFollower
 	public int StepsReached { get; private set; }
 	public bool HasPath => path.Nodes.Count > 0 && index < path.Nodes.Count;
 
+	public bool IsSearching => pending != null;
+
 	public string Describe() => HasPath
 		? $"path {index}/{path.Nodes.Count} next={path.Nodes[index].Feet}:{path.Nodes[index].Arrival} reachesGoal={path.ReachesGoal} stepTicks={stepTicks} goal={plannedGoal} intent(move={lastIntent.MoveDirection} jump={lastIntent.Jump} dig={lastIntent.DigTile} bridge={lastIntent.BridgeTile} climb={lastIntent.ClimbDirection})"
 		: $"no path (noRoute={HasNoRoute}, plannedAgo={Main.GameUpdateCount - plannedAt})";
@@ -175,6 +177,8 @@ public sealed class PathFollower
 	PathSearch pending;
 	Point pendingGoal;
 
+	public bool StartsHanging { get; set; }
+
 	void BeginReplan(Point feet, Point goal, float arriveRadius, NavigationAbilities abilities)
 	{
 		int goalRadius = Math.Max(1, (int)(arriveRadius / 16f));
@@ -182,7 +186,7 @@ public sealed class PathFollower
 			goalRadius = 0;
 		int multiplier = ExtendNextSearch ? ExtendedSearchMultiplier : 1;
 		ExtendNextSearch = false;
-		pending = PathFinder.BeginFind(feet, goal, goalRadius, abilities, failedSteps, multiplier);
+		pending = PathFinder.BeginFind(feet, goal, goalRadius, abilities, failedSteps, multiplier, StartsHanging);
 		pendingGoal = goal;
 	}
 

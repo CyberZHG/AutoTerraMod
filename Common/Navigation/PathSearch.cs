@@ -76,9 +76,10 @@ public sealed class PathSearch
 	float bestHeuristic;
 	int expanded;
 
-	public PathSearch(Point start, NavigationAbilities abilities, Func<Point, bool> isGoal, Func<Point, float> heuristic, ISet<(Point from, Point to)> forbiddenSteps, int maxExpanded, int searchRadius)
+	public PathSearch(Point start, NavigationAbilities abilities, Func<Point, bool> isGoal, Func<Point, float> heuristic, ISet<(Point from, Point to)> forbiddenSteps, int maxExpanded, int searchRadius, bool startsHanging = false)
 	{
 		this.start = start;
+		this.startsHanging = startsHanging;
 		this.abilities = abilities;
 		this.isGoal = isGoal;
 		this.heuristic = heuristic;
@@ -104,6 +105,8 @@ public sealed class PathSearch
 		best = start;
 		bestHeuristic = heuristic(start);
 	}
+
+	readonly bool startsHanging;
 
 	PathResult result;
 
@@ -216,7 +219,7 @@ public sealed class PathSearch
 		}
 		edges.Clear();
 		bool arrived = cameFrom.TryGetValue(current, out var arrival);
-		Expand(current, arrived && arrival.kind == MoveKind.Bridge, arrived && arrival.kind == MoveKind.HookHang);
+		Expand(current, arrived && arrival.kind == MoveKind.Bridge, arrived ? arrival.kind == MoveKind.HookHang : startsHanging && current == start);
 		float here = costSoFar[current];
 		foreach (var edge in edges)
 		{
@@ -502,6 +505,8 @@ public sealed class PathSearch
 		AddHookEdges(x, y);
 		AddHangEdges(x, y, x - HookColumnSpan, x + HookColumnSpan, y + 2);
 		AddJumpEdges(x, y, PathFinder.BaseJumpRise);
+		if (abilities.FlyRise > 0)
+			AddFlyEdges(x, y);
 		if (DropLanding(x, y + 1, abilities.MaxFall) is Point landing)
 			edges.Add(new Edge(landing, MoveKind.Drop, 1f + (landing.Y - y) * 0.3f));
 	}

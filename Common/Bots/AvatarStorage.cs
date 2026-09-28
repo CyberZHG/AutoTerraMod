@@ -26,6 +26,7 @@ public static class AvatarStorage
 		["lifeCrystals"] = avatar.ConsumedLifeCrystals,
 		["lifeFruit"] = avatar.ConsumedLifeFruit,
 		["manaCrystals"] = avatar.ConsumedManaCrystals,
+		["demonHeart"] = avatar.extraAccessory,
 		["inventory"] = SaveSlots(avatar.inventory),
 		["armor"] = SaveSlots(avatar.armor),
 		["miscEquips"] = SaveSlots(avatar.miscEquips)
@@ -52,6 +53,7 @@ public static class AvatarStorage
 		avatar.ConsumedLifeCrystals = tag.GetInt("lifeCrystals");
 		avatar.ConsumedLifeFruit = tag.GetInt("lifeFruit");
 		avatar.ConsumedManaCrystals = tag.GetInt("manaCrystals");
+		avatar.extraAccessory = tag.GetBool("demonHeart");
 		LoadSlots(avatar.inventory, tag.GetList<TagCompound>("inventory"));
 		LoadSlots(avatar.armor, tag.GetList<TagCompound>("armor"));
 		LoadSlots(avatar.miscEquips, tag.GetList<TagCompound>("miscEquips"));

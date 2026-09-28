@@ -1907,7 +1907,17 @@ public sealed class ShoppingGoal : ProgressionGoal
 
 	public override string Describe() => "Shopping";
 
-	public override bool AppliesTo(Bot bot) => Coins(bot) > CoinReserve && (bot.Brain.Plan is BuyStep || Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter));
+	const uint TripCommitTicks = 3 * 3600;
+
+	readonly Dictionary<int, uint> tripStartedAt = new();
+
+	public override bool AppliesTo(Bot bot) => Coins(bot) > CoinReserve && !Rallying(bot) && (bot.Brain.Plan is BuyStep || Shops.WithinShoppingTrip(bot, bot.Faction.BaseCenter) || OnTrip(bot));
+
+	static bool Rallying(Bot bot) => bot.Faction.Rally is { } rally && Terraria.Main.GameUpdateCount < rally.until;
+
+	bool OnTrip(Bot bot) =>
+		tripStartedAt.TryGetValue(bot.Id, out uint at) && Terraria.Main.GameUpdateCount - at < TripCommitTicks
+		&& choices.TryGetValue(bot.Id, out var cached) && cached.choice != null;
 
 	public override bool IsMet(Bot bot) => Choice(bot) == null;
 
@@ -1923,7 +1933,10 @@ public sealed class ShoppingGoal : ProgressionGoal
 		var choice = Best(bot);
 		choices[bot.Id] = (Terraria.Main.GameUpdateCount, choice);
 		if (choice != null && choice != cached.choice)
+		{
+			tripStartedAt[bot.Id] = Terraria.Main.GameUpdateCount;
 			BotDiagnostics.Log(bot, $"wants to buy {Terraria.Lang.GetItemNameValue(choice.ItemType)} x{choice.Amount}");
+		}
 		return choice;
 	}
 

@@ -14,7 +14,7 @@ public static class StatBoosters
 
 	const float SharingCooperation = 0.6f;
 
-	public static readonly int[] BoosterTypes = { ItemID.LifeCrystal, ItemID.LifeFruit, ItemID.ManaCrystal, ItemID.FallenStar };
+	public static readonly int[] BoosterTypes = { ItemID.LifeCrystal, ItemID.LifeFruit, ItemID.ManaCrystal, ItemID.DemonHeart, ItemID.FallenStar };
 
 	public static bool IsBooster(int itemType) => BoosterTypes.Contains(itemType);
 
@@ -25,6 +25,7 @@ public static class StatBoosters
 		{
 			ItemID.LifeCrystal => WantsLifeCrystals(avatar) && !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedLifeCrystals < avatar.ConsumedLifeCrystals),
 			ItemID.LifeFruit => WantsLifeFruit(avatar) && !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedLifeFruit < avatar.ConsumedLifeFruit),
+			ItemID.DemonHeart => WantsDemonHeart(avatar),
 			ItemID.ManaCrystal or ItemID.FallenStar => avatar.ConsumedManaCrystals < Player.ManaCrystalMax
 				&& !LeavesForNeedierMate(bot, itemType, mate => mate.ConsumedManaCrystals < avatar.ConsumedManaCrystals),
 			_ => false
@@ -45,10 +46,13 @@ public static class StatBoosters
 		{
 			ItemID.LifeCrystal => WantsLifeCrystals(mate.Avatar),
 			ItemID.LifeFruit => WantsLifeFruit(mate.Avatar),
+			ItemID.DemonHeart => WantsDemonHeart(mate.Avatar),
 			_ => mate.Avatar.ConsumedManaCrystals < Player.ManaCrystalMax
 		});
 
 	public static bool WantsLifeCrystals(Player avatar) => avatar.ConsumedLifeCrystals < Player.LifeCrystalMax;
+
+	public static bool WantsDemonHeart(Player avatar) => Main.expertMode && !avatar.extraAccessory;
 
 	public static bool WantsLifeFruit(Player avatar) => !WantsLifeCrystals(avatar) && avatar.ConsumedLifeFruit < LifeFruitMax;
 
@@ -67,6 +71,8 @@ public static class StatBoosters
 			avatar.ConsumedLifeFruit++;
 			Announce(bot, CombatText.HealLife, LifeFruitBonus);
 		}
+		if (KeepsForSelf(bot, ItemID.DemonHeart) && TryConsume(bot, ItemID.DemonHeart))
+			avatar.extraAccessory = true;
 		while (KeepsForSelf(bot, ItemID.ManaCrystal) && TryConsume(bot, ItemID.ManaCrystal))
 		{
 			avatar.UseManaMaxIncreasingItem(ManaCrystalBonus);

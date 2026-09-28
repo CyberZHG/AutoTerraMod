@@ -124,7 +124,7 @@ public static class PathFinder
 
 	public static float CenterXOf(int nodeX) => (nodeX + 1) * 16f;
 
-	public static PathSearch BeginFind(Point start, Point goal, int goalRadius, NavigationAbilities abilities, ISet<(Point from, Point to)> forbiddenSteps = null, int searchMultiplier = 1)
+	public static PathSearch BeginFind(Point start, Point goal, int goalRadius, NavigationAbilities abilities, ISet<(Point from, Point to)> forbiddenSteps = null, int searchMultiplier = 1, bool startsHanging = false)
 	{
 		int maxExpanded = MaxExpandedNodes * searchMultiplier;
 		int searchRadius = MaxSearchRadius;
@@ -138,7 +138,7 @@ public static class PathFinder
 			goal = WaypointToward(start, goal);
 			goalRadius = Math.Max(goalRadius, WaypointRadius);
 		}
-		return new PathSearch(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), forbiddenSteps, maxExpanded, searchRadius);
+		return new PathSearch(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), forbiddenSteps, maxExpanded, searchRadius, startsHanging);
 	}
 
 	public static PathSearch BeginExit(Point start, NavigationAbilities abilities, Func<Point, float> distanceToExit, int searchMultiplier) =>

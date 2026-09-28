@@ -722,7 +722,10 @@ public sealed class BotMotor
 		}
 		MotorIntent intent;
 		using (Systems.Probes.Measure("m:Follow"))
+		{
+			follower.StartsHanging = bot.Grapple.IsAttached && npc.velocity.Y == 0f;
 			intent = follower.Follow(npc, leg ?? target, leg == null ? arriveRadius : LegRadius, abilities);
+		}
 		if (leg == null && follower.HasNoRoute)
 			needsWholeRoute = true;
 		AimProgressAt(leg ?? target);
@@ -737,6 +740,8 @@ public sealed class BotMotor
 			npc.velocity.X = 0f;
 			return;
 		}
+		if (npc.velocity.Y == 0f && follower.IsSearching && !follower.HasNoRoute)
+			return;
 		if ((follower.HasNoRoute || follower.FinishedShortOfGoal || Main.GameUpdateCount < recyclingUntil) && !PlacementForbidden && RecycleBlocks(npc, delta, ref moveDirection, ref wantsJump, ref jumpHoldTicks))
 		{
 			recyclingUntil = Main.GameUpdateCount + RecyclingStickTicks;
@@ -1435,7 +1440,7 @@ public sealed class BotMotor
 
 	void RefuelWings(NPC npc)
 	{
-		if (npc.velocity.Y != 0f && !npc.wet)
+		if (npc.velocity.Y != 0f && !npc.wet && !bot.Grapple.IsAttached)
 			return;
 		wingTimeLeft = FlightTicks;
 		extraJumpReady = HasExtraJump;
