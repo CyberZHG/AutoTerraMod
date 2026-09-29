@@ -24,8 +24,53 @@ public static class MoonLordFoothold
 		int x = Utils.Clamp(coreX + side * SideOffset, 50, Main.maxTilesX - 50);
 		if (NearestDeck(coreX, x) is Point deck)
 			return deck.ToWorldCoordinates(8f, 0f);
+		x = FlatColumnNear(x);
 		var ground = new Point(x, TileQuery.SurfaceY(x) - 1);
 		return (Grounds.StandingSpotNear(ground) ?? ground).ToWorldCoordinates(8f, 0f);
+	}
+
+	const int FlatSearchSpan = 40;
+	const int FlatMargin = 3;
+	const int FlatTolerance = 2;
+	static readonly System.Collections.Generic.Dictionary<int, (int flat, uint at)> flatCache = new();
+	const uint FlatCacheTicks = 120;
+	const int FlatCacheLimit = 64;
+
+	static int FlatColumnNear(int x)
+	{
+		if (flatCache.TryGetValue(x, out var cached) && Main.GameUpdateCount - cached.at < FlatCacheTicks)
+			return cached.flat;
+		if (flatCache.Count > FlatCacheLimit)
+			flatCache.Clear();
+		int flat = x;
+		for (int distance = 0; distance <= FlatSearchSpan; distance++)
+		{
+			if (IsFlat(x - distance))
+			{
+				flat = x - distance;
+				break;
+			}
+			if (IsFlat(x + distance))
+			{
+				flat = x + distance;
+				break;
+			}
+		}
+		flatCache[x] = (flat, Main.GameUpdateCount);
+		return flat;
+	}
+
+	static bool IsFlat(int x)
+	{
+		if (x - FlatMargin < 50 || x + 1 + FlatMargin > Main.maxTilesX - 50)
+			return false;
+		int surface = TileQuery.SurfaceY(x);
+		for (int column = x - FlatMargin; column <= x + 1 + FlatMargin; column++)
+		{
+			if (Math.Abs(TileQuery.SurfaceY(column) - surface) > FlatTolerance)
+				return false;
+		}
+		return true;
 	}
 
 	static NPC Core()

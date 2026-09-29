@@ -329,16 +329,30 @@ public sealed class BossCredit : GlobalNPC
 			RecordDamage(npc, shot.factionId, shot.botId, damageDone, projectile.Name);
 	}
 
-	const uint LootWindowTicks = 3 * 3600;
-	static (Microsoft.Xna.Framework.Vector2 at, uint tick)? lastBossDeath;
+	const uint LootWindowTicks = 10 * 3600;
+	static readonly List<(Microsoft.Xna.Framework.Vector2 at, uint tick)> bossDeaths = new();
 
-	public static Microsoft.Xna.Framework.Vector2? RecentLootPoint =>
-		lastBossDeath is { } death && Main.GameUpdateCount - death.tick < LootWindowTicks ? death.at : null;
+	public static Microsoft.Xna.Framework.Vector2? LootPointNear(Microsoft.Xna.Framework.Vector2 from)
+	{
+		bossDeaths.RemoveAll(death => Main.GameUpdateCount - death.tick >= LootWindowTicks);
+		Microsoft.Xna.Framework.Vector2? nearest = null;
+		float nearestDistance = float.MaxValue;
+		foreach (var death in bossDeaths)
+		{
+			float distance = Microsoft.Xna.Framework.Vector2.DistanceSquared(death.at, from);
+			if (distance < nearestDistance)
+			{
+				nearest = death.at;
+				nearestDistance = distance;
+			}
+		}
+		return nearest;
+	}
 
 	static void OnBossKill(NPC npc)
 	{
 		if (npc.boss || BossCatalog.ChallengeOf(npc.type) != null || npc.type is NPCID.LunarTowerSolar or NPCID.LunarTowerVortex or NPCID.LunarTowerNebula or NPCID.LunarTowerStardust)
-			lastBossDeath = (npc.Center, Main.GameUpdateCount);
+			bossDeaths.Add((npc.Center, Main.GameUpdateCount));
 		var challenge = BossCatalog.ChallengeOf(npc.type);
 		if (challenge == null || !IsEssential(challenge, npc) || OtherPartsAlive(challenge, npc) || !damageByFight.ContainsKey(challenge.BossType))
 			return;

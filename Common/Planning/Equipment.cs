@@ -120,7 +120,13 @@ public static class Equipment
 	{
 		for (int armorSlot = FirstAccessorySlot; armorSlot <= LastAccessorySlot; armorSlot++)
 		{
-			if (!avatar.IsItemSlotUnlockedAndUsable(armorSlot) || avatar.armor[armorSlot].type == ItemID.ClothierVoodooDoll)
+			if (!avatar.IsItemSlotUnlockedAndUsable(armorSlot))
+			{
+				if (!avatar.armor[armorSlot].IsAir && Inventory.Add(avatar, avatar.armor[armorSlot].Clone()).IsAir)
+					avatar.armor[armorSlot].TurnToAir();
+				continue;
+			}
+			if (avatar.armor[armorSlot].type == ItemID.ClothierVoodooDoll)
 				continue;
 			int equippedScore = AccessoryScore(avatar.armor[armorSlot]);
 			int bestSlot = -1;

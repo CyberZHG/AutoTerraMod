@@ -749,7 +749,7 @@ public sealed class PickupTask : BotTask
 			return FallenStarPriority;
 		if (ItemID.Sets.IsAPickup[item.type])
 			return RestorePickupPriority;
-		if (Bosses.BossCredit.RecentLootPoint is Vector2 loot && Vector2.Distance(item.Center, loot) < BossLootRadius)
+		if (Bosses.BossCredit.LootPointNear(item.Center) is Vector2 loot && Vector2.Distance(item.Center, loot) < BossLootRadius)
 			return BossLootPriority;
 		if ((item.timeSinceItemSpawned < FreshDropTicks || IsMinedTreasure(item) || ResourceSources.IsWood(item.type)) && Vector2.Distance(item.Center, Bot.Center) < FreshDropRadius)
 			return FreshDropPriority;
@@ -781,7 +781,7 @@ public sealed class PickupTask : BotTask
 		if (restore >= 0)
 			return restore;
 		int nearest = -1;
-		var loot = Bosses.BossCredit.RecentLootPoint;
+		var loot = Bosses.BossCredit.LootPointNear(Bot.Center);
 		bool lootTrip = loot is Vector2 trip && Vector2.Distance(trip, Bot.Center) < LootTripRadius;
 		float nearestDistance = lootTrip ? float.MaxValue : SearchRadius;
 		for (int i = 0; i < Main.maxItems; i++)
@@ -887,6 +887,14 @@ public sealed class PickupTask : BotTask
 		if (ground != null && Math.Abs(spot.X - Bot.Center.X) < RiseAlignPixels && item.Center.Y < Bot.Center.Y - RiseMinPixels && RiseUp(item))
 			return;
 		Bot.Motor.ClimbingStraightUp = false;
+		if (HopsUnder(item) && ++hopTicks <= HopGiveUpTicks)
+		{
+			Bot.Watchdog.RecordProgress();
+			Bot.Motor.MoveTo(new Vector2(item.Center.X, Bot.Center.Y), 4f);
+			if (Bot.Npc.velocity.Y == 0f)
+				Bot.Motor.RequestJump();
+			return;
+		}
 		Bot.Motor.MoveTo(spot, 8f);
 		if (Bot.Motor.HasArrived)
 			arrivedTicks++;
@@ -896,6 +904,25 @@ public sealed class PickupTask : BotTask
 			return;
 		unreachable.Add(itemIndex);
 		IsFinished = true;
+	}
+
+	const float HopReachPixels = 16f * 3f;
+	const int HopGiveUpTicks = 180;
+	int hopTicks;
+
+	bool HopsUnder(Item item)
+	{
+		var body = Bot.Npc;
+		float rise = body.position.Y - (item.position.Y + item.height);
+		if (rise < 0f || rise > HopReachPixels || Math.Abs(item.Center.X - body.Center.X) > 16f * 2f)
+			return false;
+		int x = (int)(item.Center.X / 16f);
+		for (int y = (int)(item.Center.Y / 16f) + 1; y <= (int)(body.position.Y / 16f); y++)
+		{
+			if (TileQuery.IsSolid(x, y) && !TileQuery.IsPlatform(x, y))
+				return false;
+		}
+		return true;
 	}
 
 	const float RiseAlignPixels = 16f * 3f;
@@ -947,5 +974,6 @@ public sealed class PickupTask : BotTask
 		base.Start();
 		arrivedTicks = 0;
 		risingTicks = 0;
+		hopTicks = 0;
 	}
 }

@@ -76,7 +76,7 @@ Commands: {
 	Description: Shows or changes this world's faction settings (lowering a count hides bots, keeping them in the save)
 	NotStarted: Factions have not started in this world yet.
 	Usage: Usage: {0}
-	Current: This world: bots {3}, {0} factions, {1} bots each, relation: {2}, material drops {4}x
+	Current: This world: bots {3}, {0} factions, {1} bots each, relation: {2}
 	On: on
 	Off: off
 }

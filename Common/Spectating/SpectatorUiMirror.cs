@@ -99,14 +99,14 @@ public sealed class SpectatorUiMirror : ModSystem
 		int[] BuffType, int[] BuffTime,
 		int Life, int LifeMax, int LifeMax2, int Mana, int ManaMax, int ManaMax2,
 		int Breath, int BreathMax, int SelectedItem, Player.DefenseStat Defense,
-		int LifeCrystals, int LifeFruit, int ManaCrystals, bool Ghost, bool Dead)
+		int LifeCrystals, int LifeFruit, int ManaCrystals, bool ExtraAccessory, bool Ghost, bool Dead)
 	{
 		public static PlayerView Capture(Player player) => new(
 			player.inventory, player.armor, player.dye, player.miscEquips, player.miscDyes,
 			player.buffType, player.buffTime,
 			player.statLife, player.statLifeMax, player.statLifeMax2, player.statMana, player.statManaMax, player.statManaMax2,
 			player.breath, player.breathMax, player.selectedItem, player.statDefense,
-			player.ConsumedLifeCrystals, player.ConsumedLifeFruit, player.ConsumedManaCrystals, player.ghost, player.dead);
+			player.ConsumedLifeCrystals, player.ConsumedLifeFruit, player.ConsumedManaCrystals, player.extraAccessory, player.ghost, player.dead);
 
 		public void ApplyTo(Player player)
 		{
@@ -130,6 +130,7 @@ public sealed class SpectatorUiMirror : ModSystem
 			player.ConsumedLifeCrystals = LifeCrystals;
 			player.ConsumedLifeFruit = LifeFruit;
 			player.ConsumedManaCrystals = ManaCrystals;
+			player.extraAccessory = ExtraAccessory;
 			player.ghost = Ghost;
 			player.dead = Dead;
 		}

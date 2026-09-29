@@ -29,12 +29,25 @@ public sealed class RopeColumnTask : BotTask
 	{
 		if (Bot.Npc is not NPC body || System.Math.Abs(Bot.Center.X - spot.X) > 16f * 2.5f || Bot.Center.Y >= spot.Y)
 			return false;
-		float nudge = System.Math.Clamp(spot.X - Bot.Center.X, -SlideSpeed, SlideSpeed);
-		int row = (int)((body.position.Y + body.height + SlideSpeed) / 16f);
-		bool blocked = false;
-		for (int x = (int)((body.position.X + nudge) / 16f); x <= (int)((body.position.X + nudge + body.width - 1) / 16f); x++)
-			blocked |= TileQuery.IsSolid(x, row) && !TileQuery.IsPlatform(x, row);
-		if (blocked && System.Math.Abs(nudge) < 0.5f)
+		if (ShaftBlockBelow(body) is Point block && Bot.Hands.Dig(block) is not (ToolResult.Unbreakable or ToolResult.NoTool))
+		{
+			Bot.Motor.Stop();
+			Bot.Watchdog.RecordProgress();
+			return true;
+		}
+		int column = (int)(spot.X / 16f);
+		float goal = spot.X - body.width / 2f;
+		foreach (float left in new[] { goal, column * 16f, (column + 1) * 16f - body.width })
+		{
+			if (!Blocked(left, body.position.Y + SlideSpeed, body))
+			{
+				goal = left;
+				break;
+			}
+		}
+		float nudge = System.Math.Clamp(goal - body.position.X, -SlideSpeed, SlideSpeed);
+		bool blocked = Blocked(body.position.X + nudge, body.position.Y + SlideSpeed, body);
+		if (blocked && (System.Math.Abs(nudge) < 0.5f || Blocked(body.position.X + nudge, body.position.Y, body)))
 			return false;
 		Bot.Motor.Stop();
 		if (Bot.Grapple.IsAttached)
@@ -46,6 +59,35 @@ public sealed class RopeColumnTask : BotTask
 		Bot.Vitals.Teleported(body);
 		Bot.Watchdog.RecordProgress();
 		return true;
+	}
+
+	Point? ShaftBlockBelow(NPC body)
+	{
+		if (Bot.Faction.Hellevator is not { } shaft || shaft.RopeX != step.X || Bot.Hands.BestPickaxe is not Item pick)
+			return null;
+		for (int y = (int)(body.position.Y / 16f); y <= (int)((body.position.Y + body.height + SlideSpeed) / 16f); y++)
+		{
+			for (int x = shaft.X; x <= shaft.Right; x++)
+			{
+				var tile = new Point(x, y);
+				if (TileQuery.IsSolid(x, y) && !TileQuery.IsPlatform(x, y) && !World.Highway.ProtectsAnyDeck(x, y) && !Building.HouseInspector.IsProtected(x, y) && Bot.Hands.CanReach(pick, tile))
+					return tile;
+			}
+		}
+		return null;
+	}
+
+	static bool Blocked(float left, float top, NPC body)
+	{
+		for (int x = (int)(left / 16f); x <= (int)((left + body.width - 1) / 16f); x++)
+		{
+			for (int y = (int)(top / 16f); y <= (int)((top + body.height - 1) / 16f); y++)
+			{
+				if (TileQuery.IsSolid(x, y) && !TileQuery.IsPlatform(x, y))
+					return true;
+			}
+		}
+		return false;
 	}
 
 	Point? ShaftPlatformAbove(int row)

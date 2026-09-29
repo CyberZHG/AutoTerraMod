@@ -144,7 +144,7 @@ public static class BossCatalog
 		new(NPCID.HallowBoss, NoParts, () => NPC.downedEmpressOfLight, true, 0f,
 			new BossTrigger[] { new LacewingTrigger() }, () => NPC.downedPlantBoss),
 		new(NPCID.CultistBoss, NoParts, () => NPC.downedAncientCultist, false, 0f,
-			new BossTrigger[] { new CultistRitualTrigger() }, () => NPC.downedGolemBoss),
+			new BossTrigger[] { new CultistRitualTrigger() }, () => NPC.downedGolemBoss && !NPC.LunarApocalypseIsUp && !NPC.AnyNPCs(NPCID.MoonLordCore)),
 		new(NPCID.MoonLordCore, new int[] { NPCID.MoonLordHead, NPCID.MoonLordHand }, () => NPC.downedMoonlord, false, 140000f,
 			new BossTrigger[] { new SummonItemTrigger(ItemID.CelestialSigil), new PillarsTrigger() }, () => NPC.downedAncientCultist)
 	};

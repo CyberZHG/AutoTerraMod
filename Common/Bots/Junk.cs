@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AutoTerraMod.Common.Planning;
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
 
@@ -61,10 +62,23 @@ public static class Junk
 	}
 
 	const uint AbandonedTicks = 36000;
-	static readonly Dictionary<int, (int type, uint at)> abandoned = new();
+	const float AbandonedRadius = 16f * 8f;
+	const int MaxDropsPerType = 64;
+	static readonly Dictionary<int, List<(Vector2 at, uint tick)>> abandoned = new();
 
-	public static bool IsAbandoned(int index) =>
-		abandoned.TryGetValue(index, out var drop) && Main.item[index].type == drop.type && Main.GameUpdateCount - drop.at < AbandonedTicks;
+	public static bool IsAbandoned(int index)
+	{
+		var item = Main.item[index];
+		if (!abandoned.TryGetValue(item.type, out var drops))
+			return false;
+		drops.RemoveAll(drop => Main.GameUpdateCount - drop.tick >= AbandonedTicks);
+		foreach (var drop in drops)
+		{
+			if (Vector2.DistanceSquared(drop.at, item.Center) < AbandonedRadius * AbandonedRadius)
+				return true;
+		}
+		return false;
+	}
 
 	static void DropHardestToUse(Bot bot)
 	{
@@ -78,11 +92,16 @@ public static class Junk
 			return;
 		string name = victim.Name;
 		int stack = victim.stack;
-		int index = Item.NewItem(bot.Avatar.GetSource_DropAsItem(), bot.Center, victim.type, stack, prefixGiven: victim.prefix);
+		Item.NewItem(bot.Avatar.GetSource_DropAsItem(), bot.Center, victim.type, stack, prefixGiven: victim.prefix);
+		if (!abandoned.TryGetValue(victim.type, out var drops))
+			abandoned[victim.type] = drops = new();
+		int near = drops.FindIndex(drop => Vector2.DistanceSquared(drop.at, bot.Center) < AbandonedRadius * AbandonedRadius / 4f);
+		if (near >= 0)
+			drops.RemoveAt(near);
+		else if (drops.Count >= MaxDropsPerType)
+			drops.RemoveAt(0);
+		drops.Add((bot.Center, Main.GameUpdateCount));
 		victim.TurnToAir();
-		if (abandoned.Count > 400)
-			abandoned.Clear();
-		abandoned[index] = (Main.item[index].type, Main.GameUpdateCount);
 		BotDiagnostics.Log(bot, $"dropped {name} x{stack} on the ground (inventory and storage full)");
 	}
 

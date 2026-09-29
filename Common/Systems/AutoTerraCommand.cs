@@ -9,7 +9,7 @@ public sealed class AutoTerraCommand : ModCommand
 {
 	public override CommandType Type => CommandType.World;
 	public override string Command => "autoterra";
-	public override string Usage => "/autoterra [enabled <on|off> | factions <1-4> | bots <1-6> | relation <race|cooperate|war> | materials <1|5|10|20|50>]";
+	public override string Usage => "/autoterra [enabled <on|off> | factions <1-4> | bots <1-6> | relation <race|cooperate|war>]";
 	public override string Description => Text("Description");
 
 	static string Text(string key, params object[] args) => Language.GetTextValue($"Mods.AutoTerraMod.Commands.{key}", args);
@@ -57,5 +57,5 @@ public sealed class AutoTerraCommand : ModCommand
 
 	static string Describe(WorldFactionSettings settings) =>
 		Text("Current", settings.FactionCount, settings.BotsPerFaction, Language.GetTextValue($"Mods.AutoTerraMod.Configs.FactionRelation.{settings.Relation}.Label"),
-			Text(settings.BotsEnabled ? "On" : "Off"), settings.MaterialMultiplier);
+			Text(settings.BotsEnabled ? "On" : "Off"));
 }

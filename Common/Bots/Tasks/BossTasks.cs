@@ -664,12 +664,12 @@ public sealed class SummonTask : BotTask
 
 	bool WearDoll()
 	{
-		if (Avatar.armor.Any(item => item.type == ItemID.ClothierVoodooDoll))
+		if (Enumerable.Range(FirstAccessorySlot, AccessorySlots).Any(index => Avatar.armor[index].type == ItemID.ClothierVoodooDoll && Avatar.IsItemSlotUnlockedAndUsable(index)))
 			return true;
 		var doll = Inventory.Items(Avatar).FirstOrDefault(item => item.type == ItemID.ClothierVoodooDoll);
 		if (doll == null)
 			return false;
-		int slot = System.Array.FindIndex(Avatar.armor, FirstAccessorySlot, AccessorySlots, item => item.IsAir);
+		int slot = Enumerable.Range(FirstAccessorySlot, AccessorySlots).FirstOrDefault(index => Avatar.armor[index].IsAir && Avatar.IsItemSlotUnlockedAndUsable(index), -1);
 		if (slot < 0)
 		{
 			slot = FirstAccessorySlot;
