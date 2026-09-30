@@ -241,15 +241,15 @@ public sealed class HouseBlueprint
 			yield return Operation(action, tile);
 		}
 		var frame = shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && !TileQuery.IsSolid(tile) && !Hellevator.InAnyShaft(tile.X, tile.Y) && !(Main.tile[tile.X, tile.Y].HasTile && Main.tileRope[Main.tile[tile.X, tile.Y].TileType] && Bots.Tasks.TidyCampTask.IsLifelineColumn(tile.X))).ToList();
-		foreach (var tile in frame.Where(tile => tile.Y == Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
+		foreach (var tile in frame.Where(tile => tile.Y == Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1).ThenBy(tile => tile.X))
 			yield return Operation(FrameAction(tile), tile);
-		foreach (var tile in InteriorTiles().Concat(shellInBuildOrder.Where(tile => tile.Y < Floor && !Hellevator.InAnyShaft(tile.X, tile.Y))).Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None).OrderByDescending(tile => tile.Y))
+		foreach (var tile in InteriorTiles().Concat(shellInBuildOrder.Where(tile => tile.Y < Floor && !Hellevator.InAnyShaft(tile.X, tile.Y))).Where(tile => Main.tile[tile.X, tile.Y].WallType == WallID.None).OrderBy(tile => tile.X).ThenByDescending(tile => tile.Y))
 			yield return Operation(BuildAction.PlaceWall, tile);
 		foreach (var tile in platforms.Where(tile => Main.tile[tile.X, tile.Y].HasTile && !TileQuery.IsPlatform(tile.X, tile.Y) && !HoldsFurniture(tile) && !IsFurniture(tile)))
 			yield return Operation(BuildAction.ClearTile, tile);
-		foreach (var tile in frame.Where(tile => tile.Y != Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1))
+		foreach (var tile in frame.Where(tile => tile.Y != Floor).OrderBy(tile => Bots.BotHands.Anchored(tile) ? 0 : 1).ThenBy(tile => tile.X).ThenByDescending(tile => tile.Y))
 			yield return Operation(FrameAction(tile), tile);
-		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)))
+		foreach (var tile in platforms.Where(tile => !TileQuery.IsPlatform(tile.X, tile.Y) && !TileQuery.IsSolid(tile) && !IsFurniture(tile)).OrderByDescending(tile => tile.Y).ThenBy(tile => tile.X))
 			yield return Operation(BuildAction.PlacePlatform, tile);
 		if (frame.Count == 0)
 			foreach (var tile in InteriorTiles().Where(tile => Main.tile[tile.X, tile.Y].HasTile && TileID.Sets.Platforms[Main.tile[tile.X, tile.Y].TileType] && !IsPlatformSpot(tile) && !HoldsFurniture(tile)))
@@ -294,9 +294,9 @@ public sealed class HouseBlueprint
 			if (!InteriorHas(TileID.Sets.RoomNeeds.CountsAsChair))
 				yield return Operation(BuildAction.PlaceChair, new Point(center + 1, Floor - 1));
 		}
-		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && NeedsNewBlock(tile, materials)))
+		foreach (var tile in shellInBuildOrder.Where(tile => !IsPlatformSpot(tile) && NeedsNewBlock(tile, materials)).OrderBy(tile => tile.X).ThenByDescending(tile => tile.Y))
 			yield return Operation(BuildAction.RenovateBlock, tile);
-		foreach (var tile in InteriorTiles().Where(tile => NeedsNewWall(tile, materials)))
+		foreach (var tile in InteriorTiles().Where(tile => NeedsNewWall(tile, materials)).OrderBy(tile => tile.X).ThenByDescending(tile => tile.Y))
 			yield return Operation(BuildAction.RenovateWall, tile);
 		if (Yard != null)
 		{

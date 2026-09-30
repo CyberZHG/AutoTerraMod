@@ -132,6 +132,7 @@ public sealed class Settlement
 
 	IEnumerable<Point> YardTiles()
 	{
+		var tiles = new List<Point>();
 		for (int y = yardTop - YardHeadroom; y < Floor; y++)
 		{
 			for (int x = Left - ApronWidth; x <= Right + ApronWidth; x++)
@@ -139,10 +140,14 @@ public sealed class Settlement
 				if (!World.TileQuery.IsSolid(x, y) || Terraria.Main.tileFrameImportant[Terraria.Main.tile[x, y].TileType] || shell.Contains(new Point(x, y)))
 					continue;
 				if (!structures.Any(structure => x >= structure.Left && x <= structure.Right && y >= structure.Top && y <= structure.Floor))
-					yield return new Point(x, y);
+					tiles.Add(new Point(x, y));
 			}
 		}
+		return tiles.OrderBy(tile => Exposed(tile) ? 0 : 1).ThenBy(tile => Math.Max(0, Math.Max(Left - tile.X, tile.X - Right)) + Floor - tile.Y);
 	}
+
+	static bool Exposed(Point tile) =>
+		!World.TileQuery.IsSolid(tile.X - 1, tile.Y) || !World.TileQuery.IsSolid(tile.X + 1, tile.Y) || !World.TileQuery.IsSolid(tile.X, tile.Y - 1) || !World.TileQuery.IsSolid(tile.X, tile.Y + 1);
 
 	void CloseMisalignedDoors()
 	{
