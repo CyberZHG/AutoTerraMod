@@ -18,7 +18,8 @@ public static class Junk
 
 	public static bool IsUnwanted(Bot bot, Item item)
 	{
-		if (Inventory.Count(bot.Avatar, item.type) >= Plenty)
+		int held = Inventory.Count(bot.Avatar, item.type);
+		if (held >= Plenty || held > 0 && held + item.stack > Plenty)
 			return true;
 		if (IsSpareSummon(item, Inventory.Count(bot.Avatar, item.type)))
 			return true;

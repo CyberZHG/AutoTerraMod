@@ -50,7 +50,7 @@ public sealed class BuildTask : BotTask
 			failures = 0;
 			operationStartedAt = Main.GameUpdateCount;
 		}
-		bool near = Vector2.Distance(Bot.Center, operation.Tile.ToWorldCoordinates()) < NearOperationDistance;
+		bool near = Vector2.Distance(Bot.Center, operation.Tile.ToWorldCoordinates()) < FarOperationDistance;
 		if (!near)
 			operationStartedAt = Main.GameUpdateCount;
 		else if (Main.GameUpdateCount - operationStartedAt > OperationTimeoutTicks)
