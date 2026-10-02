@@ -24,6 +24,12 @@ public sealed class LootTask : BotTask
 	readonly System.Collections.Generic.Dictionary<int, uint> wantedRetryAt = new();
 
 	const uint WantedRetryTicks = 10 * 3600;
+	const uint NoProgressTicks = 1800;
+	const float ProgressPixels = 32f;
+
+	int progressChest = -1;
+	float bestDistance;
+	uint improvedAt;
 
 	public LootTask(Bot bot) : base(bot) { }
 
@@ -65,9 +71,10 @@ public sealed class LootTask : BotTask
 		var reachTool = emptied && ShouldCarryHome(chest) ? Bot.Hands.BestPickaxe : null;
 		if (!Bot.Hands.CanReach(reachTool, chestTile))
 		{
+			bool progressing = Progressing(chestTile);
 			if (wanted)
 			{
-				if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
+				if (!progressing || !TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
 				{
 					BotDiagnostics.Log(Bot, $"cannot reach chest {chestIndex} at {chestTile} yet, trying again later; motor: {Bot.Motor.Describe()}");
 					wantedRetryAt[chestIndex] = Main.GameUpdateCount + WantedRetryTicks;
@@ -75,7 +82,7 @@ public sealed class LootTask : BotTask
 				}
 				return;
 			}
-			if (!TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
+			if (!progressing || !TravelOrTunnel(chestTile.ToWorldCoordinates(16f, 16f), 24f))
 				Abandon("stuck on the way");
 			return;
 		}
@@ -123,6 +130,21 @@ public sealed class LootTask : BotTask
 			Bot.Hands.PickUpDropNear(chestTile, item => item.createTile >= 0 && TileID.Sets.BasicChest[item.createTile]);
 		if (result is not ToolResult.Working)
 			IsFinished = true;
+	}
+
+	bool Progressing(Point chestTile)
+	{
+		float distance = Vector2.Distance(Bot.Center, chestTile.ToWorldCoordinates(16f, 16f));
+		if (progressChest != chestIndex || distance < bestDistance - ProgressPixels)
+		{
+			progressChest = chestIndex;
+			bestDistance = distance;
+			improvedAt = Main.GameUpdateCount;
+		}
+		if (Main.GameUpdateCount - improvedAt <= NoProgressTicks)
+			return true;
+		progressChest = -1;
+		return false;
 	}
 
 	bool ShouldCarryHome(Chest chest) =>
