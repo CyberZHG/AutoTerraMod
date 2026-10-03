@@ -233,7 +233,7 @@ public sealed class BotVitals
 		}
 	}
 
-	const uint StatRefreshTicks = 4;
+	const uint StatRefreshTicks = 8;
 	bool statsRefreshed;
 
 	public void RefreshVanillaStats(bool force = true)

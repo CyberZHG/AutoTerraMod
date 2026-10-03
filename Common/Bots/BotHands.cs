@@ -381,7 +381,7 @@ public sealed class BotHands
 	{
 		if (item == null || item.IsAir || item.createTile < 0 || item.createTile is TileID.HellstoneBrick or TileID.LunarOre || !Ready || !CanReach(item, tile) || World.ShimmerZone.Contains(tile.X, tile.Y))
 			return false;
-		if (TileID.Sets.Platforms[item.createTile] && !Anchored(tile))
+		if (TileID.Sets.Platforms[item.createTile] && (!Anchored(tile) || !intoShaft && World.Hellevator.BlocksStrayPlatform(tile.X, tile.Y)))
 			return false;
 		if (Main.tileSolid[item.createTile] && !Main.tileSolidTop[item.createTile] && (World.Highway.InAnyClearance(tile.X, tile.Y) || !intoShaft && World.Hellevator.InAnyShaft(tile.X, tile.Y)))
 			return false;

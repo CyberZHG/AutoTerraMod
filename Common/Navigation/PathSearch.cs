@@ -380,7 +380,7 @@ public sealed class PathSearch
 	{
 		if (ClimbableNearby(x, y))
 			return;
-		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise) && (Placeable(x, y - rise + 1) || Placeable(x + 1, y - rise + 1)); rise++)
+		for (int rise = 1; rise <= MaxPillar && BodyClear(x, y - rise) && (PillarSpot(x, y - rise + 1) || PillarSpot(x + 1, y - rise + 1)); rise++)
 		{
 			int top = y - rise;
 			bool exit = rise == 1 || (BodyClear(x - 1, top) && Supported(x - 1, top)) || (BodyClear(x + 1, top) && Supported(x + 1, top));
@@ -549,6 +549,8 @@ public sealed class PathSearch
 				edges.Add(new Edge(new Point(x, top), MoveKind.Climb, RopeClimbBaseCost + rise * RopeClimbCostPerTile));
 		}
 	}
+
+	bool PillarSpot(int x, int y) => Placeable(x, y) && !World.Hellevator.InAnyShaft(x, y);
 
 	bool Placeable(int x, int y) =>
 		(TileQuery.FreeForPlacing(x, y) || abilities.CanChop && TileQuery.IsChoppableTree(Main.tile[x, y].TileType)) && !World.Highway.InAnyClearance(x, y);

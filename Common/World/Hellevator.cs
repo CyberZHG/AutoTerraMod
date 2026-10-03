@@ -72,6 +72,16 @@ public sealed record Hellevator(int X, int TopY)
 		return false;
 	}
 
+	public static bool BlocksStrayPlatform(int x, int y)
+	{
+		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Hellevator is { } shaft && shaft.Contains(x, y) && !(x == shaft.X && shaft.NeedsPlatform(y)))
+				return true;
+		}
+		return false;
+	}
+
 	public static bool InOthersShaft(int factionId, int x, int y)
 	{
 		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
