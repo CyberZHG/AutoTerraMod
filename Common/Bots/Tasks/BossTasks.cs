@@ -1543,6 +1543,17 @@ public sealed class BuildBridgeTask : BotTask
 		}
 		if (Bot.Hands.PlaceBridge(deck, solidDeck: !bridge.WantsPlatform(frontier)) || (Main.tile[deck.X, deck.Y].LiquidAmount > 0 && Bot.Hands.PlaceScaffold(deck)))
 			Bot.Watchdog.RecordProgress();
+		else if (bridge is Hellbridge && TileQuery.IsDangerousLiquid(deck.X, deck.Y) && Bot.Hands.CanReach(null, deck) && Bot.Hands.Ready)
+		{
+			if (bridge.Raise(frontier, direction))
+				BotDiagnostics.Log(Bot, $"lava fills the bridge deck at {deck}, raising column {frontier} to row {bridge.FeetRow(frontier)}");
+			else
+			{
+				BotDiagnostics.Log(Bot, $"lava fills the bridge deck at {deck} even when raised, skipping column {frontier}");
+				bridge.Skip(frontier);
+			}
+			Bot.Watchdog.RecordProgress();
+		}
 		else if (!Bot.Hands.CanReach(null, deck))
 		{
 			Bot.Motor.MoveTo(deck.ToWorldCoordinates(), 24f);
@@ -1550,7 +1561,7 @@ public sealed class BuildBridgeTask : BotTask
 				IsFinished = true;
 		}
 		else if (Bot.Hands.Ready && Main.GameUpdateCount % 300 == 0)
-			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {frontier},{bridge.Y + 1}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[frontier, bridge.Y + 1].HasTile} liquid={Main.tile[frontier, bridge.Y + 1].LiquidAmount}");
+			BotDiagnostics.Log(Bot, $"cannot place bridge deck at {deck}; material={Bot.Hands.HasBridgeMaterial} tile={Main.tile[deck.X, deck.Y].HasTile} liquid={Main.tile[deck.X, deck.Y].LiquidAmount} anchored={BotHands.Anchored(deck)}");
 	}
 }
 

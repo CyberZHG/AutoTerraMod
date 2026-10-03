@@ -26,6 +26,8 @@ public interface ICorridor
 
 	void Dip(int x, int rows) { }
 
+	bool Raise(int x, int direction) => false;
+
 	void Tolerate(int x, int y);
 
 	bool IsTolerated(int x, int y);

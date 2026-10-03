@@ -72,6 +72,21 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 		frontierAt[0] = frontierAt[1] = null;
 	}
 
+	const int MaxRise = 3;
+
+	public bool Raise(int x, int direction)
+	{
+		int dip = dips.TryGetValue(x, out int current) ? current : 0;
+		if (dip <= -MaxRise)
+			return false;
+		dips[x] = dip - 1;
+		int behind = x - direction;
+		if (FeetRow(behind) > FeetRow(x))
+			dips[behind] = dip - 1;
+		frontierAt[0] = frontierAt[1] = null;
+		return true;
+	}
+
 	public int Headroom => 5;
 
 	readonly System.Collections.Generic.Dictionary<int, uint> skipped = new();

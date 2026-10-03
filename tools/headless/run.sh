@@ -10,7 +10,12 @@ CONFIG="$(mktemp -t autoterra-serverconfig)"
 { echo "world=$WORLDS/AutoTest.wld"; cat "$HERE/serverconfig.txt"; } > "$CONFIG"
 MODS="$(mktemp -d -t autoterra-mods)"
 cp "$HOME/Library/Application Support/Terraria/tModLoader/Mods/AutoTerraMod.tmod" "$MODS/"
-echo '["AutoTerraMod"]' > "$MODS/enabled.json"
+ENABLED='"AutoTerraMod"'
+for EXTRA in $AUTOTERRA_EXTRA_MODS; do
+	cp "$HOME/Library/Application Support/Terraria/tModLoader/Mods/$EXTRA.tmod" "$MODS/"
+	ENABLED="$ENABLED, \"$EXTRA\""
+done
+echo "[$ENABLED]" > "$MODS/enabled.json"
 if [[ "$2" == "--fresh" ]]; then
 	rm -f "$WORLDS"/AutoTest.wld "$WORLDS"/AutoTest.twld "$WORLDS"/AutoTest.wld.bak "$WORLDS"/AutoTest.twld.bak
 fi

@@ -56,6 +56,10 @@ public sealed class Perf : ModSystem
 	static int worstTickGcs;
 	static int slowTicks;
 	const double SlowTickMilliseconds = 8.0;
+	static long windowStartedAt;
+	static long updateTotal;
+	static long drawTotal;
+	static int drawFrames;
 
 	public static PerfScope Measure(PerfSection section) => new(section);
 
@@ -64,6 +68,20 @@ public sealed class Perf : ModSystem
 		elapsed[(int)section] += ticks;
 		thisTick[(int)section] += ticks;
 		calls[(int)section]++;
+	}
+
+	public override void Load()
+	{
+		if (!Main.dedServ)
+			Terraria.On_Main.DoDraw += TimeDraw;
+	}
+
+	static void TimeDraw(Terraria.On_Main.orig_DoDraw orig, Main self, Microsoft.Xna.Framework.GameTime gameTime)
+	{
+		long started = Stopwatch.GetTimestamp();
+		orig(self, gameTime);
+		drawTotal += Stopwatch.GetTimestamp() - started;
+		drawFrames++;
 	}
 
 	public override void OnWorldLoad()
@@ -83,6 +101,7 @@ public sealed class Perf : ModSystem
 	static void CloseTick()
 	{
 		long update = tickStartedAt == 0 ? 0 : Stopwatch.GetTimestamp() - tickStartedAt;
+		updateTotal += update;
 		if (Milliseconds(update) > SlowTickMilliseconds)
 			slowTicks++;
 		if (update > worstUpdate)
@@ -119,6 +138,9 @@ public sealed class Perf : ModSystem
 		pathNodes = 0;
 		worstUpdate = 0;
 		slowTicks = 0;
+		updateTotal = drawTotal = 0;
+		drawFrames = 0;
+		windowStartedAt = Stopwatch.GetTimestamp();
 	}
 
 	static string BuildReport(float seconds)
@@ -132,6 +154,13 @@ public sealed class Perf : ModSystem
 		report.Append($" pathNodes={pathNodes / seconds:0}/s; worst tick {Milliseconds(worstUpdate):0.0}ms [");
 		report.Append(string.Join(" ", Enum.GetValues<PerfSection>().Where(section => worstTick[(int)section] > 0).Select(section => $"{section}={Milliseconds(worstTick[(int)section]):0.0}")));
 		report.Append($"] gc1+={worstTickGcs}, ticks over {SlowTickMilliseconds:0}ms: {slowTicks}");
+		if (windowStartedAt != 0)
+		{
+			double wall = Milliseconds(Stopwatch.GetTimestamp() - windowStartedAt) / 1000.0;
+			report.Append($"; real {wall:0.0}s, update {Milliseconds(updateTotal) / (seconds * 60f):0.0}ms/tick");
+			if (drawFrames > 0)
+				report.Append($", draw {drawFrames / wall:0}fps at {Milliseconds(drawTotal) / drawFrames:0.0}ms");
+		}
 		return report.ToString();
 	}
 }
