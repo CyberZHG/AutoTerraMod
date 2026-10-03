@@ -282,7 +282,8 @@ public sealed class PathSearch
 					}
 					else if (abilities.CanRope && abilities.CanBridge && anchored && DropLanding(nx, y, MaxRopeDescent) is Point bottom)
 						edges.Add(new Edge(bottom, MoveKind.RopeDown, RopeClimbBaseCost + (bottom.Y - y) * RopeClimbCostPerTile));
-					if (abilities.CanBridge && anchored && !Main.tile[PathFinder.BridgeColumn(x, nx), y + 1].HasTile && !World.Highway.InAnyClearance(PathFinder.BridgeColumn(x, nx), y + 1))
+					if (abilities.CanBridge && anchored && !Main.tile[PathFinder.BridgeColumn(x, nx), y + 1].HasTile && !World.Highway.InAnyClearance(PathFinder.BridgeColumn(x, nx), y + 1)
+						&& !World.Hellevator.BlocksStrayPlatform(PathFinder.BridgeColumn(x, nx), y + 1))
 						edges.Add(new Edge(new Point(nx, y), MoveKind.Bridge, BridgeCost));
 				}
 			}

@@ -1554,6 +1554,12 @@ public sealed class BuildBridgeTask : BotTask
 			}
 			Bot.Watchdog.RecordProgress();
 		}
+		else if (!BotHands.Anchored(deck) && Bot.Hands.Ready && Bot.Hands.CanReach(null, deck + new Point(0, 1))
+			&& !TileQuery.HasTile(deck + new Point(0, 1)) && Bot.Hands.PlaceBridge(deck + new Point(0, 1), solidDeck: true))
+		{
+			BotDiagnostics.Log(Bot, $"bridge deck at {deck} has nothing to attach to, propping it from below");
+			Bot.Watchdog.RecordProgress();
+		}
 		else if (!Bot.Hands.CanReach(null, deck))
 		{
 			Bot.Motor.MoveTo(deck.ToWorldCoordinates(), 24f);
