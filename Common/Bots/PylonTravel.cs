@@ -95,6 +95,15 @@ public static class PylonTravel
 
 	public static TeleportPylonType TypeOfItem(int itemType) => (TeleportPylonType)ContentSamples.ItemsByType[itemType].placeStyle;
 
+	const uint StrandedMemoryTicks = 60 * 3600;
+
+	const int StrandedReach = 150;
+
+	static readonly System.Collections.Generic.Dictionary<TeleportPylonType, (Point16 where, uint at)> strandedAt = new();
+
+	public static bool StrandedRecently(TeleportPylonType type, Point16 near) =>
+		strandedAt.TryGetValue(type, out var stranded) && Main.GameUpdateCount - stranded.at < StrandedMemoryTicks && System.Math.Abs(stranded.where.X - near.X) < StrandedReach;
+
 	public static bool IsStranded(int x, int y)
 	{
 		if (Main.tile[x, y].TileType != TileID.TeleportationPylon)
@@ -103,7 +112,12 @@ public static class PylonTravel
 		{
 			var origin = pylon.PositionInTiles;
 			if (x >= origin.X && x < origin.X + 3 && y >= origin.Y && y < origin.Y + 4)
-				return !MeetsBiome(pylon.TypeOfPylon, origin);
+			{
+				if (MeetsBiome(pylon.TypeOfPylon, origin))
+					return false;
+				strandedAt[pylon.TypeOfPylon] = (origin, Main.GameUpdateCount);
+				return true;
+			}
 		}
 		return false;
 	}

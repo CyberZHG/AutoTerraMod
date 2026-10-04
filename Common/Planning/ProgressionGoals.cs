@@ -52,7 +52,8 @@ public sealed class StationGoal : ProgressionGoal
 
 	int[] Placeable(Bot bot) => tileType == TileID.TeleportationPylon
 		? stationItems.Where(item => !Terraria.Main.PylonSystem.Pylons.Any(pylon => pylon.TypeOfPylon == PylonTravel.TypeOfItem(item))
-			&& PylonTravel.MeetsBiome(PylonTravel.TypeOfItem(item), new Terraria.DataStructures.Point16(bot.Faction.BaseTile.X, bot.Faction.BaseTile.Y))).ToArray()
+			&& PylonTravel.MeetsBiome(PylonTravel.TypeOfItem(item), new Terraria.DataStructures.Point16(bot.Faction.BaseTile.X, bot.Faction.BaseTile.Y))
+			&& !PylonTravel.StrandedRecently(PylonTravel.TypeOfItem(item), new Terraria.DataStructures.Point16(bot.Faction.BaseTile.X, bot.Faction.BaseTile.Y))).ToArray()
 		: stationItems;
 }
 
