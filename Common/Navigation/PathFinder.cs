@@ -138,7 +138,7 @@ public static class PathFinder
 			goal = WaypointToward(start, goal);
 			goalRadius = Math.Max(goalRadius, WaypointRadius);
 		}
-		return new PathSearch(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), forbiddenSteps, maxExpanded, searchRadius, startsHanging);
+		return new PathSearch(start, abilities, node => IsGoal(node, goal, goalRadius), node => Heuristic(node, goal), forbiddenSteps, maxExpanded, searchRadius, startsHanging, World.Hellbridge.FloorUnder(start, goal));
 	}
 
 	public static PathSearch BeginExit(Point start, NavigationAbilities abilities, Func<Point, float> distanceToExit, int searchMultiplier) =>

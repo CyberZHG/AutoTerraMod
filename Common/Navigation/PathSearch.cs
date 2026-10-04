@@ -76,9 +76,10 @@ public sealed class PathSearch
 	float bestHeuristic;
 	int expanded;
 
-	public PathSearch(Point start, NavigationAbilities abilities, Func<Point, bool> isGoal, Func<Point, float> heuristic, ISet<(Point from, Point to)> forbiddenSteps, int maxExpanded, int searchRadius, bool startsHanging = false)
+	public PathSearch(Point start, NavigationAbilities abilities, Func<Point, bool> isGoal, Func<Point, float> heuristic, ISet<(Point from, Point to)> forbiddenSteps, int maxExpanded, int searchRadius, bool startsHanging = false, int? floorRow = null)
 	{
 		this.start = start;
+		this.floorRow = floorRow;
 		this.startsHanging = startsHanging;
 		this.abilities = abilities;
 		this.isGoal = isGoal;
@@ -107,6 +108,7 @@ public sealed class PathSearch
 	}
 
 	readonly bool startsHanging;
+	readonly int? floorRow;
 
 	PathResult result;
 
@@ -226,6 +228,8 @@ public sealed class PathSearch
 			if (Math.Abs(edge.To.X - start.X) > searchRadius || Math.Abs(edge.To.Y - start.Y) > searchRadius)
 				continue;
 			if (forbiddenSteps != null && forbiddenSteps.Contains((current, edge.To)))
+				continue;
+			if (edge.To.Y > floorRow)
 				continue;
 			float cost = here + edge.Cost + (IsHazardousStand(edge.To) ? HazardPenalty : 0f) + (AboveCorridor(edge.To) ? OffCorridorPenalty : 0f);
 			if (costSoFar.TryGetValue(edge.To, out float known) && known <= cost)

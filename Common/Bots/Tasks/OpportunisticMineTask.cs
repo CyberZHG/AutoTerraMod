@@ -148,10 +148,12 @@ public sealed class OpportunisticMineTask : BotTask
 		Bot.Hands.BestHammer != null && (Main.hardMode || WorldGen.shadowOrbCount < OrbsBeforeBoss) && !unreachable.Contains(new Point(x, y))
 		&& !HouseInspector.IsProtected(x, y) && WorldGen.CanKillTile(x, y);
 
+	const int BridgeMargin = 4;
+
 	bool Worthwhile(int x, int y, int power, int pickTier)
 	{
 		var tile = Main.tile[x, y];
-		if (!tile.HasTile)
+		if (!tile.HasTile || y > Main.UnderworldLayer && y >= Hellbridge.FightRow - BridgeMargin)
 			return false;
 		int type = tile.TileType;
 		if (type == TileID.ShadowOrbs)

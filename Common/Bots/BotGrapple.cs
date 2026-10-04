@@ -12,6 +12,7 @@ public sealed class BotGrapple
 {
 	const float DefaultRange = 300f;
 	const float CappedAnchorPenalty = 16f * 12f;
+	const float PassThroughBonus = 16f * 5f;
 	const float PullSpeed = 11f;
 	const float HangDistance = 20f;
 	const float HangSnap = 1f;
@@ -366,7 +367,7 @@ public sealed class BotGrapple
 				if (lastAnchor is Vector2 previous && Vector2.Distance(previous, point) < RepeatAnchorDistance && Main.GameUpdateCount - lastAnchorAt < RepeatAnchorTicks)
 					continue;
 				bool capped = TileQuery.IsSolid(x, y - 1) && TileQuery.IsSolid(x, y - 2);
-				float score = Vector2.Distance(point, target) + (capped && target.Y < point.Y ? CappedAnchorPenalty : 0f);
+				float score = Vector2.Distance(point, target) + (capped && target.Y < point.Y ? CappedAnchorPenalty : 0f) - (target.Y < point.Y && TileQuery.IsPlatform(x, y) ? PassThroughBonus : 0f);
 				if (score < bestScore)
 				{
 					bestScore = score;

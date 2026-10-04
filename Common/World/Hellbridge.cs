@@ -49,6 +49,21 @@ public sealed record Hellbridge(int CenterX, int Y) : ICorridor
 
 	public int BuiltLength => Frontier(1) - Frontier(-1);
 
+	const int FloorSlack = 4;
+
+	public static int? FloorUnder(Point start, Point goal)
+	{
+		if (start.Y <= Main.UnderworldLayer)
+			return null;
+		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
+		{
+			if (faction.Hellbridge is { } bridge && start.Y <= bridge.Y + FloorSlack && goal.Y <= bridge.Y + FloorSlack
+				&& start.X >= bridge.Frontier(-1) && start.X <= bridge.Frontier(1))
+				return bridge.Y + FloorSlack;
+		}
+		return null;
+	}
+
 	public bool IsBuilt(int x) => Skipped(x) || (IsDeck(x) || ICorridor.HoldsChest(x, FeetRow(x) + 1, FeetRow(x) + 1)) && HeadroomClear(x);
 
 	public bool IsDeck(int x) => (TileQuery.IsPlatform(x, FeetRow(x) + 1) || !RequiresPlatform(x) && TileQuery.IsSolid(x, FeetRow(x) + 1)) && !ICorridor.Scorches(x, FeetRow(x) + 1);
