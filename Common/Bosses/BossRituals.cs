@@ -63,7 +63,7 @@ public static class BossRituals
 	public static IEnumerable<BossTrigger> InPreferredOrder(Bot bot, BossChallenge challenge) =>
 		challenge.Triggers.OrderBy(trigger => trigger switch
 		{
-			SummonItemTrigger item when Inventory.Count(bot.Avatar, item.Item) > 0 => 0,
+			SummonItemTrigger item when Inventory.Count(bot.Avatar, item.Item) > 0 || Building.BaseStorage.Count(bot.Faction, item.Item) > 0 => 0,
 			PillarsTrigger when NearestPillar(bot.Center) != null => 0,
 			SmashOrbsTrigger when !CanMineEvilStone(bot) => 2,
 			_ => 1
