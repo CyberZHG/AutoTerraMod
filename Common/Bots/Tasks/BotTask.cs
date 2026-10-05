@@ -419,7 +419,9 @@ public abstract class BotTask
 		if (!beneath && Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
 			var tunnelLeg = Bot.Center + Vector2.Normalize(target - Bot.Center) * TunnelLegPixels;
-			if (!Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()) && CrossesWalledMaze(Bot.Center, tunnelLeg))
+			if (World.Hellbridge.PassageAbove(Bot.CenterTile) is Point passage && target.Y < Bot.Center.Y)
+				tunnelLeg = passage.ToWorldCoordinates();
+			else if (!Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()) && CrossesWalledMaze(Bot.Center, tunnelLeg))
 				tunnelLeg = new Vector2(Bot.Center.X, (TileQuery.SurfaceY(Bot.CenterTile.X) - 2) * 16f);
 			BotDiagnostics.Log(Bot, $"stuck far from {target.ToTileCoordinates()}, tunneling a leg toward {tunnelLeg.ToTileCoordinates()}");
 			legTunnel = (tunnelLeg, target);
