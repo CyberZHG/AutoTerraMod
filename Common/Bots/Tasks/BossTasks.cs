@@ -241,6 +241,7 @@ public sealed class SummonTask : BotTask
 
 	const float RouteWorthTiles = 150f;
 	const int UndergroundRallyDepth = 30;
+	const float MaxRouteSpanTiles = 600f;
 	const uint RallyRouteTicks = 5 * 3600;
 
 	void ChooseRallyRoute(Factions.Faction faction, Vector2 place)
@@ -249,6 +250,11 @@ public sealed class SummonTask : BotTask
 		faction.RallyShaft = null;
 		if (step.Trigger is PillarsTrigger || Vector2.Distance(place, faction.BaseCenter) < RouteWorthTiles * 16f)
 			return;
+		if (System.Math.Abs(place.X - faction.BaseCenter.X) > MaxRouteSpanTiles * 16f || PylonTravel.Serves(faction.BaseCenter, place, RouteWorthTiles * 16f))
+		{
+			BotDiagnostics.Log(Bot, $"rally route to {place.ToTileCoordinates()}: heading straight there, too far to build a route or served by a pylon");
+			return;
+		}
 		var goal = place.ToTileCoordinates();
 		bool underground = goal.Y > Main.worldSurface + UndergroundRallyDepth;
 		bool shaftReaches = underground && faction.Hellevator is { } own && own.FirstImpassableRow() > goal.Y + 1 && TunnelDiggable(faction, own.RopeX, goal);

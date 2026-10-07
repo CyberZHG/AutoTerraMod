@@ -24,9 +24,18 @@ public static class PylonTravel
 
 	static Vector2 Center(TeleportPylonInfo pylon) => new((pylon.PositionInTiles.X + 1.5f) * 16f, (pylon.PositionInTiles.Y + 2f) * 16f);
 
+	static System.Collections.Generic.List<TeleportPylonInfo> Usable() =>
+		Main.PylonSystem.Pylons.Where(pylon => HasEnoughNpcs(pylon) && !RecentlyRefused(pylon) && MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)).ToList();
+
+	public static bool Serves(Vector2 from, Vector2 to, float within)
+	{
+		var pylons = Usable();
+		return pylons.Count >= 2 && pylons.Any(pylon => Vector2.Distance(Center(pylon), to) < within && Vector2.Distance(Center(pylon), to) + MinSaving < Vector2.Distance(from, to));
+	}
+
 	public static PylonHop? Plan(Vector2 from, Vector2 to)
 	{
-		var pylons = Main.PylonSystem.Pylons.Where(pylon => HasEnoughNpcs(pylon) && !RecentlyRefused(pylon) && MeetsBiome(pylon.TypeOfPylon, pylon.PositionInTiles)).ToList();
+		var pylons = Usable();
 		if (pylons.Count < 2)
 			return null;
 		var near = pylons.MinBy(pylon => Vector2.Distance(Center(pylon), from));
