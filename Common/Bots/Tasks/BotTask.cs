@@ -42,6 +42,7 @@ public abstract class BotTask
 	public virtual void Stop() => Bot.Motor.Stop();
 
 	const float MaxTunnelDistance = 16f * 200f;
+	const float PylonServesTiles = 350f;
 	const float TunnelLegPixels = 16f * 40f;
 	(Vector2 leg, Vector2 target)? legTunnel;
 
@@ -312,8 +313,12 @@ public abstract class BotTask
 		Bot.Watchdog.RecordProgress();
 	}
 
+	bool shaftDropping;
+
 	bool ShaftShortcut(Vector2 target)
 	{
+		bool wasDropping = shaftDropping;
+		shaftDropping = false;
 		if (Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()))
 			return false;
 		if (TravelShaft is not { } shaft || target.Y < Bot.Center.Y + ShaftDropFinish || shaft.FirstImpassableRow() - shaft.TopY < ShaftUsefulDepth)
@@ -321,8 +326,9 @@ public abstract class BotTask
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
-		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || Bot.Npc?.velocity.Y > 0f))
+		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || wasDropping && Bot.Npc?.velocity.Y > 0f))
 		{
+			shaftDropping = true;
 			CentreIn(shaft);
 			return true;
 		}
@@ -349,10 +355,19 @@ public abstract class BotTask
 	void ChooseTravelShaft(Vector2 target)
 	{
 		borrowedShaft = null;
-		if (Bot.Faction.Hellevator is { IsComplete: true } || target.Y < Main.UnderworldLayer * 16f)
-			return;
 		int x = Bot.CenterTile.X;
-		borrowedShaft = BotWorldSystem.Factions.Select(faction => faction.Hellevator).Where(shaft => shaft is { IsComplete: true }).MinBy(shaft => System.Math.Abs(shaft.RopeX - x));
+		var nearest = BotWorldSystem.Factions.Select(faction => faction.Hellevator).Where(shaft => shaft is { IsComplete: true }).MinBy(shaft => System.Math.Abs(shaft.RopeX - x));
+		if (target.Y < Main.UnderworldLayer * 16f)
+		{
+			bool inNearest = nearest != null && nearest.Contains(Bot.CenterTile.X, Bot.CenterTile.Y);
+			bool deepBelowCamp = (InAnyCamp(Bot.CenterTile) || inNearest) && target.Y / 16f > Bot.CenterTile.Y + (inNearest ? 0 : DeepDetourRows);
+			if (deepBelowCamp && nearest != null && (Bot.Faction.Hellevator is not { } own || System.Math.Abs(own.RopeX - x) > MaxSidewaysTunnel))
+				borrowedShaft = nearest;
+			return;
+		}
+		if (Bot.Faction.Hellevator is { IsComplete: true })
+			return;
+		borrowedShaft = nearest;
 	}
 
 	protected bool TravelOrTunnel(Vector2 target, float radius)
@@ -414,10 +429,18 @@ public abstract class BotTask
 		}
 		campRetries = 0;
 		bool beneath = BelowWithinReach(target);
+		if (beneath && InAnyCamp(Bot.CenterTile) && DeepDetour(target, radius))
+			return true;
 		if (!beneath && (Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance || InOwnShaft()) && DeepDetour(target, radius))
 			return true;
 		if (!beneath && Vector2.Distance(Bot.Center, target) >= MaxTunnelDistance)
 		{
+			if (Bot.CenterTile.Y > TileQuery.SurfaceY(Bot.CenterTile.X) + SurfaceFirstDepth && PylonTravel.Serves(BotWorldSystem.RespawnFeet(Bot), target, PylonServesTiles * 16f) && TryRecallHome())
+			{
+				BotDiagnostics.Log(Bot, $"far underground from {target.ToTileCoordinates()}, recalled home to travel by pylon");
+				Bot.LastRecallTarget = target;
+				return true;
+			}
 			var tunnelLeg = Bot.Center + Vector2.Normalize(target - Bot.Center) * TunnelLegPixels;
 			if (World.Hellbridge.PassageAbove(Bot.CenterTile) is Point passage && target.Y < Bot.Center.Y)
 				tunnelLeg = passage.ToWorldCoordinates();
@@ -614,7 +637,7 @@ public abstract class BotTask
 			{
 				int exit = Utils.Clamp(goal.X, low, high);
 				if (System.Math.Abs(exit - here.X) <= HighwayExitSlack)
-					return null;
+					continue;
 				roadRow = (highway, Main.GameUpdateCount);
 				return Leg(here, new Point(exit, highway.Y), _ => highway.Y) ?? new Vector2(exit * 16f + 8f, (highway.Y + 1) * 16f - 21f);
 			}

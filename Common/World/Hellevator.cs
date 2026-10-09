@@ -86,11 +86,14 @@ public sealed record Hellevator(int X, int TopY)
 	{
 		foreach (var faction in Common.Systems.BotWorldSystem.Factions)
 		{
-			if (faction.Id != factionId && faction.Hellevator is { } shaft && x >= shaft.X - 1 && x <= shaft.Right + 1 && shaft.Contains(System.Math.Clamp(x, shaft.X, shaft.Right), y))
+			if (faction.Id != factionId && faction.Hellevator is { } shaft && x >= shaft.X - 1 && x <= shaft.Right + 1 && shaft.Contains(System.Math.Clamp(x, shaft.X, shaft.Right), y)
+				&& !(x >= shaft.X && x <= shaft.Right && Blocks(x, y)))
 				return true;
 		}
 		return false;
 	}
+
+	static bool Blocks(int x, int y) => TileQuery.IsSolid(x, y) && !TileQuery.IsPlatform(x, y) && !Main.tileRope[Main.tile[x, y].TileType];
 
 	public static bool InAnyShaft(int x, int y)
 	{

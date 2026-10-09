@@ -755,6 +755,7 @@ public sealed class PathSearch
 		int tileType = Main.tile[x, y].TileType;
 		return !Main.tileFrameImportant[tileType]
 			&& !HouseInspector.IsProtected(x, y)
+			&& !DangerSpots.DigRefused(x, y)
 			&& !TileQuery.SupportsShrine(x, y)
 			&& !TileQuery.SupportsBoulder(x, y)
 			&& PickRequirement.MinimumPick(tileType, x, y) <= abilities.PickPower

@@ -659,7 +659,12 @@ public sealed class BotMotor
 			return;
 		if (PathFinder.RemovableBlockerOnTop(tile.X, tile.Y, Abilities().CanChop) is not Point blocker)
 		{
-			bot.Hands.Dig(tile);
+			if (bot.Hands.Dig(tile) == ToolResult.Unbreakable && !DangerSpots.DigRefused(tile.X, tile.Y))
+			{
+				DangerSpots.RefuseDig(tile);
+				BotDiagnostics.Log(bot, $"cannot dig {TileQuery.TypeAt(tile)} at {tile}, routing around it");
+				follower.Invalidate();
+			}
 			return;
 		}
 		bool chop = Main.tileAxe[TileQuery.TypeAt(blocker)];

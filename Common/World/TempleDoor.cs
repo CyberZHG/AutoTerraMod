@@ -23,7 +23,6 @@ public static class TempleDoor
 		cache.Clear();
 		guides.Clear();
 		entrances.Clear();
-		knownDoor = null;
 	}
 
 	public static Point? Near(Point tile)
@@ -31,16 +30,25 @@ public static class TempleDoor
 		var key = new Point(tile.X / CacheCell, tile.Y / CacheCell);
 		if (cache.TryGetValue(key, out var cached) && Main.GameUpdateCount - cached.at < CacheTicks)
 			return cached.door;
-		if (knownDoor is Point remembered && IsLihzahrdDoor(remembered.X, remembered.Y) && !IsLihzahrdDoor(remembered.X, remembered.Y - 1))
+		if (TempleShaft.KnownDoor is Point remembered && (IsLihzahrdDoor(remembered.X, remembered.Y) && !IsLihzahrdDoor(remembered.X, remembered.Y - 1) || IsDoorway(remembered)))
 			return Math.Abs(remembered.X - tile.X) <= KnownDoorReach && Math.Abs(remembered.Y - tile.Y) <= KnownDoorReach ? remembered : null;
 		var door = Scan(tile) ?? (Navigation.PathFinder.InsideMaze(tile) ? DeepScan(tile) : null);
 		if (door is Point found)
-			knownDoor = found;
+			TempleShaft.KnownDoor = found;
 		cache[key] = (Main.GameUpdateCount, door);
 		return door;
 	}
 
-	static Point? knownDoor;
+	static bool IsDoorway(Point door)
+	{
+		for (int y = door.Y; y < door.Y + DoorHeight; y++)
+		{
+			if (!WorldGen.InWorld(door.X, y, 10) || Main.tile[door.X, y].HasTile && Main.tile[door.X, y].TileType == TileID.LihzahrdBrick || Main.tile[door.X, y].WallType != WallID.LihzahrdBrickUnsafe)
+				return false;
+		}
+		return true;
+	}
+
 	const int KnownDoorReach = 1000;
 
 	const int DeepScanRise = 600;
@@ -288,7 +296,9 @@ public static class TempleDoor
 		return new Guide(goal, Main.GameUpdateCount, left, top, width, height, steps);
 	}
 
-	static bool Open(int x, int y)
+	static bool Open(int x, int y) => Column(x, y) && (Column(x - 1, y) || Column(x + 1, y));
+
+	static bool Column(int x, int y)
 	{
 		if (Main.tile[x, y].WallType != WallID.LihzahrdBrickUnsafe)
 			return false;
