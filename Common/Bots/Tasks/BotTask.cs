@@ -449,10 +449,17 @@ public abstract class BotTask
 				Bot.LastRecallTarget = target;
 				return true;
 			}
+			bool legsFailing = NoteFailedLeg();
+			if (legsFailing && TryRecallHome())
+			{
+				BotDiagnostics.Log(Bot, $"tunnel legs toward {target.ToTileCoordinates()} keep failing, recalled home");
+				Bot.LastRecallTarget = target;
+				return true;
+			}
 			var tunnelLeg = Bot.Center + Vector2.Normalize(target - Bot.Center) * TunnelLegPixels;
 			if (World.Hellbridge.PassageAbove(Bot.CenterTile) is Point passage && target.Y < Bot.Center.Y)
 				tunnelLeg = passage.ToWorldCoordinates();
-			else if (!Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()) && CrossesWalledMaze(Bot.Center, tunnelLeg))
+			else if (legsFailing || !Navigation.PathFinder.InsideWalledMaze(target.ToTileCoordinates()) && CrossesWalledMaze(Bot.Center, tunnelLeg))
 				tunnelLeg = new Vector2(Bot.Center.X, (TileQuery.SurfaceY(Bot.CenterTile.X) - 2) * 16f);
 			BotDiagnostics.Log(Bot, $"stuck far from {target.ToTileCoordinates()}, tunneling a leg toward {tunnelLeg.ToTileCoordinates()}");
 			legTunnel = (tunnelLeg, target);
@@ -729,6 +736,19 @@ public abstract class BotTask
 
 	static bool InAnyCamp(Point tile) => BotWorldSystem.Factions.Any(faction => faction.Settlement is { } camp
 		&& tile.X >= camp.Left - CampTunnelMargin && tile.X <= camp.Right + CampTunnelMargin && tile.Y >= camp.Top - CampTunnelMargin && tile.Y <= camp.Floor + CampTunnelMargin);
+
+	(Point at, uint when, int count) failedLegs;
+	const int FailedLegsBeforeFallback = 3;
+	const uint FailedLegWindowTicks = 900;
+	const int FailedLegSlackTiles = 3;
+
+	bool NoteFailedLeg()
+	{
+		var here = Bot.CenterTile;
+		bool same = Main.GameUpdateCount - failedLegs.when < FailedLegWindowTicks && System.Math.Abs(failedLegs.at.X - here.X) <= FailedLegSlackTiles && System.Math.Abs(failedLegs.at.Y - here.Y) <= FailedLegSlackTiles;
+		failedLegs = (same ? failedLegs.at : here, Main.GameUpdateCount, same ? failedLegs.count + 1 : 1);
+		return failedLegs.count >= FailedLegsBeforeFallback;
+	}
 
 	bool InOwnShaft() => TravelShaft is { } shaft && shaft.Contains(Bot.CenterTile.X, Bot.CenterTile.Y) && Bot.CenterTile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
 
