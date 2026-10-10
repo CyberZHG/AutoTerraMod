@@ -436,7 +436,8 @@ public sealed class PathSearch
 		{
 			if (Supported(x + direction, y) || !BodyClear(x + direction, y) || !BodyClear(x, arc) || PlatformInArc(x, y) || PlatformInArc(x + direction, y))
 				continue;
-			for (int dx = 2; dx <= reach; dx++)
+			int reachThisWay = RunUpReach(x, y, direction, reach);
+			for (int dx = 2; dx <= reachThisWay; dx++)
 			{
 				int nx = x + direction * dx;
 				if (!BodyClear(nx, arc) || RopeInArc(nx, arc) || PlatformInArc(nx, y))
@@ -450,6 +451,17 @@ public sealed class PathSearch
 				}
 			}
 		}
+	}
+
+	const int FullRunUpTiles = 10;
+
+	int RunUpReach(int x, int y, int direction, int reach)
+	{
+		int standing = Math.Min(reach, PathFinder.BaseLeapReach + abilities.FlyRise * 2 / 3);
+		int runUp = 0;
+		while (runUp < FullRunUpTiles && Supported(x - direction * (runUp + 1), y) && BodyClear(x - direction * (runUp + 1), y))
+			runUp++;
+		return standing + (reach - standing) * runUp / FullRunUpTiles;
 	}
 
 	bool PlatformInArc(int x, int y)

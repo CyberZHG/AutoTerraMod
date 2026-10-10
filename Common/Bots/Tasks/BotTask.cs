@@ -177,6 +177,8 @@ public abstract class BotTask
 	const float SameTargetPixels = 32f;
 	(Vector2 target, uint at, bool beats)? recallChecked;
 	(Vector2 target, uint at, Vector2? road)? roadChecked;
+	(Vector2 road, uint at, Vector2 target)? heldRoad;
+	const uint RoadHoldTicks = 120;
 
 	bool CachedRecallBeats(Vector2 target)
 	{
@@ -197,6 +199,12 @@ public abstract class BotTask
 		var result = HighwayRoute(target, out recalled);
 		if (result is Vector2 waypoint && Vector2.Distance(waypoint, Bot.Center) < ReachedWaypointPixels)
 			result = null;
+		if (!recalled && result is Vector2 fresh && heldRoad is var (held, heldAt, heldFor) && Main.GameUpdateCount - heldAt < RoadHoldTicks
+			&& Vector2.DistanceSquared(heldFor, target) < SameTargetPixels * SameTargetPixels && Vector2.DistanceSquared(held, fresh) > SameTargetPixels * SameTargetPixels
+			&& Vector2.Distance(held, Bot.Center) >= ReachedWaypointPixels)
+			result = held;
+		else if (result is Vector2 kept)
+			heldRoad = (kept, Main.GameUpdateCount, target);
 		roadChecked = recalled ? null : (target, Main.GameUpdateCount, result);
 		return result;
 	}
