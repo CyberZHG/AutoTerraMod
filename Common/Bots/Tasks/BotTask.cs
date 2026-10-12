@@ -323,6 +323,9 @@ public abstract class BotTask
 
 	bool shaftDropping;
 
+	(Vector2 target, uint at)? shaftLevelReached;
+	const uint ShaftLevelMemoryTicks = 3600;
+
 	bool ShaftShortcut(Vector2 target)
 	{
 		bool wasDropping = shaftDropping;
@@ -334,7 +337,11 @@ public abstract class BotTask
 		float centerX = (shaft.X + 1) * 16f;
 		var tile = Bot.CenterTile;
 		bool inShaft = tile.X >= shaft.X && tile.X <= shaft.Right && tile.Y >= shaft.TopY - ShaftMouthHeadroom && tile.Y < shaft.FirstImpassableRow() - ShaftDropRoom;
-		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin || wasDropping && Bot.Npc?.velocity.Y > 0f))
+		if (inShaft && target.Y < Bot.Center.Y + ShaftDropMargin)
+			shaftLevelReached = (target, Main.GameUpdateCount);
+		bool levelAlreadyReached = shaftLevelReached is var (reachedFor, reachedAt) && Main.GameUpdateCount - reachedAt < ShaftLevelMemoryTicks
+			&& Vector2.DistanceSquared(reachedFor, target) < SameTargetPixels * SameTargetPixels;
+		if (inShaft && (target.Y >= Bot.Center.Y + ShaftDropMargin && !levelAlreadyReached || wasDropping && Bot.Npc?.velocity.Y > 0f))
 		{
 			shaftDropping = true;
 			CentreIn(shaft);
@@ -549,13 +556,21 @@ public abstract class BotTask
 	uint templeLoggedAt;
 	const uint TempleLogTicks = 3600;
 
-	static Vector2 TempleLeg(Point here, Point door, Point mouth, int side)
+	(Point mouth, uint at) templeDescent;
+	const int TempleDescentKeepTiles = 60;
+	const uint TempleDescentHoldTicks = 300;
+
+	Vector2 TempleLeg(Point here, Point door, Point mouth, int side)
 	{
 		Point leg;
-		if (System.Math.Abs(mouth.X - here.X) > TempleArrival && here.Y < mouth.Y - TempleArrival)
+		bool descending = templeDescent.mouth == mouth && Main.GameUpdateCount - templeDescent.at < TempleDescentHoldTicks && System.Math.Abs(mouth.X - here.X) <= TempleDescentKeepTiles;
+		if (!descending && System.Math.Abs(mouth.X - here.X) > TempleArrival && here.Y < mouth.Y - TempleArrival)
 			leg = new Point(mouth.X, here.Y);
 		else if (System.Math.Abs(mouth.X - here.X) + System.Math.Abs(mouth.Y - here.Y) > TempleArrival)
+		{
 			leg = mouth;
+			templeDescent = (mouth, Main.GameUpdateCount);
+		}
 		else
 			leg = World.TempleDoor.InsideStep(door, side, DoorStepInside);
 		return leg.ToWorldCoordinates(8f, 0f);
