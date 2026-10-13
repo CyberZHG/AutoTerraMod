@@ -661,7 +661,7 @@ public sealed class BossSupportGoal : ProgressionGoal
 			recentNeeds[bot.FactionId] = (current, Main.GameUpdateCount);
 		if (!recentNeeds.TryGetValue(bot.FactionId, out var need) || Main.GameUpdateCount - need.at > NeedMemoryTicks)
 			return null;
-		if (summoner.Brain.Plan is not GatherStep && Inventory.Count(summoner.Avatar, need.gather.ItemType) >= need.gather.Amount)
+		if (summoner.Brain.Plan is not GatherStep && (Inventory.Count(summoner.Avatar, need.gather.ItemType) >= need.gather.Amount || Main.CurrentFrameFlags.AnyActiveBossNPC))
 			return null;
 		bool committed = bot.Brain.Plan is GatherStep mine && mine.ItemType == need.gather.ItemType;
 		if (!committed && Microsoft.Xna.Framework.Vector2.Distance(bot.Center, summoner.Center) > HelpRange)

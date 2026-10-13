@@ -14,6 +14,7 @@ namespace AutoTerraMod.Common.Bosses;
 public sealed class BossCredit : GlobalNPC
 {
 	const float CreditShare = 0.3f;
+	const float SharedFightCreditShare = 0.1f;
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId, int botId)> shots = new();
@@ -363,9 +364,10 @@ public sealed class BossCredit : GlobalNPC
 			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
 		long best = byFaction.Values.Max();
-		bool anyOverThreshold = byFaction.Values.Any(damage => damage >= total * CreditShare);
+		float share = challenge.BossType == NPCID.MoonLordCore && BotWorldSystem.Relation != FactionRelation.War ? SharedFightCreditShare : CreditShare;
+		bool anyOverThreshold = byFaction.Values.Any(damage => damage >= total * share);
 		var credited = byFaction
-			.Where(entry => anyOverThreshold ? entry.Value >= total * CreditShare : entry.Value == best)
+			.Where(entry => anyOverThreshold ? entry.Value >= total * share : entry.Value == best)
 			.Select(entry => FactionById(entry.Key))
 			.Where(faction => faction != null)
 			.ToList();

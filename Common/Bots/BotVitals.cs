@@ -157,6 +157,7 @@ public sealed class BotVitals
 		fallStartTileY = (int)(npc.position.Y / 16f);
 		Avatar.immune = true;
 		Avatar.immuneTime = LongImmunityTicks;
+		SyncAvatar(npc, Avatar);
 		RefreshVanillaStats();
 		if (Avatar.statLife <= 0)
 		{

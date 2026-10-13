@@ -192,7 +192,7 @@ public static class Engagement
 			FightWorm(bot, target);
 			return;
 		}
-		if (target.type is NPCID.WallofFlesh or NPCID.WallofFleshEye)
+		if (target.type is NPCID.WallofFlesh or NPCID.WallofFleshEye || target.type is NPCID.TheHungry or NPCID.TheHungryII or NPCID.LeechHead or NPCID.LeechBody or NPCID.LeechTail && KitingWall(bot))
 		{
 			FightWall(bot, target);
 			return;
