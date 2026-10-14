@@ -114,7 +114,7 @@ public static class ResourceSources
 		tileSources ??= BuildTileSources();
 		if (tileSources.TryGetValue(itemType, out var tileSource))
 			return tileSource;
-		if (RecipeIndex.AnyFor(itemType).Count > 0)
+		if (RecipeIndex.For(itemType).Count > 0)
 			return null;
 		npcSources ??= BuildNpcSources();
 		if (!npcSources.TryGetValue(itemType, out var npcSource))
@@ -174,7 +174,7 @@ public static class ResourceSources
 			drops.Clear();
 			foreach (var rule in Main.ItemDropsDB.GetRulesForNPCID(npcType, false))
 				rule.ReportDroprates(drops, new DropRateInfoChainFeed(1f));
-			foreach (var drop in drops.Where(drop => drop.conditions == null || drop.conditions.Count == 0))
+			foreach (var drop in drops.Where(drop => drop.conditions == null || drop.conditions.All(HoldsInThisWorld)))
 			{
 				if (!npcsByItem.TryGetValue(drop.itemId, out var npcs))
 					npcsByItem[drop.itemId] = npcs = new Dictionary<int, float>();
@@ -183,6 +183,16 @@ public static class ResourceSources
 		}
 		return npcsByItem.ToDictionary(entry => entry.Key, entry => SourceFrom(entry.Value));
 	}
+
+	static bool HoldsInThisWorld(IItemDropRuleCondition condition) => condition switch
+	{
+		Conditions.IsExpert => Main.expertMode,
+		Conditions.NotExpert => !Main.expertMode,
+		Conditions.IsMasterMode => Main.masterMode,
+		Conditions.NotMasterMode => !Main.masterMode,
+		Conditions.NotFromStatue => true,
+		_ => false
+	};
 
 	static NpcSource SourceFrom(Dictionary<int, float> rates)
 	{

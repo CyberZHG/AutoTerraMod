@@ -10,7 +10,6 @@ namespace AutoTerraMod.Common.Planning;
 public sealed class RecipeIndex : ModSystem
 {
 	static Dictionary<int, List<Recipe>> recipesByResult = new();
-	static Dictionary<int, List<Recipe>> allRecipesByResult = new();
 
 	public override void PostSetupRecipes()
 	{
@@ -21,7 +20,6 @@ public sealed class RecipeIndex : ModSystem
 		var ingredientsByResult = allRecipes
 			.GroupBy(recipe => recipe.createItem.type)
 			.ToDictionary(group => group.Key, group => group.SelectMany(recipe => recipe.requiredItem.Select(item => item.type)).ToHashSet());
-		allRecipesByResult = allRecipes.GroupBy(recipe => recipe.createItem.type).ToDictionary(group => group.Key, group => group.ToList());
 		recipesByResult = allRecipes
 			.GroupBy(recipe => recipe.createItem.type)
 			.Select(group => (group.Key, recipes: ForwardRecipes(group.ToList(), ingredientsByResult)))
@@ -39,7 +37,6 @@ public sealed class RecipeIndex : ModSystem
 	public override void Unload()
 	{
 		recipesByResult = new();
-		allRecipesByResult = new();
 		acceptedTypes.Clear();
 	}
 
@@ -49,9 +46,6 @@ public sealed class RecipeIndex : ModSystem
 		recipesByResult.TryGetValue(itemType, out var recipes) ? recipes : Array.Empty<Recipe>();
 
 	public static bool IsCraftable(int itemType) => recipesByResult.ContainsKey(itemType);
-
-	public static IReadOnlyList<Recipe> AnyFor(int itemType) =>
-		allRecipesByResult.TryGetValue(itemType, out var recipes) ? recipes : Array.Empty<Recipe>();
 
 	public static IReadOnlyList<int> AcceptedTypes(Recipe recipe, Item required)
 	{
