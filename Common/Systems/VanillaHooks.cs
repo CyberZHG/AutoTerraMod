@@ -20,6 +20,26 @@ public sealed class VanillaHooks : ModSystem
 		On_Main.UpdateTime_SpawnTownNPCs += LetBotsAttractTownNpcs;
 		On_Projectile.Update += UpdateAvatarProjectiles;
 		On_Player.KillMe += KeepAvatarsOutOfDeath;
+		On_Main.StartInvasion += SizeInvasionForOneFaction;
+	}
+
+	static void SizeInvasionForOneFaction(On_Main.orig_StartInvasion orig, int type)
+	{
+		bool idle = Main.invasionType == 0 || Main.invasionSize == 0;
+		orig(type);
+		if (!idle || Main.invasionType == 0 || !BotWorldSystem.IsRunning || BotWorldSystem.Bots.Count == 0)
+			return;
+		int players = Enumerable.Range(0, FirstAvatarSlot).Count(slot => Main.player[slot].active && Main.player[slot].ConsumedLifeCrystals >= 5)
+			+ BotWorldSystem.Bots.GroupBy(bot => bot.FactionId).Max(faction => faction.Count());
+		int size = type switch
+		{
+			3 => 120 + 60 * players,
+			4 => 160 + 40 * players,
+			_ => 80 + 40 * players
+		};
+		if (size >= Main.invasionSize)
+			return;
+		Main.invasionSize = Main.invasionSizeStart = Main.invasionProgressMax = size;
 	}
 
 	const int FirstAvatarSlot = 200;
