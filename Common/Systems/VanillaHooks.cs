@@ -21,6 +21,13 @@ public sealed class VanillaHooks : ModSystem
 		On_Projectile.Update += UpdateAvatarProjectiles;
 		On_Player.KillMe += KeepAvatarsOutOfDeath;
 		On_Main.StartInvasion += SizeInvasionForOneFaction;
+		On_NPC.NPCLoot += LootBesideNearestBot;
+	}
+
+	static void LootBesideNearestBot(On_NPC.orig_NPCLoot orig, NPC self)
+	{
+		using (AvatarPresence.Enter())
+			orig(self);
 	}
 
 	static void SizeInvasionForOneFaction(On_Main.orig_StartInvasion orig, int type)
