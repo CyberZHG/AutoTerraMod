@@ -14,7 +14,6 @@ namespace AutoTerraMod.Common.Bosses;
 public sealed class BossCredit : GlobalNPC
 {
 	const float CreditShare = 0.3f;
-	const float SharedFightCreditShare = 0.1f;
 
 	static readonly Dictionary<int, Dictionary<int, long>> damageByFight = new();
 	static readonly Dictionary<int, (int identity, int factionId, int botId)> shots = new();
@@ -225,6 +224,9 @@ public sealed class BossCredit : GlobalNPC
 
 	public static bool IsOptional(BossChallenge challenge) => OptionalBosses.Contains(challenge.BossType);
 
+	public static bool NeedsAllies(Faction faction, BossChallenge challenge) =>
+		BotWorldSystem.Relation != FactionRelation.War && IsOptional(challenge) && !HasDefeated(faction, challenge) && faction.BossDpsCalibration.ContainsKey(challenge.BossType);
+
 	public static bool Deferred(Faction faction, BossChallenge challenge) => IsOptional(challenge) ||
 		challenge.BossType == NPCID.SkeletronHead && !NPC.AnyNPCs(NPCID.OldMan)
 		&& (!NPC.AnyNPCs(NPCID.Clothier) || !BotWorldSystem.Bots.Any(bot => bot.FactionId == faction.Id && Inventory.Count(bot.Avatar, ItemID.ClothierVoodooDoll) > 0));
@@ -364,10 +366,9 @@ public sealed class BossCredit : GlobalNPC
 			HandOutBags(challenge, fighters);
 		long total = System.Math.Max(1, byFaction.Values.Sum());
 		long best = byFaction.Values.Max();
-		float share = challenge.BossType == NPCID.MoonLordCore && BotWorldSystem.Relation != FactionRelation.War ? SharedFightCreditShare : CreditShare;
-		bool anyOverThreshold = byFaction.Values.Any(damage => damage >= total * share);
+		bool anyOverThreshold = byFaction.Values.Any(damage => damage >= total * CreditShare);
 		var credited = byFaction
-			.Where(entry => anyOverThreshold ? entry.Value >= total * share : entry.Value == best)
+			.Where(entry => anyOverThreshold ? entry.Value >= total * CreditShare : entry.Value == best)
 			.Select(entry => FactionById(entry.Key))
 			.Where(faction => faction != null)
 			.ToList();

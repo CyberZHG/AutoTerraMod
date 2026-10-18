@@ -520,14 +520,25 @@ public sealed class SummonTask : BotTask
 		bool stillWaiting = Bot.Faction.Rally is { } rally && Main.GameUpdateCount < rally.until;
 		var withGuests = gathered.Concat(BotWorldSystem.Bots.Where(guest => guest.FactionId != Bot.FactionId && guest.Faction.RallyLeaderId == Bot.Id
 			&& RallyTask.Joined(guest, GatherPoint, GatherRadius))).ToList();
-		if (present == team.Count || BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot, withGuests).IsReady)
+		bool alliesNeeded = BossCredit.NeedsAllies(Bot.Faction, step.Challenge);
+		if (present == team.Count && !alliesNeeded || BossReadiness.Evaluate(Bot.Faction, step.Challenge, Bot, withGuests).IsReady)
 			return true;
-		if (!stillWaiting && extensions < MaxRallyExtensions && team.Any(member => member.IsAlive && !gathered.Contains(member) && member.Brain.Current is RallyTask))
+		var expected = alliesNeeded ? BotWorldSystem.Bots.Where(member => member.FactionId == Bot.FactionId || member.Faction.RallyLeaderId == Bot.Id).ToList() : team;
+		if (!stillWaiting && extensions < MaxRallyExtensions && expected.Any(member => member.IsAlive && !withGuests.Contains(member) && member.Brain.Current is RallyTask))
 		{
 			extensions++;
 			Bot.Faction.Rally = (GatherPoint, Main.GameUpdateCount + RallyExtensionTicks);
 			Bot.Watchdog.RecordProgress();
 			return false;
+		}
+		if (alliesNeeded)
+		{
+			if (stillWaiting)
+			{
+				Bot.Watchdog.RecordProgress();
+				return false;
+			}
+			return GiveUpRally(withGuests.Count, expected.Count);
 		}
 		bool hostileGround = PathFinder.InsideMaze(step.Place.ToTileCoordinates());
 		if (stillWaiting && !(hostileGround && present * 2 >= team.Count))

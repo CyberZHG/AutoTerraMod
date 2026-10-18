@@ -32,11 +32,6 @@ Configs: {
 			Tooltip: Become an untargetable ghost; the camera follows bots.
 		}
 
-		DiagnosticLogging: {
-			Label: Diagnostic logging
-			Tooltip: Log bot task and plan changes to client.log.
-		}
-
 		WorkbenchBossSummons: {
 			Label: Craft boss summons at a work bench
 			Tooltip: Boss summoning items that need a demon or crimson altar can also be crafted at a work bench in worlds with bots enabled.
@@ -79,6 +74,7 @@ Commands: {
 	Current: This world: bots {3}, {0} factions, {1} bots each, relation: {2}
 	On: on
 	Off: off
+	Logging: Diagnostic logging to the log file: {0}
 }
 
 Keybinds: {

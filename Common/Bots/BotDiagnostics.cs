@@ -1,5 +1,4 @@
 using AutoTerraMod.Common.Bots.Tasks;
-using AutoTerraMod.Common.Config;
 using AutoTerraMod.Common.Planning;
 using Terraria;
 using Terraria.ModLoader;
@@ -8,7 +7,9 @@ namespace AutoTerraMod.Common.Bots;
 
 public static class BotDiagnostics
 {
-	public static bool Enabled => Systems.HeadlessTestMode.Enabled || ModContent.GetInstance<AutoTerraConfig>().DiagnosticLogging;
+	public static bool LoggingRequested { get; set; }
+
+	public static bool Enabled => Systems.HeadlessTestMode.Enabled || LoggingRequested;
 
 	public static void Log(Bot bot, string message)
 	{

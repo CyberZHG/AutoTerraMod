@@ -32,11 +32,6 @@ Configs: {
 			Tooltip: 变成不被攻击的幽灵，镜头跟随角色。
 		}
 
-		DiagnosticLogging: {
-			Label: 诊断日志
-			Tooltip: 把角色任务和计划变化写入 client.log。
-		}
-
 		WorkbenchBossSummons: {
 			Label: 在工作台合成Boss召唤物
 			Tooltip: 原本需要恶魔祭坛或猩红祭坛的Boss召唤物在开启了bot的地图里也可以在工作台合成。
@@ -79,6 +74,7 @@ Commands: {
 	Current: 当前世界：AI 角色{3}，{0} 个阵营，每阵营 {1} 人，关系：{2}
 	On: 开启
 	Off: 关闭
+	Logging: 诊断日志（写入日志文件）：{0}
 }
 
 Keybinds: {

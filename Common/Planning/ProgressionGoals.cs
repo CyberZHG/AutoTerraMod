@@ -574,7 +574,7 @@ public sealed class BossGoal : ProgressionGoal
 				break;
 			if (bot.Faction.Rally != null && bot.Faction.RallyBossType != challenge.BossType)
 				continue;
-			bool shared = challenge.BossType == NPCID.MoonLordCore && BotWorldSystem.Relation != Config.FactionRelation.War;
+			bool shared = challenge.BossType == NPCID.MoonLordCore && BotWorldSystem.Relation != Config.FactionRelation.War || Bosses.BossCredit.NeedsAllies(bot.Faction, challenge);
 			var report = Bosses.BossReadiness.Evaluate(bot.Faction, challenge, bot, shared ? BotWorldSystem.Bots : null);
 			LogReadiness(bot, challenge, report);
 			if (!report.IsReady)

@@ -37,9 +37,6 @@ public sealed class AutoTerraConfig : ModConfig
 	public bool ShowInfoPanel;
 
 	[DefaultValue(false)]
-	public bool DiagnosticLogging;
-
-	[DefaultValue(false)]
 	public bool WorkbenchBossSummons;
 
 	[CustomModConfigItem(typeof(WorldPickerElement))]

@@ -9,7 +9,7 @@ public sealed class AutoTerraCommand : ModCommand
 {
 	public override CommandType Type => CommandType.World;
 	public override string Command => "autoterra";
-	public override string Usage => "/autoterra [enabled <on|off> | factions <1-4> | bots <1-6> | relation <race|cooperate|war>]";
+	public override string Usage => "/autoterra [enabled <on|off> | factions <1-4> | bots <1-6> | relation <race|cooperate|war> | logging <on|off>]";
 	public override string Description => Text("Description");
 
 	static string Text(string key, params object[] args) => Language.GetTextValue($"Mods.AutoTerraMod.Commands.{key}", args);
@@ -25,6 +25,12 @@ public sealed class AutoTerraCommand : ModCommand
 		if (args.Length == 0)
 		{
 			caller.Reply(Describe(current));
+			return;
+		}
+		if (args.Length == 2 && args[0].ToLowerInvariant() == "logging" && args[1].ToLowerInvariant() is "on" or "off")
+		{
+			Bots.BotDiagnostics.LoggingRequested = args[1].ToLowerInvariant() == "on";
+			caller.Reply(Text("Logging", Text(Bots.BotDiagnostics.LoggingRequested ? "On" : "Off")));
 			return;
 		}
 		if (args.Length != 2 || Change(current, args[0].ToLowerInvariant(), args[1]) is not WorldFactionSettings changed)

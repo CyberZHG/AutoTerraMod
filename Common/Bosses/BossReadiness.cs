@@ -82,7 +82,7 @@ public static class BossReadiness
 		{
 			if (!calibrated.IsReady && raw.IsReady)
 				return raw;
-			return Report(setup with { RequiredRatio = setup.RequiredRatio * PlateauPatience(faction, challenge.BossType) }, Calibration(faction, challenge.BossType));
+			return Report(setup with { RequiredRatio = setup.RequiredRatio * (BossCredit.IsOptional(challenge) ? 1f : PlateauPatience(faction, challenge.BossType)) }, Calibration(faction, challenge.BossType));
 		}
 		return calibrated;
 	}
